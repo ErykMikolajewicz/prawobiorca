@@ -6,15 +6,23 @@ __pycache__/
 .env
 
 .idea
+.vscode
 /secrets/
 
 /site/
 
 .cache
+/files/
 
 /deploy/gcp/secrets
 
 postman/
 .postman
 /regulations/
+/logs/
+
+/scratch/
+/core-service/storage/
+
+/core-service/tests/unit/ai/benchmark_results/*
 .coverage

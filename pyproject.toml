@@ -5,9 +5,13 @@ description = "Law acts search engine with AI features."
 license = "MIT"
 readme = "README.md"
 requires-python = "==3.14.*"
-dependencies = [
+[dependency-groups]
+dev = [
     "poethepoet==0.48.*",
     "ruff==0.16.*",
+    "playwright==1.61.*",
+]
+docs = [
     "mkdocstrings[python]==1.0.*",
     "zensical==0.0.63",
     "google-auth[requests]==2.58.*",

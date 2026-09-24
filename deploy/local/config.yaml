@@ -5,6 +5,8 @@ metadata:
 data:
   APP_LOGGING_LEVEL: "INFO"
   APP_COOKIE_SECURE: "false"
+  OLLAMA_MODEL_NAME: "gemma4:e4b-it-q4_K_M"
+  OLLAMA_HOST: "http://192.168.88.238:11434"
 
   RELATIONAL_DB_USER: "postgres"
   RELATIONAL_DB_HOST: "postgres"

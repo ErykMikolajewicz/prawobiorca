@@ -39,8 +39,23 @@ const handleUnpin = async (articleId: string) => {
   await loadDocuments()
 }
 
+import { ElMessage } from 'element-plus'
+
 const handleGeneratePdf = async (description: string) => {
-  await generatePdf(caseId, description)
+  try {
+    await generatePdf(caseId, description)
+    ElMessage({
+      message: 'Wniosek został pomyślnie wygenerowany.',
+      type: 'success',
+      duration: 5000,
+    })
+  } catch (error) {
+    ElMessage({
+      message: 'Wystąpił błąd podczas generowania wniosku.',
+      type: 'error',
+      duration: 5000,
+    })
+  }
 }
 </script>
 

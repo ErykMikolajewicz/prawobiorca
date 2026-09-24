@@ -9,7 +9,8 @@ Within the project, we maintain the following types of tests:
 - **Integration tests of the AI services** (`extraction-service`) — the service keeps them in its own
 `tests/` directory and they are run with `poe test_extraction` (the service image must be built first).
 - **Frontend unit tests** — the frontend lives in `prawobiorca-frontend/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest).
-- **E2E tests** are not currently implemented. They will be placed in `prawobiorca-frontend/`, probably using the `playwright` library.
+- **Manual E2E / UAT tests** — see [Manual E2E Test Case](manual_e2e_test.md) for step-by-step verification of full user flows (login, case creation, article search, and PDF generation).
+- **E2E tests** are not currently automated. They will be placed in `prawobiorca-frontend/`, probably using the `playwright` library.
 
 ## Technology Stack
 
