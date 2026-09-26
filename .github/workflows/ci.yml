@@ -49,6 +49,8 @@ jobs:
           cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm type-check
+      - run: pnpm test:unit --run
 
   api-types:
     if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
@@ -58,7 +60,6 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
       - run: uv sync --locked
       - run: cp core-service/.env.example core-service/.env
-      - run: uv run poe export_openapi
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: prawobiorca-frontend/package.json
@@ -69,6 +70,5 @@ jobs:
           cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: prawobiorca-frontend
-      - run: pnpm generate:api-types
-        working-directory: prawobiorca-frontend
+      - run: uv run poe api_types
       - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/types/api/schema.ts

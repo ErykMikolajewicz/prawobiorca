@@ -28,7 +28,7 @@ Required toolchain versions are declared in `prawobiorca-frontend/package.json`:
 All application code lives in `prawobiorca-frontend/src`:
 
 * **`api/`** — one module per API area (`auth`, `accounts`, `cases`, `documents`, `regulations`), plus the shared axios instance.
-* **`types/api/`** — TypeScript types mirroring the request/response contracts of `core-service`.
+* **`types/api/`** — TypeScript types of the request/response contracts of `core-service`. `schema.ts` is generated from `core-service/openapi.json`, the other modules re-export its types under shorter names.
 * **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors) and `organisms/` (navbar, footer, forms, lists).
 * **`composables/`** — reusable stateful logic (dark mode, regulation upload, preparation status polling).
@@ -47,6 +47,7 @@ All application code lives in `prawobiorca-frontend/src`:
 * `withCredentials` is enabled — access and refresh tokens are carried in cookies, never stored by the application itself.
 * A response interceptor retries a request once after refreshing the tokens when `core-service` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
 * When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page.
+* API types are generated with `poe api_types` (run from the repository root): it exports `core-service/openapi.json` and generates `src/types/api/schema.ts` from it with `openapi-typescript`. Both files are committed, and CI fails when they are out of date.
 
 ---
 
@@ -72,9 +73,11 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm install` | Install dependencies. |
 | `pnpm dev` | Vite dev server with hot reload. |
 | `pnpm build` | Type-check and build the production bundle. |
+| `pnpm type-check` | Type-check with `vue-tsc`. |
 | `pnpm test:unit` | Run unit tests with Vitest. |
 | `pnpm lint` | Run oxlint and ESLint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
 | `pnpm check` | Run oxlint, ESLint and oxfmt without fixing; used by the pre-commit hook. |
+| `pnpm generate:api-types` | Generate `src/types/api/schema.ts` from `core-service/openapi.json`. |
 
 A JetBrains IDE (PyCharm Professional, free for students under a non-commercial licence) with the Vue plugin is recommended, so that the whole repository — Python services and frontend — is handled by a single IDE. In VS Code, the [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) extension is required to make the TypeScript language service aware of `.vue` types.

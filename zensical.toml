@@ -16,7 +16,6 @@ nav = [
     ]},
   {"Tests" = [
     {"General information" = "tests/tests.md"},
-    {"Main fixtures" = "tests/main_fixtures.md"},
     {"Integration fixtures" = "tests/integration_fixtures.md"}
   ]}
 ]

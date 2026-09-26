@@ -6,14 +6,14 @@ When additional team members join the project:
 
 - **Jira** is introduced for task and story management.
 - **Definition of Done:**
-    - A story is considered complete when its status is changed in Taiga by project manager, 
+    - A story is considered complete when its status is changed in Jira by project manager, 
     - or after passing code review and integration tests (for backend-only features).
 
 ## 2. Branching Model (Git)
 
 The repository maintains the following branches:
 
-- `dev` – Main development branch where developers merge their changes.
+- `develop` – Main development branch where developers merge their changes.
 - `<jira number>` – Per task/subtask branches for implementing individual functionalities.
 - `main` – Main production branch for production releases.
 
@@ -26,8 +26,8 @@ The repository maintains the following branches:
     A branch `<jira number>` is created e.g. 55, 78.  
     The developer implements the feature and prepares unit tests.
 
-- **Merging to dev**  
-    After development and initial testing, the feature branch is merged (PR) into `dev`.
+- **Merging to develop**  
+    After development and initial testing, the feature branch is merged (PR) into `develop`.
 
 - **Integration Testing**  
     A designated developer prepares integration tests for new or modified components.
@@ -46,7 +46,7 @@ The repository maintains the following branches:
 ## 4. Additional Guidelines
 
 - Every change must undergo code review (including test quality).
-- Automated tests run on every PR to `dev` and `main`.
+- Automated tests run on every PR to `develop` and `main`.
 - Commit messages follow the **Conventional Commits** specification.
 - Every feature branch is named according to the Jira task number and description.
 - Documentation is updated as needed, at the latest in the sprint following feature implementation.
@@ -73,3 +73,30 @@ The repository maintains the following branches:
 - `bugfix`, `docs`, `test`, `style` – Increment the patch version (X.Y.Z)
 - `feature`, `refactor`, `chore` – Increment the minor version (X.Y.Z)
 - **Breaking changes:** Increment the major version (X.Y.Z). Breaking changes should be prepared over several commits on a dedicated branch.
+
+## 6. CI/CD
+
+Pipelines are defined with GitHub Actions in `.github/workflows/`.
+
+### 6.1 CI (`ci.yml`)
+
+Runs on every push to `develop` and on every PR to `develop` and `main`:
+
+- **backend** – Ruff lint and format check, unit tests with coverage (`poe cov`, fails below 90%).
+- **integration** – integration tests (`poe test_integration`).
+- **frontend** – `pnpm check`, `pnpm type-check` and unit tests with Vitest.
+- **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/types/api/schema.ts` with `poe api_types` and fails if they differ from the committed files.
+
+When the API contract changes, run `poe api_types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
+
+### 6.2 CD (`cd.yml`)
+
+Runs on every push to `main` and deploys to GKE:
+
+- Detects whether the backend (`core-service/`) or the frontend (`prawobiorca-frontend/`) changed, together with their manifests in `deploy/gcp/`.
+- Builds only the changed images and pushes them to Artifact Registry, tagged with the commit SHA and `latest`.
+- For the backend, runs the migrations job first, then rolls out `prawobiorca-backend` and `prawobiorca-worker`; for the frontend, rolls out `prawobiorca-frontend`.
+
+GitHub authenticates to GCP with Workload Identity Federation, configured once by `scripts/cloud/github_cicd_init.sh`.
+
+Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL, Redis, `embedding-service`) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction-service`, `embedding-batch-service`) by their own scripts in `scripts/cloud/`.
