@@ -17,7 +17,6 @@ from src.domain.exceptions.regulations import (
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
-    RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import (
@@ -25,6 +24,7 @@ from src.domain.value_objects.regulations import (
     RegulationRegistrationData,
     RegulationType,
 )
+from src.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class PrepareRegulation:
 
         try:
             sections_collection = await self.regulation_preparator.prepare_regulation(regulation_content)
-        except RegulationServiceUnavailable:
+        except ServiceUnavailable:
             logger.error("Service to prepare regulation not working!")
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
@@ -126,7 +126,7 @@ class RetryRegulationPreparation:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
                 )
-            raise RegulationServiceUnavailable()
+            raise ServiceUnavailable()
 
 
 @dataclass
@@ -196,7 +196,7 @@ class ConfirmRegulationUpload:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
                 )
-            raise RegulationServiceUnavailable()
+            raise ServiceUnavailable()
 
 
 @dataclass

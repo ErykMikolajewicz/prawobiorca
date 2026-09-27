@@ -21,10 +21,10 @@ from src.domain.exceptions.regulations import (
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
-    RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.shared.exceptions import ServiceUnavailable
 
 
 def get_set_statuses(mock_regulations_repository):
@@ -176,7 +176,7 @@ async def test_prepare_regulation_service_unavailable(
     mock_regulations_storage.get_regulation.return_value = b"content"
 
     mock_regulation_preparator = AsyncMock()
-    mock_regulation_preparator.prepare_regulation.side_effect = RegulationServiceUnavailable()
+    mock_regulation_preparator.prepare_regulation.side_effect = ServiceUnavailable()
 
     use_case = PrepareRegulation(
         session_maker=mock_session_maker,
@@ -186,7 +186,7 @@ async def test_prepare_regulation_service_unavailable(
         regulation_preparator=mock_regulation_preparator,
     )
 
-    with pytest.raises(RegulationServiceUnavailable):
+    with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [
@@ -380,7 +380,7 @@ async def test_retry_regulation_preparation_scheduler_unavailable(
         regulation_preparation_scheduler=mock_scheduler,
     )
 
-    with pytest.raises(RegulationServiceUnavailable):
+    with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [
@@ -612,7 +612,7 @@ async def test_confirm_regulation_upload_scheduler_unavailable(
         regulation_preparation_scheduler=mock_scheduler,
     )
 
-    with pytest.raises(RegulationServiceUnavailable):
+    with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [

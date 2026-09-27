@@ -20,7 +20,6 @@ from src.domain.exceptions.regulations import (
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
-    RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import RegulationType
@@ -112,7 +111,6 @@ async def add_public_regulation(
         status.HTTP_409_CONFLICT: {
             "description": "Regulation upload already confirmed, or its content not found on storage!"
         },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Preparation service not working!"},
     },
 )
 async def confirm_public_regulation_upload(
@@ -143,11 +141,6 @@ async def confirm_public_regulation_upload(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Regulation upload already confirmed!",
-        )
-    except RegulationServiceUnavailable:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Preparation service not working!",
         )
 
 
@@ -196,7 +189,6 @@ async def delete_public_regulation(
         status.HTTP_409_CONFLICT: {
             "description": "Regulation already prepared, preparation in progress, or its content not uploaded!"
         },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Preparation service not working!"},
     },
 )
 async def retry_public_regulation_preparation(
@@ -225,9 +217,4 @@ async def retry_public_regulation_preparation(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Regulation content not uploaded!",
-        )
-    except RegulationServiceUnavailable:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Preparation service not working!",
         )

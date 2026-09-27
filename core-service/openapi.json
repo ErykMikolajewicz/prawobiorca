@@ -31,6 +31,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "401": {
             "description": "Incorrect logging data!"
           },
@@ -63,6 +66,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "401": {
             "description": "Invalid or expired refresh token!"
           }
@@ -85,6 +91,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "401": {
             "description": "User not logged."
           }
@@ -106,6 +115,9 @@
                 "schema": {}
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable!"
           }
         }
       }
@@ -150,6 +162,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "204": {
             "description": "No public files for given search criteria."
           },
@@ -191,6 +206,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "422": {
             "description": "Validation Error",
@@ -285,6 +303,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "204": {
             "description": "No search results."
           },
@@ -335,14 +356,14 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "Regulation not found!"
           },
           "409": {
             "description": "Regulation upload already confirmed, or its content not found on storage!"
-          },
-          "503": {
-            "description": "Preparation service not working!"
           },
           "422": {
             "description": "Validation Error",
@@ -388,6 +409,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "Regulation not found!"
           },
@@ -426,6 +450,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "404": {
             "description": "Regulation not found!"
@@ -471,14 +498,14 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "Regulation to prepare not found!"
           },
           "409": {
             "description": "Regulation already prepared, preparation in progress, or its content not uploaded!"
-          },
-          "503": {
-            "description": "Preparation service not working!"
           },
           "422": {
             "description": "Validation Error",
@@ -519,6 +546,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "409": {
             "description": "User with that login already exists."
           },
@@ -557,6 +587,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "204": {
             "description": "No user cases."
           }
@@ -590,6 +623,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "422": {
             "description": "Validation Error",
@@ -626,6 +662,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "404": {
             "description": "No case with that id!"
@@ -681,6 +720,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "No case with that id!"
           },
@@ -729,6 +771,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "204": {
             "description": "No documents for case."
           },
@@ -767,6 +812,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "422": {
             "description": "Validation Error",
@@ -821,6 +869,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "204": {
             "description": "Not found user files with that criteria."
           },
@@ -862,6 +913,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "400": {
             "description": "Can't add empty regulation."
@@ -910,14 +964,14 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "Regulation not found!"
           },
           "409": {
             "description": "Regulation upload already confirmed, or its content not found on storage!"
-          },
-          "503": {
-            "description": "Preparation service not working!"
           },
           "422": {
             "description": "Validation Error",
@@ -963,6 +1017,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "Regulation not found!"
           },
@@ -1001,6 +1058,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
           },
           "404": {
             "description": "Regulation not found!"
@@ -1098,6 +1158,9 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "204": {
             "description": "No search results."
           },
@@ -1148,14 +1211,14 @@
               }
             }
           },
+          "503": {
+            "description": "Service unavailable!"
+          },
           "404": {
             "description": "Regulation to prepare not found!"
           },
           "409": {
             "description": "Regulation already prepared, preparation in progress, or its content not uploaded!"
-          },
-          "503": {
-            "description": "Preparation service not working!"
           },
           "422": {
             "description": "Validation Error",

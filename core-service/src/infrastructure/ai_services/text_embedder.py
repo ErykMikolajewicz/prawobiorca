@@ -2,8 +2,8 @@ from typing import Iterable
 
 from httpx2 import AsyncClient, HTTPError
 
-from src.domain.exceptions.regulations import RegulationServiceUnavailable
 from src.domain.value_objects.sections import SectionChunk
+from src.shared.exceptions import ServiceUnavailable
 
 EMBEDDING_MODEL_NAME = "mmlw-retrieval-roberta-large-v2"
 
@@ -28,7 +28,7 @@ class TextsEmbedder:
             )
             response.raise_for_status()
         except HTTPError as e:
-            raise RegulationServiceUnavailable() from e
+            raise ServiceUnavailable() from e
         embeddings_data = sorted(response.json()["data"], key=lambda item: item["index"])
 
         return [item["embedding"] for item in embeddings_data]

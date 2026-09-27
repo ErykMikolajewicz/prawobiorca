@@ -634,6 +634,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   refresh_tokens_api_auth_refresh_post: {
@@ -656,6 +663,13 @@ export interface operations {
       }
       /** @description Invalid or expired refresh token! */
       401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Service unavailable! */
+      503: {
         headers: {
           [name: string]: unknown
         }
@@ -688,6 +702,13 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   logout_user_api_auth_logout_post: {
@@ -707,6 +728,13 @@ export interface operations {
         content: {
           'application/json': unknown
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -746,6 +774,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   add_public_regulation_api_regulations_post: {
@@ -778,6 +813,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -836,6 +878,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   confirm_public_regulation_upload_api_regulations__regulationId__confirm_upload_post: {
@@ -881,7 +930,7 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
-      /** @description Preparation service not working! */
+      /** @description Service unavailable! */
       503: {
         headers: {
           [name: string]: unknown
@@ -926,6 +975,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   delete_public_regulation_api_regulations__regulationId__delete: {
@@ -961,6 +1017,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -1007,7 +1070,7 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
-      /** @description Preparation service not working! */
+      /** @description Service unavailable! */
       503: {
         headers: {
           [name: string]: unknown
@@ -1054,6 +1117,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   get_cases_list_api_user_cases_get: {
@@ -1076,6 +1146,13 @@ export interface operations {
       }
       /** @description No user cases. */
       204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Service unavailable! */
+      503: {
         headers: {
           [name: string]: unknown
         }
@@ -1114,6 +1191,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   delete_user_case_api_user_cases__caseId__delete: {
@@ -1149,6 +1233,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -1187,6 +1278,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -1230,6 +1328,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   delete_case_document_api_user_cases_documents__documentId__delete: {
@@ -1258,6 +1363,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -1296,6 +1408,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -1344,6 +1463,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   confirm_user_regulation_upload_api_user_regulations__regulationId__confirm_upload_post: {
@@ -1389,7 +1515,7 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
-      /** @description Preparation service not working! */
+      /** @description Service unavailable! */
       503: {
         headers: {
           [name: string]: unknown
@@ -1434,6 +1560,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   delete_user_regulation_api_user_regulations__regulationId__delete: {
@@ -1469,6 +1602,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -1527,6 +1667,13 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Service unavailable! */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   retry_user_regulation_preparation_api_user_regulations__regulationId__preparation_retry_post: {
@@ -1572,7 +1719,7 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
-      /** @description Preparation service not working! */
+      /** @description Service unavailable! */
       503: {
         headers: {
           [name: string]: unknown
