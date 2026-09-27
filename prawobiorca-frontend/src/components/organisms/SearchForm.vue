@@ -11,11 +11,7 @@ const emit = defineEmits<{
   (e: 'search', searchConfig: SearchRegulationDocumentsParams): void
 }>()
 
-const searchParams = reactive<SearchRegulationDocumentsParams>({
-  ...props.searchParams,
-  threshold: props.searchParams.threshold ?? 0.2,
-  order_by: props.searchParams.order_by ?? 'document',
-})
+const searchParams = reactive<SearchRegulationDocumentsParams>({ ...props.searchParams })
 
 function onSubmit() {
   if (searchParams.query.trim()) {

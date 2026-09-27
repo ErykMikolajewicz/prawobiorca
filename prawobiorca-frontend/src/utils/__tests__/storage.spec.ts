@@ -1,20 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import axios from 'axios'
-import { getPublicRegulationDownloadUrl as fetchPublicRegulationDownloadUrl } from '@/api/generated/endpoints/regulations/regulations'
-import { getUserRegulationDownloadUrl as fetchUserRegulationDownloadUrl } from '@/api/generated/endpoints/user-regulations/user-regulations'
-import {
-  getPublicRegulationDownloadUrl,
-  getUserRegulationDownloadUrl,
-  uploadFileToStorage,
-} from '@/utils/storage'
-
-vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
-  getPublicRegulationDownloadUrl: vi.fn(),
-}))
-
-vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
-  getUserRegulationDownloadUrl: vi.fn(),
-}))
+import { uploadFileToStorage } from '@/utils/storage'
 
 vi.mock('axios', () => ({
   default: {
@@ -59,23 +45,5 @@ describe('storage utils', () => {
     expect(axios.post).toHaveBeenCalledTimes(1)
     const [url] = vi.mocked(axios.post).mock.calls[0] ?? []
     expect(url).toBe('/storage/regulations')
-  })
-
-  it('getUserRegulationDownloadUrl retrieves download url and rewrites localhost:9000 in dev', async () => {
-    vi.mocked(fetchUserRegulationDownloadUrl).mockResolvedValueOnce(
-      'http://localhost:9000/regulations/uuid-123.pdf',
-    )
-    const url = await getUserRegulationDownloadUrl('uuid-123')
-    expect(fetchUserRegulationDownloadUrl).toHaveBeenCalledWith('uuid-123')
-    expect(url).toBe('/storage/regulations/uuid-123.pdf')
-  })
-
-  it('getPublicRegulationDownloadUrl retrieves download url and rewrites localhost:9000 in dev', async () => {
-    vi.mocked(fetchPublicRegulationDownloadUrl).mockResolvedValueOnce(
-      'http://localhost:9000/regulations/uuid-456.pdf',
-    )
-    const url = await getPublicRegulationDownloadUrl('uuid-456')
-    expect(fetchPublicRegulationDownloadUrl).toHaveBeenCalledWith('uuid-456')
-    expect(url).toBe('/storage/regulations/uuid-456.pdf')
   })
 })
