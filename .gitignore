@@ -6,7 +6,6 @@ __pycache__/
 .env
 
 .idea
-/secrets/
 
 /site/
 
@@ -14,7 +13,7 @@ __pycache__/
 
 /deploy/gcp/secrets
 
-postman/
-.postman
-/regulations/
 .coverage
+
+/CLAUDE.md
+/AGENTS.md
