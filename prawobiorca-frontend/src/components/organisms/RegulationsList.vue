@@ -3,14 +3,14 @@ import { computed } from 'vue'
 import RegulationCard from '@/components/molecules/RegulationCard.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
-import type { uploadTarget } from '@/composables/useRegulationUpload'
+import type { UploadTarget } from '@/composables/useRegulationUpload'
 
 type Props = {
   title: string
   emptyDescription: string
   regulations: Array<RegulationRepresentation>
   typeFilter: RegulationType | undefined
-  target: uploadTarget
+  target: UploadTarget
   canManage: boolean
 }
 

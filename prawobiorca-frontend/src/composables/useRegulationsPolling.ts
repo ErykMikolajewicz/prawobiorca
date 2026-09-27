@@ -3,7 +3,7 @@ import { onUnmounted, watch } from 'vue'
 const DEFAULT_INTERVAL_MS = 5000
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000
 
-type pollingOptions = {
+type PollingOptions = {
   intervalMs?: number
   timeoutMs?: number
 }
@@ -14,7 +14,7 @@ type pollingOptions = {
 export function useRegulationsPolling(
   hasPending: () => boolean,
   refresh: () => Promise<void>,
-  options?: pollingOptions,
+  options?: PollingOptions,
 ) {
   const intervalMs = options?.intervalMs ?? DEFAULT_INTERVAL_MS
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS

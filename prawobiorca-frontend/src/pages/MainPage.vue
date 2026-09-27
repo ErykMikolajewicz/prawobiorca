@@ -63,16 +63,27 @@ function handleCaseDeleted(caseId: string) {
   cases.value = cases.value.filter((c) => c.id !== caseId)
 }
 
+let publicRegulationsRequestId = 0
+let userRegulationsRequestId = 0
+
 async function fetchPublicRegulations() {
-  publicRegulations.value = await getPublicRegulations({
+  const requestId = ++publicRegulationsRequestId
+  const regulations = await getPublicRegulations({
     documentType: publicRegulationTypeFilter.value,
   })
+  if (requestId === publicRegulationsRequestId) {
+    publicRegulations.value = regulations
+  }
 }
 
 async function fetchUserRegulations() {
-  userRegulations.value = await getUserRegulations({
+  const requestId = ++userRegulationsRequestId
+  const regulations = await getUserRegulations({
     documentType: userRegulationTypeFilter.value,
   })
+  if (requestId === userRegulationsRequestId) {
+    userRegulations.value = regulations
+  }
 }
 
 async function fetchCases() {

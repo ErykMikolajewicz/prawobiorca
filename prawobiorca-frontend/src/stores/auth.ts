@@ -4,13 +4,13 @@ import { ref } from 'vue'
 
 import { checkIsUserLogged, logoutUser, logUser } from '@/api/generated/endpoints/auth/auth'
 
-type currentUser = {
+type CurrentUser = {
   isAdmin: boolean
 }
 
-async function getCurrentUser(): Promise<currentUser | null> {
+async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
-    return (await checkIsUserLogged()) as currentUser
+    return (await checkIsUserLogged()) as CurrentUser
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {

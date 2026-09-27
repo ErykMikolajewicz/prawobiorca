@@ -3,14 +3,14 @@ import { ElMessage } from 'element-plus'
 import { getApiErrorMessage } from '@/utils/error'
 import type { RegulationPreparationStatus } from '@/api/generated/model'
 
-export type preparationStatusOption = {
+export type PreparationStatusOption = {
   label: string
   tagType: 'info' | 'warning' | 'danger'
 }
 
 export const preparationStatusOptions: Record<
   Exclude<RegulationPreparationStatus, 'PREPARED'>,
-  preparationStatusOption
+  PreparationStatusOption
 > = {
   NOT_STARTED: { label: 'Oczekuje', tagType: 'info' },
   IN_PROGRESS: { label: 'Przetwarzanie', tagType: 'warning' },

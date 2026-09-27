@@ -18,11 +18,11 @@ import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { uploadTarget } from '@/composables/useRegulationUpload'
+import type { UploadTarget } from '@/composables/useRegulationUpload'
 
 type Props = {
   regulation: RegulationRepresentation
-  target: uploadTarget
+  target: UploadTarget
   canManage: boolean
 }
 

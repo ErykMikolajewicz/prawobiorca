@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import CaseCard from '@/components/molecules/CaseCard.vue'
 import CaseCreationCard from '@/components/molecules/CaseCreationCard.vue'
+import type { CaseData } from '@/api/generated/model'
 
 type Props = {
-  cases: Array<{
-    id: string
-    name: string
-  }>
+  cases: Array<CaseData>
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'case-deleted', caseId: string): void
-  (e: 'case-created', newCase: { id: string; name: string }): void
+  (e: 'case-created', newCase: CaseData): void
 }>()
 </script>
 
@@ -23,10 +21,9 @@ const emit = defineEmits<{
 
     <div class="cases-grid">
       <CaseCard
-        v-for="(userCase, index) in props.cases"
+        v-for="userCase in props.cases"
         :key="userCase.id"
         :user-case="userCase"
-        :index="index + 1"
         @deleted="(id) => emit('case-deleted', id)"
       />
 

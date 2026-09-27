@@ -16,9 +16,9 @@ import type {
   RegulationType,
 } from '@/api/generated/model'
 
-export type uploadTarget = 'user' | 'public'
+export type UploadTarget = 'user' | 'public'
 
-type regulationUploadResult = {
+type RegulationUploadResult = {
   id: string
   preparationStatus: RegulationPreparationStatus
 }
@@ -32,7 +32,7 @@ export const regulationTypeOptions: Array<{ label: string; value: RegulationType
 async function confirmUpload(
   regulationId: string,
   confirm: (regulationId: string) => Promise<unknown>,
-): Promise<regulationUploadResult> {
+): Promise<RegulationUploadResult> {
   try {
     await confirm(regulationId)
     return { id: regulationId, preparationStatus: 'IN_PROGRESS' }
@@ -43,11 +43,11 @@ async function confirmUpload(
 }
 
 async function uploadRegulation(
-  target: uploadTarget,
+  target: UploadTarget,
   regulation: File,
   presentationName: string,
   regulationType?: RegulationType,
-): Promise<regulationUploadResult> {
+): Promise<RegulationUploadResult> {
   const addRegulation = target === 'public' ? addPublicRegulation : addUserRegulation
   const confirm = target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
 
@@ -65,7 +65,7 @@ export function useRegulationUpload() {
   const selectedFile = ref<File | null>(null)
   const presentationName = ref('')
   const selectedRegulationType = ref<RegulationType | ''>('')
-  const target = ref<uploadTarget>('user')
+  const target = ref<UploadTarget>('user')
   const isSubmitting = ref(false)
 
   function resetForm() {
@@ -84,7 +84,7 @@ export function useRegulationUpload() {
 
   async function submit(): Promise<{
     regulation: RegulationRepresentation
-    target: uploadTarget
+    target: UploadTarget
   } | null> {
     if (!selectedFile.value) {
       ElMessage.warning('Wybierz plik do przesłania.')

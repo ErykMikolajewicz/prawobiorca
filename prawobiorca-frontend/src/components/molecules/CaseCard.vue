@@ -12,7 +12,6 @@ type Props = {
     id: string
     name: string
   }
-  index: number
 }
 
 const props = defineProps<Props>()

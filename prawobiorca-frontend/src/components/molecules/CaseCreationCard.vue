@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Add2RoundedIcon from '@iconify-vue/material-symbols/add-2-rounded'
-import { ElMessage } from 'element-plus'
+import { ElMessage, type InputInstance } from 'element-plus'
 import { addCase } from '@/api/generated/endpoints/cases/cases'
 import { getApiErrorMessage } from '@/utils/error'
 
 const newCaseName = ref('')
-const inputRef = ref<HTMLInputElement>()
+const inputRef = ref<InputInstance>()
 
 const emit = defineEmits<{
   (e: 'case-created', newCase: { id: string; name: string }): void
@@ -37,14 +37,14 @@ async function createCase() {
 <template>
   <el-card shadow="never" class="form-card" @click="inputRef?.focus()">
     <form class="case-form" @submit.prevent="createCase">
-      <input
+      <el-input
         id="case_name"
         ref="inputRef"
         v-model="newCaseName"
         name="case_name"
         placeholder="Utwórz nową sprawę..."
         required
-        class="flex-grow-input"
+        class="case-name-input"
       />
       <button type="submit" class="icon-btn">
         <Add2RoundedIcon />
@@ -69,11 +69,13 @@ async function createCase() {
   }
 }
 
-input {
-  border: none;
-  background: transparent;
-  outline: none;
-  width: 100%;
+.case-name-input {
   font-size: 1.1em;
+
+  :deep(.el-input__wrapper) {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
 }
 </style>
