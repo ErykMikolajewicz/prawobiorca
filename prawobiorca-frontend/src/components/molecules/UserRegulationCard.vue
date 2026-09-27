@@ -5,6 +5,7 @@ import {
   retryUserRegulationPreparation,
 } from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@/utils/error'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
 import RefreshRoundedIcon from '@iconify-vue/material-symbols/refresh-rounded'
@@ -38,7 +39,9 @@ async function handleDelete() {
     ElMessage.success('Regulacja została usunięta')
     emit('deleted', props.regulation.id)
   } catch (error) {
-    ElMessage.error('Nie udało się usunąć regulacji')
+    ElMessage.error(
+      getApiErrorMessage(error, { defaultServerMessage: 'Nie udało się usunąć regulacji' }),
+    )
     console.error(error)
   } finally {
     isDeleting.value = false

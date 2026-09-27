@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { getApiErrorMessage } from '@/utils/error'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -10,7 +12,12 @@ async function handleLogin() {
 }
 
 async function handleLogout() {
-  await authStore.logout()
+  try {
+    await authStore.logout()
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, { defaultServerMessage: 'Nie udało się wylogować.' }))
+    console.error(error)
+  }
   await router.push('/')
 }
 </script>

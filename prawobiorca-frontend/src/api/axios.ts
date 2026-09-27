@@ -59,7 +59,10 @@ prawobiorcaClient.interceptors.response.use(
 
     try {
       await refreshTokens()
-    } catch {
+    } catch (refreshError: unknown) {
+      if (!axios.isAxiosError(refreshError) || refreshError.response?.status !== 401) {
+        return Promise.reject(refreshError)
+      }
       notifySessionExpired()
       return Promise.reject(error)
     }

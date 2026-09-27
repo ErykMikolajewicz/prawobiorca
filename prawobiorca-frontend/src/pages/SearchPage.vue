@@ -3,6 +3,7 @@ import { ref, onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@/utils/error'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
 import AppNavbar from '@/components/organisms/AppNavbar.vue'
@@ -73,7 +74,11 @@ async function performSearch(params: SearchRegulationDocumentsParams) {
       results.value = await searchRegulationDocuments(regulationId.value, params)
     }
   } catch (error) {
-    ElMessage.error('Wystąpił błąd podczas przeszukiwania regulacji.')
+    ElMessage.error(
+      getApiErrorMessage(error, {
+        defaultServerMessage: 'Wystąpił błąd podczas przeszukiwania regulacji.',
+      }),
+    )
     console.error(error)
   } finally {
     isSearching.value = false
@@ -93,7 +98,11 @@ async function handleAddToCase(payload: { documentContent: string }) {
     })
     ElMessage.success('Dodano do sprawy.')
   } catch (error) {
-    ElMessage.error('Wystąpił błąd podczas dodawania do sprawy.')
+    ElMessage.error(
+      getApiErrorMessage(error, {
+        defaultServerMessage: 'Wystąpił błąd podczas dodawania do sprawy.',
+      }),
+    )
     console.error(error)
   }
 }

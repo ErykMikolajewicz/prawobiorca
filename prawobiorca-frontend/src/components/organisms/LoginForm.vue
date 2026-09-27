@@ -28,7 +28,9 @@ const onSubmit = async () => {
     await authStore.login(form.username, form.password)
     await router.push('/')
   } catch (error: unknown) {
-    errorMessage.value = getApiErrorMessage(error)
+    errorMessage.value = getApiErrorMessage(error, {
+      unauthorizedMessage: 'Nieprawidłowa nazwa użytkownika lub hasło.',
+    })
   } finally {
     isLoading.value = false
   }

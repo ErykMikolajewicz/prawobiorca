@@ -7,6 +7,7 @@ import './assets/styles.css'
 import { useAuthStore } from './stores/auth'
 import { setSessionExpiredHandler } from './api/sessionExpiry'
 import { useDarkMode } from './composables/useDarkMode'
+import { getApiErrorMessage } from './utils/error'
 
 import App from './App.vue'
 import router from './router'
@@ -31,6 +32,10 @@ setSessionExpiredHandler(() => {
   }
 })
 
-await authStore.checkIsLogged()
+try {
+  await authStore.checkIsLogged()
+} catch (error: unknown) {
+  ElMessage.error(getApiErrorMessage(error))
+}
 
 app.mount('#app')

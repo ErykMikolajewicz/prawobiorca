@@ -25,13 +25,13 @@ function response(config: InternalAxiosRequestConfig, status: number): AxiosResp
   }
 }
 
-function unauthorized(config: InternalAxiosRequestConfig): AxiosError {
+function httpError(config: InternalAxiosRequestConfig, status: number): AxiosError {
   return new AxiosError(
-    'Unauthorized',
-    AxiosError.ERR_BAD_REQUEST,
+    String(status),
+    status >= 500 ? AxiosError.ERR_BAD_RESPONSE : AxiosError.ERR_BAD_REQUEST,
     config,
     {},
-    response(config, 401),
+    response(config, status),
   )
 }
 
@@ -40,7 +40,7 @@ function adapterFor(statuses: Record<string, number[]>): AxiosAdapter {
   return vi.fn(async (config: InternalAxiosRequestConfig) => {
     const queue = statuses[config.url ?? '']
     const status = queue?.shift() ?? 200
-    if (status === 401) throw unauthorized(config)
+    if (status >= 400) throw httpError(config, status)
     return response(config, status)
   })
 }
@@ -99,6 +99,16 @@ describe('prawobiorcaClient refresh interceptor', () => {
       config: { url: '/api/user/cases' },
     })
     expect(notifySessionExpired).toHaveBeenCalledOnce()
+    expect(calledPaths(adapter)).toEqual(['/api/user/cases', '/api/auth/refresh'])
+  })
+
+  it('nie zgłasza wygaśnięcia sesji i propaguje błąd refreshu, gdy refresh zwróci 503', async () => {
+    const adapter = useAdapter({ '/api/user/cases': [401], '/api/auth/refresh': [503] })
+
+    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toMatchObject({
+      response: { status: 503 },
+    })
+    expect(notifySessionExpired).not.toHaveBeenCalled()
     expect(calledPaths(adapter)).toEqual(['/api/user/cases', '/api/auth/refresh'])
   })
 

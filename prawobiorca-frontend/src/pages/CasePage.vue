@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@/utils/error'
 
 import AppNavbar from '@/components/organisms/AppNavbar.vue'
 import AppFooter from '@/components/organisms/AppFooter.vue'
@@ -41,12 +43,27 @@ onBeforeMount(async () => {
 })
 
 const handleUnpin = async (articleId: string) => {
-  await deleteCaseDocument(articleId)
+  try {
+    await deleteCaseDocument(articleId)
+  } catch (error) {
+    ElMessage.error(
+      getApiErrorMessage(error, { defaultServerMessage: 'Nie udało się odpiąć dokumentu.' }),
+    )
+    console.error(error)
+    return
+  }
   await loadDocuments()
 }
 
 const handleGeneratePdf = async (description: string) => {
-  await generatePdf(caseId, description)
+  try {
+    await generatePdf(caseId, description)
+  } catch (error) {
+    ElMessage.error(
+      getApiErrorMessage(error, { defaultServerMessage: 'Nie udało się wygenerować wniosku.' }),
+    )
+    console.error(error)
+  }
 }
 </script>
 

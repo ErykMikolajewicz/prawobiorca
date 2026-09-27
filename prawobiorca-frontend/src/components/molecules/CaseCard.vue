@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { deleteUserCase } from '@/api/generated/endpoints/cases/cases'
 import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@/utils/error'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
 import ArrowRightAltRoundedIcon from '@iconify-vue/material-symbols/arrow-right-alt-rounded'
 import IconMotion from '@/components/atoms/IconMotion.vue'
@@ -29,7 +30,9 @@ async function handleDelete() {
     ElMessage.success('Sprawa została usunięta')
     emit('deleted', props.userCase.id)
   } catch (error) {
-    ElMessage.error('Nie udało się usunąć sprawy')
+    ElMessage.error(
+      getApiErrorMessage(error, { defaultServerMessage: 'Nie udało się usunąć sprawy' }),
+    )
     console.error(error)
   } finally {
     isDeleting.value = false

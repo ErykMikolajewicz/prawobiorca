@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Add2RoundedIcon from '@iconify-vue/material-symbols/add-2-rounded'
+import { ElMessage } from 'element-plus'
 import { addCase } from '@/api/generated/endpoints/cases/cases'
+import { getApiErrorMessage } from '@/utils/error'
 
 const newCaseName = ref('')
 const inputRef = ref<HTMLInputElement>()
@@ -19,13 +21,20 @@ async function createCase() {
     return
   }
 
-  const caseId: string = await addCase({ caseName: newCaseName.value })
-  const newCase = {
-    id: caseId,
-    name: newCaseName.value.trim(),
+  try {
+    const caseId: string = await addCase({ caseName: newCaseName.value })
+    const newCase = {
+      id: caseId,
+      name: newCaseName.value.trim(),
+    }
+    emit('case-created', newCase)
+    newCaseName.value = ''
+  } catch (error) {
+    ElMessage.error(
+      getApiErrorMessage(error, { defaultServerMessage: 'Nie udało się utworzyć sprawy.' }),
+    )
+    console.error(error)
   }
-  emit('case-created', newCase)
-  newCaseName.value = ''
 }
 
 defineExpose({

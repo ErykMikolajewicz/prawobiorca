@@ -1,24 +1,21 @@
 import axios, { AxiosError } from 'axios'
 
-export function hasMessage(obj: unknown): obj is { message: string } {
-  if (typeof obj !== 'object' || obj === null) return false
-  const rec = obj as Record<string, unknown>
-  return typeof rec.message === 'string'
-}
-
 export function getApiErrorMessage(
   error: unknown,
   options?: {
     conflictMessage?: string
     defaultServerMessage?: string
+    serviceUnavailableMessage?: string
     unauthorizedMessage?: string
   },
 ): string {
   const defaultServer =
     options?.defaultServerMessage ?? 'Wystąpił błąd po stronie serwera. Spróbuj ponownie później.'
   const conflictMsg = options?.conflictMessage ?? 'Zasób jest już zajęty.'
-  const unauthorizedMsg =
-    options?.unauthorizedMessage ?? 'Nieprawidłowa nazwa użytkownika lub hasło.'
+  const serviceUnavailableMsg =
+    options?.serviceUnavailableMessage ??
+    'Serwis jest chwilowo niedostępny. Spróbuj ponownie później.'
+  const unauthorizedMsg = options?.unauthorizedMessage ?? 'Sesja wygasła. Zaloguj się ponownie.'
 
   if (!axios.isAxiosError(error)) {
     return 'Wystąpił błąd. Spróbuj ponownie.'
@@ -30,9 +27,7 @@ export function getApiErrorMessage(
     const status = axiosErr.response.status
     if (status === 401) return unauthorizedMsg
     if (status === 409) return conflictMsg
-
-    const data = axiosErr.response.data
-    if (hasMessage(data)) return data.message
+    if (status === 503) return serviceUnavailableMsg
 
     return defaultServer
   }
