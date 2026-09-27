@@ -10,19 +10,19 @@ import {
 } from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { uploadFileToStorage } from '@/utils/storage'
 import type {
-  regulationPreparationStatus,
-  regulationRepresentation,
-  regulationType,
-} from '@/types/api/regulations.ts'
+  RegulationPreparationStatus,
+  RegulationRepresentation,
+  RegulationType,
+} from '@/api/generated/model'
 
 export type uploadTarget = 'user' | 'public'
 
 type regulationUploadResult = {
   id: string
-  preparationStatus: regulationPreparationStatus
+  preparationStatus: RegulationPreparationStatus
 }
 
-export const regulationTypeOptions: Array<{ label: string; value: regulationType }> = [
+export const regulationTypeOptions: Array<{ label: string; value: RegulationType }> = [
   { label: 'Ustawa', value: 'ACT' },
   { label: 'Rozporządzenie', value: 'DECREE' },
   { label: 'Regulamin', value: 'STATUTE' },
@@ -45,7 +45,7 @@ async function uploadRegulation(
   target: uploadTarget,
   regulation: File,
   presentationName: string,
-  regulationType?: regulationType,
+  regulationType?: RegulationType,
 ): Promise<regulationUploadResult> {
   const addRegulation = target === 'public' ? addPublicRegulation : addUserRegulation
   const confirm = target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
@@ -63,7 +63,7 @@ async function uploadRegulation(
 export function useRegulationUpload() {
   const selectedFile = ref<File | null>(null)
   const presentationName = ref('')
-  const selectedRegulationType = ref<regulationType | ''>('')
+  const selectedRegulationType = ref<RegulationType | ''>('')
   const target = ref<uploadTarget>('user')
   const isSubmitting = ref(false)
 
@@ -82,7 +82,7 @@ export function useRegulationUpload() {
   }
 
   async function submit(): Promise<{
-    regulation: regulationRepresentation
+    regulation: RegulationRepresentation
     target: uploadTarget
   } | null> {
     if (!selectedFile.value) {

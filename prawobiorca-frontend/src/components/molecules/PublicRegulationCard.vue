@@ -5,7 +5,7 @@ import {
   retryPublicRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { ElMessage } from 'element-plus'
-import type { regulationRepresentation } from '@/types/api/regulations.ts'
+import type { RegulationRepresentation } from '@/api/generated/model'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
 import RefreshRoundedIcon from '@iconify-vue/material-symbols/refresh-rounded'
@@ -15,7 +15,7 @@ import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
 
 type Props = {
-  regulation: regulationRepresentation
+  regulation: RegulationRepresentation
   isAdmin?: boolean
 }
 

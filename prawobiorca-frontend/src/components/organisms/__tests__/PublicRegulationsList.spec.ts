@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PublicRegulationsList from '../PublicRegulationsList.vue'
-import type { regulationRepresentation } from '@/types/api/regulations'
+import type { RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   deletePublicRegulation: vi.fn(),
   retryPublicRegulationPreparation: vi.fn(),
 }))
 
-const mockRegulations: regulationRepresentation[] = [
+const mockRegulations: RegulationRepresentation[] = [
   {
     id: '1',
     presentationName: 'Prepared Doc',

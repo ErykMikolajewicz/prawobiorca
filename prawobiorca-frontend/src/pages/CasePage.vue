@@ -13,7 +13,7 @@ import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 import { generatePdf } from '@/api/cases.ts'
 import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
-import type { DocumentData } from '@/types/api/documents.ts'
+import type { CaseDocument } from '@/api/generated/model'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -23,7 +23,7 @@ const caseId = route.params.id as string
 const authStore = useAuthStore()
 const { isUserLogged } = storeToRefs(authStore)
 
-const documents = ref<Array<DocumentData>>([])
+const documents = ref<Array<CaseDocument>>([])
 
 const loadDocuments = async () => {
   if (isUserLogged.value) {

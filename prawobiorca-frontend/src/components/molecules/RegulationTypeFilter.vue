@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { regulationTypeOptions } from '@/composables/useRegulationUpload'
-import type { regulationType } from '@/types/api/regulations.ts'
+import type { RegulationType } from '@/api/generated/model'
 
 type Props = {
-  modelValue: regulationType | undefined
+  modelValue: RegulationType | undefined
 }
 
 defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: regulationType | undefined): void
+  (e: 'update:modelValue', value: RegulationType | undefined): void
 }>()
 
-function handleChange(value: regulationType | '' | undefined) {
+function handleChange(value: RegulationType | '' | undefined) {
   emit('update:modelValue', value ? value : undefined)
 }
 </script>

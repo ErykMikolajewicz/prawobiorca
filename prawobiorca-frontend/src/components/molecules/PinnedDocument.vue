@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { DocumentData } from '@/types/api/documents.ts'
+import type { CaseDocument } from '@/api/generated/model'
 
-type Props = { document: DocumentData }
+type Props = { document: CaseDocument }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{

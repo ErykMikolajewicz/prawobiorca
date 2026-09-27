@@ -2,10 +2,10 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
-import type { caseData } from '@/types/api/cases'
+import type { CaseData } from '@/api/generated/model'
 
 const props = defineProps<{
-  cases: Array<caseData>
+  cases: Array<CaseData>
   selectedCaseId?: string
 }>()
 

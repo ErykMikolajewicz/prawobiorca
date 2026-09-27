@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import SearchResultItem from '@/components/molecules/SearchResultItem.vue'
-import type { searchResult } from '@/types/api/search.ts'
+import type { SearchResult } from '@/api/generated/model'
 
 const props = defineProps<{
-  results: Array<searchResult>
+  results: Array<SearchResult>
   selectedCaseId?: string
   query: string
 }>()
@@ -21,7 +21,7 @@ const onAddToCase = (payload: { documentContent: string }) => {
 
 type ResultGroup = {
   header: string | null
-  items: Array<searchResult>
+  items: Array<SearchResult>
 }
 
 const groupedResults = computed<Array<ResultGroup>>(() => {

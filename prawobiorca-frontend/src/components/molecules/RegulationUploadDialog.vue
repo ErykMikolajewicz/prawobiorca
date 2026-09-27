@@ -2,7 +2,7 @@
 import { watch } from 'vue'
 import FileSelectButton from '@/components/atoms/FileSelectButton.vue'
 import { useRegulationUpload, regulationTypeOptions } from '@/composables/useRegulationUpload'
-import type { regulationRepresentation } from '@/types/api/regulations.ts'
+import type { RegulationRepresentation } from '@/api/generated/model'
 import type { uploadTarget } from '@/composables/useRegulationUpload'
 
 type Props = {
@@ -14,7 +14,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'created', regulation: regulationRepresentation, target: uploadTarget): void
+  (e: 'created', regulation: RegulationRepresentation, target: uploadTarget): void
 }>()
 
 const {

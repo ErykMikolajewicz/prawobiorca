@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PublicRegulationCard from '../PublicRegulationCard.vue'
 import { retryPublicRegulationPreparation } from '@/api/generated/endpoints/regulations/regulations'
-import type { regulationPreparationStatus, regulationRepresentation } from '@/types/api/regulations'
+import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   deletePublicRegulation: vi.fn(),
@@ -16,8 +16,8 @@ vi.mock('element-plus', () => ({
   },
 }))
 
-function mountCard(preparationStatus: regulationPreparationStatus, isAdmin: boolean) {
-  const regulation: regulationRepresentation = {
+function mountCard(preparationStatus: RegulationPreparationStatus, isAdmin: boolean) {
+  const regulation: RegulationRepresentation = {
     id: 'uuid-1',
     presentationName: 'Ustawa testowa',
     regulationType: 'ACT',

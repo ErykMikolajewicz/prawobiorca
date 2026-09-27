@@ -21,7 +21,6 @@ seed = { cmd = "uv run scripts/seed_relational_db.py", cwd = "core-service" }
 init_regulations = { cmd = "uv run scripts/init_regulations.py", cwd = "core-service" }
 init_e2e_regulation = { cmd = "uv run scripts/init_e2e_regulation.py", cwd = "core-service" }
 export_openapi = { cmd = "uv run scripts/export_openapi.py", cwd = "core-service" }
-generate_api_types = { cmd = "pnpm generate:api-types", cwd = "prawobiorca-frontend" }
 generate_api_client = { cmd = "pnpm generate:api-client", cwd = "prawobiorca-frontend" }
 
 [tasks.cov]
@@ -36,7 +35,7 @@ sequence = [
 sequence = ["build_app", "build_extraction-service", "build_embedding-service", "build_frontend"]
 
 [tasks.api_types]
-sequence = ["export_openapi", "generate_api_types", "generate_api_client"]
+sequence = ["export_openapi", "generate_api_client"]
 
 [tasks.init_db]
 sequence = ["upgrade_db", "seed", "init_regulations"]

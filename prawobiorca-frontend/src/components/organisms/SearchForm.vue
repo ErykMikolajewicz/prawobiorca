@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 
-import type { searchParams } from '@/types/api/search.ts'
+import type { SearchRegulationDocumentsParams } from '@/api/generated/model'
 
 const props = defineProps<{
-  searchParams: searchParams
+  searchParams: SearchRegulationDocumentsParams
 }>()
 
 const emit = defineEmits<{
-  (e: 'search', searchConfig: searchParams): void
+  (e: 'search', searchConfig: SearchRegulationDocumentsParams): void
 }>()
 
-const searchParams = reactive<searchParams>({
+const searchParams = reactive<SearchRegulationDocumentsParams>({
   ...props.searchParams,
   threshold: props.searchParams.threshold ?? 0.2,
   order_by: props.searchParams.order_by ?? 'document',

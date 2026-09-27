@@ -13,31 +13,30 @@ import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regu
 import { getUserRegulations } from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
-import type { regulationRepresentation, regulationType } from '@/types/api/regulations.ts'
+import type { CaseData, RegulationRepresentation, RegulationType } from '@/api/generated/model'
 import { getCasesList } from '@/api/generated/endpoints/cases/cases'
-import type { caseData } from '@/types/api/cases.ts'
 
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const { isUserLogged, isAdmin } = storeToRefs(authStore)
 
-const publicRegulations = ref<Array<regulationRepresentation>>([])
+const publicRegulations = ref<Array<RegulationRepresentation>>([])
 
-const userRegulations = ref<Array<regulationRepresentation>>([])
+const userRegulations = ref<Array<RegulationRepresentation>>([])
 
-const cases = ref<Array<caseData>>([])
+const cases = ref<Array<CaseData>>([])
 
 const isUploadDialogVisible = ref(false)
 
-const publicRegulationTypeFilter = ref<regulationType | undefined>(undefined)
-const userRegulationTypeFilter = ref<regulationType | undefined>(undefined)
+const publicRegulationTypeFilter = ref<RegulationType | undefined>(undefined)
+const userRegulationTypeFilter = ref<RegulationType | undefined>(undefined)
 
-function handleCaseCreated(newCase: caseData) {
+function handleCaseCreated(newCase: CaseData) {
   cases.value.push(newCase)
 }
 
-function handleRegulationCreated(regulation: regulationRepresentation, target: 'user' | 'public') {
+function handleRegulationCreated(regulation: RegulationRepresentation, target: 'user' | 'public') {
   if (target === 'public') {
     publicRegulations.value.push(regulation)
   } else {
@@ -65,7 +64,7 @@ function handlePublicRegulationPreparationRetried(regulationId: string) {
   markAsInProgress(publicRegulations.value, regulationId)
 }
 
-function markAsInProgress(regulations: Array<regulationRepresentation>, regulationId: string) {
+function markAsInProgress(regulations: Array<RegulationRepresentation>, regulationId: string) {
   const regulation = regulations.find((item) => item.id === regulationId)
   if (regulation) {
     regulation.preparationStatus = 'IN_PROGRESS'
@@ -101,7 +100,7 @@ async function fetchUserRegulations() {
 watch(publicRegulationTypeFilter, fetchPublicRegulations)
 watch(userRegulationTypeFilter, fetchUserRegulations)
 
-function isPending(regulation: regulationRepresentation): boolean {
+function isPending(regulation: RegulationRepresentation): boolean {
   return (
     regulation.preparationStatus === 'NOT_STARTED' || regulation.preparationStatus === 'IN_PROGRESS'
   )

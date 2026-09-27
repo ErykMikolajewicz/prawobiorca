@@ -13,8 +13,12 @@ import SearchResultsList from '@/components/organisms/SearchResultsList.vue'
 
 import { useAuthStore } from '@/stores/auth'
 import { addCaseDocument, getCasesList } from '@/api/generated/endpoints/cases/cases'
-import type { caseData } from '@/types/api/cases'
-import type { searchResult, searchParams, searchOrder } from '@/types/api/search.ts'
+import type {
+  CaseData,
+  SearchOrder,
+  SearchRegulationDocumentsParams,
+  SearchResult,
+} from '@/api/generated/model'
 import { searchRegulationDocuments } from '@/api/generated/endpoints/regulations/regulations'
 import { searchUserRegulationDocuments } from '@/api/generated/endpoints/user-regulations/user-regulations'
 
@@ -25,16 +29,16 @@ const { isUserLogged } = storeToRefs(authStore)
 
 const regulationId = ref((route.params.regulationId as string) || '')
 const regulationName = history.state.filename
-const searchParams = ref<searchParams>({
+const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
   threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.2,
   limit: route.query.limit ? Number(route.query.limit) : undefined,
-  order_by: (route.query.order_by as searchOrder) || 'document',
+  order_by: (route.query.order_by as SearchOrder) || 'document',
 })
 
-const cases = ref<Array<caseData>>([])
+const cases = ref<Array<CaseData>>([])
 const selectedCaseId = ref<string>('')
-const results = ref<Array<searchResult>>([])
+const results = ref<Array<SearchResult>>([])
 const isSearching = ref(false)
 
 onBeforeMount(async () => {
@@ -48,7 +52,7 @@ onBeforeMount(async () => {
   }
 })
 
-const handleSearch = async (newSearchParams: searchParams) => {
+const handleSearch = async (newSearchParams: SearchRegulationDocumentsParams) => {
   searchParams.value = newSearchParams
 
   await router.replace({
@@ -58,15 +62,15 @@ const handleSearch = async (newSearchParams: searchParams) => {
   await performSearch(newSearchParams)
 }
 
-async function performSearch(searchParams: searchParams) {
+async function performSearch(params: SearchRegulationDocumentsParams) {
   isSearching.value = true
 
   const isUserFile = route.path.includes('/user/regulations')
   try {
     if (isUserFile) {
-      results.value = await searchUserRegulationDocuments(regulationId.value, searchParams)
+      results.value = await searchUserRegulationDocuments(regulationId.value, params)
     } else {
-      results.value = await searchRegulationDocuments(regulationId.value, searchParams)
+      results.value = await searchRegulationDocuments(regulationId.value, params)
     }
   } catch (error) {
     ElMessage.error('Wystąpił błąd podczas przeszukiwania regulacji.')

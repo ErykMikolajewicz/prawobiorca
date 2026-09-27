@@ -12,10 +12,10 @@ import IconMotion from '@/components/atoms/IconMotion.vue'
 import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
-import type { regulationRepresentation } from '@/types/api/regulations.ts'
+import type { RegulationRepresentation } from '@/api/generated/model'
 
 type Props = {
-  regulation: regulationRepresentation
+  regulation: RegulationRepresentation
 }
 
 const props = defineProps<Props>()

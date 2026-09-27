@@ -2,18 +2,18 @@
 import { computed } from 'vue'
 import PublicRegulationCard from '@/components/molecules/PublicRegulationCard.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
-import type { regulationRepresentation, regulationType } from '@/types/api/regulations.ts'
+import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 
 type Props = {
-  regulations: Array<regulationRepresentation>
-  typeFilter: regulationType | undefined
+  regulations: Array<RegulationRepresentation>
+  typeFilter: RegulationType | undefined
   isAdmin?: boolean
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'update:typeFilter', value: regulationType | undefined): void
+  (e: 'update:typeFilter', value: RegulationType | undefined): void
   (e: 'regulation-deleted', regulationId: string): void
   (e: 'regulation-preparation-retried', regulationId: string): void
 }>()

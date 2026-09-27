@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import PinnedDocument from '@/components/molecules/PinnedDocument.vue'
-import type { DocumentData } from '@/types/api/documents.ts'
+import type { CaseDocument } from '@/api/generated/model'
 
-defineProps<{ documents: Array<DocumentData> }>()
+defineProps<{ documents: Array<CaseDocument> }>()
 
 const emit = defineEmits<{
   (e: 'unpin', id: string): void

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import UserRegulationCard from '@/components/molecules/UserRegulationCard.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
-import type { regulationRepresentation, regulationType } from '@/types/api/regulations.ts'
+import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 
 type Props = {
-  regulations: Array<regulationRepresentation>
-  typeFilter: regulationType | undefined
+  regulations: Array<RegulationRepresentation>
+  typeFilter: RegulationType | undefined
 }
 
 defineProps<Props>()
@@ -13,7 +13,7 @@ defineProps<Props>()
 const emit = defineEmits<{
   (e: 'user-regulation-deleted', regulationId: string): void
   (e: 'user-regulation-preparation-retried', regulationId: string): void
-  (e: 'update:typeFilter', value: regulationType | undefined): void
+  (e: 'update:typeFilter', value: RegulationType | undefined): void
 }>()
 </script>
 

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getApiErrorMessage } from '@/utils/error'
-import type { regulationPreparationStatus } from '@/types/api/regulations.ts'
+import type { RegulationPreparationStatus } from '@/api/generated/model'
 
 export type preparationStatusOption = {
   label: string
@@ -9,7 +9,7 @@ export type preparationStatusOption = {
 }
 
 export const preparationStatusOptions: Record<
-  Exclude<regulationPreparationStatus, 'PREPARED'>,
+  Exclude<RegulationPreparationStatus, 'PREPARED'>,
   preparationStatusOption
 > = {
   NOT_STARTED: { label: 'Oczekuje', tagType: 'info' },

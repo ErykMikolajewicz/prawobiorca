@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SearchResultsList from '../SearchResultsList.vue'
-import type { searchResult } from '@/types/api/search'
+import type { SearchResult } from '@/api/generated/model'
 
-const mockResults: searchResult[] = [
+const mockResults: SearchResult[] = [
   {
     id: '1',
     score: 0.5,

@@ -2,12 +2,12 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
-import type { searchResultElement, searchResultHighlight } from '@/types/api/search.ts'
+import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
 
 const props = defineProps<{
   result: string
-  elements?: Array<searchResultElement> | null
-  highlight?: searchResultHighlight | null
+  elements?: Array<SearchResultElement> | null
+  highlight?: SearchResultHighlight | null
   score: number
   selectedCaseId?: string
 }>()
