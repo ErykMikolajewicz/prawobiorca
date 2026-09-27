@@ -18,7 +18,6 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-app.use(router)
 app.use(ElementPlus)
 
 const authStore = useAuthStore(pinia)
@@ -38,4 +37,5 @@ try {
   ElMessage.error(getApiErrorMessage(error))
 }
 
+app.use(router)
 app.mount('#app')

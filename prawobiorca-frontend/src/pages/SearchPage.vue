@@ -43,6 +43,10 @@ const results = ref<Array<SearchResult>>([])
 const isSearching = ref(false)
 
 onBeforeMount(async () => {
+  if (searchParams.value.query) {
+    void performSearch(searchParams.value)
+  }
+
   if (isUserLogged.value) {
     try {
       cases.value = await getCasesList()

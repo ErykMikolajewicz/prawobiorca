@@ -82,7 +82,6 @@ async function fetchPublicRegulations() {
     })
   } catch (error) {
     console.error('Failed to fetch public files:', error)
-    publicRegulations.value = []
   }
 }
 
@@ -93,7 +92,6 @@ async function fetchUserRegulations() {
     })
   } catch (error) {
     console.error('Failed to fetch user regulations:', error)
-    userRegulations.value = []
   }
 }
 
