@@ -2,6 +2,8 @@
 import { computed, ref, onBeforeMount, watch } from 'vue'
 
 import { storeToRefs } from 'pinia'
+import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@/utils/error'
 
 import AppNavbar from '@/components/organisms/AppNavbar.vue'
 import AppFooter from '@/components/organisms/AppFooter.vue'
@@ -62,27 +64,44 @@ function handleCaseDeleted(caseId: string) {
 }
 
 async function fetchPublicRegulations() {
-  try {
-    publicRegulations.value = await getPublicRegulations({
-      documentType: publicRegulationTypeFilter.value,
-    })
-  } catch (error) {
-    console.error('Failed to fetch public files:', error)
-  }
+  publicRegulations.value = await getPublicRegulations({
+    documentType: publicRegulationTypeFilter.value,
+  })
 }
 
 async function fetchUserRegulations() {
+  userRegulations.value = await getUserRegulations({
+    documentType: userRegulationTypeFilter.value,
+  })
+}
+
+async function fetchCases() {
+  cases.value = await getCasesList()
+}
+
+async function loadWithErrorMessage(fetch: () => Promise<void>, errorMessage: string) {
   try {
-    userRegulations.value = await getUserRegulations({
-      documentType: userRegulationTypeFilter.value,
-    })
+    await fetch()
   } catch (error) {
-    console.error('Failed to fetch user regulations:', error)
+    ElMessage.error(getApiErrorMessage(error, { defaultServerMessage: errorMessage }))
+    console.error(error)
   }
 }
 
-watch(publicRegulationTypeFilter, fetchPublicRegulations)
-watch(userRegulationTypeFilter, fetchUserRegulations)
+async function loadPublicRegulations() {
+  await loadWithErrorMessage(fetchPublicRegulations, 'Nie udało się pobrać regulacji publicznych.')
+}
+
+async function loadUserRegulations() {
+  await loadWithErrorMessage(fetchUserRegulations, 'Nie udało się pobrać regulacji użytkownika.')
+}
+
+async function loadCases() {
+  await loadWithErrorMessage(fetchCases, 'Nie udało się pobrać spraw.')
+}
+
+watch(publicRegulationTypeFilter, loadPublicRegulations)
+watch(userRegulationTypeFilter, loadUserRegulations)
 
 function isPending(regulation: RegulationRepresentation): boolean {
   return (
@@ -98,26 +117,25 @@ const hasPendingRegulations = computed(() => {
 })
 
 async function refreshRegulations() {
-  await fetchPublicRegulations()
+  try {
+    await fetchPublicRegulations()
 
-  if (isUserLogged.value) {
-    await fetchUserRegulations()
+    if (isUserLogged.value) {
+      await fetchUserRegulations()
+    }
+  } catch (error) {
+    console.error('Failed to refresh regulations:', error)
   }
 }
 
 useRegulationsPolling(() => hasPendingRegulations.value, refreshRegulations)
 
 onBeforeMount(async () => {
-  await fetchPublicRegulations()
+  await loadPublicRegulations()
 
   if (isUserLogged.value) {
-    try {
-      await fetchUserRegulations()
-      cases.value = await getCasesList()
-    } catch (error) {
-      console.error('Failed to fetch user data:', error)
-      cases.value = []
-    }
+    await loadUserRegulations()
+    await loadCases()
   }
 })
 </script>

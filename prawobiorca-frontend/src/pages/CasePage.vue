@@ -32,6 +32,11 @@ const loadDocuments = async () => {
     try {
       documents.value = await getCaseDocuments(caseId)
     } catch (error) {
+      ElMessage.error(
+        getApiErrorMessage(error, {
+          defaultServerMessage: 'Nie udało się pobrać przypiętych dokumentów.',
+        }),
+      )
       console.error('Failed to fetch case articles:', error)
       documents.value = []
     }

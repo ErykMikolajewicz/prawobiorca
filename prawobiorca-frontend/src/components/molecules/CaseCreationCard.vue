@@ -18,7 +18,7 @@ async function createCase() {
   }
 
   try {
-    const caseId: string = await addCase({ caseName: newCaseName.value })
+    const caseId: string = await addCase({ caseName: newCaseName.value.trim() })
     const newCase = {
       id: caseId,
       name: newCaseName.value.trim(),
