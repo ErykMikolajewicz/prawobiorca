@@ -165,9 +165,6 @@
           "503": {
             "description": "Service unavailable!"
           },
-          "204": {
-            "description": "No public files for given search criteria."
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -305,9 +302,6 @@
           },
           "503": {
             "description": "Service unavailable!"
-          },
-          "204": {
-            "description": "No search results."
           },
           "400": {
             "description": "Regulation not prepared, normally should not occur."
@@ -589,9 +583,6 @@
           },
           "503": {
             "description": "Service unavailable!"
-          },
-          "204": {
-            "description": "No user cases."
           }
         }
       },
@@ -774,9 +765,6 @@
           "503": {
             "description": "Service unavailable!"
           },
-          "204": {
-            "description": "No documents for case."
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -871,9 +859,6 @@
           },
           "503": {
             "description": "Service unavailable!"
-          },
-          "204": {
-            "description": "Not found user files with that criteria."
           },
           "422": {
             "description": "Validation Error",
@@ -1160,9 +1145,6 @@
           },
           "503": {
             "description": "Service unavailable!"
-          },
-          "204": {
-            "description": "No search results."
           },
           "400": {
             "description": "Regulation not prepared, by user, can't search."

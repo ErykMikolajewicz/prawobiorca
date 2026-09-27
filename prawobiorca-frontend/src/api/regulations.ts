@@ -20,7 +20,7 @@ export async function getPublicRegulations(
   regulationType?: regulationType,
 ): Promise<Array<regulationRepresentation>> {
   try {
-    const response = await prawobiorcaClient.get('/regulations', {
+    const response = await prawobiorcaClient.get('/api/regulations', {
       params: regulationType ? { documentType: regulationType } : undefined,
     })
 
@@ -42,7 +42,7 @@ export async function getUserRegulations(
   regulationType?: regulationType,
 ): Promise<Array<regulationRepresentation>> {
   try {
-    const response = await prawobiorcaClient.get('/user/regulations', {
+    const response = await prawobiorcaClient.get('/api/user/regulations', {
       params: regulationType ? { documentType: regulationType } : undefined,
     })
 
@@ -63,12 +63,12 @@ export async function getUserRegulations(
 export async function createPublicRegulation(
   data: regulationData,
 ): Promise<regulationUploadTarget> {
-  const response = await prawobiorcaClient.post('/regulations', data)
+  const response = await prawobiorcaClient.post('/api/regulations', data)
   return response.data
 }
 
 export async function createUserRegulation(data: regulationData): Promise<regulationUploadTarget> {
-  const response = await prawobiorcaClient.post('/user/regulations', data)
+  const response = await prawobiorcaClient.post('/api/user/regulations', data)
   return response.data
 }
 
@@ -91,15 +91,15 @@ export async function uploadFileToStorage(
 }
 
 export async function confirmPublicRegulationUpload(regulationId: string): Promise<void> {
-  await prawobiorcaClient.post(`/regulations/${regulationId}/confirm-upload`)
+  await prawobiorcaClient.post(`/api/regulations/${regulationId}/confirm-upload`)
 }
 
 export async function confirmUserRegulationUpload(regulationId: string): Promise<void> {
-  await prawobiorcaClient.post(`/user/regulations/${regulationId}/confirm-upload`)
+  await prawobiorcaClient.post(`/api/user/regulations/${regulationId}/confirm-upload`)
 }
 
 export async function getPublicRegulationDownloadUrl(regulationId: string): Promise<string> {
-  const response = await prawobiorcaClient.get(`/regulations/${regulationId}/download-url`)
+  const response = await prawobiorcaClient.get(`/api/regulations/${regulationId}/download-url`)
   const url = response.data
   if (import.meta.env.DEV && typeof url === 'string' && url.includes('localhost:9000')) {
     return url.replace(/^https?:\/\/localhost:9000/, '/storage')
@@ -108,7 +108,7 @@ export async function getPublicRegulationDownloadUrl(regulationId: string): Prom
 }
 
 export async function getUserRegulationDownloadUrl(regulationId: string): Promise<string> {
-  const response = await prawobiorcaClient.get(`/user/regulations/${regulationId}/download-url`)
+  const response = await prawobiorcaClient.get(`/api/user/regulations/${regulationId}/download-url`)
   const url = response.data
   if (import.meta.env.DEV && typeof url === 'string' && url.includes('localhost:9000')) {
     return url.replace(/^https?:\/\/localhost:9000/, '/storage')
@@ -170,26 +170,26 @@ export async function uploadPublicRegulation(
 }
 
 export async function deleteUserRegulation(regulationId: string): Promise<void> {
-  await prawobiorcaClient.delete(`/user/regulations/${regulationId}`)
+  await prawobiorcaClient.delete(`/api/user/regulations/${regulationId}`)
 }
 
 export async function deletePublicRegulation(regulationId: string): Promise<void> {
-  await prawobiorcaClient.delete(`/regulations/${regulationId}`)
+  await prawobiorcaClient.delete(`/api/regulations/${regulationId}`)
 }
 
 export async function retryUserRegulationPreparation(regulationId: string): Promise<void> {
-  await prawobiorcaClient.post(`/user/regulations/${regulationId}/preparation-retry`)
+  await prawobiorcaClient.post(`/api/user/regulations/${regulationId}/preparation-retry`)
 }
 
 export async function retryPublicRegulationPreparation(regulationId: string): Promise<void> {
-  await prawobiorcaClient.post(`/regulations/${regulationId}/preparation-retry`)
+  await prawobiorcaClient.post(`/api/regulations/${regulationId}/preparation-retry`)
 }
 
 export async function searchRegulation(
   searchParams: searchParams,
   regulationId: string,
 ): Promise<Array<searchResult>> {
-  const response = await prawobiorcaClient.get(`/regulations/${regulationId}/documents`, {
+  const response = await prawobiorcaClient.get(`/api/regulations/${regulationId}/documents`, {
     params: { ...searchParams },
   })
 
@@ -203,7 +203,7 @@ export async function searchUserRegulation(
   searchParams: searchParams,
   regulationId: string,
 ): Promise<Array<searchResult>> {
-  const response = await prawobiorcaClient.get(`/user/regulations/${regulationId}/documents`, {
+  const response = await prawobiorcaClient.get(`/api/user/regulations/${regulationId}/documents`, {
     params: { ...searchParams },
   })
 

@@ -71,7 +71,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: prawobiorca-frontend
       - run: uv run poe api_types
-      - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/types/api/schema.ts
+      - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/types/api/schema.ts prawobiorca-frontend/src/api/generated
 
   e2e:
     if: github.repository == 'ErykMikolajewicz/prawobiorca-backend' && github.base_ref == 'main'

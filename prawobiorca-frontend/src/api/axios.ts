@@ -1,11 +1,17 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios'
+import axios, { type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios'
 
 import { notifySessionExpired } from '@/api/sessionExpiry'
 
-export const prawobiorcaClient = axios.create({
-  baseURL: '/api',
-})
+export const prawobiorcaClient = axios.create()
 prawobiorcaClient.defaults.withCredentials = true
+
+export async function prawobiorcaRequest<T>(
+  config: AxiosRequestConfig,
+  options?: AxiosRequestConfig,
+): Promise<T> {
+  const response = await prawobiorcaClient<T>({ ...config, ...options })
+  return response.data
+}
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
 
@@ -29,7 +35,7 @@ let refreshPromise: Promise<void> | null = null
  */
 function refreshTokens(): Promise<void> {
   refreshPromise ??= prawobiorcaClient
-    .post('/auth/refresh')
+    .post('/api/auth/refresh')
     .then(() => undefined)
     .finally(() => {
       refreshPromise = null

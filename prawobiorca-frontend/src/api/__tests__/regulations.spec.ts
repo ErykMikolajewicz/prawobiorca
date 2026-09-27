@@ -42,7 +42,7 @@ describe('regulations API', () => {
     }
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ data: mockTarget })
     const target = await createUserRegulation({ name: 'Regulamin', regulationType: 'STATUTE' })
-    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/user/regulations', {
+    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/api/user/regulations', {
       name: 'Regulamin',
       regulationType: 'STATUTE',
     })
@@ -57,7 +57,7 @@ describe('regulations API', () => {
     }
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ data: mockTarget })
     const target = await createPublicRegulation({ name: 'Ustawa', regulationType: 'ACT' })
-    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/regulations', {
+    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/api/regulations', {
       name: 'Ustawa',
       regulationType: 'ACT',
     })
@@ -101,13 +101,15 @@ describe('regulations API', () => {
   it('confirmUserRegulationUpload sends POST to confirm endpoint', async () => {
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ status: 204 })
     await confirmUserRegulationUpload('uuid-123')
-    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/user/regulations/uuid-123/confirm-upload')
+    expect(prawobiorcaClient.post).toHaveBeenCalledWith(
+      '/api/user/regulations/uuid-123/confirm-upload',
+    )
   })
 
   it('confirmPublicRegulationUpload sends POST to confirm endpoint', async () => {
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ status: 204 })
     await confirmPublicRegulationUpload('uuid-456')
-    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/regulations/uuid-456/confirm-upload')
+    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/api/regulations/uuid-456/confirm-upload')
   })
 
   it('getUserRegulationDownloadUrl retrieves download url and rewrites localhost:9000 in dev', async () => {
@@ -115,7 +117,9 @@ describe('regulations API', () => {
       data: 'http://localhost:9000/regulations/uuid-123.pdf',
     })
     const url = await getUserRegulationDownloadUrl('uuid-123')
-    expect(prawobiorcaClient.get).toHaveBeenCalledWith('/user/regulations/uuid-123/download-url')
+    expect(prawobiorcaClient.get).toHaveBeenCalledWith(
+      '/api/user/regulations/uuid-123/download-url',
+    )
     expect(url).toBe('/storage/regulations/uuid-123.pdf')
   })
 
@@ -124,7 +128,7 @@ describe('regulations API', () => {
       data: 'http://localhost:9000/regulations/uuid-456.pdf',
     })
     const url = await getPublicRegulationDownloadUrl('uuid-456')
-    expect(prawobiorcaClient.get).toHaveBeenCalledWith('/regulations/uuid-456/download-url')
+    expect(prawobiorcaClient.get).toHaveBeenCalledWith('/api/regulations/uuid-456/download-url')
     expect(url).toBe('/storage/regulations/uuid-456.pdf')
   })
 
@@ -144,14 +148,14 @@ describe('regulations API', () => {
     const result = await uploadUserRegulation(file, 'User Doc', 'STATUTE')
 
     expect(result).toEqual({ id: 'uuid-user-1', preparationStatus: 'IN_PROGRESS' })
-    expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(1, '/user/regulations', {
+    expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(1, '/api/user/regulations', {
       name: 'User Doc',
       regulationType: 'STATUTE',
     })
     expect(axios.post).toHaveBeenCalledWith('https://s3.local/upload', expect.any(FormData))
     expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(
       2,
-      '/user/regulations/uuid-user-1/confirm-upload',
+      '/api/user/regulations/uuid-user-1/confirm-upload',
     )
   })
 
@@ -171,14 +175,14 @@ describe('regulations API', () => {
     const result = await uploadPublicRegulation(file, 'Public Doc', 'ACT')
 
     expect(result).toEqual({ id: 'uuid-pub-1', preparationStatus: 'IN_PROGRESS' })
-    expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(1, '/regulations', {
+    expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(1, '/api/regulations', {
       name: 'Public Doc',
       regulationType: 'ACT',
     })
     expect(axios.post).toHaveBeenCalledWith('https://s3.local/upload', expect.any(FormData))
     expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(
       2,
-      '/regulations/uuid-pub-1/confirm-upload',
+      '/api/regulations/uuid-pub-1/confirm-upload',
     )
   })
 
@@ -204,13 +208,15 @@ describe('regulations API', () => {
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ status: 202 })
     await retryUserRegulationPreparation('uuid-123')
     expect(prawobiorcaClient.post).toHaveBeenCalledWith(
-      '/user/regulations/uuid-123/preparation-retry',
+      '/api/user/regulations/uuid-123/preparation-retry',
     )
   })
 
   it('retryPublicRegulationPreparation sends POST to public preparation retry endpoint', async () => {
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ status: 202 })
     await retryPublicRegulationPreparation('uuid-456')
-    expect(prawobiorcaClient.post).toHaveBeenCalledWith('/regulations/uuid-456/preparation-retry')
+    expect(prawobiorcaClient.post).toHaveBeenCalledWith(
+      '/api/regulations/uuid-456/preparation-retry',
+    )
   })
 })

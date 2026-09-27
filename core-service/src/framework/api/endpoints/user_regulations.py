@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from src.app.dtos.regulations import RegulationData, RegulationRepresentation, RegulationUploadTarget
 from src.app.dtos.search import SearchParams, SearchResult
@@ -43,21 +43,13 @@ user_regulations_router = APIRouter(
 @user_regulations_router.get(
     "/user/regulations",
     response_model=list[RegulationRepresentation],
-    responses={
-        status.HTTP_204_NO_CONTENT: {"description": "Not found user files with that criteria."},
-    },
 )
 async def get_user_regulations(
     list_regulations: Annotated[ListRegulations, Depends(get_list_regulations)],
     user_id: Annotated[UUID, Depends(require_logged_user)],
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
-) -> list[RegulationRepresentation] | Response:
-    user_regulations = await list_regulations.execute(user_id, regulation_type)
-
-    if not user_regulations:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    return user_regulations
+) -> list[RegulationRepresentation]:
+    return await list_regulations.execute(user_id, regulation_type)
 
 
 @user_regulations_router.post(
@@ -159,7 +151,6 @@ async def delete_user_regulation(
     "/user/regulations/{regulationId}/documents",
     response_model=list[SearchResult],
     responses={
-        status.HTTP_204_NO_CONTENT: {"description": "No search results."},
         status.HTTP_400_BAD_REQUEST: {"description": "Regulation not prepared, by user, can't search."},
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found."},
     },
@@ -169,7 +160,7 @@ async def search_user_regulation_documents(
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
     user_id: Annotated[UUID, Depends(require_logged_user)],
     search_params: Annotated[SearchParams, Query()],
-) -> list[SearchResult] | Response:
+) -> list[SearchResult]:
     try:
         results = await search_regulation.execute(user_id, regulation_id, search_params)
     except RegulationNotFound:
@@ -182,9 +173,6 @@ async def search_user_regulation_documents(
             detail=f"Regulation {e.regulations_name}, not prepared to search,"
             f" report problem to application administrator.",
         )
-
-    if not results:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return results
 

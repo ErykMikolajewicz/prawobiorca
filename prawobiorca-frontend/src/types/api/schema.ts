@@ -758,13 +758,6 @@ export interface operations {
           'application/json': components['schemas']['RegulationRepresentation'][]
         }
       }
-      /** @description No public files for given search criteria. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
       /** @description Validation Error */
       422: {
         headers: {
@@ -847,13 +840,6 @@ export interface operations {
         content: {
           'application/json': components['schemas']['SearchResult'][]
         }
-      }
-      /** @description No search results. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
       /** @description Regulation not prepared, normally should not occur. */
       400: {
@@ -1144,13 +1130,6 @@ export interface operations {
           'application/json': components['schemas']['CaseData'][]
         }
       }
-      /** @description No user cases. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
       /** @description Service unavailable! */
       503: {
         headers: {
@@ -1262,13 +1241,6 @@ export interface operations {
         content: {
           'application/json': components['schemas']['CaseDocument'][]
         }
-      }
-      /** @description No documents for case. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
       /** @description Validation Error */
       422: {
@@ -1392,13 +1364,6 @@ export interface operations {
         content: {
           'application/json': components['schemas']['RegulationRepresentation'][]
         }
-      }
-      /** @description Not found user files with that criteria. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
       /** @description Validation Error */
       422: {
@@ -1636,13 +1601,6 @@ export interface operations {
         content: {
           'application/json': components['schemas']['SearchResult'][]
         }
-      }
-      /** @description No search results. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
       /** @description Regulation not prepared, by user, can't search. */
       400: {

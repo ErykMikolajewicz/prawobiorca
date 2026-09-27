@@ -6,7 +6,7 @@ export type currentUser = {
 }
 
 export async function logout(): Promise<void> {
-  await prawobiorcaClient.post('/auth/logout')
+  await prawobiorcaClient.post('/api/auth/logout')
 }
 
 export async function login(username: string, password: string): Promise<void> {
@@ -15,14 +15,14 @@ export async function login(username: string, password: string): Promise<void> {
   params.append('username', username)
   params.append('password', password)
 
-  await prawobiorcaClient.post('/auth/login', params, {
+  await prawobiorcaClient.post('/api/auth/login', params, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
 }
 
 export async function getCurrentUser(): Promise<currentUser | null> {
   try {
-    const response = await prawobiorcaClient.get('/auth/me')
+    const response = await prawobiorcaClient.get('/api/auth/me')
     return response.data
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {

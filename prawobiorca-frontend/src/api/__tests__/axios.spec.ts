@@ -61,70 +61,78 @@ describe('prawobiorcaClient refresh interceptor', () => {
   })
 
   it('odświeża tokeny po 401 i ponawia oryginalne żądanie', async () => {
-    const adapter = useAdapter({ '/user/cases': [401, 200] })
+    const adapter = useAdapter({ '/api/user/cases': [401, 200] })
 
-    const result = await prawobiorcaClient.get('/user/cases')
+    const result = await prawobiorcaClient.get('/api/user/cases')
 
     expect(result.status).toBe(200)
-    expect(calledPaths(adapter)).toEqual(['/user/cases', '/auth/refresh', '/user/cases'])
+    expect(calledPaths(adapter)).toEqual([
+      '/api/user/cases',
+      '/api/auth/refresh',
+      '/api/user/cases',
+    ])
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 
   it('odświeża tokeny raz dla równoległych 401', async () => {
     const adapter = useAdapter({
-      '/user/cases': [401, 200],
-      '/user/regulations': [401, 200],
-      '/user/cases/abc/documents': [401, 200],
+      '/api/user/cases': [401, 200],
+      '/api/user/regulations': [401, 200],
+      '/api/user/cases/abc/documents': [401, 200],
     })
 
     const results = await Promise.all([
-      prawobiorcaClient.get('/user/cases'),
-      prawobiorcaClient.get('/user/regulations'),
-      prawobiorcaClient.get('/user/cases/abc/documents'),
+      prawobiorcaClient.get('/api/user/cases'),
+      prawobiorcaClient.get('/api/user/regulations'),
+      prawobiorcaClient.get('/api/user/cases/abc/documents'),
     ])
 
     expect(results.map((r) => r.status)).toEqual([200, 200, 200])
-    expect(calledPaths(adapter).filter((url) => url === '/auth/refresh')).toHaveLength(1)
+    expect(calledPaths(adapter).filter((url) => url === '/api/auth/refresh')).toHaveLength(1)
   })
 
   it('zgłasza wygaśnięcie sesji i propaguje pierwotny błąd, gdy refresh też zwróci 401', async () => {
-    const adapter = useAdapter({ '/user/cases': [401], '/auth/refresh': [401] })
+    const adapter = useAdapter({ '/api/user/cases': [401], '/api/auth/refresh': [401] })
 
-    await expect(prawobiorcaClient.get('/user/cases')).rejects.toMatchObject({
+    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toMatchObject({
       response: { status: 401 },
-      config: { url: '/user/cases' },
+      config: { url: '/api/user/cases' },
     })
     expect(notifySessionExpired).toHaveBeenCalledOnce()
-    expect(calledPaths(adapter)).toEqual(['/user/cases', '/auth/refresh'])
+    expect(calledPaths(adapter)).toEqual(['/api/user/cases', '/api/auth/refresh'])
   })
 
   it('nie odświeża tokenów po 401 z logowania', async () => {
-    const adapter = useAdapter({ '/auth/login': [401] })
+    const adapter = useAdapter({ '/api/auth/login': [401] })
 
-    await expect(prawobiorcaClient.post('/auth/login')).rejects.toMatchObject({
+    await expect(prawobiorcaClient.post('/api/auth/login')).rejects.toMatchObject({
       response: { status: 401 },
     })
-    expect(calledPaths(adapter)).toEqual(['/auth/login'])
+    expect(calledPaths(adapter)).toEqual(['/api/auth/login'])
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 
   it('nie odświeża tokenów po 401 z /auth/me', async () => {
-    const adapter = useAdapter({ '/auth/me': [401] })
+    const adapter = useAdapter({ '/api/auth/me': [401] })
 
-    await expect(prawobiorcaClient.get('/auth/me')).rejects.toMatchObject({
+    await expect(prawobiorcaClient.get('/api/auth/me')).rejects.toMatchObject({
       response: { status: 401 },
     })
-    expect(calledPaths(adapter)).toEqual(['/auth/me'])
+    expect(calledPaths(adapter)).toEqual(['/api/auth/me'])
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 
   it('nie ponawia żądania po raz drugi, gdy po odświeżeniu nadal jest 401', async () => {
-    const adapter = useAdapter({ '/user/cases': [401, 401] })
+    const adapter = useAdapter({ '/api/user/cases': [401, 401] })
 
-    await expect(prawobiorcaClient.get('/user/cases')).rejects.toMatchObject({
+    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toMatchObject({
       response: { status: 401 },
     })
-    expect(calledPaths(adapter)).toEqual(['/user/cases', '/auth/refresh', '/user/cases'])
+    expect(calledPaths(adapter)).toEqual([
+      '/api/user/cases',
+      '/api/auth/refresh',
+      '/api/user/cases',
+    ])
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 })
