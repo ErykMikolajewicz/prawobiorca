@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import PublicRegulationsList from '../PublicRegulationsList.vue'
 import type { regulationRepresentation } from '@/types/api/regulations'
 
-vi.mock('@/api/regulations', () => ({
+vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   deletePublicRegulation: vi.fn(),
   retryPublicRegulationPreparation: vi.fn(),
 }))

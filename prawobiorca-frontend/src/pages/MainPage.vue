@@ -9,11 +9,12 @@ import PublicFilesList from '@/components/organisms/PublicRegulationsList.vue'
 import UserRegulationsList from '@/components/organisms/UserRegulationsList.vue'
 import UserCasesList from '@/components/organisms/UserCasesList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
-import { getPublicRegulations, getUserRegulations } from '@/api/regulations.ts'
+import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
+import { getUserRegulations } from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
 import type { regulationRepresentation, regulationType } from '@/types/api/regulations.ts'
-import { getCases } from '@/api/cases.ts'
+import { getCasesList } from '@/api/generated/endpoints/cases/cases'
 import type { caseData } from '@/types/api/cases.ts'
 
 import { useAuthStore } from '@/stores/auth'
@@ -77,7 +78,9 @@ function handleCaseDeleted(caseId: string) {
 
 async function fetchPublicRegulations() {
   try {
-    publicRegulations.value = await getPublicRegulations(publicRegulationTypeFilter.value)
+    publicRegulations.value = await getPublicRegulations({
+      documentType: publicRegulationTypeFilter.value,
+    })
   } catch (error) {
     console.error('Failed to fetch public files:', error)
     publicRegulations.value = []
@@ -86,7 +89,9 @@ async function fetchPublicRegulations() {
 
 async function fetchUserRegulations() {
   try {
-    userRegulations.value = await getUserRegulations(userRegulationTypeFilter.value)
+    userRegulations.value = await getUserRegulations({
+      documentType: userRegulationTypeFilter.value,
+    })
   } catch (error) {
     console.error('Failed to fetch user regulations:', error)
     userRegulations.value = []
@@ -125,7 +130,7 @@ onBeforeMount(async () => {
   if (isUserLogged.value) {
     try {
       await fetchUserRegulations()
-      cases.value = await getCases()
+      cases.value = await getCasesList()
     } catch (error) {
       console.error('Failed to fetch user data:', error)
       cases.value = []

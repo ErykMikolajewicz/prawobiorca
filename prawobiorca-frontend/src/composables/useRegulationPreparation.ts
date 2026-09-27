@@ -17,7 +17,7 @@ export const preparationStatusOptions: Record<
   FAILED: { label: 'Błąd przetwarzania', tagType: 'danger' },
 }
 
-export function useRegulationPreparation(retryFn: (regulationId: string) => Promise<void>) {
+export function useRegulationPreparation(retryFn: (regulationId: string) => Promise<unknown>) {
   const isRetrying = ref(false)
 
   async function retry(regulationId: string): Promise<boolean> {

@@ -12,11 +12,11 @@ import CaseSelector from '@/components/molecules/CaseSelector.vue'
 import SearchResultsList from '@/components/organisms/SearchResultsList.vue'
 
 import { useAuthStore } from '@/stores/auth'
-import { getCases } from '@/api/cases'
+import { addCaseDocument, getCasesList } from '@/api/generated/endpoints/cases/cases'
 import type { caseData } from '@/types/api/cases'
-import { addDocumentToCase } from '@/api/documents.ts'
 import type { searchResult, searchParams, searchOrder } from '@/types/api/search.ts'
-import { searchRegulation, searchUserRegulation } from '@/api/regulations.ts'
+import { searchRegulationDocuments } from '@/api/generated/endpoints/regulations/regulations'
+import { searchUserRegulationDocuments } from '@/api/generated/endpoints/user-regulations/user-regulations'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,7 +39,12 @@ const isSearching = ref(false)
 
 onBeforeMount(async () => {
   if (isUserLogged.value) {
-    cases.value = await getCases()
+    try {
+      cases.value = await getCasesList()
+    } catch (error) {
+      console.error('Failed to fetch cases:', error)
+      cases.value = []
+    }
   }
 })
 
@@ -59,9 +64,9 @@ async function performSearch(searchParams: searchParams) {
   const isUserFile = route.path.includes('/user/regulations')
   try {
     if (isUserFile) {
-      results.value = await searchUserRegulation(searchParams, regulationId.value)
+      results.value = await searchUserRegulationDocuments(regulationId.value, searchParams)
     } else {
-      results.value = await searchRegulation(searchParams, regulationId.value)
+      results.value = await searchRegulationDocuments(regulationId.value, searchParams)
     }
   } catch (error) {
     ElMessage.error('Wystąpił błąd podczas przeszukiwania regulacji.')
@@ -78,7 +83,10 @@ async function handleAddToCase(payload: { documentContent: string }) {
   }
 
   try {
-    await addDocumentToCase(selectedCaseId.value, regulationName, payload.documentContent)
+    await addCaseDocument(selectedCaseId.value, {
+      presentationName: regulationName,
+      content: payload.documentContent,
+    })
     ElMessage.success('Dodano do sprawy.')
   } catch (error) {
     ElMessage.error('Wystąpił błąd podczas dodawania do sprawy.')

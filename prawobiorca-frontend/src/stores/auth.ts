@@ -1,23 +1,41 @@
+import axios from 'axios'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import * as authApi from '@/api/auth'
+import { checkIsUserLogged, logoutUser, logUser } from '@/api/generated/endpoints/auth/auth'
+
+type currentUser = {
+  isAdmin: boolean
+}
+
+async function getCurrentUser(): Promise<currentUser | null> {
+  try {
+    return (await checkIsUserLogged()) as currentUser
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        return null
+      }
+    }
+    throw error
+  }
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const isUserLogged = ref(false)
   const isAdmin = ref(false)
 
   async function checkIsLogged(): Promise<void> {
-    const currentUser = await authApi.getCurrentUser()
+    const currentUser = await getCurrentUser()
     isUserLogged.value = currentUser !== null
     isAdmin.value = currentUser?.isAdmin ?? false
   }
 
   async function login(username: string, password: string): Promise<void> {
-    await authApi.login(username, password)
+    await logUser({ grant_type: 'password', username, password })
     isUserLogged.value = true
 
-    const currentUser = await authApi.getCurrentUser()
+    const currentUser = await getCurrentUser()
     isAdmin.value = currentUser?.isAdmin ?? false
   }
 
@@ -28,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     try {
-      await authApi.logout()
+      await logoutUser()
     } finally {
       resetSession()
     }

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PublicRegulationCard from '../PublicRegulationCard.vue'
-import { retryPublicRegulationPreparation } from '@/api/regulations'
+import { retryPublicRegulationPreparation } from '@/api/generated/endpoints/regulations/regulations'
 import type { regulationPreparationStatus, regulationRepresentation } from '@/types/api/regulations'
 
-vi.mock('@/api/regulations', () => ({
+vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   deletePublicRegulation: vi.fn(),
   retryPublicRegulationPreparation: vi.fn(),
 }))
@@ -74,7 +74,7 @@ describe('PublicRegulationCard', () => {
     const form = wrapper.find('form.form-action')
     expect(form.exists()).toBe(true)
 
-    vi.mocked(retryPublicRegulationPreparation).mockResolvedValueOnce()
+    vi.mocked(retryPublicRegulationPreparation).mockResolvedValueOnce(undefined)
     await form.trigger('submit.prevent')
 
     expect(retryPublicRegulationPreparation).toHaveBeenCalledWith('uuid-1')

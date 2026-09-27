@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Add2RoundedIcon from '@iconify-vue/material-symbols/add-2-rounded'
-import { addCase } from '@/api/cases'
+import { addCase } from '@/api/generated/endpoints/cases/cases'
 
 const newCaseName = ref('')
 const inputRef = ref<HTMLInputElement>()
@@ -19,7 +19,7 @@ async function createCase() {
     return
   }
 
-  const caseId: string = await addCase(newCaseName.value)
+  const caseId: string = await addCase({ caseName: newCaseName.value })
   const newCase = {
     id: caseId,
     name: newCaseName.value.trim(),

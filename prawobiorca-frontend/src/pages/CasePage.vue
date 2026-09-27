@@ -10,7 +10,8 @@ import AppFooter from '@/components/organisms/AppFooter.vue'
 import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 
-import { getCaseDocuments, unpinDocument, generatePdf } from '@/api/cases.ts'
+import { generatePdf } from '@/api/cases.ts'
+import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
 import type { DocumentData } from '@/types/api/documents.ts'
 import { ArrowLeft } from '@element-plus/icons-vue'
@@ -26,7 +27,12 @@ const documents = ref<Array<DocumentData>>([])
 
 const loadDocuments = async () => {
   if (isUserLogged.value) {
-    documents.value = await getCaseDocuments(caseId)
+    try {
+      documents.value = await getCaseDocuments(caseId)
+    } catch (error) {
+      console.error('Failed to fetch case articles:', error)
+      documents.value = []
+    }
   }
 }
 
@@ -35,7 +41,7 @@ onBeforeMount(async () => {
 })
 
 const handleUnpin = async (articleId: string) => {
-  await unpinDocument(articleId)
+  await deleteCaseDocument(articleId)
   await loadDocuments()
 }
 

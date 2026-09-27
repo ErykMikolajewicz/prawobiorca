@@ -9,8 +9,3 @@ export type regulationRepresentation = components['schemas']['RegulationRepresen
 export type regulationData = components['schemas']['RegulationData']
 
 export type regulationUploadTarget = components['schemas']['RegulationUploadTarget']
-
-export type regulationUploadResult = {
-  id: string
-  preparationStatus: regulationPreparationStatus
-}

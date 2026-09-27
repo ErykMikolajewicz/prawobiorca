@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { deleteCase } from '@/api/cases'
+import { deleteUserCase } from '@/api/generated/endpoints/cases/cases'
 import { ElMessage } from 'element-plus'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
 import ArrowRightAltRoundedIcon from '@iconify-vue/material-symbols/arrow-right-alt-rounded'
@@ -25,7 +25,7 @@ const isDeleting = ref(false)
 async function handleDelete() {
   try {
     isDeleting.value = true
-    await deleteCase(props.userCase.id)
+    await deleteUserCase(props.userCase.id)
     ElMessage.success('Sprawa została usunięta')
     emit('deleted', props.userCase.id)
   } catch (error) {

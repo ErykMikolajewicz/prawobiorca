@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { deletePublicRegulation, retryPublicRegulationPreparation } from '@/api/regulations'
+import {
+  deletePublicRegulation,
+  retryPublicRegulationPreparation,
+} from '@/api/generated/endpoints/regulations/regulations'
 import { ElMessage } from 'element-plus'
 import type { regulationRepresentation } from '@/types/api/regulations.ts'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'

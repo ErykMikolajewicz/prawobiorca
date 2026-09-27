@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { deleteUserRegulation, retryUserRegulationPreparation } from '@/api/regulations'
+import {
+  deleteUserRegulation,
+  retryUserRegulationPreparation,
+} from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { ElMessage } from 'element-plus'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'

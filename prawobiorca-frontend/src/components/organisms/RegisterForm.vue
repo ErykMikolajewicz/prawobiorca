@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from '@/api/accounts'
+import { createAccount } from '@/api/generated/endpoints/account/account'
 import { ElMessage } from 'element-plus'
 import { getApiErrorMessage } from '@/utils/error'
 
@@ -25,7 +25,7 @@ const onSubmit = async () => {
   errorMessage.value = ''
 
   try {
-    await register(form.username, form.password)
+    await createAccount({ username: form.username, password: form.password })
 
     ElMessage({
       message: 'Rejestracja przebiegła pomyślnie. Możesz się teraz zalogować.',
