@@ -75,6 +75,7 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm build` | Type-check and build the production bundle. |
 | `pnpm type-check` | Type-check with `vue-tsc`. |
 | `pnpm test:unit` | Run unit tests with Vitest. |
+| `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [Tests](../tests/tests.md#e2e-tests)). |
 | `pnpm lint` | Run oxlint and ESLint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
 | `pnpm check` | Run oxlint, ESLint and oxfmt without fixing; used by the pre-commit hook. |

@@ -5,6 +5,7 @@ VIRTUAL_ENV = ""
 dev = { cmd = "uv run ../scripts/local/dev.py", cwd = "core-service" }
 run_locally = "uv run scripts/local/run.py"
 run_locally_down = "uv run scripts/local/stop.py"
+run_e2e_env = "uv run scripts/local/run_e2e.py"
 
 test = { cmd = "uv run pytest tests/unit", cwd = "core-service" }
 test_integration = { cmd = "uv run pytest tests/integration", cwd = "core-service" }
@@ -18,6 +19,7 @@ build_frontend = "podman image build --tag=prawobiorca-frontend prawobiorca-fron
 upgrade_db = { cmd = "uv run alembic upgrade head", cwd = "core-service" }
 seed = { cmd = "uv run scripts/seed_relational_db.py", cwd = "core-service" }
 init_regulations = { cmd = "uv run scripts/init_regulations.py", cwd = "core-service" }
+init_e2e_regulation = { cmd = "uv run scripts/init_e2e_regulation.py", cwd = "core-service" }
 export_openapi = { cmd = "uv run scripts/export_openapi.py", cwd = "core-service" }
 generate_api_types = { cmd = "pnpm generate:api-types", cwd = "prawobiorca-frontend" }
 
