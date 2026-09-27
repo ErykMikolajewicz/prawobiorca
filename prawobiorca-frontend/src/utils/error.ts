@@ -1,14 +1,14 @@
 import axios, { AxiosError } from 'axios'
+import { ElMessage } from 'element-plus'
 
-export function getApiErrorMessage(
-  error: unknown,
-  options?: {
-    conflictMessage?: string
-    defaultServerMessage?: string
-    serviceUnavailableMessage?: string
-    unauthorizedMessage?: string
-  },
-): string {
+export type ApiErrorMessageOptions = {
+  conflictMessage?: string
+  defaultServerMessage?: string
+  serviceUnavailableMessage?: string
+  unauthorizedMessage?: string
+}
+
+export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOptions): string {
   const defaultServer =
     options?.defaultServerMessage ?? 'Wystąpił błąd po stronie serwera. Spróbuj ponownie później.'
   const conflictMsg = options?.conflictMessage ?? 'Zasób jest już zajęty.'
@@ -37,4 +37,9 @@ export function getApiErrorMessage(
   }
 
   return 'Wystąpił błąd. Spróbuj ponownie.'
+}
+
+export function showApiError(error: unknown, options?: ApiErrorMessageOptions): void {
+  ElMessage.error(getApiErrorMessage(error, options))
+  console.error(error)
 }

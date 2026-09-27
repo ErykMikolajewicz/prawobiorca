@@ -3,11 +3,10 @@ import { ref, onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@/utils/error'
+import { showApiError } from '@/utils/error'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
-import AppNavbar from '@/components/organisms/AppNavbar.vue'
-import AppFooter from '@/components/organisms/AppFooter.vue'
+import AppLayout from '@/components/templates/AppLayout.vue'
 import SearchForm from '@/components/organisms/SearchForm.vue'
 import CaseSelector from '@/components/molecules/CaseSelector.vue'
 import SearchResultsList from '@/components/organisms/SearchResultsList.vue'
@@ -78,12 +77,7 @@ async function performSearch(params: SearchRegulationDocumentsParams) {
       results.value = await searchRegulationDocuments(regulationId.value, params)
     }
   } catch (error) {
-    ElMessage.error(
-      getApiErrorMessage(error, {
-        defaultServerMessage: 'Wystąpił błąd podczas przeszukiwania regulacji.',
-      }),
-    )
-    console.error(error)
+    showApiError(error, { defaultServerMessage: 'Wystąpił błąd podczas przeszukiwania regulacji.' })
   } finally {
     isSearching.value = false
   }
@@ -102,65 +96,30 @@ async function handleAddToCase(payload: { documentContent: string }) {
     })
     ElMessage.success('Dodano do sprawy.')
   } catch (error) {
-    ElMessage.error(
-      getApiErrorMessage(error, {
-        defaultServerMessage: 'Wystąpił błąd podczas dodawania do sprawy.',
-      }),
-    )
-    console.error(error)
+    showApiError(error, { defaultServerMessage: 'Wystąpił błąd podczas dodawania do sprawy.' })
   }
 }
 </script>
 
 <template>
-  <div class="page-container">
-    <AppNavbar />
+  <AppLayout>
+    <el-button link @click="router.push('/')">
+      <el-icon><ArrowLeft /></el-icon> Powrót do głównego ekranu
+    </el-button>
 
-    <main class="main-content">
-      <el-button link @click="router.push('/')">
-        <el-icon><ArrowLeft /></el-icon> Powrót do głównego ekranu
-      </el-button>
+    <CaseSelector v-model:selected-case-id="selectedCaseId" :cases="cases" />
 
-      <CaseSelector v-model:selected-case-id="selectedCaseId" :cases="cases" />
+    <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
 
-      <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
+    <div v-loading="isSearching">
+      <SearchForm :search-params="searchParams" @search="handleSearch" />
 
-      <div v-loading="isSearching">
-        <SearchForm :search-params="searchParams" @search="handleSearch" />
-
-        <SearchResultsList
-          :results="results"
-          :selected-case-id="selectedCaseId"
-          :query="searchParams.query"
-          @add-to-case="handleAddToCase"
-        />
-      </div>
-    </main>
-
-    <AppFooter />
-  </div>
+      <SearchResultsList
+        :results="results"
+        :selected-case-id="selectedCaseId"
+        :query="searchParams.query"
+        @add-to-case="handleAddToCase"
+      />
+    </div>
+  </AppLayout>
 </template>
-
-<style scoped>
-.page-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.main-content {
-  flex-grow: 1;
-  padding: 1rem;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  overflow-x: hidden;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    padding: 0.5rem;
-  }
-}
-</style>

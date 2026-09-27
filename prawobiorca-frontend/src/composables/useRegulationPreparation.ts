@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@/utils/error'
+import { showApiError } from '@/utils/error'
 import type { RegulationPreparationStatus } from '@/api/generated/model'
 
 export type PreparationStatusOption = {
@@ -27,12 +27,9 @@ export function useRegulationPreparation(retryFn: (regulationId: string) => Prom
       ElMessage.success('Ponowne przetwarzanie zostało rozpoczęte')
       return true
     } catch (error) {
-      ElMessage.error(
-        getApiErrorMessage(error, {
-          conflictMessage: 'Regulacja jest już przetwarzana lub przygotowana.',
-        }),
-      )
-      console.error('Nie udało się ponowić przetwarzania regulacji', error)
+      showApiError(error, {
+        conflictMessage: 'Regulacja jest już przetwarzana lub przygotowana.',
+      })
       return false
     } finally {
       isRetrying.value = false

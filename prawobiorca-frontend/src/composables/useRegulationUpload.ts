@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@/utils/error'
+import { showApiError } from '@/utils/error'
 import {
   addPublicRegulation,
   confirmPublicRegulationUpload,
@@ -122,12 +122,7 @@ export function useRegulationUpload() {
         target: target.value,
       }
     } catch (error) {
-      console.error('Failed to upload regulation:', error)
-      ElMessage.error(
-        getApiErrorMessage(error, {
-          defaultServerMessage: 'Wystąpił błąd podczas dodawania pliku.',
-        }),
-      )
+      showApiError(error, { defaultServerMessage: 'Wystąpił błąd podczas dodawania pliku.' })
       return null
     } finally {
       isSubmitting.value = false

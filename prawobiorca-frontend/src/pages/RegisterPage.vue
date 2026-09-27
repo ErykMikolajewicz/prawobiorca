@@ -1,47 +1,31 @@
 <script setup lang="ts">
-import RegisterForm from '@/components/organisms/RegisterForm.vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { createAccount } from '@/api/generated/endpoints/account/account'
+import AuthForm from '@/components/organisms/AuthForm.vue'
+
+const router = useRouter()
+
+async function register(username: string, password: string) {
+  await createAccount({ username, password })
+
+  ElMessage({
+    message: 'Rejestracja przebiegła pomyślnie. Możesz się teraz zalogować.',
+    type: 'success',
+  })
+
+  await router.push('/auth/login')
+}
 </script>
 
 <template>
-  <div class="register-page">
-    <div class="register-container">
-      <h2 class="title">Rejestracja</h2>
-
-      <RegisterForm />
-
-      <p class="login-link">
-        <router-link v-slot="{ navigate, href }" to="/auth/login" custom>
-          <el-link :href="href" type="primary" @click="navigate">
-            Masz już konto? Zaloguj się
-          </el-link>
-        </router-link>
-      </p>
-    </div>
-  </div>
+  <AuthForm
+    title="Rejestracja"
+    submit-label="Zarejestruj"
+    password-autocomplete="new-password"
+    link-text="Masz już konto? Zaloguj się"
+    link-to="/auth/login"
+    :error-message-options="{ conflictMessage: 'Nazwa użytkownika jest już zajęta.' }"
+    :submit="register"
+  />
 </template>
-
-<style scoped>
-.register-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-
-.register-container {
-  width: 100%;
-  max-width: 400px;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.title {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.login-link {
-  text-align: center;
-  margin-top: 16px;
-}
-</style>

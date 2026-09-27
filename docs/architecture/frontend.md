@@ -29,7 +29,7 @@ All application code lives in `prawobiorca-frontend/src`:
 
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. `cases.ts` holds the only hand-written call, to an endpoint missing from the contract.
 * **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`).
-* **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors) and `organisms/` (navbar, footer, forms, lists).
+* **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (navbar, footer, forms, lists) and `templates/` (`AppLayout`, the navbar–content–footer page layout).
 * **`composables/`** — reusable stateful logic (dark mode, regulation upload flow, preparation status polling).
 * **`stores/`** — Pinia stores; currently `auth`, holding the session state.
 * **`router/`** — route definitions.

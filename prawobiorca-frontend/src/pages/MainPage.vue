@@ -2,11 +2,9 @@
 import { computed, ref, onBeforeMount, watch } from 'vue'
 
 import { storeToRefs } from 'pinia'
-import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@/utils/error'
+import { showApiError } from '@/utils/error'
 
-import AppNavbar from '@/components/organisms/AppNavbar.vue'
-import AppFooter from '@/components/organisms/AppFooter.vue'
+import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
 import UserCasesList from '@/components/organisms/UserCasesList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
@@ -94,8 +92,7 @@ async function loadWithErrorMessage(fetch: () => Promise<void>, errorMessage: st
   try {
     await fetch()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, { defaultServerMessage: errorMessage }))
-    console.error(error)
+    showApiError(error, { defaultServerMessage: errorMessage })
   }
 }
 
@@ -152,88 +149,61 @@ onBeforeMount(async () => {
 </script>
 
 <template>
-  <div class="page-container">
-    <AppNavbar />
+  <AppLayout>
+    <div v-if="isUserLogged" class="page-actions">
+      <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj plik</el-button>
+    </div>
 
-    <main class="main-content">
-      <div v-if="isUserLogged" class="page-actions">
-        <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj plik</el-button>
-      </div>
+    <RegulationsList
+      v-model:type-filter="publicRegulationTypeFilter"
+      title="Publiczne regulacje"
+      empty-description="Brak regulacji publicznych."
+      :regulations="publicRegulations"
+      target="public"
+      :can-manage="isAdmin"
+      @regulation-deleted="(regulationId) => removeRegulation(publicRegulations, regulationId)"
+      @regulation-preparation-retried="
+        (regulationId) => markAsInProgress(publicRegulations, regulationId)
+      "
+    />
 
+    <el-divider />
+
+    <template v-if="isUserLogged">
       <RegulationsList
-        v-model:type-filter="publicRegulationTypeFilter"
-        title="Publiczne regulacje"
-        empty-description="Brak regulacji publicznych."
-        :regulations="publicRegulations"
-        target="public"
-        :can-manage="isAdmin"
-        @regulation-deleted="(regulationId) => removeRegulation(publicRegulations, regulationId)"
+        v-model:type-filter="userRegulationTypeFilter"
+        title="Regulacje użytkownika"
+        empty-description="Brak regulacji użytkownika."
+        :regulations="userRegulations"
+        target="user"
+        :can-manage="true"
+        @regulation-deleted="(regulationId) => removeRegulation(userRegulations, regulationId)"
         @regulation-preparation-retried="
-          (regulationId) => markAsInProgress(publicRegulations, regulationId)
+          (regulationId) => markAsInProgress(userRegulations, regulationId)
         "
       />
 
       <el-divider />
 
-      <template v-if="isUserLogged">
-        <RegulationsList
-          v-model:type-filter="userRegulationTypeFilter"
-          title="Regulacje użytkownika"
-          empty-description="Brak regulacji użytkownika."
-          :regulations="userRegulations"
-          target="user"
-          :can-manage="true"
-          @regulation-deleted="(regulationId) => removeRegulation(userRegulations, regulationId)"
-          @regulation-preparation-retried="
-            (regulationId) => markAsInProgress(userRegulations, regulationId)
-          "
-        />
-
-        <el-divider />
-
-        <UserCasesList
-          :cases="cases"
-          @case-deleted="handleCaseDeleted"
-          @case-created="handleCaseCreated"
-        />
-      </template>
-    </main>
+      <UserCasesList
+        :cases="cases"
+        @case-deleted="handleCaseDeleted"
+        @case-created="handleCaseCreated"
+      />
+    </template>
 
     <RegulationUploadDialog
       v-model="isUploadDialogVisible"
       :is-admin="isAdmin"
       @created="handleRegulationCreated"
     />
-
-    <AppFooter />
-  </div>
+  </AppLayout>
 </template>
 
 <style scoped>
-.page-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.main-content {
-  flex-grow: 1;
-  padding: 1rem;
-  width: 100%;
-  max-width: 1200px;
-  box-sizing: border-box;
-  overflow-x: hidden;
-}
-
 .page-actions {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 1rem;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    padding: 0.5rem;
-  }
 }
 </style>
