@@ -58,6 +58,4 @@ export function useRegulationsPolling(
   watch(hasPending, (pending) => (pending ? start() : stop()), { immediate: true })
 
   onUnmounted(stop)
-
-  return {}
 }

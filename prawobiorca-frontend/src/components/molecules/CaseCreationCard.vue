@@ -12,10 +12,6 @@ const emit = defineEmits<{
   (e: 'case-created', newCase: { id: string; name: string }): void
 }>()
 
-const triggerInput = () => {
-  inputRef.value?.focus()
-}
-
 async function createCase() {
   if (newCaseName.value.trim() === '') {
     return
@@ -36,15 +32,11 @@ async function createCase() {
     console.error(error)
   }
 }
-
-defineExpose({
-  triggerInput,
-})
 </script>
 
 <template>
   <el-card shadow="never" class="form-card" @click="inputRef?.focus()">
-    <form class="case-form" action="/user/cases" method="post" @submit.prevent="createCase">
+    <form class="case-form" @submit.prevent="createCase">
       <input
         id="case_name"
         ref="inputRef"

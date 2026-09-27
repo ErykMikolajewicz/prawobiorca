@@ -45,14 +45,7 @@ const onSubmit = async () => {
 
 <template>
   <el-form :model="form" label-position="top" @keyup.enter="onSubmit">
-    <el-alert
-      v-if="errorMessage"
-      :title="errorMessage"
-      type="error"
-      show-icon
-      class="mb-3"
-      :closable="false"
-    />
+    <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" />
 
     <el-form-item label="Nazwa użytkownika:" prop="username">
       <el-input id="username" v-model="form.username" required />

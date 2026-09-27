@@ -12,7 +12,7 @@ import AppFooter from '@/components/organisms/AppFooter.vue'
 import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 
-import { generatePdf } from '@/api/cases.ts'
+import { generatePdf } from '@/api/cases'
 import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
 import type { CaseDocument } from '@/api/generated/model'
@@ -88,7 +88,7 @@ const handleGeneratePdf = async (description: string) => {
         <el-col :span="12" :xs="24">
           <section>
             <h2>Kontekst / Opis Wniosku</h2>
-            <GeneratePdfForm :case-id="caseId" @generate-pdf="handleGeneratePdf" />
+            <GeneratePdfForm @generate-pdf="handleGeneratePdf" />
           </section>
         </el-col>
       </el-row>

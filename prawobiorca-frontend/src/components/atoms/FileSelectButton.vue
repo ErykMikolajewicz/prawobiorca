@@ -25,10 +25,6 @@ function handleFileChange(event: Event) {
   const file = input.files?.[0] ?? null
   emit('update:modelValue', file)
 }
-
-defineExpose({
-  triggerFileInput,
-})
 </script>
 
 <template>
