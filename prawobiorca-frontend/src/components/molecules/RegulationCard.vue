@@ -4,9 +4,12 @@ import {
   deletePublicRegulation,
   retryPublicRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
+import {
+  deleteUserRegulation,
+  retryUserRegulationPreparation,
+} from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { ElMessage } from 'element-plus'
 import { getApiErrorMessage } from '@/utils/error'
-import type { RegulationRepresentation } from '@/api/generated/model'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
 import RefreshRoundedIcon from '@iconify-vue/material-symbols/refresh-rounded'
@@ -14,10 +17,13 @@ import IconMotion from '@/components/atoms/IconMotion.vue'
 import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
+import type { RegulationRepresentation } from '@/api/generated/model'
+import type { uploadTarget } from '@/composables/useRegulationUpload'
 
 type Props = {
   regulation: RegulationRepresentation
-  isAdmin?: boolean
+  target: uploadTarget
+  canManage: boolean
 }
 
 const props = defineProps<Props>()
@@ -31,12 +37,18 @@ const isDeleting = ref(false)
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
 const hasFailed = computed(() => props.regulation.preparationStatus === 'FAILED')
 
-const { isRetrying, retry } = useRegulationPreparation(retryPublicRegulationPreparation)
+const deleteRegulation = props.target === 'public' ? deletePublicRegulation : deleteUserRegulation
+const retryRegulationPreparation =
+  props.target === 'public' ? retryPublicRegulationPreparation : retryUserRegulationPreparation
+const searchRouteName =
+  props.target === 'public' ? 'SearchPublicRegulation' : 'SearchUserRegulation'
+
+const { isRetrying, retry } = useRegulationPreparation(retryRegulationPreparation)
 
 async function handleDelete() {
   try {
     isDeleting.value = true
-    await deletePublicRegulation(props.regulation.id)
+    await deleteRegulation(props.regulation.id)
     ElMessage.success('Regulacja została usunięta')
     emit('deleted', props.regulation.id)
   } catch (error) {
@@ -62,7 +74,7 @@ async function retryPreparation(regulationId: string) {
     :to="
       isPrepared
         ? {
-            name: 'SearchPublicRegulation',
+            name: searchRouteName,
             params: { regulationId: regulation.id },
             state: { filename: regulation.presentationName },
           }
@@ -78,6 +90,7 @@ async function retryPreparation(regulationId: string) {
             regulation.presentationName
           }}</span>
         </div>
+
         <div class="actions">
           <span v-if="isPrepared">
             <IconMotion motion-type="search">
@@ -85,7 +98,7 @@ async function retryPreparation(regulationId: string) {
             </IconMotion>
           </span>
 
-          <template v-else-if="isAdmin">
+          <template v-else-if="canManage">
             <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
 
             <form
@@ -100,7 +113,7 @@ async function retryPreparation(regulationId: string) {
           </template>
 
           <el-popconfirm
-            v-if="isAdmin"
+            v-if="canManage"
             title="Czy na pewno chcesz usunąć tę regulację?"
             confirm-button-text="Tak"
             cancel-button-text="Nie"
@@ -171,17 +184,6 @@ async function retryPreparation(regulationId: string) {
   :deep(.icon-btn) {
     color: var(--el-color-primary);
   }
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--el-text-color-regular);
 }
 
 .icon-btn-danger:hover {

@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import PublicRegulationCard from '../PublicRegulationCard.vue'
+import RegulationCard from '../RegulationCard.vue'
 import { retryPublicRegulationPreparation } from '@/api/generated/endpoints/regulations/regulations'
 import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   deletePublicRegulation: vi.fn(),
   retryPublicRegulationPreparation: vi.fn(),
+}))
+
+vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
+  deleteUserRegulation: vi.fn(),
+  retryUserRegulationPreparation: vi.fn(),
 }))
 
 vi.mock('element-plus', () => ({
@@ -16,7 +21,7 @@ vi.mock('element-plus', () => ({
   },
 }))
 
-function mountCard(preparationStatus: RegulationPreparationStatus, isAdmin: boolean) {
+function mountCard(preparationStatus: RegulationPreparationStatus, canManage: boolean) {
   const regulation: RegulationRepresentation = {
     id: 'uuid-1',
     presentationName: 'Ustawa testowa',
@@ -24,8 +29,8 @@ function mountCard(preparationStatus: RegulationPreparationStatus, isAdmin: bool
     preparationStatus,
   }
 
-  return mount(PublicRegulationCard, {
-    props: { regulation, isAdmin },
+  return mount(RegulationCard, {
+    props: { regulation, target: 'public', canManage },
     global: {
       stubs: {
         RouterLink: {
@@ -46,7 +51,7 @@ function mountCard(preparationStatus: RegulationPreparationStatus, isAdmin: bool
   })
 }
 
-describe('PublicRegulationCard', () => {
+describe('RegulationCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -67,7 +72,7 @@ describe('PublicRegulationCard', () => {
     expect(wrapper.find('form.form-action').exists()).toBe(false)
   })
 
-  it('retries preparation when regulation failed and user is admin', async () => {
+  it('retries preparation when regulation failed and user can manage it', async () => {
     const wrapper = mountCard('FAILED', true)
 
     expect(wrapper.find('.status-badge-stub').text()).toBe('FAILED')
@@ -90,7 +95,7 @@ describe('PublicRegulationCard', () => {
     expect(wrapper.emitted('preparation-retried')).toBeUndefined()
   })
 
-  it('does not render status, retry or search action for a non-admin when not prepared', () => {
+  it('does not render status, retry or search action when user cannot manage and not prepared', () => {
     const wrapper = mountCard('FAILED', false)
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)

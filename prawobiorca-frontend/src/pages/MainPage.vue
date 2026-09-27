@@ -5,8 +5,7 @@ import { storeToRefs } from 'pinia'
 
 import AppNavbar from '@/components/organisms/AppNavbar.vue'
 import AppFooter from '@/components/organisms/AppFooter.vue'
-import PublicFilesList from '@/components/organisms/PublicRegulationsList.vue'
-import UserRegulationsList from '@/components/organisms/UserRegulationsList.vue'
+import RegulationsList from '@/components/organisms/RegulationsList.vue'
 import UserCasesList from '@/components/organisms/UserCasesList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
 import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
@@ -44,24 +43,11 @@ function handleRegulationCreated(regulation: RegulationRepresentation, target: '
   }
 }
 
-function handleUserRegulationDeleted(regulationId: string) {
-  userRegulations.value = userRegulations.value.filter(
-    (regulation) => regulation.id !== regulationId,
-  )
-}
-
-function handlePublicRegulationDeleted(regulationId: string) {
-  publicRegulations.value = publicRegulations.value.filter(
-    (regulation) => regulation.id !== regulationId,
-  )
-}
-
-function handleUserRegulationPreparationRetried(regulationId: string) {
-  markAsInProgress(userRegulations.value, regulationId)
-}
-
-function handlePublicRegulationPreparationRetried(regulationId: string) {
-  markAsInProgress(publicRegulations.value, regulationId)
+function removeRegulation(regulations: Array<RegulationRepresentation>, regulationId: string) {
+  const index = regulations.findIndex((item) => item.id === regulationId)
+  if (index !== -1) {
+    regulations.splice(index, 1)
+  }
 }
 
 function markAsInProgress(regulations: Array<RegulationRepresentation>, regulationId: string) {
@@ -145,24 +131,33 @@ onBeforeMount(async () => {
         <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj plik</el-button>
       </div>
 
-      <PublicFilesList
+      <RegulationsList
+        v-model:type-filter="publicRegulationTypeFilter"
+        title="Publiczne regulacje"
+        empty-description="Brak regulacji publicznych."
         :regulations="publicRegulations"
-        :type-filter="publicRegulationTypeFilter"
-        :is-admin="isAdmin"
-        @update:type-filter="(value) => (publicRegulationTypeFilter = value)"
-        @regulation-deleted="handlePublicRegulationDeleted"
-        @regulation-preparation-retried="handlePublicRegulationPreparationRetried"
+        target="public"
+        :can-manage="isAdmin"
+        @regulation-deleted="(regulationId) => removeRegulation(publicRegulations, regulationId)"
+        @regulation-preparation-retried="
+          (regulationId) => markAsInProgress(publicRegulations, regulationId)
+        "
       />
 
       <el-divider />
 
       <template v-if="isUserLogged">
-        <UserRegulationsList
+        <RegulationsList
+          v-model:type-filter="userRegulationTypeFilter"
+          title="Regulacje użytkownika"
+          empty-description="Brak regulacji użytkownika."
           :regulations="userRegulations"
-          :type-filter="userRegulationTypeFilter"
-          @update:type-filter="(value) => (userRegulationTypeFilter = value)"
-          @user-regulation-deleted="handleUserRegulationDeleted"
-          @user-regulation-preparation-retried="handleUserRegulationPreparationRetried"
+          target="user"
+          :can-manage="true"
+          @regulation-deleted="(regulationId) => removeRegulation(userRegulations, regulationId)"
+          @regulation-preparation-retried="
+            (regulationId) => markAsInProgress(userRegulations, regulationId)
+          "
         />
 
         <el-divider />

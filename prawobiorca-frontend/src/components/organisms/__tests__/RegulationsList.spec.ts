@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import PublicRegulationsList from '../PublicRegulationsList.vue'
+import RegulationsList from '../RegulationsList.vue'
 import type { RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
@@ -23,20 +23,23 @@ const mockRegulations: RegulationRepresentation[] = [
   },
 ]
 
-describe('PublicRegulationsList', () => {
-  it('displays only prepared regulations when user is not admin', () => {
-    const wrapper = mount(PublicRegulationsList, {
+describe('RegulationsList', () => {
+  it('displays only prepared regulations when user cannot manage them', () => {
+    const wrapper = mount(RegulationsList, {
       props: {
         regulations: mockRegulations,
+        title: 'Publiczne regulacje',
+        emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        isAdmin: false,
+        target: 'public',
+        canManage: false,
       },
       global: {
         stubs: {
           RouterLink: true,
-          PublicRegulationCard: {
+          RegulationCard: {
             template: '<div class="stub-card">{{ regulation.presentationName }}</div>',
-            props: ['regulation', 'isAdmin'],
+            props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
           ElEmpty: true,
@@ -49,19 +52,22 @@ describe('PublicRegulationsList', () => {
     expect(cards[0]?.text()).toBe('Prepared Doc')
   })
 
-  it('displays all regulations (prepared and unprepared) when user is admin', () => {
-    const wrapper = mount(PublicRegulationsList, {
+  it('displays all regulations (prepared and unprepared) when user can manage them', () => {
+    const wrapper = mount(RegulationsList, {
       props: {
         regulations: mockRegulations,
+        title: 'Publiczne regulacje',
+        emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        isAdmin: true,
+        target: 'public',
+        canManage: true,
       },
       global: {
         stubs: {
           RouterLink: true,
-          PublicRegulationCard: {
+          RegulationCard: {
             template: '<div class="stub-card">{{ regulation.presentationName }}</div>',
-            props: ['regulation', 'isAdmin'],
+            props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
           ElEmpty: true,
@@ -74,7 +80,7 @@ describe('PublicRegulationsList', () => {
   })
 
   it('shows empty state when no regulations are visible', () => {
-    const wrapper = mount(PublicRegulationsList, {
+    const wrapper = mount(RegulationsList, {
       props: {
         regulations: [
           {
@@ -84,8 +90,11 @@ describe('PublicRegulationsList', () => {
             regulationType: 'STATUTE',
           },
         ],
+        title: 'Publiczne regulacje',
+        emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        isAdmin: false,
+        target: 'public',
+        canManage: false,
       },
       global: {
         stubs: {

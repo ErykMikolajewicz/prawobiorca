@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import PublicRegulationCard from '@/components/molecules/PublicRegulationCard.vue'
+import RegulationCard from '@/components/molecules/RegulationCard.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
+import type { uploadTarget } from '@/composables/useRegulationUpload'
 
 type Props = {
+  title: string
+  emptyDescription: string
   regulations: Array<RegulationRepresentation>
   typeFilter: RegulationType | undefined
-  isAdmin?: boolean
+  target: uploadTarget
+  canManage: boolean
 }
 
 const props = defineProps<Props>()
@@ -19,7 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const displayedRegulations = computed(() => {
-  if (props.isAdmin) {
+  if (props.canManage) {
     return props.regulations
   }
   return props.regulations.filter((regulation) => regulation.preparationStatus === 'PREPARED')
@@ -27,8 +31,8 @@ const displayedRegulations = computed(() => {
 </script>
 
 <template>
-  <div class="public-regulations-container">
-    <h2 class="section-title">Publiczne regulacje</h2>
+  <div class="regulations-container">
+    <h2 class="section-title">{{ title }}</h2>
 
     <div class="filter-row">
       <RegulationTypeFilter
@@ -38,11 +42,12 @@ const displayedRegulations = computed(() => {
     </div>
 
     <div v-if="displayedRegulations.length" class="files-grid">
-      <PublicRegulationCard
+      <RegulationCard
         v-for="regulation in displayedRegulations"
         :key="regulation.id"
         :regulation="regulation"
-        :is-admin="isAdmin"
+        :target="target"
+        :can-manage="canManage"
         @deleted="(regulationId) => emit('regulation-deleted', regulationId)"
         @preparation-retried="
           (regulationId) => emit('regulation-preparation-retried', regulationId)
@@ -50,12 +55,12 @@ const displayedRegulations = computed(() => {
       />
     </div>
 
-    <el-empty v-else description="Brak regulacji publicznych." />
+    <el-empty v-else :description="emptyDescription" />
   </div>
 </template>
 
 <style scoped>
-.public-regulations-container {
+.regulations-container {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
