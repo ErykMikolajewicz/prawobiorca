@@ -8,5 +8,4 @@ export type searchResult = components['schemas']['SearchResult']
 
 export type searchOrder = components['schemas']['SearchOrder']
 
-export type searchParams =
-  operations['search_regulation_documents_api_regulations__regulationId__documents_get']['parameters']['query']
+export type searchParams = operations['search_regulation_documents']['parameters']['query']

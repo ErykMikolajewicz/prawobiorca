@@ -164,7 +164,7 @@ async def delete_user_regulation(
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found."},
     },
 )
-async def search_regulation_documents(
+async def search_user_regulation_documents(
     search_regulation: Annotated[SearchRegulation, Depends(get_search_regulation)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
     user_id: Annotated[UUID, Depends(require_logged_user)],

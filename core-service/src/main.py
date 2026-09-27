@@ -71,6 +71,7 @@ prawobiorca = FastAPI(
     title="PRAWOBIORCA",
     version=version,
     responses={status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"}},
+    generate_unique_id_function=lambda route: route.name,
 )
 
 origins = ["http://localhost:5173"]

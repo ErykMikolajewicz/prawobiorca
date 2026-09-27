@@ -14,7 +14,7 @@ export interface paths {
     get?: never
     put?: never
     /** Log User */
-    post: operations['log_user_api_auth_login_post']
+    post: operations['log_user']
     delete?: never
     options?: never
     head?: never
@@ -31,7 +31,7 @@ export interface paths {
     get?: never
     put?: never
     /** Refresh Tokens */
-    post: operations['refresh_tokens_api_auth_refresh_post']
+    post: operations['refresh_tokens']
     delete?: never
     options?: never
     head?: never
@@ -46,7 +46,7 @@ export interface paths {
       cookie?: never
     }
     /** Check Is User Logged */
-    get: operations['check_is_user_logged_api_auth_me_get']
+    get: operations['check_is_user_logged']
     put?: never
     post?: never
     delete?: never
@@ -65,7 +65,7 @@ export interface paths {
     get?: never
     put?: never
     /** Logout User */
-    post: operations['logout_user_api_auth_logout_post']
+    post: operations['logout_user']
     delete?: never
     options?: never
     head?: never
@@ -80,10 +80,10 @@ export interface paths {
       cookie?: never
     }
     /** Get Public Regulations */
-    get: operations['get_public_regulations_api_regulations_get']
+    get: operations['get_public_regulations']
     put?: never
     /** Add Public Regulation */
-    post: operations['add_public_regulation_api_regulations_post']
+    post: operations['add_public_regulation']
     delete?: never
     options?: never
     head?: never
@@ -98,7 +98,7 @@ export interface paths {
       cookie?: never
     }
     /** Search Regulation Documents */
-    get: operations['search_regulation_documents_api_regulations__regulationId__documents_get']
+    get: operations['search_regulation_documents']
     put?: never
     post?: never
     delete?: never
@@ -117,7 +117,7 @@ export interface paths {
     get?: never
     put?: never
     /** Confirm Public Regulation Upload */
-    post: operations['confirm_public_regulation_upload_api_regulations__regulationId__confirm_upload_post']
+    post: operations['confirm_public_regulation_upload']
     delete?: never
     options?: never
     head?: never
@@ -132,7 +132,7 @@ export interface paths {
       cookie?: never
     }
     /** Get Public Regulation Download Url */
-    get: operations['get_public_regulation_download_url_api_regulations__regulationId__download_url_get']
+    get: operations['get_public_regulation_download_url']
     put?: never
     post?: never
     delete?: never
@@ -152,7 +152,7 @@ export interface paths {
     put?: never
     post?: never
     /** Delete Public Regulation */
-    delete: operations['delete_public_regulation_api_regulations__regulationId__delete']
+    delete: operations['delete_public_regulation']
     options?: never
     head?: never
     patch?: never
@@ -168,7 +168,7 @@ export interface paths {
     get?: never
     put?: never
     /** Retry Public Regulation Preparation */
-    post: operations['retry_public_regulation_preparation_api_regulations__regulationId__preparation_retry_post']
+    post: operations['retry_public_regulation_preparation']
     delete?: never
     options?: never
     head?: never
@@ -185,7 +185,7 @@ export interface paths {
     get?: never
     put?: never
     /** Create Account */
-    post: operations['create_account_api_accounts_register_post']
+    post: operations['create_account']
     delete?: never
     options?: never
     head?: never
@@ -200,10 +200,10 @@ export interface paths {
       cookie?: never
     }
     /** Get Cases List */
-    get: operations['get_cases_list_api_user_cases_get']
+    get: operations['get_cases_list']
     put?: never
     /** Add Case */
-    post: operations['add_case_api_user_cases_post']
+    post: operations['add_case']
     delete?: never
     options?: never
     head?: never
@@ -221,7 +221,7 @@ export interface paths {
     put?: never
     post?: never
     /** Delete User Case */
-    delete: operations['delete_user_case_api_user_cases__caseId__delete']
+    delete: operations['delete_user_case']
     options?: never
     head?: never
     patch?: never
@@ -235,10 +235,10 @@ export interface paths {
       cookie?: never
     }
     /** Get Case Documents */
-    get: operations['get_case_documents_api_user_cases__caseId__documents_get']
+    get: operations['get_case_documents']
     put?: never
     /** Add Case Document */
-    post: operations['add_case_document_api_user_cases__caseId__documents_post']
+    post: operations['add_case_document']
     delete?: never
     options?: never
     head?: never
@@ -256,7 +256,7 @@ export interface paths {
     put?: never
     post?: never
     /** Delete Case Document */
-    delete: operations['delete_case_document_api_user_cases_documents__documentId__delete']
+    delete: operations['delete_case_document']
     options?: never
     head?: never
     patch?: never
@@ -270,10 +270,10 @@ export interface paths {
       cookie?: never
     }
     /** Get User Regulations */
-    get: operations['get_user_regulations_api_user_regulations_get']
+    get: operations['get_user_regulations']
     put?: never
     /** Add User Regulation */
-    post: operations['add_user_regulation_api_user_regulations_post']
+    post: operations['add_user_regulation']
     delete?: never
     options?: never
     head?: never
@@ -290,7 +290,7 @@ export interface paths {
     get?: never
     put?: never
     /** Confirm User Regulation Upload */
-    post: operations['confirm_user_regulation_upload_api_user_regulations__regulationId__confirm_upload_post']
+    post: operations['confirm_user_regulation_upload']
     delete?: never
     options?: never
     head?: never
@@ -305,7 +305,7 @@ export interface paths {
       cookie?: never
     }
     /** Get User Regulation Download Url */
-    get: operations['get_user_regulation_download_url_api_user_regulations__regulationId__download_url_get']
+    get: operations['get_user_regulation_download_url']
     put?: never
     post?: never
     delete?: never
@@ -325,7 +325,7 @@ export interface paths {
     put?: never
     post?: never
     /** Delete User Regulation */
-    delete: operations['delete_user_regulation_api_user_regulations__regulationId__delete']
+    delete: operations['delete_user_regulation']
     options?: never
     head?: never
     patch?: never
@@ -338,8 +338,8 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** Search Regulation Documents */
-    get: operations['search_regulation_documents_api_user_regulations__regulationId__documents_get']
+    /** Search User Regulation Documents */
+    get: operations['search_user_regulation_documents']
     put?: never
     post?: never
     delete?: never
@@ -358,7 +358,7 @@ export interface paths {
     get?: never
     put?: never
     /** Retry User Regulation Preparation */
-    post: operations['retry_user_regulation_preparation_api_user_regulations__regulationId__preparation_retry_post']
+    post: operations['retry_user_regulation_preparation']
     delete?: never
     options?: never
     head?: never
@@ -373,7 +373,7 @@ export interface paths {
       cookie?: never
     }
     /** Get Health Status */
-    get: operations['get_health_status_health_liveness_get']
+    get: operations['get_health_status']
     put?: never
     post?: never
     delete?: never
@@ -390,7 +390,7 @@ export interface paths {
       cookie?: never
     }
     /** Check is application ready to response for requests. */
-    get: operations['check_readiness_health_ready_get']
+    get: operations['check_readiness']
     put?: never
     post?: never
     delete?: never
@@ -403,13 +403,13 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
-    /** Body_add_case_api_user_cases_post */
-    Body_add_case_api_user_cases_post: {
+    /** Body_add_case */
+    Body_add_case: {
       /** Casename */
       caseName: string
     }
-    /** Body_log_user_api_auth_login_post */
-    Body_log_user_api_auth_login_post: {
+    /** Body_log_user */
+    Body_log_user: {
       /** Grant Type */
       grant_type?: string | null
       /** Username */
@@ -596,7 +596,7 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
-  log_user_api_auth_login_post: {
+  log_user: {
     parameters: {
       query?: never
       header?: never
@@ -605,7 +605,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/x-www-form-urlencoded': components['schemas']['Body_log_user_api_auth_login_post']
+        'application/x-www-form-urlencoded': components['schemas']['Body_log_user']
       }
     }
     responses: {
@@ -643,7 +643,7 @@ export interface operations {
       }
     }
   }
-  refresh_tokens_api_auth_refresh_post: {
+  refresh_tokens: {
     parameters: {
       query?: never
       header?: never
@@ -677,7 +677,7 @@ export interface operations {
       }
     }
   }
-  check_is_user_logged_api_auth_me_get: {
+  check_is_user_logged: {
     parameters: {
       query?: never
       header?: never
@@ -711,7 +711,7 @@ export interface operations {
       }
     }
   }
-  logout_user_api_auth_logout_post: {
+  logout_user: {
     parameters: {
       query?: never
       header?: never
@@ -738,7 +738,7 @@ export interface operations {
       }
     }
   }
-  get_public_regulations_api_regulations_get: {
+  get_public_regulations: {
     parameters: {
       query?: {
         documentType?: components['schemas']['RegulationType'] | null
@@ -783,7 +783,7 @@ export interface operations {
       }
     }
   }
-  add_public_regulation_api_regulations_post: {
+  add_public_regulation: {
     parameters: {
       query?: never
       header?: never
@@ -823,7 +823,7 @@ export interface operations {
       }
     }
   }
-  search_regulation_documents_api_regulations__regulationId__documents_get: {
+  search_regulation_documents: {
     parameters: {
       query: {
         threshold: number
@@ -887,7 +887,7 @@ export interface operations {
       }
     }
   }
-  confirm_public_regulation_upload_api_regulations__regulationId__confirm_upload_post: {
+  confirm_public_regulation_upload: {
     parameters: {
       query?: never
       header?: never
@@ -939,7 +939,7 @@ export interface operations {
       }
     }
   }
-  get_public_regulation_download_url_api_regulations__regulationId__download_url_get: {
+  get_public_regulation_download_url: {
     parameters: {
       query?: never
       header?: never
@@ -984,7 +984,7 @@ export interface operations {
       }
     }
   }
-  delete_public_regulation_api_regulations__regulationId__delete: {
+  delete_public_regulation: {
     parameters: {
       query?: never
       header?: never
@@ -1027,7 +1027,7 @@ export interface operations {
       }
     }
   }
-  retry_public_regulation_preparation_api_regulations__regulationId__preparation_retry_post: {
+  retry_public_regulation_preparation: {
     parameters: {
       query?: never
       header?: never
@@ -1079,7 +1079,7 @@ export interface operations {
       }
     }
   }
-  create_account_api_accounts_register_post: {
+  create_account: {
     parameters: {
       query?: never
       header?: never
@@ -1126,7 +1126,7 @@ export interface operations {
       }
     }
   }
-  get_cases_list_api_user_cases_get: {
+  get_cases_list: {
     parameters: {
       query?: never
       header?: never
@@ -1160,7 +1160,7 @@ export interface operations {
       }
     }
   }
-  add_case_api_user_cases_post: {
+  add_case: {
     parameters: {
       query?: never
       header?: never
@@ -1169,7 +1169,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/x-www-form-urlencoded': components['schemas']['Body_add_case_api_user_cases_post']
+        'application/x-www-form-urlencoded': components['schemas']['Body_add_case']
       }
     }
     responses: {
@@ -1200,7 +1200,7 @@ export interface operations {
       }
     }
   }
-  delete_user_case_api_user_cases__caseId__delete: {
+  delete_user_case: {
     parameters: {
       query?: never
       header?: never
@@ -1243,7 +1243,7 @@ export interface operations {
       }
     }
   }
-  get_case_documents_api_user_cases__caseId__documents_get: {
+  get_case_documents: {
     parameters: {
       query?: never
       header?: never
@@ -1288,7 +1288,7 @@ export interface operations {
       }
     }
   }
-  add_case_document_api_user_cases__caseId__documents_post: {
+  add_case_document: {
     parameters: {
       query?: never
       header?: never
@@ -1337,7 +1337,7 @@ export interface operations {
       }
     }
   }
-  delete_case_document_api_user_cases_documents__documentId__delete: {
+  delete_case_document: {
     parameters: {
       query?: never
       header?: never
@@ -1373,7 +1373,7 @@ export interface operations {
       }
     }
   }
-  get_user_regulations_api_user_regulations_get: {
+  get_user_regulations: {
     parameters: {
       query?: {
         documentType?: components['schemas']['RegulationType'] | null
@@ -1418,7 +1418,7 @@ export interface operations {
       }
     }
   }
-  add_user_regulation_api_user_regulations_post: {
+  add_user_regulation: {
     parameters: {
       query?: never
       header?: never
@@ -1472,7 +1472,7 @@ export interface operations {
       }
     }
   }
-  confirm_user_regulation_upload_api_user_regulations__regulationId__confirm_upload_post: {
+  confirm_user_regulation_upload: {
     parameters: {
       query?: never
       header?: never
@@ -1524,7 +1524,7 @@ export interface operations {
       }
     }
   }
-  get_user_regulation_download_url_api_user_regulations__regulationId__download_url_get: {
+  get_user_regulation_download_url: {
     parameters: {
       query?: never
       header?: never
@@ -1569,7 +1569,7 @@ export interface operations {
       }
     }
   }
-  delete_user_regulation_api_user_regulations__regulationId__delete: {
+  delete_user_regulation: {
     parameters: {
       query?: never
       header?: never
@@ -1612,7 +1612,7 @@ export interface operations {
       }
     }
   }
-  search_regulation_documents_api_user_regulations__regulationId__documents_get: {
+  search_user_regulation_documents: {
     parameters: {
       query: {
         threshold: number
@@ -1676,7 +1676,7 @@ export interface operations {
       }
     }
   }
-  retry_user_regulation_preparation_api_user_regulations__regulationId__preparation_retry_post: {
+  retry_user_regulation_preparation: {
     parameters: {
       query?: never
       header?: never
@@ -1728,7 +1728,7 @@ export interface operations {
       }
     }
   }
-  get_health_status_health_liveness_get: {
+  get_health_status: {
     parameters: {
       query?: never
       header?: never
@@ -1755,7 +1755,7 @@ export interface operations {
       }
     }
   }
-  check_readiness_health_ready_get: {
+  check_readiness: {
     parameters: {
       query?: never
       header?: never
