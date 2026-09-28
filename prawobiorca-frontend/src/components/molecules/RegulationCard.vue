@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import {
+  confirmPublicRegulationUpload,
   deletePublicRegulation,
   retryPublicRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import {
+  confirmUserRegulationUpload,
   deleteUserRegulation,
   retryUserRegulationPreparation,
 } from '@/api/generated/endpoints/user-regulations/user-regulations'
@@ -35,15 +37,27 @@ const emit = defineEmits<{
 
 const isDeleting = ref(false)
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
-const hasFailed = computed(() => props.regulation.preparationStatus === 'FAILED')
+const isNotStarted = computed(() => props.regulation.preparationStatus === 'NOT_STARTED')
+const canRetry = computed(
+  () => isNotStarted.value || props.regulation.preparationStatus === 'FAILED',
+)
 
 const deleteRegulation = props.target === 'public' ? deletePublicRegulation : deleteUserRegulation
 const retryRegulationPreparation =
   props.target === 'public' ? retryPublicRegulationPreparation : retryUserRegulationPreparation
+const confirmRegulationUpload =
+  props.target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
 const searchRouteName =
   props.target === 'public' ? 'SearchPublicRegulation' : 'SearchUserRegulation'
 
-const { isRetrying, retry } = useRegulationPreparation(retryRegulationPreparation)
+const preparationRetry = useRegulationPreparation(retryRegulationPreparation)
+const uploadConfirmation = useRegulationPreparation(
+  confirmRegulationUpload,
+  'Pliku nie ma w magazynie. Usuń regulację i dodaj ją ponownie.',
+)
+const isRetrying = computed(
+  () => preparationRetry.isRetrying.value || uploadConfirmation.isRetrying.value,
+)
 
 async function handleDelete() {
   try {
@@ -52,13 +66,14 @@ async function handleDelete() {
     ElMessage.success('Regulacja została usunięta')
     emit('deleted', props.regulation.id)
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się usunąć regulacji' })
+    showApiError(error, { defaultMessage: 'Nie udało się usunąć regulacji' })
   } finally {
     isDeleting.value = false
   }
 }
 
 async function retryPreparation(regulationId: string) {
+  const { retry } = isNotStarted.value ? uploadConfirmation : preparationRetry
   if (await retry(regulationId)) {
     emit('preparation-retried', regulationId)
   }
@@ -95,20 +110,16 @@ async function retryPreparation(regulationId: string) {
         <template v-else-if="canManage">
           <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
 
-          <form
-            v-if="hasFailed"
-            class="form-action"
-            @submit.prevent="retryPreparation(regulation.id)"
+          <button
+            v-if="canRetry"
+            class="icon-btn"
+            type="button"
+            aria-label="Ponów przetwarzanie"
+            :disabled="isRetrying"
+            @click="retryPreparation(regulation.id)"
           >
-            <button
-              class="icon-btn"
-              type="submit"
-              aria-label="Ponów przetwarzanie"
-              :disabled="isRetrying"
-            >
-              <RefreshRoundedIcon />
-            </button>
-          </form>
+            <RefreshRoundedIcon />
+          </button>
         </template>
 
         <el-popconfirm
@@ -197,12 +208,5 @@ async function retryPreparation(regulationId: string) {
 .actions button {
   position: relative;
   z-index: 1;
-}
-
-.form-action {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
 }
 </style>

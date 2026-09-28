@@ -27,7 +27,7 @@ async function login(username: string, password: string) {
     submit-label="Zaloguj"
     password-autocomplete="current-password"
     link-text="Załóż konto"
-    link-to="/accounts/register"
+    :link-to="{ name: 'RegisterPage' }"
     :error-message-options="{ unauthorizedMessage: 'Nieprawidłowa nazwa użytkownika lub hasło.' }"
     :submit="login"
   />

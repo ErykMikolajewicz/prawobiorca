@@ -47,16 +47,32 @@ describe('useRegulations', () => {
     expect(regulations.value.map((item) => item.id)).toEqual(['fresh'])
   })
 
+  it('reports loading while regulations are being loaded', async () => {
+    let resolveRequest: ((value: Array<RegulationRepresentation>) => void) | undefined
+    vi.mocked(getPublicRegulations).mockImplementationOnce(
+      () => new Promise((resolve) => (resolveRequest = resolve)),
+    )
+
+    const { isLoading, load } = useRegulations('public')
+
+    const loading = load()
+    expect(isLoading.value).toBe(true)
+
+    resolveRequest?.([regulation('a')])
+    await loading
+    expect(isLoading.value).toBe(false)
+  })
+
   it('removes a regulation and marks another as in progress', async () => {
     vi.mocked(getPublicRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
 
-    const { regulations, hasPending, fetch, remove, markAsInProgress } = useRegulations('public')
+    const { regulations, pendingIds, fetch, remove, markAsInProgress } = useRegulations('public')
     await fetch()
 
     remove('a')
     markAsInProgress('b')
 
     expect(regulations.value).toEqual([{ ...regulation('b'), preparationStatus: 'IN_PROGRESS' }])
-    expect(hasPending.value).toBe(true)
+    expect(pendingIds.value).toEqual(['b'])
   })
 })

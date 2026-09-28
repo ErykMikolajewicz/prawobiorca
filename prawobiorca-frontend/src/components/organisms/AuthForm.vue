@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { getApiErrorMessage, type ApiErrorMessageOptions } from '@/utils/error'
 
 type Props = {
@@ -7,7 +8,7 @@ type Props = {
   submitLabel: string
   passwordAutocomplete: 'current-password' | 'new-password'
   linkText: string
-  linkTo: string
+  linkTo: RouteLocationRaw
   errorMessageOptions: ApiErrorMessageOptions
   submit: (username: string, password: string) => Promise<void>
 }

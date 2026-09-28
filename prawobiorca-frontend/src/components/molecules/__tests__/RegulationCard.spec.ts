@@ -1,18 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import RegulationCard from '../RegulationCard.vue'
-import { retryPublicRegulationPreparation } from '@/api/generated/endpoints/regulations/regulations'
+import {
+  confirmPublicRegulationUpload,
+  retryPublicRegulationPreparation,
+} from '@/api/generated/endpoints/regulations/regulations'
 import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
+  confirmPublicRegulationUpload: vi.fn(),
   deletePublicRegulation: vi.fn(),
   retryPublicRegulationPreparation: vi.fn(),
 }))
 
 vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
+  confirmUserRegulationUpload: vi.fn(),
   deleteUserRegulation: vi.fn(),
   retryUserRegulationPreparation: vi.fn(),
 }))
+
+const RETRY_BUTTON = 'button[aria-label="Ponów przetwarzanie"]'
 
 vi.mock('element-plus', () => ({
   ElMessage: {
@@ -61,7 +68,7 @@ describe('RegulationCard', () => {
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(true)
     expect(wrapper.find('.status-badge-stub').exists()).toBe(false)
-    expect(wrapper.find('form.form-action').exists()).toBe(false)
+    expect(wrapper.find(RETRY_BUTTON).exists()).toBe(false)
   })
 
   it('renders status badge without retry action while preparation is in progress', () => {
@@ -69,20 +76,31 @@ describe('RegulationCard', () => {
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)
     expect(wrapper.find('.status-badge-stub').text()).toBe('IN_PROGRESS')
-    expect(wrapper.find('form.form-action').exists()).toBe(false)
+    expect(wrapper.find(RETRY_BUTTON).exists()).toBe(false)
   })
 
   it('retries preparation when regulation failed and user can manage it', async () => {
     const wrapper = mountCard('FAILED', true)
 
     expect(wrapper.find('.status-badge-stub').text()).toBe('FAILED')
-    const form = wrapper.find('form.form-action')
-    expect(form.exists()).toBe(true)
+    const button = wrapper.find(RETRY_BUTTON)
+    expect(button.exists()).toBe(true)
 
     vi.mocked(retryPublicRegulationPreparation).mockResolvedValueOnce(undefined)
-    await form.trigger('submit.prevent')
+    await button.trigger('click')
 
     expect(retryPublicRegulationPreparation).toHaveBeenCalledWith('uuid-1')
+    expect(wrapper.emitted('preparation-retried')?.[0]).toEqual(['uuid-1'])
+  })
+
+  it('confirms the upload again when regulation was not started', async () => {
+    const wrapper = mountCard('NOT_STARTED', true)
+
+    vi.mocked(confirmPublicRegulationUpload).mockResolvedValueOnce(undefined)
+    await wrapper.find(RETRY_BUTTON).trigger('click')
+
+    expect(confirmPublicRegulationUpload).toHaveBeenCalledWith('uuid-1')
+    expect(retryPublicRegulationPreparation).not.toHaveBeenCalled()
     expect(wrapper.emitted('preparation-retried')?.[0]).toEqual(['uuid-1'])
   })
 
@@ -90,7 +108,7 @@ describe('RegulationCard', () => {
     const wrapper = mountCard('FAILED', true)
 
     vi.mocked(retryPublicRegulationPreparation).mockRejectedValueOnce(new Error('boom'))
-    await wrapper.find('form.form-action').trigger('submit.prevent')
+    await wrapper.find(RETRY_BUTTON).trigger('click')
 
     expect(wrapper.emitted('preparation-retried')).toBeUndefined()
   })
@@ -100,6 +118,6 @@ describe('RegulationCard', () => {
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)
     expect(wrapper.find('.status-badge-stub').exists()).toBe(false)
-    expect(wrapper.find('form.form-action').exists()).toBe(false)
+    expect(wrapper.find(RETRY_BUTTON).exists()).toBe(false)
   })
 })

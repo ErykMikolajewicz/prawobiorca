@@ -30,7 +30,7 @@ All application code lives in `prawobiorca-frontend/src`:
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. `cases.ts` holds the only hand-written call, to an endpoint missing from the contract.
 * **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (navbar, footer, forms, lists) and `templates/` (`AppLayout`, the navbar–content–footer page layout).
-* **`composables/`** — reusable stateful logic (dark mode, regulation lists, regulation upload flow, preparation status polling).
+* **`composables/`** — reusable stateful logic (dark mode, regulation lists, regulation search, regulation upload flow, preparation status polling).
 * **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope).
 * **`stores/`** — Pinia stores; currently `auth`, holding the session state.
 * **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in.
@@ -48,6 +48,7 @@ All application code lives in `prawobiorca-frontend/src`:
 * A response interceptor retries a request once after refreshing the tokens when `core-service` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
 * When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page, and the request is rejected with `SessionExpiredError`, which `showApiError` ignores so the user sees a single message.
 * The API client is generated with `poe api_types` (run from the repository root): it exports `core-service/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
+* In development, presigned storage URLs pointing at `VITE_DEV_STORAGE_ORIGIN` (set in the committed `.env.development`) are rewritten to `/storage`, which the Vite dev server proxies to object storage. The variable is not set in production builds, so URLs are used as returned by `core-service`.
 
 ---
 

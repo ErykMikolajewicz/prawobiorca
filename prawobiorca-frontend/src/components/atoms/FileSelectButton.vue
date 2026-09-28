@@ -20,6 +20,7 @@ function triggerFileInput() {
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] ?? null
+  input.value = ''
 }
 </script>
 

@@ -115,7 +115,7 @@ export function useRegulationUpload() {
         target: target.value,
       }
     } catch (error) {
-      showApiError(error, { defaultServerMessage: 'Wystąpił błąd podczas dodawania pliku.' })
+      showApiError(error, { defaultMessage: 'Wystąpił błąd podczas dodawania pliku.' })
       return null
     } finally {
       isSubmitting.value = false

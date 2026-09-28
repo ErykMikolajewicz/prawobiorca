@@ -35,6 +35,7 @@ describe('RegulationsList', () => {
         canManage: false,
       },
       global: {
+        directives: { loading: {} },
         stubs: {
           RouterLink: true,
           RegulationCard: {
@@ -63,6 +64,7 @@ describe('RegulationsList', () => {
         canManage: true,
       },
       global: {
+        directives: { loading: {} },
         stubs: {
           RouterLink: true,
           RegulationCard: {
@@ -97,6 +99,7 @@ describe('RegulationsList', () => {
         canManage: false,
       },
       global: {
+        directives: { loading: {} },
         stubs: {
           RegulationTypeFilter: true,
           ElEmpty: {
@@ -107,5 +110,30 @@ describe('RegulationsList', () => {
     })
 
     expect(wrapper.find('.el-empty-stub').exists()).toBe(true)
+  })
+
+  it('hides empty state while regulations are loading', () => {
+    const wrapper = mount(RegulationsList, {
+      props: {
+        regulations: [],
+        title: 'Publiczne regulacje',
+        emptyDescription: 'Brak regulacji publicznych.',
+        typeFilter: undefined,
+        target: 'public',
+        canManage: false,
+        loading: true,
+      },
+      global: {
+        directives: { loading: {} },
+        stubs: {
+          RegulationTypeFilter: true,
+          ElEmpty: {
+            template: '<div class="el-empty-stub">Brak regulacji</div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('.el-empty-stub').exists()).toBe(false)
   })
 })

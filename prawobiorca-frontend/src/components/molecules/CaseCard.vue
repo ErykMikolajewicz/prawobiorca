@@ -6,12 +6,10 @@ import { showApiError } from '@/utils/error'
 import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
 import ArrowRightAltRoundedIcon from '@iconify-vue/material-symbols/arrow-right-alt-rounded'
 import IconMotion from '@/components/atoms/IconMotion.vue'
+import type { CaseData } from '@/api/generated/model'
 
 type Props = {
-  userCase: {
-    id: string
-    name: string
-  }
+  userCase: CaseData
 }
 
 const props = defineProps<Props>()
@@ -29,7 +27,7 @@ async function handleDelete() {
     ElMessage.success('Sprawa została usunięta')
     emit('deleted', props.userCase.id)
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się usunąć sprawy' })
+    showApiError(error, { defaultMessage: 'Nie udało się usunąć sprawy' })
   } finally {
     isDeleting.value = false
   }
@@ -41,7 +39,7 @@ async function handleDelete() {
     <div class="card-content">
       <div class="case-info">
         <router-link
-          :to="`/user/cases/${userCase.id}`"
+          :to="{ name: 'CasePage', params: { id: userCase.id } }"
           class="case-name case-card-link"
           :title="userCase.name"
         >

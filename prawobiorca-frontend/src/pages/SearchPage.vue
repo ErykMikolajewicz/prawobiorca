@@ -4,36 +4,26 @@ import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
-import { ArrowLeft } from '@element-plus/icons-vue'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
+import BackToMainButton from '@/components/atoms/BackToMainButton.vue'
 import SearchForm from '@/components/organisms/SearchForm.vue'
 import CaseSelector from '@/components/molecules/CaseSelector.vue'
 import SearchResultsList from '@/components/organisms/SearchResultsList.vue'
+import { useRegulationSearch } from '@/composables/useRegulationSearch'
 
 import { useAuthStore } from '@/stores/auth'
 import { addCaseDocument, getCasesList } from '@/api/generated/endpoints/cases/cases'
-import type {
-  CaseData,
-  SearchOrder,
-  SearchRegulationDocumentsParams,
-  SearchResult,
-} from '@/api/generated/model'
-import {
-  getPublicRegulation,
-  searchRegulationDocuments,
-} from '@/api/generated/endpoints/regulations/regulations'
-import {
-  getUserRegulation,
-  searchUserRegulationDocuments,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
+import type { CaseData, SearchOrder, SearchRegulationDocumentsParams } from '@/api/generated/model'
+import { getPublicRegulation } from '@/api/generated/endpoints/regulations/regulations'
+import { getUserRegulation } from '@/api/generated/endpoints/user-regulations/user-regulations'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { isUserLogged } = storeToRefs(authStore)
 
-const regulationId = ref((route.params.regulationId as string) || '')
+const regulationId = route.params.regulationId as string
 const isUserRegulation = route.name === 'SearchUserRegulation'
 const regulationName = ref('')
 const searchParams = ref<SearchRegulationDocumentsParams>({
@@ -45,8 +35,11 @@ const searchParams = ref<SearchRegulationDocumentsParams>({
 
 const cases = ref<Array<CaseData>>([])
 const selectedCaseId = ref<string>('')
-const results = ref<Array<SearchResult>>([])
-const isSearching = ref(false)
+const {
+  results,
+  isSearching,
+  search: performSearch,
+} = useRegulationSearch(isUserRegulation ? 'user' : 'public', regulationId)
 
 onBeforeMount(async () => {
   void loadRegulationName()
@@ -68,10 +61,10 @@ onBeforeMount(async () => {
 async function loadRegulationName() {
   const getRegulation = isUserRegulation ? getUserRegulation : getPublicRegulation
   try {
-    const regulation = await getRegulation(regulationId.value)
+    const regulation = await getRegulation(regulationId)
     regulationName.value = regulation.presentationName
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się pobrać regulacji.' })
+    showApiError(error, { defaultMessage: 'Nie udało się pobrać regulacji.' })
   }
 }
 
@@ -83,22 +76,6 @@ async function handleSearch(newSearchParams: SearchRegulationDocumentsParams) {
   })
 
   await performSearch(newSearchParams)
-}
-
-async function performSearch(params: SearchRegulationDocumentsParams) {
-  isSearching.value = true
-
-  try {
-    if (isUserRegulation) {
-      results.value = await searchUserRegulationDocuments(regulationId.value, params)
-    } else {
-      results.value = await searchRegulationDocuments(regulationId.value, params)
-    }
-  } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Wystąpił błąd podczas przeszukiwania regulacji.' })
-  } finally {
-    isSearching.value = false
-  }
 }
 
 async function handleAddToCase(payload: { documentContent: string }) {
@@ -114,16 +91,14 @@ async function handleAddToCase(payload: { documentContent: string }) {
     })
     ElMessage.success('Dodano do sprawy.')
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Wystąpił błąd podczas dodawania do sprawy.' })
+    showApiError(error, { defaultMessage: 'Wystąpił błąd podczas dodawania do sprawy.' })
   }
 }
 </script>
 
 <template>
   <AppLayout>
-    <el-button link @click="router.push('/')">
-      <el-icon><ArrowLeft /></el-icon> Powrót do głównego ekranu
-    </el-button>
+    <BackToMainButton />
 
     <CaseSelector v-if="isUserLogged" v-model:selected-case-id="selectedCaseId" :cases="cases" />
 

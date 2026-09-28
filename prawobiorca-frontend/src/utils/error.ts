@@ -5,14 +5,12 @@ import { SessionExpiredError } from '@/api/sessionExpiry'
 
 export type ApiErrorMessageOptions = {
   conflictMessage?: string
-  defaultServerMessage?: string
+  defaultMessage?: string
   serviceUnavailableMessage?: string
   unauthorizedMessage?: string
 }
 
 export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOptions): string {
-  const defaultServer =
-    options?.defaultServerMessage ?? 'Wystąpił błąd po stronie serwera. Spróbuj ponownie później.'
   const conflictMsg = options?.conflictMessage ?? 'Zasób jest już zajęty.'
   const serviceUnavailableMsg =
     options?.serviceUnavailableMessage ??
@@ -28,8 +26,10 @@ export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOpti
     if (status === 401) return unauthorizedMsg
     if (status === 409) return conflictMsg
     if (status === 503) return serviceUnavailableMsg
+    if (options?.defaultMessage) return options.defaultMessage
+    if (status >= 500) return 'Wystąpił błąd po stronie serwera. Spróbuj ponownie później.'
 
-    return defaultServer
+    return 'Nie udało się wykonać operacji. Sprawdź dane i spróbuj ponownie.'
   }
 
   if (error.request) {

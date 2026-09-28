@@ -47,38 +47,33 @@ async function loadCases() {
   try {
     cases.value = await getCasesList()
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się pobrać spraw.' })
+    showApiError(error, { defaultMessage: 'Nie udało się pobrać spraw.' })
   }
 }
 
-const hasPendingRegulations = computed(() => {
-  if (isUserLogged.value && userRegulations.hasPending) {
-    return true
-  }
-  return isAdmin.value && publicRegulations.hasPending
-})
+const pendingRegulationIds = computed(() => [
+  ...(isUserLogged.value ? userRegulations.pendingIds : []),
+  ...(isAdmin.value ? publicRegulations.pendingIds : []),
+])
 
 async function refreshRegulations() {
   try {
-    await publicRegulations.fetch()
-
-    if (isUserLogged.value) {
-      await userRegulations.fetch()
-    }
+    await Promise.all([
+      publicRegulations.fetch(),
+      ...(isUserLogged.value ? [userRegulations.fetch()] : []),
+    ])
   } catch (error) {
     console.error('Failed to refresh regulations:', error)
   }
 }
 
-useRegulationsPolling(() => hasPendingRegulations.value, refreshRegulations)
+useRegulationsPolling(() => pendingRegulationIds.value, refreshRegulations)
 
 onBeforeMount(async () => {
-  await publicRegulations.load()
-
-  if (isUserLogged.value) {
-    await userRegulations.load()
-    await loadCases()
-  }
+  await Promise.all([
+    publicRegulations.load(),
+    ...(isUserLogged.value ? [userRegulations.load(), loadCases()] : []),
+  ])
 })
 </script>
 
@@ -93,6 +88,7 @@ onBeforeMount(async () => {
       title="Publiczne regulacje"
       empty-description="Brak regulacji publicznych."
       :regulations="publicRegulations.regulations"
+      :loading="publicRegulations.isLoading"
       target="public"
       :can-manage="isAdmin"
       @regulation-deleted="publicRegulations.remove"
@@ -107,6 +103,7 @@ onBeforeMount(async () => {
         title="Regulacje użytkownika"
         empty-description="Brak regulacji użytkownika."
         :regulations="userRegulations.regulations"
+        :loading="userRegulations.isLoading"
         target="user"
         can-manage
         @regulation-deleted="userRegulations.remove"

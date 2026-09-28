@@ -14,7 +14,7 @@ async function register(username: string, password: string) {
     type: 'success',
   })
 
-  await router.push('/auth/login')
+  await router.push({ name: 'LoginPage' })
 }
 </script>
 
@@ -24,7 +24,7 @@ async function register(username: string, password: string) {
     submit-label="Zarejestruj"
     password-autocomplete="new-password"
     link-text="Masz już konto? Zaloguj się"
-    link-to="/auth/login"
+    :link-to="{ name: 'LoginPage' }"
     :error-message-options="{ conflictMessage: 'Nazwa użytkownika jest już zajęta.' }"
     :submit="register"
   />

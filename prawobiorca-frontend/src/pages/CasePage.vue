@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
 import { useRoute } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
+import BackToMainButton from '@/components/atoms/BackToMainButton.vue'
 import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 
@@ -14,25 +12,18 @@ import { generatePdf } from '@/api/cases'
 import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
 import type { CaseDocument } from '@/api/generated/model'
-import { ArrowLeft } from '@element-plus/icons-vue'
 
 const route = useRoute()
-const router = useRouter()
 const caseId = route.params.id as string
-
-const authStore = useAuthStore()
-const { isUserLogged } = storeToRefs(authStore)
 
 const documents = ref<Array<CaseDocument>>([])
 
 async function loadDocuments() {
-  if (isUserLogged.value) {
-    try {
-      documents.value = await getCaseDocuments(caseId)
-    } catch (error) {
-      showApiError(error, { defaultServerMessage: 'Nie udało się pobrać przypiętych dokumentów.' })
-      documents.value = []
-    }
+  try {
+    documents.value = await getCaseDocuments(caseId)
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się pobrać przypiętych dokumentów.' })
+    documents.value = []
   }
 }
 
@@ -45,7 +36,7 @@ async function handleUnpin(documentId: string) {
     await deleteCaseDocument(documentId)
     documents.value = documents.value.filter((document) => document.id !== documentId)
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się odpiąć dokumentu.' })
+    showApiError(error, { defaultMessage: 'Nie udało się odpiąć dokumentu.' })
   }
 }
 
@@ -53,16 +44,14 @@ const handleGeneratePdf = async (description: string) => {
   try {
     await generatePdf(caseId, description)
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się wygenerować wniosku.' })
+    showApiError(error, { defaultMessage: 'Nie udało się wygenerować wniosku.' })
   }
 }
 </script>
 
 <template>
   <AppLayout>
-    <el-button link @click="router.push('/')">
-      <el-icon><ArrowLeft /></el-icon> Powrót do głównego ekranu
-    </el-button>
+    <BackToMainButton />
 
     <h1>Szczegóły Sprawy</h1>
 

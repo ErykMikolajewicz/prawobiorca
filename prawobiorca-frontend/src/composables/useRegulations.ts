@@ -13,7 +13,10 @@ const loadErrorMessages: Record<RegulationScope, string> = {
 export function useRegulations(scope: RegulationScope) {
   const regulations = ref<Array<RegulationRepresentation>>([])
   const typeFilter = ref<RegulationType | undefined>(undefined)
-  const hasPending = computed(() => regulations.value.some(isPending))
+  const isLoading = ref(false)
+  const pendingIds = computed(() =>
+    regulations.value.filter(isPending).map((regulation) => regulation.id),
+  )
 
   const getRegulations = scope === 'public' ? getPublicRegulations : getUserRegulations
   let lastRequestId = 0
@@ -27,10 +30,13 @@ export function useRegulations(scope: RegulationScope) {
   }
 
   async function load() {
+    isLoading.value = true
     try {
       await fetch()
     } catch (error) {
-      showApiError(error, { defaultServerMessage: loadErrorMessages[scope] })
+      showApiError(error, { defaultMessage: loadErrorMessages[scope] })
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -51,5 +57,15 @@ export function useRegulations(scope: RegulationScope) {
 
   watch(typeFilter, load)
 
-  return { regulations, typeFilter, hasPending, fetch, load, add, remove, markAsInProgress }
+  return {
+    regulations,
+    typeFilter,
+    isLoading,
+    pendingIds,
+    fetch,
+    load,
+    add,
+    remove,
+    markAsInProgress,
+  }
 }

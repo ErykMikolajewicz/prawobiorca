@@ -7,16 +7,16 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 async function handleLogin() {
-  await router.push('/auth/login')
+  await router.push({ name: 'LoginPage' })
 }
 
 async function handleLogout() {
   try {
     await authStore.logout()
   } catch (error) {
-    showApiError(error, { defaultServerMessage: 'Nie udało się wylogować.' })
+    showApiError(error, { defaultMessage: 'Nie udało się wylogować.' })
   }
-  await router.push('/')
+  await router.push({ name: 'MainPage' })
 }
 </script>
 

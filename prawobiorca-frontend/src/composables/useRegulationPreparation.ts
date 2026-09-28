@@ -2,7 +2,10 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
 
-export function useRegulationPreparation(retryFn: (regulationId: string) => Promise<unknown>) {
+export function useRegulationPreparation(
+  retryFn: (regulationId: string) => Promise<unknown>,
+  conflictMessage = 'Regulacja jest już przetwarzana lub przygotowana.',
+) {
   const isRetrying = ref(false)
 
   async function retry(regulationId: string): Promise<boolean> {
@@ -12,9 +15,7 @@ export function useRegulationPreparation(retryFn: (regulationId: string) => Prom
       ElMessage.success('Ponowne przetwarzanie zostało rozpoczęte')
       return true
     } catch (error) {
-      showApiError(error, {
-        conflictMessage: 'Regulacja jest już przetwarzana lub przygotowana.',
-      })
+      showApiError(error, { conflictMessage })
       return false
     } finally {
       isRetrying.value = false

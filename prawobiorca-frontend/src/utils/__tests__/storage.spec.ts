@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
 import { uploadFileToStorage } from '@/utils/storage'
 
@@ -11,6 +11,10 @@ vi.mock('axios', () => ({
 describe('storage utils', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('uploadFileToStorage posts FormData to target url', async () => {
@@ -32,7 +36,8 @@ describe('storage utils', () => {
     expect((formData as FormData).get('file')).toEqual(file)
   })
 
-  it('uploadFileToStorage rewrites localhost:9000 to /storage in dev environment', async () => {
+  it('uploadFileToStorage rewrites the dev storage origin to /storage', async () => {
+    vi.stubEnv('VITE_DEV_STORAGE_ORIGIN', 'http://localhost:9000')
     vi.mocked(axios.post).mockResolvedValueOnce({ status: 204 })
     const target = {
       id: 'uuid-123',
@@ -45,5 +50,19 @@ describe('storage utils', () => {
     expect(axios.post).toHaveBeenCalledTimes(1)
     const [url] = vi.mocked(axios.post).mock.calls[0] ?? []
     expect(url).toBe('/storage/regulations')
+  })
+
+  it('uploadFileToStorage keeps the url when dev storage origin is not set', async () => {
+    vi.stubEnv('VITE_DEV_STORAGE_ORIGIN', '')
+    vi.mocked(axios.post).mockResolvedValueOnce({ status: 204 })
+    const target = {
+      id: 'uuid-123',
+      url: 'http://localhost:9000/regulations',
+      fields: {},
+    }
+    await uploadFileToStorage(target, new File(['content'], 'test.pdf'))
+
+    const [url] = vi.mocked(axios.post).mock.calls[0] ?? []
+    expect(url).toBe('http://localhost:9000/regulations')
   })
 })

@@ -3,8 +3,9 @@ import axios from 'axios'
 import type { RegulationUploadTarget } from '@/api/generated/model'
 
 function toBrowserStorageUrl(url: string): string {
-  if (import.meta.env.DEV && url.includes('localhost:9000')) {
-    return url.replace(/^https?:\/\/localhost:9000/, '/storage')
+  const devStorageOrigin = import.meta.env.VITE_DEV_STORAGE_ORIGIN
+  if (devStorageOrigin && url.startsWith(devStorageOrigin)) {
+    return '/storage' + url.slice(devStorageOrigin.length)
   }
   return url
 }

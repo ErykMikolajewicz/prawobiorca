@@ -27,7 +27,5 @@ export const preparationStatusOptions: Record<
 }
 
 export function isPending(regulation: RegulationRepresentation): boolean {
-  return (
-    regulation.preparationStatus === 'NOT_STARTED' || regulation.preparationStatus === 'IN_PROGRESS'
-  )
+  return regulation.preparationStatus === 'IN_PROGRESS'
 }

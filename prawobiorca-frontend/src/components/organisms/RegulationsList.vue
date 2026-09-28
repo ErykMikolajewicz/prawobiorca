@@ -11,6 +11,7 @@ type Props = {
   regulations: Array<RegulationRepresentation>
   target: RegulationScope
   canManage: boolean
+  loading?: boolean
 }
 
 const props = defineProps<Props>()
@@ -31,7 +32,7 @@ const displayedRegulations = computed(() => {
 </script>
 
 <template>
-  <div class="regulations-container">
+  <div v-loading="loading" class="regulations-container">
     <h2 class="section-title">{{ title }}</h2>
 
     <div class="filter-row">
@@ -52,7 +53,7 @@ const displayedRegulations = computed(() => {
       />
     </div>
 
-    <el-empty v-else :description="emptyDescription" />
+    <el-empty v-else-if="!loading" :description="emptyDescription" />
   </div>
 </template>
 
