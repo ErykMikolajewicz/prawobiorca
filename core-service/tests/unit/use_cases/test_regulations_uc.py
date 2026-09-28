@@ -8,6 +8,7 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
     PrepareRegulation,
@@ -654,6 +655,39 @@ async def test_get_regulation_download_url_not_found(
         session_maker=mock_session_maker,
         regulations_repository=mock_regulations_repository,
         regulations_storage=mock_regulations_storage,
+    )
+
+    with pytest.raises(RegulationNotFound):
+        await use_case.execute(user_id, regulation_id)
+
+
+async def test_get_regulation_success(uuid_generator, mock_regulations_repository, mock_session_maker):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    mock_result = MagicMock(spec=RegulationRepresentation)
+    mock_regulations_repository.get_regulation_representation.return_value = mock_result
+
+    use_case = GetRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    result = await use_case.execute(user_id, regulation_id)
+
+    assert result == mock_result
+    mock_regulations_repository.get_regulation_representation.assert_awaited_once()
+
+
+async def test_get_regulation_not_found(uuid_generator, mock_regulations_repository, mock_session_maker):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    mock_regulations_repository.get_regulation_representation.return_value = None
+
+    use_case = GetRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
     )
 
     with pytest.raises(RegulationNotFound):

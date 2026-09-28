@@ -22,7 +22,7 @@ const form = reactive({
 const errorMessage = ref('')
 const isLoading = ref(false)
 
-const onSubmit = async () => {
+async function onSubmit() {
   if (!form.username || !form.password) {
     errorMessage.value = 'Wypełnij wszystkie pola.'
     return

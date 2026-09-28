@@ -41,6 +41,30 @@ export const addPublicRegulation = (
   )
 }
 /**
+ * @summary Get Public Regulation
+ */
+export const getPublicRegulation = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<RegulationRepresentation>>,
+) => {
+  return prawobiorcaRequest<RegulationRepresentation>(
+    { url: `/api/regulations/${regulationId}`, method: 'GET' },
+    options,
+  )
+}
+/**
+ * @summary Delete Public Regulation
+ */
+export const deletePublicRegulation = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<void>>,
+) => {
+  return prawobiorcaRequest<void>(
+    { url: `/api/regulations/${regulationId}`, method: 'DELETE' },
+    options,
+  )
+}
+/**
  * @summary Search Regulation Documents
  */
 export const searchRegulationDocuments = (
@@ -78,18 +102,6 @@ export const getPublicRegulationDownloadUrl = (
   )
 }
 /**
- * @summary Delete Public Regulation
- */
-export const deletePublicRegulation = (
-  regulationId: string,
-  options?: SecondParameter<typeof prawobiorcaRequest<void>>,
-) => {
-  return prawobiorcaRequest<void>(
-    { url: `/api/regulations/${regulationId}`, method: 'DELETE' },
-    options,
-  )
-}
-/**
  * @summary Retry Public Regulation Preparation
  */
 export const retryPublicRegulationPreparation = (
@@ -105,6 +117,10 @@ export type GetPublicRegulationsResult = NonNullable<
   Awaited<ReturnType<typeof getPublicRegulations>>
 >
 export type AddPublicRegulationResult = NonNullable<Awaited<ReturnType<typeof addPublicRegulation>>>
+export type GetPublicRegulationResult = NonNullable<Awaited<ReturnType<typeof getPublicRegulation>>>
+export type DeletePublicRegulationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePublicRegulation>>
+>
 export type SearchRegulationDocumentsResult = NonNullable<
   Awaited<ReturnType<typeof searchRegulationDocuments>>
 >
@@ -113,9 +129,6 @@ export type ConfirmPublicRegulationUploadResult = NonNullable<
 >
 export type GetPublicRegulationDownloadUrlResult = NonNullable<
   Awaited<ReturnType<typeof getPublicRegulationDownloadUrl>>
->
-export type DeletePublicRegulationResult = NonNullable<
-  Awaited<ReturnType<typeof deletePublicRegulation>>
 >
 export type RetryPublicRegulationPreparationResult = NonNullable<
   Awaited<ReturnType<typeof retryPublicRegulationPreparation>>

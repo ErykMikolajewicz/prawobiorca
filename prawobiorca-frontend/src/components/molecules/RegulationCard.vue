@@ -18,11 +18,11 @@ import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { UploadTarget } from '@/composables/useRegulationUpload'
+import type { RegulationScope } from '@/domain/regulations'
 
 type Props = {
   regulation: RegulationRepresentation
-  target: UploadTarget
+  target: RegulationScope
   canManage: boolean
 }
 
@@ -66,66 +66,72 @@ async function retryPreparation(regulationId: string) {
 </script>
 
 <template>
-  <component
-    :is="isPrepared ? 'router-link' : 'div'"
-    :to="
-      isPrepared
-        ? {
-            name: searchRouteName,
-            params: { regulationId: regulation.id },
-            state: { filename: regulation.presentationName },
-          }
-        : undefined
-    "
-    :class="isPrepared ? 'file-card-link' : ''"
-  >
-    <el-card shadow="hover" class="file-card">
-      <RegulationTypeBadge :regulation-type="regulation.regulationType" class="type-badge" />
-      <div class="card-content">
-        <div class="regulation-info">
-          <span class="regulation-name" :title="regulation.presentationName">{{
-            regulation.presentationName
-          }}</span>
-        </div>
-
-        <div class="actions">
-          <span v-if="isPrepared">
-            <IconMotion motion-type="search">
-              <SearchRoundedIcon />
-            </IconMotion>
-          </span>
-
-          <template v-else-if="canManage">
-            <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
-
-            <form
-              v-if="hasFailed"
-              class="form-action"
-              @submit.prevent="retryPreparation(regulation.id)"
-            >
-              <button class="icon-btn" type="submit" :disabled="isRetrying">
-                <RefreshRoundedIcon />
-              </button>
-            </form>
-          </template>
-
-          <el-popconfirm
-            v-if="canManage"
-            title="Czy na pewno chcesz usunąć tę regulację?"
-            confirm-button-text="Tak"
-            cancel-button-text="Nie"
-            @confirm="handleDelete"
-          >
-            <template #reference>
-              <button class="icon-btn icon-btn-danger" :disabled="isDeleting" @click.prevent.stop>
-                <DeleteOutlineRoundedIcon />
-              </button>
-            </template>
-          </el-popconfirm>
-        </div>
+  <el-card shadow="hover" class="file-card" :class="{ 'file-card--prepared': isPrepared }">
+    <RegulationTypeBadge :regulation-type="regulation.regulationType" class="type-badge" />
+    <div class="card-content">
+      <div class="regulation-info">
+        <component
+          :is="isPrepared ? 'router-link' : 'span'"
+          :to="
+            isPrepared
+              ? { name: searchRouteName, params: { regulationId: regulation.id } }
+              : undefined
+          "
+          class="regulation-name"
+          :class="{ 'file-card-link': isPrepared }"
+          :title="regulation.presentationName"
+        >
+          {{ regulation.presentationName }}
+        </component>
       </div>
-    </el-card>
-  </component>
+
+      <div class="actions">
+        <span v-if="isPrepared">
+          <IconMotion motion-type="search" class="search-action">
+            <SearchRoundedIcon />
+          </IconMotion>
+        </span>
+
+        <template v-else-if="canManage">
+          <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
+
+          <form
+            v-if="hasFailed"
+            class="form-action"
+            @submit.prevent="retryPreparation(regulation.id)"
+          >
+            <button
+              class="icon-btn"
+              type="submit"
+              aria-label="Ponów przetwarzanie"
+              :disabled="isRetrying"
+            >
+              <RefreshRoundedIcon />
+            </button>
+          </form>
+        </template>
+
+        <el-popconfirm
+          v-if="canManage"
+          title="Czy na pewno chcesz usunąć tę regulację?"
+          confirm-button-text="Tak"
+          cancel-button-text="Nie"
+          @confirm="handleDelete"
+        >
+          <template #reference>
+            <button
+              type="button"
+              class="icon-btn icon-btn-danger"
+              aria-label="Usuń regulację"
+              :disabled="isDeleting"
+            >
+              <DeleteOutlineRoundedIcon />
+            </button>
+          </template>
+        </el-popconfirm>
+      </div>
+    </div>
+  </el-card>
 </template>
 
 <style scoped>
@@ -168,28 +174,17 @@ async function retryPreparation(regulationId: string) {
 }
 
 .file-card-link {
-  display: block;
-  color: inherit;
   text-decoration: none;
 }
 
-.file-card-link:hover {
-  .file-card {
-    box-shadow: var(--app-card-shadow);
-  }
-
-  :deep(.icon-btn) {
-    color: var(--el-color-primary);
-  }
+.file-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 
-.icon-btn-danger:hover {
-  color: var(--el-color-danger);
-}
-
-.icon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.file-card--prepared:hover .search-action {
+  color: var(--el-color-primary);
 }
 
 .actions {
@@ -197,6 +192,11 @@ async function retryPreparation(regulationId: string) {
   gap: 8px;
   flex-shrink: 0;
   align-items: center;
+}
+
+.actions button {
+  position: relative;
+  z-index: 1;
 }
 
 .form-action {

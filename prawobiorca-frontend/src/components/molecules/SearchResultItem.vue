@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useAuthStore } from '@/stores/auth'
 import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
 
 const props = defineProps<{
@@ -10,14 +8,12 @@ const props = defineProps<{
   highlight?: SearchResultHighlight | null
   score: number
   selectedCaseId?: string
+  canAddToCase: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'add-to-case', payload: { documentContent: string }): void
 }>()
-
-const authStore = useAuthStore()
-const { isUserLogged } = storeToRefs(authStore)
 
 const SUB_ELEMENT_PATTERN = /^(\d+\)|[a-z]\))\s/
 
@@ -25,7 +21,7 @@ type LineSegment = { text: string; highlighted: boolean }
 type ResultLine = { text: string; segments: Array<LineSegment> }
 type ResultBlock = { subsection: string | null; lines: Array<ResultLine> }
 
-const createSegments = (text: string, elementIndex: number): Array<LineSegment> => {
+function createSegments(text: string, elementIndex: number): Array<LineSegment> {
   const highlight = props.highlight
 
   if (
@@ -63,9 +59,11 @@ const blocks = computed<Array<ResultBlock>>(() => {
   return result
 })
 
-const isSubLine = (line: string) => SUB_ELEMENT_PATTERN.test(line)
+function isSubLine(line: string) {
+  return SUB_ELEMENT_PATTERN.test(line)
+}
 
-const handleAddToCase = () => {
+function handleAddToCase() {
   emit('add-to-case', { documentContent: props.result })
 }
 </script>
@@ -89,7 +87,7 @@ const handleAddToCase = () => {
             </p>
           </div>
         </div>
-        <label v-else>{{ result }}</label>
+        <span v-else class="result-plain">{{ result }}</span>
       </div>
       <div class="score-column">
         <span class="score-label">Podobieństwo</span>
@@ -97,7 +95,7 @@ const handleAddToCase = () => {
       </div>
       <div class="actions">
         <el-tooltip
-          v-if="isUserLogged"
+          v-if="canAddToCase"
           :disabled="!!selectedCaseId"
           content="Wybierz bieżącą sprawę, by dodać do niej wyszukany element."
           placement="top"

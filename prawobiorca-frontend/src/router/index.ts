@@ -1,10 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import MainPage from '@/pages/MainPage.vue'
-import LoginPage from '@/pages/LoginPage.vue'
-import RegisterPage from '@/pages/RegisterPage.vue'
-import SearchPage from '@/pages/SearchPage.vue'
-import CasePage from '@/pages/CasePage.vue'
 import { useAuthStore } from '@/stores/auth'
+
+const SearchPage = () => import('@/pages/SearchPage.vue')
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,7 +9,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'MainPage',
-      component: MainPage,
+      component: () => import('@/pages/MainPage.vue'),
     },
     {
       path: '/regulations/:regulationId/documents',
@@ -28,25 +25,29 @@ const router = createRouter({
     {
       path: '/auth/login',
       name: 'LoginPage',
-      component: LoginPage,
+      component: () => import('@/pages/LoginPage.vue'),
     },
     {
       path: '/accounts/register',
       name: 'RegisterPage',
-      component: RegisterPage,
+      component: () => import('@/pages/RegisterPage.vue'),
     },
     {
       path: '/user/cases/:id',
       name: 'CasePage',
-      component: CasePage,
+      component: () => import('@/pages/CasePage.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: { name: 'MainPage' },
     },
   ],
 })
 
 router.beforeEach((to) => {
   if (to.meta.requiresAuth && !useAuthStore().isUserLogged) {
-    return { name: 'LoginPage' }
+    return { name: 'LoginPage', query: { redirect: to.fullPath } }
   }
 })
 

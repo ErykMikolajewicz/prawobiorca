@@ -37,36 +37,46 @@ async function handleDelete() {
 </script>
 
 <template>
-  <router-link :to="`/user/cases/${userCase.id}`" class="case-card-link">
-    <el-card shadow="hover" class="case-card">
-      <div class="card-content">
-        <div class="case-info">
-          <span class="case-name" :title="userCase.name">{{ userCase.name }}</span>
-        </div>
-        <div class="actions">
-          <IconMotion motion-type="arrow">
-            <ArrowRightAltRoundedIcon />
-          </IconMotion>
-          <el-popconfirm
-            title="Czy na pewno chcesz usunąć tę sprawę?"
-            confirm-button-text="Tak"
-            cancel-button-text="Nie"
-            @confirm="handleDelete"
-          >
-            <template #reference>
-              <button class="icon-btn icon-btn-danger" :disabled="isDeleting" @click.prevent.stop>
-                <DeleteOutlineRoundedIcon />
-              </button>
-            </template>
-          </el-popconfirm>
-        </div>
+  <el-card shadow="hover" class="case-card">
+    <div class="card-content">
+      <div class="case-info">
+        <router-link
+          :to="`/user/cases/${userCase.id}`"
+          class="case-name case-card-link"
+          :title="userCase.name"
+        >
+          {{ userCase.name }}
+        </router-link>
       </div>
-    </el-card>
-  </router-link>
+      <div class="actions">
+        <IconMotion motion-type="arrow">
+          <ArrowRightAltRoundedIcon />
+        </IconMotion>
+        <el-popconfirm
+          title="Czy na pewno chcesz usunąć tę sprawę?"
+          confirm-button-text="Tak"
+          cancel-button-text="Nie"
+          @confirm="handleDelete"
+        >
+          <template #reference>
+            <button
+              type="button"
+              class="icon-btn icon-btn-danger"
+              aria-label="Usuń sprawę"
+              :disabled="isDeleting"
+            >
+              <DeleteOutlineRoundedIcon />
+            </button>
+          </template>
+        </el-popconfirm>
+      </div>
+    </div>
+  </el-card>
 </template>
 
 <style scoped>
 .case-card {
+  position: relative;
   height: 100%;
 }
 
@@ -94,24 +104,24 @@ async function handleDelete() {
   color: var(--el-text-color-primary);
 }
 
-.icon-btn-danger:hover {
-  color: var(--el-color-danger);
-}
-
-.icon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
 }
 
+.actions button {
+  position: relative;
+  z-index: 1;
+}
+
 .case-card-link {
-  display: block;
-  color: inherit;
   text-decoration: none;
+}
+
+.case-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 </style>

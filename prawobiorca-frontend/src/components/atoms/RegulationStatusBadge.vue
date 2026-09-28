@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { preparationStatusOptions } from '@/composables/useRegulationPreparation'
+import { preparationStatusOptions } from '@/domain/regulations'
 import type { RegulationPreparationStatus } from '@/api/generated/model'
 
 type Props = {

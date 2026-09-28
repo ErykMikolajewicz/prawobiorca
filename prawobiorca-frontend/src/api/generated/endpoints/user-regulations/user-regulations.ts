@@ -41,6 +41,30 @@ export const addUserRegulation = (
   )
 }
 /**
+ * @summary Get User Regulation
+ */
+export const getUserRegulation = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<RegulationRepresentation>>,
+) => {
+  return prawobiorcaRequest<RegulationRepresentation>(
+    { url: `/api/user/regulations/${regulationId}`, method: 'GET' },
+    options,
+  )
+}
+/**
+ * @summary Delete User Regulation
+ */
+export const deleteUserRegulation = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<void>>,
+) => {
+  return prawobiorcaRequest<void>(
+    { url: `/api/user/regulations/${regulationId}`, method: 'DELETE' },
+    options,
+  )
+}
+/**
  * @summary Confirm User Regulation Upload
  */
 export const confirmUserRegulationUpload = (
@@ -61,18 +85,6 @@ export const getUserRegulationDownloadUrl = (
 ) => {
   return prawobiorcaRequest<string>(
     { url: `/api/user/regulations/${regulationId}/download-url`, method: 'GET' },
-    options,
-  )
-}
-/**
- * @summary Delete User Regulation
- */
-export const deleteUserRegulation = (
-  regulationId: string,
-  options?: SecondParameter<typeof prawobiorcaRequest<void>>,
-) => {
-  return prawobiorcaRequest<void>(
-    { url: `/api/user/regulations/${regulationId}`, method: 'DELETE' },
     options,
   )
 }
@@ -103,14 +115,15 @@ export const retryUserRegulationPreparation = (
 }
 export type GetUserRegulationsResult = NonNullable<Awaited<ReturnType<typeof getUserRegulations>>>
 export type AddUserRegulationResult = NonNullable<Awaited<ReturnType<typeof addUserRegulation>>>
+export type GetUserRegulationResult = NonNullable<Awaited<ReturnType<typeof getUserRegulation>>>
+export type DeleteUserRegulationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteUserRegulation>>
+>
 export type ConfirmUserRegulationUploadResult = NonNullable<
   Awaited<ReturnType<typeof confirmUserRegulationUpload>>
 >
 export type GetUserRegulationDownloadUrlResult = NonNullable<
   Awaited<ReturnType<typeof getUserRegulationDownloadUrl>>
->
-export type DeleteUserRegulationResult = NonNullable<
-  Awaited<ReturnType<typeof deleteUserRegulation>>
 >
 export type SearchUserRegulationDocumentsResult = NonNullable<
   Awaited<ReturnType<typeof searchUserRegulationDocuments>>

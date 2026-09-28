@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 
 type Props = {
-  modelValue: File | null
   label?: string
 }
 
@@ -10,9 +9,7 @@ withDefaults(defineProps<Props>(), {
   label: 'Wybierz plik',
 })
 
-const emit = defineEmits<{
-  (e: 'update:modelValue', file: File | null): void
-}>()
+const selectedFile = defineModel<File | null>({ required: true })
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
@@ -22,8 +19,7 @@ function triggerFileInput() {
 
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0] ?? null
-  emit('update:modelValue', file)
+  selectedFile.value = input.files?.[0] ?? null
 }
 </script>
 
@@ -31,7 +27,7 @@ function handleFileChange(event: Event) {
   <span class="file-select">
     <input ref="fileInputRef" type="file" class="hidden-file-input" @change="handleFileChange" />
     <el-button @click="triggerFileInput">{{ label }}</el-button>
-    <span v-if="modelValue" class="selected-file-name">{{ modelValue.name }}</span>
+    <span v-if="selectedFile" class="selected-file-name">{{ selectedFile.name }}</span>
   </span>
 </template>
 

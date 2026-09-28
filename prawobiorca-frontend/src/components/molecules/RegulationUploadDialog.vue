@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import FileSelectButton from '@/components/atoms/FileSelectButton.vue'
-import { useRegulationUpload, regulationTypeOptions } from '@/composables/useRegulationUpload'
+import { useRegulationUpload } from '@/composables/useRegulationUpload'
+import { regulationTypeOptions, type RegulationScope } from '@/domain/regulations'
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { UploadTarget } from '@/composables/useRegulationUpload'
 
 type Props = {
-  modelValue: boolean
   isAdmin: boolean
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
+
+const visible = defineModel<boolean>({ required: true })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: boolean): void
-  (e: 'created', regulation: RegulationRepresentation, target: UploadTarget): void
+  (e: 'created', regulation: RegulationRepresentation, target: RegulationScope): void
 }>()
 
 const {
@@ -28,17 +28,14 @@ const {
   submit,
 } = useRegulationUpload()
 
-watch(
-  () => props.modelValue,
-  (visible) => {
-    if (visible) {
-      resetForm()
-    }
-  },
-)
+watch(visible, (isVisible) => {
+  if (isVisible) {
+    resetForm()
+  }
+})
 
 function closeDialog() {
-  emit('update:modelValue', false)
+  visible.value = false
 }
 
 async function handleSubmit() {
@@ -53,12 +50,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <el-dialog
-    :model-value="modelValue"
-    title="Dodaj plik"
-    width="min(480px, 92vw)"
-    @update:model-value="(value: boolean) => emit('update:modelValue', value)"
-  >
+  <el-dialog v-model="visible" title="Dodaj plik" width="min(480px, 92vw)">
     <el-form label-position="top" @submit.prevent="handleSubmit">
       <el-form-item label="Plik:">
         <FileSelectButton :model-value="selectedFile" @update:model-value="setFile" />

@@ -25,7 +25,7 @@ const { isUserLogged } = storeToRefs(authStore)
 
 const documents = ref<Array<CaseDocument>>([])
 
-const loadDocuments = async () => {
+async function loadDocuments() {
   if (isUserLogged.value) {
     try {
       documents.value = await getCaseDocuments(caseId)
@@ -40,14 +40,13 @@ onBeforeMount(async () => {
   await loadDocuments()
 })
 
-const handleUnpin = async (articleId: string) => {
+async function handleUnpin(documentId: string) {
   try {
-    await deleteCaseDocument(articleId)
+    await deleteCaseDocument(documentId)
+    documents.value = documents.value.filter((document) => document.id !== documentId)
   } catch (error) {
     showApiError(error, { defaultServerMessage: 'Nie udało się odpiąć dokumentu.' })
-    return
   }
-  await loadDocuments()
 }
 
 const handleGeneratePdf = async (description: string) => {

@@ -27,7 +27,10 @@ setSessionExpiredHandler(() => {
   authStore.resetSession()
   if (wasLogged) {
     ElMessage.error('Sesja wygasła. Zaloguj się ponownie.')
-    void router.push('/auth/login')
+    void router.push({
+      name: 'LoginPage',
+      query: { redirect: router.currentRoute.value.fullPath },
+    })
   }
 })
 

@@ -1,4 +1,4 @@
-import type { BodyLogUser } from '../../model'
+import type { BodyLogUser, CurrentUser } from '../../model'
 
 import { prawobiorcaRequest } from '../../../axios'
 
@@ -47,9 +47,9 @@ export const refreshTokens = (options?: SecondParameter<typeof prawobiorcaReques
  * @summary Check Is User Logged
  */
 export const checkIsUserLogged = (
-  options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
+  options?: SecondParameter<typeof prawobiorcaRequest<CurrentUser>>,
 ) => {
-  return prawobiorcaRequest<unknown>({ url: `/api/auth/me`, method: 'GET' }, options)
+  return prawobiorcaRequest<CurrentUser>({ url: `/api/auth/me`, method: 'GET' }, options)
 }
 /**
  * @summary Logout User

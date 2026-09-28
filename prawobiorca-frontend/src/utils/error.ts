@@ -1,5 +1,7 @@
-import axios, { AxiosError } from 'axios'
+import axios from 'axios'
 import { ElMessage } from 'element-plus'
+
+import { SessionExpiredError } from '@/api/sessionExpiry'
 
 export type ApiErrorMessageOptions = {
   conflictMessage?: string
@@ -21,10 +23,8 @@ export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOpti
     return 'Wystąpił błąd. Spróbuj ponownie.'
   }
 
-  const axiosErr = error as AxiosError
-
-  if (axiosErr.response) {
-    const status = axiosErr.response.status
+  if (error.response) {
+    const status = error.response.status
     if (status === 401) return unauthorizedMsg
     if (status === 409) return conflictMsg
     if (status === 503) return serviceUnavailableMsg
@@ -32,7 +32,7 @@ export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOpti
     return defaultServer
   }
 
-  if (axiosErr.request) {
+  if (error.request) {
     return 'Nie można połączyć się z serwerem. Sprawdź połączenie sieciowe.'
   }
 
@@ -40,6 +40,8 @@ export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOpti
 }
 
 export function showApiError(error: unknown, options?: ApiErrorMessageOptions): void {
+  if (error instanceof SessionExpiredError) return
+
   ElMessage.error(getApiErrorMessage(error, options))
   console.error(error)
 }

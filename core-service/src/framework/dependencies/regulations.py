@@ -11,6 +11,7 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
     RetryRegulationPreparation,
@@ -63,6 +64,13 @@ def get_list_regulations(
 ) -> ListRegulations:
 
     return ListRegulations(session_maker, regulation_manager)
+
+
+def get_regulation(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+) -> GetRegulation:
+    return GetRegulation(session_maker, regulations_repository)
 
 
 def get_retry_regulation_preparation(

@@ -1,8 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
 import SearchResultItem from '../SearchResultItem.vue'
-import { useAuthStore } from '@/stores/auth'
 import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
 
 function mountItem(
@@ -12,7 +10,7 @@ function mountItem(
   highlight: SearchResultHighlight | null = null,
 ) {
   return mount(SearchResultItem, {
-    props: { result, elements, score: 0.5, selectedCaseId, highlight },
+    props: { result, elements, score: 0.5, selectedCaseId, highlight, canAddToCase: true },
     global: {
       stubs: {
         ElCard: { template: '<div class="el-card"><slot /></div>' },
@@ -24,16 +22,11 @@ function mountItem(
 }
 
 describe('SearchResultItem', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    useAuthStore().isUserLogged = true
-  })
-
   it('falls back to the flat text when no elements are provided', () => {
     const wrapper = mountItem('1. Ustęp pierwszy\n2. Ustęp drugi', null)
 
     expect(wrapper.find('.result-blocks').exists()).toBe(false)
-    expect(wrapper.find('label').text()).toBe('1. Ustęp pierwszy\n2. Ustęp drugi')
+    expect(wrapper.find('.result-plain').text()).toBe('1. Ustęp pierwszy\n2. Ustęp drugi')
   })
 
   it('groups elements sharing a subsection into one block', () => {

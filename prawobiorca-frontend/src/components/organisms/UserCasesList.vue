@@ -19,7 +19,7 @@ const emit = defineEmits<{
   <div class="user-cases-container">
     <h2 class="section-title">Moje sprawy</h2>
 
-    <div class="cases-grid">
+    <div class="cards-grid">
       <CaseCard
         v-for="userCase in props.cases"
         :key="userCase.id"
@@ -37,20 +37,5 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-.section-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  padding-left: 12px;
-  border-left: 4px solid var(--el-color-primary);
-}
-
-.cases-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 </style>

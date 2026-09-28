@@ -87,7 +87,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUser"
+                }
               }
             }
           },
@@ -206,6 +208,95 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/regulations/{regulationId}": {
+      "get": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "Get Public Regulation",
+        "operationId": "get_public_regulation",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulationRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "Delete Public Regulation",
+        "operationId": "delete_public_regulation",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Regulation not found!"
           },
           "422": {
             "description": "Validation Error",
@@ -402,48 +493,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/regulations/{regulationId}": {
-      "delete": {
-        "tags": [
-          "regulations"
-        ],
-        "summary": "Delete Public Regulation",
-        "operationId": "delete_public_regulation",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
           },
           "503": {
             "description": "Service unavailable!"
@@ -921,6 +970,95 @@
         }
       }
     },
+    "/api/user/regulations/{regulationId}": {
+      "get": {
+        "tags": [
+          "user_regulations"
+        ],
+        "summary": "Get User Regulation",
+        "operationId": "get_user_regulation",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulationRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user_regulations"
+        ],
+        "summary": "Delete User Regulation",
+        "operationId": "delete_user_regulation",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user/regulations/{regulationId}/confirm-upload": {
       "post": {
         "tags": [
@@ -1001,48 +1139,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/user/regulations/{regulationId}": {
-      "delete": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Delete User Regulation",
-        "operationId": "delete_user_regulation",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
           },
           "503": {
             "description": "Service unavailable!"
@@ -1393,6 +1489,19 @@
           "content"
         ],
         "title": "CaseDocument"
+      },
+      "CurrentUser": {
+        "properties": {
+          "isAdmin": {
+            "type": "boolean",
+            "title": "Isadmin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "isAdmin"
+        ],
+        "title": "CurrentUser"
       },
       "HTTPValidationError": {
         "properties": {

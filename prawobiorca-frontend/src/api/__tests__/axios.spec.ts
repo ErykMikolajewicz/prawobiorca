@@ -8,11 +8,11 @@ import {
 } from 'axios'
 
 import { prawobiorcaClient } from '@/api/axios'
-import { notifySessionExpired } from '@/api/sessionExpiry'
+import { notifySessionExpired, SessionExpiredError } from '@/api/sessionExpiry'
 
-vi.mock('@/api/sessionExpiry', () => ({
+vi.mock('@/api/sessionExpiry', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/sessionExpiry')>()),
   notifySessionExpired: vi.fn(),
-  setSessionExpiredHandler: vi.fn(),
 }))
 
 function response(config: InternalAxiosRequestConfig, status: number): AxiosResponse {
@@ -91,13 +91,12 @@ describe('prawobiorcaClient refresh interceptor', () => {
     expect(calledPaths(adapter).filter((url) => url === '/api/auth/refresh')).toHaveLength(1)
   })
 
-  it('zgłasza wygaśnięcie sesji i propaguje pierwotny błąd, gdy refresh też zwróci 401', async () => {
+  it('zgłasza wygaśnięcie sesji i odrzuca SessionExpiredError, gdy refresh też zwróci 401', async () => {
     const adapter = useAdapter({ '/api/user/cases': [401], '/api/auth/refresh': [401] })
 
-    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toMatchObject({
-      response: { status: 401 },
-      config: { url: '/api/user/cases' },
-    })
+    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toBeInstanceOf(
+      SessionExpiredError,
+    )
     expect(notifySessionExpired).toHaveBeenCalledOnce()
     expect(calledPaths(adapter)).toEqual(['/api/user/cases', '/api/auth/refresh'])
   })

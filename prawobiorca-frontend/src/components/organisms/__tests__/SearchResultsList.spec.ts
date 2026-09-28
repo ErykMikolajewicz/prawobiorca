@@ -19,7 +19,7 @@ const mockResults: SearchResult[] = [
 
 function mountList() {
   return mount(SearchResultsList, {
-    props: { results: mockResults, query: 'ustęp' },
+    props: { results: mockResults, query: 'ustęp', canAddToCase: true },
     global: {
       stubs: {
         ElSwitch: {

@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios'
 
-import { notifySessionExpired } from '@/api/sessionExpiry'
+import { notifySessionExpired, SessionExpiredError } from '@/api/sessionExpiry'
 
 export const prawobiorcaClient = axios.create()
 prawobiorcaClient.defaults.withCredentials = true
@@ -64,7 +64,7 @@ prawobiorcaClient.interceptors.response.use(
         return Promise.reject(refreshError)
       }
       notifySessionExpired()
-      return Promise.reject(error)
+      return Promise.reject(new SessionExpiredError('Session expired'))
     }
 
     return prawobiorcaClient(config)

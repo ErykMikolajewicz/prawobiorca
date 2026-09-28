@@ -8,7 +8,7 @@ const emit = defineEmits<{
   (e: 'unpin', id: string): void
 }>()
 
-const handleUnpin = () => {
+function handleUnpin() {
   emit('unpin', props.document.id)
 }
 </script>

@@ -30,9 +30,10 @@ All application code lives in `prawobiorca-frontend/src`:
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. `cases.ts` holds the only hand-written call, to an endpoint missing from the contract.
 * **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (navbar, footer, forms, lists) and `templates/` (`AppLayout`, the navbar–content–footer page layout).
-* **`composables/`** — reusable stateful logic (dark mode, regulation upload flow, preparation status polling).
+* **`composables/`** — reusable stateful logic (dark mode, regulation lists, regulation upload flow, preparation status polling).
+* **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope).
 * **`stores/`** — Pinia stores; currently `auth`, holding the session state.
-* **`router/`** — route definitions.
+* **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in.
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite) and global styles.
 * **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover.
 
@@ -45,7 +46,7 @@ All application code lives in `prawobiorca-frontend/src`:
 * The shared axios instance (`src/api/axios.ts`) has no `baseURL` — the paths in the contract already carry the `/api` prefix, under which the API is served on the same origin in every environment (the Vite dev server proxies it to `core-service`).
 * `withCredentials` is enabled — access and refresh tokens are carried in cookies, never stored by the application itself.
 * A response interceptor retries a request once after refreshing the tokens when `core-service` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
-* When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page.
+* When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page, and the request is rejected with `SessionExpiredError`, which `showApiError` ignores so the user sees a single message.
 * The API client is generated with `poe api_types` (run from the repository root): it exports `core-service/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
 
 ---

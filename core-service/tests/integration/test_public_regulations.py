@@ -72,6 +72,35 @@ async def test_get_public_regulations(client, override_session_maker, session_ma
             await session.execute(delete(regulations_table).where(regulations_table.c.id.in_(regulations_ids)))
 
 
+async def test_get_public_regulation(client, override_session_maker, session_maker, set_user, clean_user):
+    async with session_maker.begin() as session:
+        public_regulation_id = await insert_regulation(session, None, "Public act.pdf")
+        private_regulation_id = await insert_regulation(session, USER_ID, "Private act.pdf")
+
+    try:
+        response = await client.get(f"/api/regulations/{public_regulation_id}")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "id": str(public_regulation_id),
+            "presentationName": "Public act.pdf",
+            "regulationType": RegulationType.ACT,
+            "preparationStatus": RegulationPreparationStatus.PREPARED,
+        }
+
+        response = await client.get(f"/api/regulations/{private_regulation_id}")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(
+                delete(regulations_table).where(
+                    regulations_table.c.id.in_([public_regulation_id, private_regulation_id])
+                )
+            )
+
+
 class StubTextsEmbedder:
     @staticmethod
     async def embed_queries(queries):

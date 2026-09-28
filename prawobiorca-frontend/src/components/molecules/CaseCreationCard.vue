@@ -43,7 +43,7 @@ async function createCase() {
         required
         class="case-name-input"
       />
-      <button type="submit" class="icon-btn">
+      <button type="submit" class="icon-btn" aria-label="Utwórz sprawę">
         <Add2RoundedIcon />
       </button>
     </form>

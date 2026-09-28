@@ -10,24 +10,17 @@ import {
   confirmUserRegulationUpload,
 } from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { uploadFileToStorage } from '@/utils/storage'
+import type { RegulationScope } from '@/domain/regulations'
 import type {
   RegulationPreparationStatus,
   RegulationRepresentation,
   RegulationType,
 } from '@/api/generated/model'
 
-export type UploadTarget = 'user' | 'public'
-
 type RegulationUploadResult = {
   id: string
   preparationStatus: RegulationPreparationStatus
 }
-
-export const regulationTypeOptions: Array<{ label: string; value: RegulationType }> = [
-  { label: 'Ustawa', value: 'ACT' },
-  { label: 'Rozporządzenie', value: 'DECREE' },
-  { label: 'Regulamin', value: 'STATUTE' },
-]
 
 async function confirmUpload(
   regulationId: string,
@@ -43,7 +36,7 @@ async function confirmUpload(
 }
 
 async function uploadRegulation(
-  target: UploadTarget,
+  target: RegulationScope,
   regulation: File,
   presentationName: string,
   regulationType?: RegulationType,
@@ -65,7 +58,7 @@ export function useRegulationUpload() {
   const selectedFile = ref<File | null>(null)
   const presentationName = ref('')
   const selectedRegulationType = ref<RegulationType | ''>('')
-  const target = ref<UploadTarget>('user')
+  const target = ref<RegulationScope>('user')
   const isSubmitting = ref(false)
 
   function resetForm() {
@@ -84,7 +77,7 @@ export function useRegulationUpload() {
 
   async function submit(): Promise<{
     regulation: RegulationRepresentation
-    target: UploadTarget
+    target: RegulationScope
   } | null> {
     if (!selectedFile.value) {
       ElMessage.warning('Wybierz plik do przesłania.')

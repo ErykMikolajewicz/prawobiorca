@@ -6,6 +6,7 @@ import type { SearchResult } from '@/api/generated/model'
 const props = defineProps<{
   results: Array<SearchResult>
   selectedCaseId?: string
+  canAddToCase: boolean
   query: string
 }>()
 
@@ -15,7 +16,7 @@ const emit = defineEmits<{
 
 const showHighlight = ref(true)
 
-const onAddToCase = (payload: { documentContent: string }) => {
+function onAddToCase(payload: { documentContent: string }) {
   emit('add-to-case', payload)
 }
 
@@ -60,6 +61,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
           :highlight="showHighlight ? highlight : null"
           :score="score"
           :selected-case-id="selectedCaseId"
+          :can-add-to-case="canAddToCase"
           @add-to-case="onAddToCase"
         />
       </div>

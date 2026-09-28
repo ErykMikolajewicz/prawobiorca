@@ -9,6 +9,7 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
     RetryRegulationPreparation,
@@ -30,6 +31,7 @@ from src.framework.dependencies.regulations import (
     get_confirm_regulation_upload,
     get_delete_regulation,
     get_list_regulations,
+    get_regulation,
     get_regulation_download_url,
     get_retry_regulation_preparation,
     get_search_regulation,
@@ -50,6 +52,24 @@ async def get_user_regulations(
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
 ) -> list[RegulationRepresentation]:
     return await list_regulations.execute(user_id, regulation_type)
+
+
+@user_regulations_router.get(
+    "/user/regulations/{regulationId}",
+    response_model=RegulationRepresentation,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
+    },
+)
+async def get_user_regulation(
+    user_id: Annotated[UUID, Depends(require_logged_user)],
+    get_regulation_: Annotated[GetRegulation, Depends(get_regulation)],
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
+) -> RegulationRepresentation:
+    try:
+        return await get_regulation_.execute(user_id, regulation_id)
+    except RegulationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
 
 
 @user_regulations_router.post(

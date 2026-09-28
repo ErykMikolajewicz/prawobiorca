@@ -219,6 +219,24 @@ class GetRegulationDownloadUrl:
 
 
 @dataclass
+class GetRegulation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> RegulationRepresentation:
+        async with self.session_maker() as session:
+            regulation_representation = await self.regulations_repository.get_regulation_representation(
+                session, user_id, regulation_id
+            )
+
+        if regulation_representation is None:
+            logger.warning("Regulation not found! regulation id: %s", regulation_id)
+            raise RegulationNotFound
+
+        return regulation_representation
+
+
+@dataclass
 class ListRegulations:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository

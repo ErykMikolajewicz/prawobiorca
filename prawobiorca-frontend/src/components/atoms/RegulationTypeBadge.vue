@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { regulationTypeOptions } from '@/composables/useRegulationUpload'
+import { regulationTypeOptions } from '@/domain/regulations'
 import type { RegulationType } from '@/api/generated/model'
 
 type Props = {

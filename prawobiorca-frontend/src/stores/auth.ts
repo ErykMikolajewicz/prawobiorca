@@ -3,14 +3,11 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { checkIsUserLogged, logoutUser, logUser } from '@/api/generated/endpoints/auth/auth'
-
-type CurrentUser = {
-  isAdmin: boolean
-}
+import type { CurrentUser } from '@/api/generated/model'
 
 async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
-    return (await checkIsUserLogged()) as CurrentUser
+    return await checkIsUserLogged()
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {

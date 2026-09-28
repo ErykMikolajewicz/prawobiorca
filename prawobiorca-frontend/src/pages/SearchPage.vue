@@ -19,8 +19,14 @@ import type {
   SearchRegulationDocumentsParams,
   SearchResult,
 } from '@/api/generated/model'
-import { searchRegulationDocuments } from '@/api/generated/endpoints/regulations/regulations'
-import { searchUserRegulationDocuments } from '@/api/generated/endpoints/user-regulations/user-regulations'
+import {
+  getPublicRegulation,
+  searchRegulationDocuments,
+} from '@/api/generated/endpoints/regulations/regulations'
+import {
+  getUserRegulation,
+  searchUserRegulationDocuments,
+} from '@/api/generated/endpoints/user-regulations/user-regulations'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +34,8 @@ const authStore = useAuthStore()
 const { isUserLogged } = storeToRefs(authStore)
 
 const regulationId = ref((route.params.regulationId as string) || '')
-const regulationName = history.state.filename
+const isUserRegulation = route.name === 'SearchUserRegulation'
+const regulationName = ref('')
 const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
   threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.2,
@@ -42,6 +49,8 @@ const results = ref<Array<SearchResult>>([])
 const isSearching = ref(false)
 
 onBeforeMount(async () => {
+  void loadRegulationName()
+
   if (searchParams.value.query) {
     void performSearch(searchParams.value)
   }
@@ -56,7 +65,17 @@ onBeforeMount(async () => {
   }
 })
 
-const handleSearch = async (newSearchParams: SearchRegulationDocumentsParams) => {
+async function loadRegulationName() {
+  const getRegulation = isUserRegulation ? getUserRegulation : getPublicRegulation
+  try {
+    const regulation = await getRegulation(regulationId.value)
+    regulationName.value = regulation.presentationName
+  } catch (error) {
+    showApiError(error, { defaultServerMessage: 'Nie udało się pobrać regulacji.' })
+  }
+}
+
+async function handleSearch(newSearchParams: SearchRegulationDocumentsParams) {
   searchParams.value = newSearchParams
 
   await router.replace({
@@ -69,9 +88,8 @@ const handleSearch = async (newSearchParams: SearchRegulationDocumentsParams) =>
 async function performSearch(params: SearchRegulationDocumentsParams) {
   isSearching.value = true
 
-  const isUserFile = route.path.includes('/user/regulations')
   try {
-    if (isUserFile) {
+    if (isUserRegulation) {
       results.value = await searchUserRegulationDocuments(regulationId.value, params)
     } else {
       results.value = await searchRegulationDocuments(regulationId.value, params)
@@ -91,7 +109,7 @@ async function handleAddToCase(payload: { documentContent: string }) {
 
   try {
     await addCaseDocument(selectedCaseId.value, {
-      presentationName: regulationName,
+      presentationName: regulationName.value,
       content: payload.documentContent,
     })
     ElMessage.success('Dodano do sprawy.')
@@ -107,7 +125,7 @@ async function handleAddToCase(payload: { documentContent: string }) {
       <el-icon><ArrowLeft /></el-icon> Powrót do głównego ekranu
     </el-button>
 
-    <CaseSelector v-model:selected-case-id="selectedCaseId" :cases="cases" />
+    <CaseSelector v-if="isUserLogged" v-model:selected-case-id="selectedCaseId" :cases="cases" />
 
     <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
 
@@ -117,6 +135,7 @@ async function handleAddToCase(payload: { documentContent: string }) {
       <SearchResultsList
         :results="results"
         :selected-case-id="selectedCaseId"
+        :can-add-to-case="isUserLogged"
         :query="searchParams.query"
         @add-to-case="handleAddToCase"
       />

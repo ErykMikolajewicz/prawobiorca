@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onBeforeMount, watch } from 'vue'
+import { computed, reactive, ref, onBeforeMount } from 'vue'
 
 import { storeToRefs } from 'pinia'
 import { showApiError } from '@/utils/error'
@@ -8,11 +8,11 @@ import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
 import UserCasesList from '@/components/organisms/UserCasesList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
-import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
-import { getUserRegulations } from '@/api/generated/endpoints/user-regulations/user-regulations'
+import { useRegulations } from '@/composables/useRegulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
-import type { CaseData, RegulationRepresentation, RegulationType } from '@/api/generated/model'
+import type { CaseData, RegulationRepresentation } from '@/api/generated/model'
+import type { RegulationScope } from '@/domain/regulations'
 import { getCasesList } from '@/api/generated/endpoints/cases/cases'
 
 import { useAuthStore } from '@/stores/auth'
@@ -20,116 +20,50 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const { isUserLogged, isAdmin } = storeToRefs(authStore)
 
-const publicRegulations = ref<Array<RegulationRepresentation>>([])
-
-const userRegulations = ref<Array<RegulationRepresentation>>([])
+const publicRegulations = reactive(useRegulations('public'))
+const userRegulations = reactive(useRegulations('user'))
 
 const cases = ref<Array<CaseData>>([])
 
 const isUploadDialogVisible = ref(false)
 
-const publicRegulationTypeFilter = ref<RegulationType | undefined>(undefined)
-const userRegulationTypeFilter = ref<RegulationType | undefined>(undefined)
-
 function handleCaseCreated(newCase: CaseData) {
   cases.value.push(newCase)
-}
-
-function handleRegulationCreated(regulation: RegulationRepresentation, target: 'user' | 'public') {
-  if (target === 'public') {
-    publicRegulations.value.push(regulation)
-  } else {
-    userRegulations.value.push(regulation)
-  }
-}
-
-function removeRegulation(regulations: Array<RegulationRepresentation>, regulationId: string) {
-  const index = regulations.findIndex((item) => item.id === regulationId)
-  if (index !== -1) {
-    regulations.splice(index, 1)
-  }
-}
-
-function markAsInProgress(regulations: Array<RegulationRepresentation>, regulationId: string) {
-  const regulation = regulations.find((item) => item.id === regulationId)
-  if (regulation) {
-    regulation.preparationStatus = 'IN_PROGRESS'
-  }
 }
 
 function handleCaseDeleted(caseId: string) {
   cases.value = cases.value.filter((c) => c.id !== caseId)
 }
 
-let publicRegulationsRequestId = 0
-let userRegulationsRequestId = 0
-
-async function fetchPublicRegulations() {
-  const requestId = ++publicRegulationsRequestId
-  const regulations = await getPublicRegulations({
-    documentType: publicRegulationTypeFilter.value,
-  })
-  if (requestId === publicRegulationsRequestId) {
-    publicRegulations.value = regulations
+function handleRegulationCreated(regulation: RegulationRepresentation, target: RegulationScope) {
+  if (target === 'public') {
+    publicRegulations.add(regulation)
+  } else {
+    userRegulations.add(regulation)
   }
-}
-
-async function fetchUserRegulations() {
-  const requestId = ++userRegulationsRequestId
-  const regulations = await getUserRegulations({
-    documentType: userRegulationTypeFilter.value,
-  })
-  if (requestId === userRegulationsRequestId) {
-    userRegulations.value = regulations
-  }
-}
-
-async function fetchCases() {
-  cases.value = await getCasesList()
-}
-
-async function loadWithErrorMessage(fetch: () => Promise<void>, errorMessage: string) {
-  try {
-    await fetch()
-  } catch (error) {
-    showApiError(error, { defaultServerMessage: errorMessage })
-  }
-}
-
-async function loadPublicRegulations() {
-  await loadWithErrorMessage(fetchPublicRegulations, 'Nie udało się pobrać regulacji publicznych.')
-}
-
-async function loadUserRegulations() {
-  await loadWithErrorMessage(fetchUserRegulations, 'Nie udało się pobrać regulacji użytkownika.')
 }
 
 async function loadCases() {
-  await loadWithErrorMessage(fetchCases, 'Nie udało się pobrać spraw.')
-}
-
-watch(publicRegulationTypeFilter, loadPublicRegulations)
-watch(userRegulationTypeFilter, loadUserRegulations)
-
-function isPending(regulation: RegulationRepresentation): boolean {
-  return (
-    regulation.preparationStatus === 'NOT_STARTED' || regulation.preparationStatus === 'IN_PROGRESS'
-  )
+  try {
+    cases.value = await getCasesList()
+  } catch (error) {
+    showApiError(error, { defaultServerMessage: 'Nie udało się pobrać spraw.' })
+  }
 }
 
 const hasPendingRegulations = computed(() => {
-  if (isUserLogged.value && userRegulations.value.some(isPending)) {
+  if (isUserLogged.value && userRegulations.hasPending) {
     return true
   }
-  return isAdmin.value && publicRegulations.value.some(isPending)
+  return isAdmin.value && publicRegulations.hasPending
 })
 
 async function refreshRegulations() {
   try {
-    await fetchPublicRegulations()
+    await publicRegulations.fetch()
 
     if (isUserLogged.value) {
-      await fetchUserRegulations()
+      await userRegulations.fetch()
     }
   } catch (error) {
     console.error('Failed to refresh regulations:', error)
@@ -139,10 +73,10 @@ async function refreshRegulations() {
 useRegulationsPolling(() => hasPendingRegulations.value, refreshRegulations)
 
 onBeforeMount(async () => {
-  await loadPublicRegulations()
+  await publicRegulations.load()
 
   if (isUserLogged.value) {
-    await loadUserRegulations()
+    await userRegulations.load()
     await loadCases()
   }
 })
@@ -155,32 +89,28 @@ onBeforeMount(async () => {
     </div>
 
     <RegulationsList
-      v-model:type-filter="publicRegulationTypeFilter"
+      v-model:type-filter="publicRegulations.typeFilter"
       title="Publiczne regulacje"
       empty-description="Brak regulacji publicznych."
-      :regulations="publicRegulations"
+      :regulations="publicRegulations.regulations"
       target="public"
       :can-manage="isAdmin"
-      @regulation-deleted="(regulationId) => removeRegulation(publicRegulations, regulationId)"
-      @regulation-preparation-retried="
-        (regulationId) => markAsInProgress(publicRegulations, regulationId)
-      "
+      @regulation-deleted="publicRegulations.remove"
+      @regulation-preparation-retried="publicRegulations.markAsInProgress"
     />
 
     <el-divider />
 
     <template v-if="isUserLogged">
       <RegulationsList
-        v-model:type-filter="userRegulationTypeFilter"
+        v-model:type-filter="userRegulations.typeFilter"
         title="Regulacje użytkownika"
         empty-description="Brak regulacji użytkownika."
-        :regulations="userRegulations"
+        :regulations="userRegulations.regulations"
         target="user"
-        :can-manage="true"
-        @regulation-deleted="(regulationId) => removeRegulation(userRegulations, regulationId)"
-        @regulation-preparation-retried="
-          (regulationId) => markAsInProgress(userRegulations, regulationId)
-        "
+        can-manage
+        @regulation-deleted="userRegulations.remove"
+        @regulation-preparation-retried="userRegulations.markAsInProgress"
       />
 
       <el-divider />
