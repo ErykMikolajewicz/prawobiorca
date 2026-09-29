@@ -9,6 +9,7 @@ from src.app.dtos.regulations import RegulationRepresentation
 from src.domain.exceptions.regulations import RegulationNotFound
 from src.domain.exceptions.users import UserNotFound
 from src.domain.value_objects.regulations import (
+    RegulationDetails,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -75,6 +76,24 @@ class RegulationsManagerRepository:
 
         if result.scalar_one_or_none() is None:
             raise RegulationNotFound
+
+    @staticmethod
+    async def update_regulation_details(
+        session: AsyncSession, user_id: UUID | None, id_: UUID, regulation_details: RegulationDetails
+    ) -> RegulationRepresentation:
+        statement = (
+            update(RegulationRepresentation)
+            .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
+            .values(**asdict(regulation_details))
+            .returning(RegulationRepresentation)
+        )
+        result = await session.scalars(statement)
+
+        regulation_representation = result.one_or_none()
+        if regulation_representation is None:
+            raise RegulationNotFound
+
+        return regulation_representation
 
     @staticmethod
     async def get_regulation_representation(

@@ -2,7 +2,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.app.dtos.regulations import RegulationData, RegulationRepresentation, RegulationUploadTarget
+from src.app.dtos.regulations import (
+    RegulationData,
+    RegulationDetailsData,
+    RegulationRepresentation,
+    RegulationUploadTarget,
+)
 from src.app.dtos.search import SearchParams
 from src.app.use_cases.regulations import (
     AddRegulation,
@@ -14,6 +19,7 @@ from src.app.use_cases.regulations import (
     PrepareRegulation,
     RetryRegulationPreparation,
     SearchRegulation,
+    UpdateRegulation,
 )
 from src.domain.exceptions.documents import RegulationDocumentsNotFound
 from src.domain.exceptions.regulations import (
@@ -24,7 +30,7 @@ from src.domain.exceptions.regulations import (
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
 )
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.domain.value_objects.regulations import RegulationDetails, RegulationPreparationStatus, RegulationType
 from src.shared.exceptions import ServiceUnavailable
 
 
@@ -712,6 +718,46 @@ async def test_list_regulations_success(uuid_generator, mock_regulations_reposit
     assert result == mock_results
     assert result[0].regulation_type == RegulationType.ACT
     mock_regulations_repository.list_regulations.assert_awaited_once()
+
+
+async def test_update_regulation_success(uuid_generator, mock_regulations_repository, mock_session_maker):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    mock_result = MagicMock(spec=RegulationRepresentation)
+    mock_regulations_repository.update_regulation_details.return_value = mock_result
+
+    use_case = UpdateRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    result = await use_case.execute(
+        user_id, regulation_id, RegulationDetailsData(name="New name", description="New description")
+    )
+
+    assert result == mock_result
+    mock_regulations_repository.update_regulation_details.assert_awaited_once()
+    assert mock_regulations_repository.update_regulation_details.await_args.args[1:] == (
+        user_id,
+        regulation_id,
+        RegulationDetails(presentation_name="New name", description="New description"),
+    )
+
+
+async def test_update_regulation_not_found(uuid_generator, mock_regulations_repository, mock_session_maker):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    mock_regulations_repository.update_regulation_details.side_effect = RegulationNotFound
+
+    use_case = UpdateRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    with pytest.raises(RegulationNotFound):
+        await use_case.execute(user_id, regulation_id, RegulationDetailsData(name="New name"))
 
 
 async def test_delete_regulation_prepared_success(

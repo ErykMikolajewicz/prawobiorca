@@ -11,12 +11,16 @@ vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
 const mockRegulations: RegulationRepresentation[] = [
   {
     id: '1',
+    createDate: '2026-09-29T10:00:00',
+    description: null,
     presentationName: 'Prepared Doc',
     preparationStatus: 'PREPARED',
     regulationType: 'ACT',
   },
   {
     id: '2',
+    createDate: '2026-09-29T10:00:00',
+    description: null,
     presentationName: 'Unprepared Doc',
     preparationStatus: 'IN_PROGRESS',
     regulationType: 'STATUTE',
@@ -87,6 +91,8 @@ describe('RegulationsList', () => {
         regulations: [
           {
             id: '2',
+            createDate: '2026-09-29T10:00:00',
+            description: null,
             presentationName: 'Unprepared Doc',
             preparationStatus: 'IN_PROGRESS',
             regulationType: 'STATUTE',
@@ -135,5 +141,35 @@ describe('RegulationsList', () => {
     })
 
     expect(wrapper.find('.el-empty-stub').exists()).toBe(false)
+  })
+
+  it('forwards regulation update from card', async () => {
+    const updatedRegulation = { ...mockRegulations[0]!, presentationName: 'Renamed Doc' }
+    const wrapper = mount(RegulationsList, {
+      props: {
+        regulations: mockRegulations,
+        title: 'Publiczne regulacje',
+        emptyDescription: 'Brak regulacji publicznych.',
+        typeFilter: undefined,
+        target: 'public',
+        canManage: true,
+      },
+      global: {
+        directives: { loading: {} },
+        stubs: {
+          RegulationCard: {
+            template:
+              '<button class="stub-card" @click="$emit(\'updated\', { ...regulation, presentationName: \'Renamed Doc\' })" />',
+            props: ['regulation', 'target', 'canManage'],
+          },
+          RegulationTypeFilter: true,
+          ElEmpty: true,
+        },
+      },
+    })
+
+    await wrapper.findAll('.stub-card')[0]?.trigger('click')
+
+    expect(wrapper.emitted('regulation-updated')?.[0]).toEqual([updatedRegulation])
   })
 })

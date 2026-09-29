@@ -19,6 +19,7 @@ const props = defineProps<Props>()
 const typeFilter = defineModel<RegulationType | undefined>('typeFilter')
 
 const emit = defineEmits<{
+  (e: 'regulation-updated', regulation: RegulationRepresentation): void
   (e: 'regulation-deleted', regulationId: string): void
   (e: 'regulation-preparation-retried', regulationId: string): void
 }>()
@@ -46,6 +47,7 @@ const displayedRegulations = computed(() => {
         :regulation="regulation"
         :target="target"
         :can-manage="canManage"
+        @updated="(updatedRegulation) => emit('regulation-updated', updatedRegulation)"
         @deleted="(regulationId) => emit('regulation-deleted', regulationId)"
         @preparation-retried="
           (regulationId) => emit('regulation-preparation-retried', regulationId)

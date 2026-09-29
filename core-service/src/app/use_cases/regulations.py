@@ -2,7 +2,12 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
-from src.app.dtos.regulations import RegulationData, RegulationRepresentation, RegulationUploadTarget
+from src.app.dtos.regulations import (
+    RegulationData,
+    RegulationDetailsData,
+    RegulationRepresentation,
+    RegulationUploadTarget,
+)
 from src.app.dtos.search import SearchParams, SearchResult
 from src.app.interfaces.regulations import RegulationsRepository, RegulationsStorage
 from src.app.interfaces.relational import SessionMaker
@@ -20,6 +25,7 @@ from src.domain.exceptions.regulations import (
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import (
+    RegulationDetails,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -247,6 +253,23 @@ class ListRegulations:
         async with self.session_maker() as session:
             files = await self.regulations_repository.list_regulations(session, user_id, regulation_type)
         return files
+
+
+@dataclass
+class UpdateRegulation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(
+        self, user_id: UUID | None, regulation_id: UUID, regulation_details_data: RegulationDetailsData
+    ) -> RegulationRepresentation:
+        regulation_details = RegulationDetails(
+            presentation_name=regulation_details_data.name, description=regulation_details_data.description
+        )
+        async with self.session_maker.begin() as session:
+            return await self.regulations_repository.update_regulation_details(
+                session, user_id, regulation_id, regulation_details
+            )
 
 
 @dataclass

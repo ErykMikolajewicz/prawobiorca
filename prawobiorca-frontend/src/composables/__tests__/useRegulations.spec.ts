@@ -20,7 +20,9 @@ vi.mock('element-plus', () => ({
 function regulation(id: string): RegulationRepresentation {
   return {
     id,
+    createDate: '2026-09-29T10:00:00',
     presentationName: `Regulacja ${id}`,
+    description: null,
     regulationType: 'ACT',
     preparationStatus: 'PREPARED',
   }
@@ -74,5 +76,19 @@ describe('useRegulations', () => {
 
     expect(regulations.value).toEqual([{ ...regulation('b'), preparationStatus: 'IN_PROGRESS' }])
     expect(pendingIds.value).toEqual(['b'])
+  })
+
+  it('replaces an updated regulation', async () => {
+    vi.mocked(getPublicRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
+
+    const { regulations, fetch, update } = useRegulations('public')
+    await fetch()
+
+    update({ ...regulation('a'), presentationName: 'Nowa nazwa', description: 'Opis' })
+
+    expect(regulations.value).toEqual([
+      { ...regulation('a'), presentationName: 'Nowa nazwa', description: 'Opis' },
+      regulation('b'),
+    ])
   })
 })

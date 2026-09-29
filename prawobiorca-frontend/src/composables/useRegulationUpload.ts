@@ -108,7 +108,9 @@ export function useRegulationUpload() {
       return {
         regulation: {
           id: uploadResult.id,
+          createDate: new Date().toISOString(),
           presentationName: presentationName.value.trim(),
+          description: null,
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
         },
