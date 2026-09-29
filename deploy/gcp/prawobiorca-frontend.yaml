@@ -14,6 +14,8 @@ spec:
         app: prawobiorca
         component: prawobiorca-frontend
     spec:
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
       containers:
         - name: prawobiorca-frontend
           image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/prawobiorca-frontend:latest

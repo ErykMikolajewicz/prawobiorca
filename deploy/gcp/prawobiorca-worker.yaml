@@ -14,6 +14,8 @@ spec:
         app: prawobiorca
         component: prawobiorca-worker
     spec:
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
       serviceAccountName: prawobiorca-runner
       containers:
         - name: prawobiorca-worker
@@ -21,8 +23,8 @@ spec:
           command: ["taskiq", "worker", "src.framework.workers.regulations:broker"]
           resources:
             requests:
-              cpu: "200m"
-              memory: "512Mi"
+              cpu: "100m"
+              memory: "384Mi"
             limits:
               cpu: "1"
               memory: "1Gi"
