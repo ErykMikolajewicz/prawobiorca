@@ -9,29 +9,23 @@ import type { RegulationPreparationStatus, RegulationRepresentation } from '@/ap
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   confirmPublicRegulationUpload: vi.fn(),
-  deletePublicRegulation: vi.fn(),
   retryPublicRegulationPreparation: vi.fn(),
 }))
 
 vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
   confirmUserRegulationUpload: vi.fn(),
-  deleteUserRegulation: vi.fn(),
   retryUserRegulationPreparation: vi.fn(),
 }))
 
 const RETRY_BUTTON = 'button[aria-label="Ponów przetwarzanie"]'
-
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
+const OPTIONS_BUTTON = 'button[aria-label="Opcje regulacji"]'
 
 function mountCard(preparationStatus: RegulationPreparationStatus, canManage: boolean) {
   const regulation: RegulationRepresentation = {
     id: 'uuid-1',
+    createDate: '2026-09-29T10:00:00',
     presentationName: 'Ustawa testowa',
+    description: null,
     regulationType: 'ACT',
     preparationStatus,
   }
@@ -52,7 +46,14 @@ function mountCard(preparationStatus: RegulationPreparationStatus, canManage: bo
           props: ['preparationStatus'],
         },
         IconMotion: true,
-        ElPopconfirm: true,
+        RegulationDetailsDialog: {
+          template:
+            '<div v-if="modelValue" class="details-dialog-stub">' +
+            '<button class="stub-update" @click="$emit(\'updated\', { ...regulation, presentationName: \'Nowa nazwa\' })" />' +
+            '<button class="stub-delete" @click="$emit(\'deleted\', regulation.id)" />' +
+            '</div>',
+          props: ['modelValue', 'regulation', 'target', 'canManage'],
+        },
       },
     },
   })
@@ -119,5 +120,32 @@ describe('RegulationCard', () => {
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)
     expect(wrapper.find('.status-badge-stub').exists()).toBe(false)
     expect(wrapper.find(RETRY_BUTTON).exists()).toBe(false)
+  })
+
+  it.each([true, false])(
+    'opens details dialog from options button when canManage is %s',
+    async (canManage) => {
+      const wrapper = mountCard('PREPARED', canManage)
+
+      expect(wrapper.find('.details-dialog-stub').exists()).toBe(false)
+
+      await wrapper.find(OPTIONS_BUTTON).trigger('click')
+
+      expect(wrapper.find('.details-dialog-stub').exists()).toBe(true)
+    },
+  )
+
+  it('forwards update and delete events from details dialog', async () => {
+    const wrapper = mountCard('PREPARED', true)
+
+    await wrapper.find(OPTIONS_BUTTON).trigger('click')
+    await wrapper.find('.stub-update').trigger('click')
+    await wrapper.find('.stub-delete').trigger('click')
+
+    expect(wrapper.emitted('updated')?.[0]?.[0]).toMatchObject({
+      id: 'uuid-1',
+      presentationName: 'Nowa nazwa',
+    })
+    expect(wrapper.emitted('deleted')?.[0]).toEqual(['uuid-1'])
   })
 })

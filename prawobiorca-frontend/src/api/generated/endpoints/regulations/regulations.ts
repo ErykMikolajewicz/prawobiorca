@@ -1,6 +1,7 @@
 import type {
   GetPublicRegulationsParams,
   RegulationData,
+  RegulationDetailsData,
   RegulationRepresentation,
   RegulationUploadTarget,
   SearchRegulationDocumentsParams,
@@ -49,6 +50,24 @@ export const getPublicRegulation = (
 ) => {
   return prawobiorcaRequest<RegulationRepresentation>(
     { url: `/api/regulations/${regulationId}`, method: 'GET' },
+    options,
+  )
+}
+/**
+ * @summary Update Public Regulation
+ */
+export const updatePublicRegulation = (
+  regulationId: string,
+  regulationDetailsData: RegulationDetailsData,
+  options?: SecondParameter<typeof prawobiorcaRequest<RegulationRepresentation>>,
+) => {
+  return prawobiorcaRequest<RegulationRepresentation>(
+    {
+      url: `/api/regulations/${regulationId}`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data: regulationDetailsData,
+    },
     options,
   )
 }
@@ -118,6 +137,9 @@ export type GetPublicRegulationsResult = NonNullable<
 >
 export type AddPublicRegulationResult = NonNullable<Awaited<ReturnType<typeof addPublicRegulation>>>
 export type GetPublicRegulationResult = NonNullable<Awaited<ReturnType<typeof getPublicRegulation>>>
+export type UpdatePublicRegulationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePublicRegulation>>
+>
 export type DeletePublicRegulationResult = NonNullable<
   Awaited<ReturnType<typeof deletePublicRegulation>>
 >

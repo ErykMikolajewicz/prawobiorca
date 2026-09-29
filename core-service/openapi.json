@@ -270,6 +270,63 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "Update Public Regulation",
+        "operationId": "update_public_regulation",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegulationDetailsData"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulationRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "regulations"
@@ -1018,6 +1075,63 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "user_regulations"
+        ],
+        "summary": "Update User Regulation",
+        "operationId": "update_user_regulation",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegulationDetailsData"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulationRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "user_regulations"
@@ -1583,6 +1697,33 @@
         ],
         "title": "RegulationData"
       },
+      "RegulationDetailsData": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "RegulationDetailsData"
+      },
       "RegulationPreparationStatus": {
         "type": "string",
         "enum": [
@@ -1600,11 +1741,27 @@
             "format": "uuid",
             "title": "Id"
           },
+          "createDate": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdate"
+          },
           "presentationName": {
             "type": "string",
             "maxLength": 255,
             "minLength": 1,
             "title": "Presentationname"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "regulationType": {
             "anyOf": [
@@ -1624,7 +1781,9 @@
         "type": "object",
         "required": [
           "id",
+          "createDate",
           "presentationName",
+          "description",
           "regulationType",
           "preparationStatus"
         ],

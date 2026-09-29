@@ -3,7 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from src.app.dtos.regulations import RegulationData, RegulationRepresentation, RegulationUploadTarget
+from src.app.dtos.regulations import (
+    RegulationData,
+    RegulationDetailsData,
+    RegulationRepresentation,
+    RegulationUploadTarget,
+)
 from src.app.dtos.search import SearchParams, SearchResult
 from src.app.use_cases.regulations import (
     AddRegulation,
@@ -14,6 +19,7 @@ from src.app.use_cases.regulations import (
     ListRegulations,
     RetryRegulationPreparation,
     SearchRegulation,
+    UpdateRegulation,
 )
 from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
@@ -34,6 +40,7 @@ from src.framework.dependencies.regulations import (
     get_regulation_download_url,
     get_retry_regulation_preparation,
     get_search_regulation,
+    get_update_regulation,
 )
 
 public_regulations_router = APIRouter(tags=["regulations"], prefix="/api")
@@ -168,6 +175,26 @@ async def get_public_regulation_download_url(
     user_id = None
     try:
         return await get_download_url.execute(user_id, regulation_id)
+    except RegulationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
+
+
+@public_regulations_router.patch(
+    "/regulations/{regulationId}",
+    response_model=RegulationRepresentation,
+    dependencies=(Depends(require_admin),),
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
+    },
+)
+async def update_public_regulation(
+    update_regulation_: Annotated[UpdateRegulation, Depends(get_update_regulation)],
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
+    regulation_details_data: RegulationDetailsData,
+) -> RegulationRepresentation:
+    user_id = None
+    try:
+        return await update_regulation_.execute(user_id, regulation_id, regulation_details_data)
     except RegulationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
 

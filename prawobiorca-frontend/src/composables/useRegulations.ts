@@ -44,6 +44,12 @@ export function useRegulations(scope: RegulationScope) {
     regulations.value.push(regulation)
   }
 
+  function update(updatedRegulation: RegulationRepresentation) {
+    regulations.value = regulations.value.map((regulation) =>
+      regulation.id === updatedRegulation.id ? updatedRegulation : regulation,
+    )
+  }
+
   function remove(regulationId: string) {
     regulations.value = regulations.value.filter((regulation) => regulation.id !== regulationId)
   }
@@ -65,6 +71,7 @@ export function useRegulations(scope: RegulationScope) {
     fetch,
     load,
     add,
+    update,
     remove,
     markAsInProgress,
   }

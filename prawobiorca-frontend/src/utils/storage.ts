@@ -2,7 +2,7 @@ import axios from 'axios'
 
 import type { RegulationUploadTarget } from '@/api/generated/model'
 
-function toBrowserStorageUrl(url: string): string {
+export function toBrowserStorageUrl(url: string): string {
   const devStorageOrigin = import.meta.env.VITE_DEV_STORAGE_ORIGIN
   if (devStorageOrigin && url.startsWith(devStorageOrigin)) {
     return '/storage' + url.slice(devStorageOrigin.length)

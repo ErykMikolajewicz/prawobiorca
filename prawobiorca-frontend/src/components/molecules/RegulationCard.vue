@@ -2,22 +2,19 @@
 import { computed, ref } from 'vue'
 import {
   confirmPublicRegulationUpload,
-  deletePublicRegulation,
   retryPublicRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import {
   confirmUserRegulationUpload,
-  deleteUserRegulation,
   retryUserRegulationPreparation,
 } from '@/api/generated/endpoints/user-regulations/user-regulations'
-import { ElMessage } from 'element-plus'
-import { showApiError } from '@/utils/error'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
-import DeleteOutlineRoundedIcon from '@iconify-vue/material-symbols/delete-outline-rounded'
+import MoreVertIcon from '@iconify-vue/material-symbols/more-vert'
 import RefreshRoundedIcon from '@iconify-vue/material-symbols/refresh-rounded'
 import IconMotion from '@/components/atoms/IconMotion.vue'
 import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
+import RegulationDetailsDialog from '@/components/molecules/RegulationDetailsDialog.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
 import type { RegulationRepresentation } from '@/api/generated/model'
 import type { RegulationScope } from '@/domain/regulations'
@@ -31,18 +28,18 @@ type Props = {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
+  (e: 'updated', regulation: RegulationRepresentation): void
   (e: 'deleted', regulationId: string): void
   (e: 'preparation-retried', regulationId: string): void
 }>()
 
-const isDeleting = ref(false)
+const isDetailsDialogVisible = ref(false)
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
 const isNotStarted = computed(() => props.regulation.preparationStatus === 'NOT_STARTED')
 const canRetry = computed(
   () => isNotStarted.value || props.regulation.preparationStatus === 'FAILED',
 )
 
-const deleteRegulation = props.target === 'public' ? deletePublicRegulation : deleteUserRegulation
 const retryRegulationPreparation =
   props.target === 'public' ? retryPublicRegulationPreparation : retryUserRegulationPreparation
 const confirmRegulationUpload =
@@ -58,19 +55,6 @@ const uploadConfirmation = useRegulationPreparation(
 const isRetrying = computed(
   () => preparationRetry.isRetrying.value || uploadConfirmation.isRetrying.value,
 )
-
-async function handleDelete() {
-  try {
-    isDeleting.value = true
-    await deleteRegulation(props.regulation.id)
-    ElMessage.success('Regulacja została usunięta')
-    emit('deleted', props.regulation.id)
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się usunąć regulacji' })
-  } finally {
-    isDeleting.value = false
-  }
-}
 
 async function retryPreparation(regulationId: string) {
   const { retry } = isNotStarted.value ? uploadConfirmation : preparationRetry
@@ -122,26 +106,25 @@ async function retryPreparation(regulationId: string) {
           </button>
         </template>
 
-        <el-popconfirm
-          v-if="canManage"
-          title="Czy na pewno chcesz usunąć tę regulację?"
-          confirm-button-text="Tak"
-          cancel-button-text="Nie"
-          @confirm="handleDelete"
+        <button
+          type="button"
+          class="icon-btn options-btn"
+          aria-label="Opcje regulacji"
+          @click="isDetailsDialogVisible = true"
         >
-          <template #reference>
-            <button
-              type="button"
-              class="icon-btn icon-btn-danger"
-              aria-label="Usuń regulację"
-              :disabled="isDeleting"
-            >
-              <DeleteOutlineRoundedIcon />
-            </button>
-          </template>
-        </el-popconfirm>
+          <MoreVertIcon />
+        </button>
       </div>
     </div>
+
+    <RegulationDetailsDialog
+      v-model="isDetailsDialogVisible"
+      :regulation="regulation"
+      :target="target"
+      :can-manage="canManage"
+      @updated="(updatedRegulation) => emit('updated', updatedRegulation)"
+      @deleted="(regulationId) => emit('deleted', regulationId)"
+    />
   </el-card>
 </template>
 
@@ -194,7 +177,11 @@ async function retryPreparation(regulationId: string) {
   inset: 0;
 }
 
-.file-card--prepared:hover .search-action {
+.file-card--prepared:has(.file-card-link:hover) .search-action {
+  color: var(--el-color-primary);
+}
+
+.options-btn:hover {
   color: var(--el-color-primary);
 }
 
