@@ -1,4 +1,5 @@
 import math
+from unittest.mock import ANY
 from uuid import UUID
 
 import pytest
@@ -61,7 +62,9 @@ async def test_get_public_regulations(client, override_session_maker, session_ma
         assert response.json() == [
             {
                 "id": str(public_act_id),
+                "createDate": ANY,
                 "presentationName": "Public act.pdf",
+                "description": None,
                 "regulationType": RegulationType.ACT,
                 "preparationStatus": RegulationPreparationStatus.PREPARED,
             }
@@ -83,7 +86,9 @@ async def test_get_public_regulation(client, override_session_maker, session_mak
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == {
             "id": str(public_regulation_id),
+            "createDate": ANY,
             "presentationName": "Public act.pdf",
+            "description": None,
             "regulationType": RegulationType.ACT,
             "preparationStatus": RegulationPreparationStatus.PREPARED,
         }
@@ -405,6 +410,57 @@ async def test_confirm_public_regulation_upload_as_admin(
 
         assert regulation is not None
         assert regulation.preparation_status == RegulationPreparationStatus.IN_PROGRESS
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
+
+
+async def test_update_public_regulation_as_admin(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, "Public act.pdf")
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.patch(
+            f"/api/regulations/{regulation_id}",
+            json={"name": "Renamed act.pdf", "description": "Opis regulacji"},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "id": str(regulation_id),
+            "createDate": ANY,
+            "presentationName": "Renamed act.pdf",
+            "description": "Opis regulacji",
+            "regulationType": RegulationType.ACT,
+            "preparationStatus": RegulationPreparationStatus.PREPARED,
+        }
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
+
+
+async def test_update_public_regulation_as_normal_user(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, "Public act.pdf")
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.patch(f"/api/regulations/{regulation_id}", json={"name": "Renamed act.pdf"})
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
     finally:
         async with session_maker.begin() as session:
             await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))

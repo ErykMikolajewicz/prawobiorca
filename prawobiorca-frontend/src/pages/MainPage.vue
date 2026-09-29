@@ -91,6 +91,7 @@ onBeforeMount(async () => {
       :loading="publicRegulations.isLoading"
       target="public"
       :can-manage="isAdmin"
+      @regulation-updated="publicRegulations.update"
       @regulation-deleted="publicRegulations.remove"
       @regulation-preparation-retried="publicRegulations.markAsInProgress"
     />
@@ -106,6 +107,7 @@ onBeforeMount(async () => {
         :loading="userRegulations.isLoading"
         target="user"
         can-manage
+        @regulation-updated="userRegulations.update"
         @regulation-deleted="userRegulations.remove"
         @regulation-preparation-retried="userRegulations.markAsInProgress"
       />

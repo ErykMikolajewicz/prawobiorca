@@ -364,3 +364,9 @@ class RegulationPreparationStatus(StrEnum):
 class RegulationRegistrationData:
     presentation_name: str
     regulation_type: RegulationType | None = None
+
+
+@dataclass
+class RegulationDetails:
+    presentation_name: str
+    description: str | None = None

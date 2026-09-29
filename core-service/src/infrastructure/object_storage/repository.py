@@ -32,7 +32,12 @@ class S3RegulationsStorage:
     async def get_download_url(self, id_: UUID) -> str:
         return await self.presign_client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": object_storage_settings.BUCKET, "Key": str(id_)},
+            Params={
+                "Bucket": object_storage_settings.BUCKET,
+                "Key": str(id_),
+                "ResponseContentDisposition": "inline",
+                "ResponseContentType": "application/pdf",
+            },
             ExpiresIn=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
         )
 

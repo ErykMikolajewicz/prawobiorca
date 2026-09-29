@@ -16,6 +16,7 @@ from src.app.use_cases.regulations import (
     ListRegulations,
     RetryRegulationPreparation,
     SearchRegulation,
+    UpdateRegulation,
 )
 from src.framework.dependencies.ai_services import get_texts_embedder
 from src.framework.dependencies.relational import get_session_maker
@@ -81,6 +82,13 @@ def get_retry_regulation_preparation(
     ],
 ) -> RetryRegulationPreparation:
     return RetryRegulationPreparation(session_maker, regulations_repository, regulation_preparation_scheduler)
+
+
+def get_update_regulation(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+) -> UpdateRegulation:
+    return UpdateRegulation(session_maker, regulations_repository)
 
 
 def get_delete_regulation(

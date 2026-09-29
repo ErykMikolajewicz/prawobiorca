@@ -58,7 +58,9 @@ describe('useRegulationUpload', () => {
     expect(confirmUserRegulationUpload).toHaveBeenCalledWith('uuid-user-1')
     expect(result?.regulation).toEqual({
       id: 'uuid-user-1',
+      createDate: expect.any(String),
       presentationName: 'User Doc',
+      description: null,
       regulationType: 'STATUTE',
       preparationStatus: 'IN_PROGRESS',
     })
@@ -93,7 +95,9 @@ describe('useRegulationUpload', () => {
 
     expect(result?.regulation).toEqual({
       id: 'uuid-user-2',
+      createDate: expect.any(String),
       presentationName: 'User Doc',
+      description: null,
       regulationType: null,
       preparationStatus: 'NOT_STARTED',
     })
