@@ -14,6 +14,8 @@ spec:
         app: prawobiorca
         component: prawobiorca-backend
     spec:
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
       serviceAccountName: prawobiorca-runner
       containers:
         - name: prawobiorca-backend

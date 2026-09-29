@@ -11,7 +11,7 @@ data:
   RELATIONAL_DB_PORT: "5432"
   RELATIONAL_DB_NAME: "postgres"
 
-  EMBEDDING_SERVICE_URL: "http://embedding-service:8080"
+  EMBEDDING_SERVICE_URL: "https://embedding-service-296630821006.europe-central2.run.app"
   EXTRACTION_SERVICE_URL: "https://extraction-service-296630821006.europe-central2.run.app"
 
   BROKER_URL: "redis://redis:6379"
