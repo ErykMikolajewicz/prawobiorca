@@ -33,8 +33,6 @@ const emit = defineEmits<{
 
 const name = ref('')
 const description = ref('')
-const previewUrl = ref<string | null>(null)
-const isPreviewVisible = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
 const isLoadingPreview = ref(false)
@@ -94,11 +92,16 @@ async function handleDelete() {
 }
 
 async function showPreview() {
+  const previewWindow = window.open('', '_blank')
   try {
     isLoadingPreview.value = true
-    previewUrl.value = toBrowserStorageUrl(await getRegulationDownloadUrl(props.regulation.id))
-    isPreviewVisible.value = true
+    const previewUrl = toBrowserStorageUrl(await getRegulationDownloadUrl(props.regulation.id))
+    if (previewWindow) {
+      previewWindow.opener = null
+      previewWindow.location.href = previewUrl
+    }
   } catch (error) {
+    previewWindow?.close()
     showApiError(error, { defaultMessage: 'Nie udało się pobrać podglądu pliku' })
   } finally {
     isLoadingPreview.value = false
@@ -161,28 +164,11 @@ async function showPreview() {
       </div>
     </template>
   </el-dialog>
-
-  <el-dialog
-    v-model="isPreviewVisible"
-    :title="regulation.presentationName"
-    width="min(1200px, 95vw)"
-    align-center
-    append-to-body
-  >
-    <iframe v-if="previewUrl" :src="previewUrl" title="Podgląd pliku" class="preview-frame" />
-  </el-dialog>
 </template>
 
 <style scoped>
 .regulation-description {
   white-space: pre-wrap;
-}
-
-.preview-frame {
-  width: 100%;
-  height: 80vh;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
 }
 
 .dialog-footer {

@@ -134,8 +134,10 @@ describe('RegulationDetailsDialog', () => {
     expect(wrapper.text()).toContain('Opis ustawy')
   })
 
-  it('loads file preview into iframe', async () => {
+  it('opens file preview in new browser tab', async () => {
     const wrapper = await mountDialog(false)
+    const previewWindow = { opener: window, location: { href: '' }, close: vi.fn() }
+    const openSpy = vi.spyOn(window, 'open').mockReturnValueOnce(previewWindow as unknown as Window)
     vi.mocked(getPublicRegulationDownloadUrl).mockResolvedValueOnce(
       'https://storage.example.com/uuid-1',
     )
@@ -143,8 +145,11 @@ describe('RegulationDetailsDialog', () => {
     await findButton(wrapper, 'Pokaż podgląd')?.trigger('click')
     await flushPromises()
 
+    expect(openSpy).toHaveBeenCalledWith('', '_blank')
     expect(getPublicRegulationDownloadUrl).toHaveBeenCalledWith('uuid-1')
-    expect(wrapper.find('iframe').attributes('src')).toBe('https://storage.example.com/uuid-1')
+    expect(previewWindow.opener).toBeNull()
+    expect(previewWindow.location.href).toBe('https://storage.example.com/uuid-1')
+    openSpy.mockRestore()
   })
 
   it('does not offer preview when file upload was not confirmed', async () => {
