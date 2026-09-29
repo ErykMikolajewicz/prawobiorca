@@ -8,6 +8,7 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
     PrepareRegulation,
@@ -21,10 +22,10 @@ from src.domain.exceptions.regulations import (
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
-    RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.shared.exceptions import ServiceUnavailable
 
 
 def get_set_statuses(mock_regulations_repository):
@@ -176,7 +177,7 @@ async def test_prepare_regulation_service_unavailable(
     mock_regulations_storage.get_regulation.return_value = b"content"
 
     mock_regulation_preparator = AsyncMock()
-    mock_regulation_preparator.prepare_regulation.side_effect = RegulationServiceUnavailable()
+    mock_regulation_preparator.prepare_regulation.side_effect = ServiceUnavailable()
 
     use_case = PrepareRegulation(
         session_maker=mock_session_maker,
@@ -186,7 +187,7 @@ async def test_prepare_regulation_service_unavailable(
         regulation_preparator=mock_regulation_preparator,
     )
 
-    with pytest.raises(RegulationServiceUnavailable):
+    with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [
@@ -380,7 +381,7 @@ async def test_retry_regulation_preparation_scheduler_unavailable(
         regulation_preparation_scheduler=mock_scheduler,
     )
 
-    with pytest.raises(RegulationServiceUnavailable):
+    with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [
@@ -612,7 +613,7 @@ async def test_confirm_regulation_upload_scheduler_unavailable(
         regulation_preparation_scheduler=mock_scheduler,
     )
 
-    with pytest.raises(RegulationServiceUnavailable):
+    with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [
@@ -654,6 +655,39 @@ async def test_get_regulation_download_url_not_found(
         session_maker=mock_session_maker,
         regulations_repository=mock_regulations_repository,
         regulations_storage=mock_regulations_storage,
+    )
+
+    with pytest.raises(RegulationNotFound):
+        await use_case.execute(user_id, regulation_id)
+
+
+async def test_get_regulation_success(uuid_generator, mock_regulations_repository, mock_session_maker):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    mock_result = MagicMock(spec=RegulationRepresentation)
+    mock_regulations_repository.get_regulation_representation.return_value = mock_result
+
+    use_case = GetRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    result = await use_case.execute(user_id, regulation_id)
+
+    assert result == mock_result
+    mock_regulations_repository.get_regulation_representation.assert_awaited_once()
+
+
+async def test_get_regulation_not_found(uuid_generator, mock_regulations_repository, mock_session_maker):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    mock_regulations_repository.get_regulation_representation.return_value = None
+
+    use_case = GetRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
     )
 
     with pytest.raises(RegulationNotFound):

@@ -3,8 +3,9 @@ import logging
 import tomllib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 
+from src.framework.api.exception_handlers import include_exception_handlers
 from src.framework.api.router import include_all_routers
 from src.framework.dependencies.file_storage import init_file_storage_client
 from src.infrastructure.ai_services.initialization import init_ai_services_client
@@ -65,11 +66,18 @@ async def lifespan(app: FastAPI):
                 logger.error("Error during clean up: %s", e)
 
 
-prawobiorca = FastAPI(lifespan=lifespan, title="PRAWOBIORCA", version=version)
+prawobiorca = FastAPI(
+    lifespan=lifespan,
+    title="PRAWOBIORCA",
+    version=version,
+    responses={status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"}},
+    generate_unique_id_function=lambda route: route.name,
+)
 
 origins = ["http://localhost:5173"]
 
 include_all_routers(prawobiorca)
+include_exception_handlers(prawobiorca)
 
 
 if __name__ == "__main__":

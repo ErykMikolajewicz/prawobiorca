@@ -17,7 +17,6 @@ from src.domain.exceptions.regulations import (
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
-    RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import (
@@ -25,6 +24,7 @@ from src.domain.value_objects.regulations import (
     RegulationRegistrationData,
     RegulationType,
 )
+from src.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class PrepareRegulation:
 
         try:
             sections_collection = await self.regulation_preparator.prepare_regulation(regulation_content)
-        except RegulationServiceUnavailable:
+        except ServiceUnavailable:
             logger.error("Service to prepare regulation not working!")
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
@@ -126,7 +126,7 @@ class RetryRegulationPreparation:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
                 )
-            raise RegulationServiceUnavailable()
+            raise ServiceUnavailable()
 
 
 @dataclass
@@ -196,7 +196,7 @@ class ConfirmRegulationUpload:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
                 )
-            raise RegulationServiceUnavailable()
+            raise ServiceUnavailable()
 
 
 @dataclass
@@ -216,6 +216,24 @@ class GetRegulationDownloadUrl:
             raise RegulationNotFound
 
         return await self.regulations_storage.get_download_url(regulation_id)
+
+
+@dataclass
+class GetRegulation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> RegulationRepresentation:
+        async with self.session_maker() as session:
+            regulation_representation = await self.regulations_repository.get_regulation_representation(
+                session, user_id, regulation_id
+            )
+
+        if regulation_representation is None:
+            logger.warning("Regulation not found! regulation id: %s", regulation_id)
+            raise RegulationNotFound
+
+        return regulation_representation
 
 
 @dataclass

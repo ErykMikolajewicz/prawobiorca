@@ -10,7 +10,7 @@ uv run ruff format
 
 if echo "$staged_files" | grep -q '^core-service/src/'; then
   uv run poe api_types
-  git add core-service/openapi.json prawobiorca-frontend/src/types/api/schema.ts
+  git add core-service/openapi.json prawobiorca-frontend/src/api/generated
 fi
 
 if [ -n "$staged_files" ]; then

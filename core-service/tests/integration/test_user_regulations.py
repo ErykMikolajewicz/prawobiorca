@@ -50,6 +50,38 @@ async def test_add_user_regulation(
     assert regulation.regulation_type == RegulationType.ACT
 
 
+async def test_get_user_regulation(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(
+                user_id=USER_ID,
+                presentation_name="user-regulation.pdf",
+                regulation_type=RegulationType.ACT,
+            )
+            .returning(regulations_table.c.id)
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.get(f"/api/user/regulations/{regulation_id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "id": str(regulation_id),
+        "presentationName": "user-regulation.pdf",
+        "regulationType": RegulationType.ACT,
+        "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+    }
+
+
 async def test_delete_user_regulation(
     client,
     override_session_maker,

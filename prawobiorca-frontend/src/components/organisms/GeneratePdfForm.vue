@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-defineProps<{
-  caseId: string
-}>()
-
 const description = ref('')
 
 const emit = defineEmits<{

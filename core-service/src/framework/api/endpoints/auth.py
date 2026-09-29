@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.app.dtos.account import LoginData
-from src.app.dtos.auth import AuthTokens
+from src.app.dtos.auth import AuthTokens, CurrentUser
 from src.app.use_cases.auth import LogoutUser, LogUser, RefreshTokens
 from src.domain.exceptions.users import InvalidRefreshToken, UserCantLog
 from src.domain.value_objects.users import UserPrivileges
@@ -108,17 +108,18 @@ async def refresh_tokens(refresh_tokens_: Annotated[RefreshTokens, Depends(get_r
 
 @auth_router.get(
     "/auth/me",
+    response_model=CurrentUser,
     responses={status.HTTP_401_UNAUTHORIZED: {"description": "User not logged."}},
     dependencies=[Depends(authorize_user)],
 )
-async def check_is_user_logged(request: Request):
+async def check_is_user_logged(request: Request) -> CurrentUser:
     user_id = request.state.user_id
     user_privileges: UserPrivileges | None = request.state.user_privileges
 
     if user_id is None or user_privileges is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     else:
-        return {"isAdmin": user_privileges.is_admin}
+        return CurrentUser(is_admin=user_privileges.is_admin)
 
 
 @auth_router.post(

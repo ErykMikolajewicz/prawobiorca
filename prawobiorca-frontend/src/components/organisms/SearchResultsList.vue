@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import SearchResultItem from '@/components/molecules/SearchResultItem.vue'
-import type { searchResult } from '@/types/api/search.ts'
+import type { SearchResult } from '@/api/generated/model'
 
 const props = defineProps<{
-  results: Array<searchResult>
+  results: Array<SearchResult>
   selectedCaseId?: string
+  canAddToCase: boolean
   query: string
 }>()
 
@@ -15,13 +16,13 @@ const emit = defineEmits<{
 
 const showHighlight = ref(true)
 
-const onAddToCase = (payload: { documentContent: string }) => {
+function onAddToCase(payload: { documentContent: string }) {
   emit('add-to-case', payload)
 }
 
 type ResultGroup = {
   header: string | null
-  items: Array<searchResult>
+  items: Array<SearchResult>
 }
 
 const groupedResults = computed<Array<ResultGroup>>(() => {
@@ -60,6 +61,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
           :highlight="showHighlight ? highlight : null"
           :score="score"
           :selected-case-id="selectedCaseId"
+          :can-add-to-case="canAddToCase"
           @add-to-case="onAddToCase"
         />
       </div>

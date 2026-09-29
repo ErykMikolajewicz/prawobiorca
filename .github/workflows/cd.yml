@@ -10,7 +10,7 @@ env:
 
 jobs:
   changes:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
+    if: github.repository_id == '989302666'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,7 +32,7 @@ jobs:
               - deploy/gcp/prawobiorca-frontend.yaml
 
   build:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend' && needs.changes.outputs.changes != '[]'
+    if: github.repository_id == '989302666' && needs.changes.outputs.changes != '[]'
     needs: changes
     runs-on: ubuntu-latest
     permissions:
@@ -65,7 +65,7 @@ jobs:
       - run: docker push --all-tags ${{ env.REPOSITORY }}/${{ matrix.image }}
 
   deploy:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
+    if: github.repository_id == '989302666'
     needs: [changes, build]
     runs-on: ubuntu-latest
     permissions:

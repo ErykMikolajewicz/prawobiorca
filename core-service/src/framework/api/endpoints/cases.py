@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Path, Response, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Path, status
 
 from src.app.dtos.cases import CaseData, CaseDocument, NewCaseDocument
 from src.app.use_cases.cases import (
@@ -29,17 +29,12 @@ cases_router = APIRouter(tags=["cases"], dependencies=(Depends(authorize_user),)
 @cases_router.get(
     "/user/cases",
     response_model=list[CaseData],
-    responses={status.HTTP_204_NO_CONTENT: {"description": "No user cases."}},
 )
 async def get_cases_list(
     list_cases: Annotated[ListCases, Depends(get_list_user_cases)],
     user_id: Annotated[UUID, Depends(require_logged_user)],
-) -> list[CaseData] | Response:
-    cases = await list_cases.execute(user_id)
-    if cases:
-        return cases
-    else:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+) -> list[CaseData]:
+    return await list_cases.execute(user_id)
 
 
 @cases_router.post("/user/cases")
@@ -92,18 +87,13 @@ async def add_case_document(
 @cases_router.get(
     "/user/cases/{caseId}/documents",
     response_model=list[CaseDocument],
-    responses={status.HTTP_204_NO_CONTENT: {"description": "No documents for case."}},
 )
 async def get_case_documents(
     user_id: Annotated[UUID, Depends(require_logged_user)],
     list_case_documents: Annotated[ListCaseDocuments, Depends(get_list_case_documents)],
     case_id: Annotated[UUID, Path(alias="caseId")],
-) -> list[CaseDocument] | Response:
-    documents = await list_case_documents.execute(user_id, case_id)
-
-    if not documents:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return documents
+) -> list[CaseDocument]:
+    return await list_case_documents.execute(user_id, case_id)
 
 
 @cases_router.delete("/user/cases/documents/{documentId}", status_code=status.HTTP_204_NO_CONTENT)

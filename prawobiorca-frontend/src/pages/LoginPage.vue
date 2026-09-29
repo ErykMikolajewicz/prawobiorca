@@ -1,45 +1,34 @@
 <script setup lang="ts">
-import LoginForm from '@/components/organisms/LoginForm.vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import AuthForm from '@/components/organisms/AuthForm.vue'
+
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+
+function getRedirectPath(): string {
+  const redirect = route.query.redirect
+  if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect
+  }
+  return '/'
+}
+
+async function login(username: string, password: string) {
+  await authStore.login(username, password)
+  await router.push(getRedirectPath())
+}
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <h2 class="title">Logowanie</h2>
-
-      <LoginForm />
-
-      <p class="register-link">
-        <router-link v-slot="{ navigate, href }" to="/accounts/register" custom>
-          <el-link :href="href" type="primary" @click="navigate"> Załóż konto </el-link>
-        </router-link>
-      </p>
-    </div>
-  </div>
+  <AuthForm
+    title="Logowanie"
+    submit-label="Zaloguj"
+    password-autocomplete="current-password"
+    link-text="Załóż konto"
+    :link-to="{ name: 'RegisterPage' }"
+    :error-message-options="{ unauthorizedMessage: 'Nieprawidłowa nazwa użytkownika lub hasło.' }"
+    :submit="login"
+  />
 </template>
-
-<style scoped>
-.login-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-
-.login-container {
-  width: 100%;
-  max-width: 400px;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.title {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 16px;
-}
-</style>
