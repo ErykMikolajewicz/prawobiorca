@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.app.dtos.user import StudentData
 from src.app.use_cases.generate_pdf import GenerateCasePDF
-from src.domain.exceptions.cases import LLMGenerationError
+from src.domain.exceptions.cases import LLMGenerationError, PDFGenerationError
 from src.framework.dependencies.authentication import require_logged_user
 from src.framework.dependencies.pdf_generation import get_generate_case_pdf_use_case
 
@@ -53,7 +53,7 @@ async def generate_case_pdf(
     # zapisywanie plików poza kodem źródłowym backendu, aby uniknąć restartów w trybie dev-reload
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
-    # BASE_DIR = prawobiorca/core-service/src/framework/api/endpoints ->  prawobiorca/core-service
+    # BASE_DIR = prawobiorca/core-service/src/framework/api/endpoints -> prawobiorca/core-service
     base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
     wnioski_dir = base_dir / "storage" / "wnioski"
     os.makedirs(wnioski_dir, exist_ok=True)
@@ -69,7 +69,10 @@ async def generate_case_pdf(
         )
     except LLMGenerationError as e:
         logger.error(f"Błąd generowania tekstu przez LLM: {e}")
-        raise HTTPException(status_code=500, detail=f"Błąd generowania tekstu: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Błąd generowania tekstu przez AI: {str(e)}")
+    except PDFGenerationError as e:
+        logger.error(f"Błąd generowania pliku PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Błąd kompilacji dokumentu PDF: {str(e)}")
     except Exception as e:
         logger.error(f"Nieoczekiwany błąd generowania wniosku PDF: {e}")
         raise HTTPException(status_code=500, detail="Wystąpił nieoczekiwany błąd serwera podczas kompilacji PDF.")

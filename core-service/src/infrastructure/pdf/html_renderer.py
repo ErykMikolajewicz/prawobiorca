@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 
@@ -5,7 +6,10 @@ import anyio
 
 from src.app.dtos.user import StudentData
 from src.app.interfaces.pdf_generation import PDFRenderer
+from src.domain.exceptions.cases import PDFGenerationError
 from src.shared.config.jinja import jinja_html_env
+
+logger = logging.getLogger("app.pdf.html_renderer")
 
 # obliczanie ścieżki do folderu resources na potrzeby weasyprint base_url
 INFRASTRUCTURE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,19 +43,29 @@ class HTMLToPDFRenderer(PDFRenderer):
                 content=content,
             )
         except Exception as e:
-            raise ValueError(f"Nie udało się załadować lub wyrenderować szablonu HTML: {e}")
+            logger.error(f"Błąd podczas ładowania lub renderowania szablonu HTML: {e}")
+            raise PDFGenerationError(f"Nie udało się wyrenderować szablonu HTML: {e}") from e
 
         # inicjalizacja katalogu docelowego
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        except OSError as e:
+            logger.error(f"Błąd tworzenia katalogu dla pliku PDF '{output_path}': {e}")
+            raise PDFGenerationError(f"Nie udało się utworzyć katalogu docelowego dla PDF: {e}") from e
 
         # zapis do PDF z użyciem biblioteki WeasyPrint
         base_url = f"file:///{os.path.abspath(RESOURCES_DIR).replace(os.sep, '/')}"
 
         def _generate_sync():
-            from weasyprint import HTML
+            try:
+                from weasyprint import HTML
 
-            HTML(string=html_content, base_url=base_url).write_pdf(output_path)
+                HTML(string=html_content, base_url=base_url).write_pdf(output_path)
+            except Exception as e:
+                logger.error(f"Błąd kompilacji PDF przez silnik WeasyPrint: {e}")
+                raise PDFGenerationError(f"Błąd silnika generowania PDF (WeasyPrint): {e}") from e
 
         await anyio.to_thread.run_sync(_generate_sync)
 
         return output_path
+

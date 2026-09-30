@@ -4,3 +4,8 @@ class CaseNotFound(Exception):
 
 class LLMGenerationError(Exception):
     pass
+
+
+class PDFGenerationError(Exception):
+    pass
+

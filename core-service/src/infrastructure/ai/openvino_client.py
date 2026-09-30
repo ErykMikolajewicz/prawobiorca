@@ -1,16 +1,9 @@
 import logging
 import os
-import sys
-from pathlib import Path
 
-# Zapewnienie dostępu do pakietu src przy bezpośrednim uruchomieniu pliku jako skrypt
-core_service_dir = Path(__file__).resolve().parents[3]
-if str(core_service_dir) not in sys.path:
-    sys.path.insert(0, str(core_service_dir))
+from openai import APIConnectionError, APIError, AsyncOpenAI
 
-from openai import AsyncOpenAI  # noqa: E402
-
-from src.domain.exceptions.cases import LLMGenerationError  # noqa: E402
+from src.domain.exceptions.cases import LLMGenerationError
 
 logger = logging.getLogger("app.ai")
 
@@ -54,7 +47,12 @@ class OpenVINOClient:
         self.top_p = top_p
         self._client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
-    async def generate_text(self, system_prompt: str, user_prompt: str) -> str:
+    async def generate_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float | None = None,
+    ) -> str:
         """
         Generuje treść oficjalnego wniosku za pomocą serwera OpenVINO Model Server (OpenAI API compatible).
         """
@@ -64,44 +62,39 @@ class OpenVINOClient:
                 {"role": "user", "content": user_prompt},
             ]
 
+            effective_temp = self.temperature if temperature is None else temperature
+
             response = await self._client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
-                temperature=self.temperature,
+                temperature=effective_temp,
                 max_tokens=self.max_tokens,
                 top_p=self.top_p,
                 presence_penalty=0.1,
             )
+
+            if not response.choices:
+                logger.error("Model OpenVINO zwrócił pustą listę odpowiedzi (brak choices).")
+                raise LLMGenerationError("Serwer OpenVINO nie zwrócił żadnej odpowiedzi.")
+
             content = response.choices[0].message.content
-            if not content:
-                logger.error("Model OpenVINO zwrócił pustą odpowiedź (content is None lub pusty).")
-                raise LLMGenerationError("Model OpenVINO zwrócił pustą odpowiedź.")
+            if not content or not content.strip():
+                logger.error("Model OpenVINO zwrócił pustą treść odpowiedzi.")
+                raise LLMGenerationError("Model OpenVINO wygenerował pustą treść wniosku.")
+
             return content.strip()
+        except APIConnectionError as e:
+            logger.error(f"Błąd połączenia z serwerem OpenVINO ({self._client.base_url}): {e}")
+            raise LLMGenerationError(
+                f"Nie można połączyć się z serwerem OpenVINO na {self._client.base_url}. Upewnij się, że usługa działa."
+            ) from e
+        except APIError as e:
+            logger.error(f"Błąd API OpenAI/OpenVINO na modelu '{self.model_name}': {e}")
+            raise LLMGenerationError(f"Błąd serwera OpenVINO: {e.message}") from e
+        except LLMGenerationError:
+            raise
         except Exception as e:
-            logger.error(f"Błąd połączenia lub generacji z serwerem OpenVINO na modelu '{self.model_name}': {e}")
+            logger.error(f"Nieoczekiwany błąd podczas generacji z OpenVINO na modelu '{self.model_name}': {e}")
             raise LLMGenerationError(f"Błąd podczas komunikacji z serwerem OpenVINO: {e}") from e
 
-
-if __name__ == "__main__":
-    import asyncio
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-    except ImportError:
-        pass
-
-    async def main():
-        client = OpenVINOClient()
-        print("[OpenVINOClient] Zainicjalizowano klienta:")
-        print(f"  Model: {client.model_name}")
-        print(f"  Endpoint: {client._client.base_url}")
-        prompt = "Potwierdź jednym krótkim zdaniem, że serwer działa prawidłowo."
-        print(f"[OpenVINOClient] Testowe zapytanie: '{prompt}'...")
-        try:
-            res = await client.generate_text("Jesteś pomocnym asystentem.", prompt)
-            print(f"[OpenVINOClient] Odpowiedź modelu:\n{res}")
-        except Exception as err:
-            print(f"[OpenVINOClient] Błąd podczas wywołania: {err}")
-
-    asyncio.run(main())
 
