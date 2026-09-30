@@ -157,3 +157,13 @@ html.dark .app-card {
   --el-card-bg-color: #1b1920;
   --el-card-border-color: #2c2734;
 }
+
+.app-result-card {
+  --el-card-bg-color: #faf9fd;
+  --el-card-border-color: #ebe8f1;
+}
+
+html.dark .app-result-card {
+  --el-card-bg-color: #18181a;
+  --el-card-border-color: #262628;
+}

@@ -69,7 +69,7 @@ function handleAddToCase() {
 </script>
 
 <template>
-  <el-card shadow="hover">
+  <el-card shadow="never" class="app-result-card">
     <div class="result-container">
       <div class="result-text">
         <div v-if="blocks.length" class="result-blocks">
