@@ -1,1 +1,3 @@
-export type caseData = { id: string; name: string }
+import type { components } from '@/types/api/schema.ts'
+
+export type caseData = components['schemas']['CaseData']

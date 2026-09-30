@@ -144,8 +144,11 @@ else:
 
 ## Commit hook
 Before every commit:
-- Format the code with Ruff
-- Run unit tests
+- Lint and format the code with Ruff
+- Check the frontend code with `pnpm check`
+- When `core-service/src/` is changed, regenerate the API types with `poe api_types`
+
+Tests are not run by the hook, they are run by CI.
 
 ---
 

@@ -30,6 +30,14 @@ gcloud projects add-iam-policy-binding prawobiorca \
   --member="serviceAccount:296630821006-compute@developer.gserviceaccount.com" \
   --role="roles/artifactregistry.reader"
 
+gcloud projects add-iam-policy-binding prawobiorca \
+  --member="serviceAccount:296630821006-compute@developer.gserviceaccount.com" \
+  --role="roles/container.defaultNodeServiceAccount"
+
+gcloud projects remove-iam-policy-binding prawobiorca \
+  --member="serviceAccount:296630821006-compute@developer.gserviceaccount.com" \
+  --role="roles/editor"
+
 gcloud services enable container.googleapis.com secretmanager.googleapis.com
 
 

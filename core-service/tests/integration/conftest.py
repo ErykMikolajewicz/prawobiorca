@@ -23,6 +23,9 @@ POSTGRES_IMAGE_VERSION = "pgvector/pgvector:0.8.4-pg18-trixie"
 
 @pytest.fixture(scope="session", autouse=True)
 def configure_podman():
+    if "DOCKER_HOST" in os.environ:
+        return
+
     subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"])
 
     uid = os.getuid()

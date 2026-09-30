@@ -67,7 +67,7 @@ export function useRegulationUpload() {
         regulation: {
           id: uploadResult.id,
           presentationName: presentationName.value.trim(),
-          regulationType: regulationTypeValue,
+          regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
         },
         target: target.value,

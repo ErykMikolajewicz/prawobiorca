@@ -301,7 +301,7 @@ async def test_add_public_regulation_as_admin(
     override_get_regulations_storage,
     mock_regulations_storage,
 ):
-    regulation_data = {"name": "public-regulation.pdf", "regulation_type": RegulationType.DECREE}
+    regulation_data = {"name": "public-regulation.pdf", "regulationType": RegulationType.DECREE}
 
     mock_regulations_storage.get_upload_target.side_effect = lambda id_: RegulationUploadTarget(
         id=id_, url="http://storage.local/bucket", fields={"key": str(id_)}

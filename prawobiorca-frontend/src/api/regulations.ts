@@ -137,7 +137,7 @@ export async function uploadUserRegulation(
   try {
     const uploadTarget = await createUserRegulation({
       name: presentationName,
-      regulation_type: regulationType || null,
+      regulationType: regulationType || null,
     })
 
     await uploadFileToStorage(uploadTarget, regulation)
@@ -157,7 +157,7 @@ export async function uploadPublicRegulation(
   try {
     const uploadTarget = await createPublicRegulation({
       name: presentationName,
-      regulation_type: regulationType || null,
+      regulationType: regulationType || null,
     })
 
     await uploadFileToStorage(uploadTarget, regulation)

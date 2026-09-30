@@ -399,7 +399,7 @@ async def test_add_public_regulation_success(
     )
     mock_regulations_storage.get_upload_target.return_value = upload_target
 
-    regulation_data = RegulationData(name="regulation.pdf", regulation_type=RegulationType.ACT)
+    regulation_data = RegulationData(name="regulation.pdf", regulationType=RegulationType.ACT)
 
     add_regulation = AddRegulation(
         regulations_repository=mock_regulations_repository,
@@ -425,7 +425,7 @@ async def test_add_user_regulation_success(
     )
     mock_regulations_storage.get_upload_target.return_value = upload_target
 
-    regulation_data = RegulationData(name="user-regulation.pdf", regulation_type=RegulationType.ACT)
+    regulation_data = RegulationData(name="user-regulation.pdf", regulationType=RegulationType.ACT)
 
     add_regulation = AddRegulation(
         regulations_repository=mock_regulations_repository,

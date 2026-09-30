@@ -62,7 +62,7 @@ async def require_logged_user(request: Request, _: Annotated[None, Depends(autho
     user_id = request.state.user_id
 
     if user_id is None:
-        logger.warning(f"Unlogged user attempt to use endpoint: {request.base_url}!")
+        logger.warning("Unlogged user attempt to use endpoint: %s!", request.base_url)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login required!")
 
     return user_id
@@ -72,7 +72,7 @@ async def require_admin(request: Request, admin_id: Annotated[UUID, Depends(requ
     user_privileges: UserPrivileges | None = request.state.user_privileges
 
     if user_privileges is None:
-        logger.error(f"Privileges for user {admin_id} not found!")
+        logger.error("Privileges for user %s not found!", admin_id)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User privileges unknown!")
     if not user_privileges.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin permission required!")

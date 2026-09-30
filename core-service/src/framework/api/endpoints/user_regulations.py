@@ -11,7 +11,6 @@ from src.app.use_cases.regulations import (
     DeleteRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
-    RegulationNotFound,
     RetryRegulationPreparation,
     SearchRegulation,
 )
@@ -19,10 +18,12 @@ from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
     RegulationInInvalidState,
+    RegulationNotFound,
     RegulationPreparationInProgress,
     RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
+from src.domain.exceptions.users import UserNotFound
 from src.domain.value_objects.regulations import RegulationType
 from src.framework.dependencies.authentication import require_logged_user
 from src.framework.dependencies.regulations import (
@@ -44,7 +45,7 @@ user_regulations_router = APIRouter(
     "/user/regulations",
     response_model=list[RegulationRepresentation],
     responses={
-        status.HTTP_204_NO_CONTENT: {"descriptions": "Not found user files with that criteria."},
+        status.HTTP_204_NO_CONTENT: {"description": "Not found user files with that criteria."},
     },
 )
 async def get_user_regulations(
@@ -65,6 +66,7 @@ async def get_user_regulations(
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_400_BAD_REQUEST: {"description": "Can't add empty regulation."},
+        status.HTTP_404_NOT_FOUND: {"description": "User not found!"},
     },
 )
 async def add_user_regulation(
@@ -72,7 +74,10 @@ async def add_user_regulation(
     add_regulation_: Annotated[AddRegulation, Depends(get_add_regulation)],
     regulation_data: RegulationData,
 ) -> RegulationUploadTarget:
-    return await add_regulation_.execute(user_id, regulation_data)
+    try:
+        return await add_regulation_.execute(user_id, regulation_data)
+    except UserNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found!")
 
 
 @user_regulations_router.post(

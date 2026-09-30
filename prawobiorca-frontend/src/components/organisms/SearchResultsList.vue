@@ -20,7 +20,7 @@ const onAddToCase = (payload: { documentContent: string }) => {
 }
 
 type ResultGroup = {
-  header: string
+  header: string | null
   items: Array<searchResult>
 }
 

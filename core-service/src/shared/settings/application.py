@@ -5,6 +5,8 @@ from typing import Literal
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_SECRETS_DIR = Path("/mnt/secrets-store")
+
 
 class HttpClientType(StrEnum):
     HTTPX = "HTTPX"
@@ -27,7 +29,7 @@ class ApplicationSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=Path(".env"),
-        secrets_dir=Path("/mnt/secrets-store"),
+        secrets_dir=_SECRETS_DIR if _SECRETS_DIR.exists() else None,
         extra="forbid",
         dotenv_filtering="match_prefix",
         case_sensitive=True,

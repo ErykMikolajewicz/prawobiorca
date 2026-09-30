@@ -2,12 +2,14 @@ from enum import StrEnum
 from uuid import UUID
 
 from fastapi import Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.domain.value_objects.legal_units import UnitType
 
 
 class SearchResultElement(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     text: str
     subsection: str | None = None
 
@@ -20,6 +22,8 @@ class SearchResultHighlight(BaseModel):
 
 
 class SearchResult(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     id: UUID
     score: float = Field(ge=-1, le=1)
     header: str | None = None

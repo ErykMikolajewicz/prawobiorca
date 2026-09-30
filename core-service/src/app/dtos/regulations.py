@@ -9,6 +9,8 @@ from src.shared.consts import MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
 
 
 class RegulationData(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel)
+
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     regulation_type: RegulationType | None = None
 
@@ -20,7 +22,7 @@ class RegulationUploadTarget:
     fields: dict[str, str]
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel))
+@dataclass(config=ConfigDict(alias_generator=to_camel, json_schema_serialization_defaults_required=True))
 class RegulationRepresentation:
     id: UUID
 

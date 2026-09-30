@@ -1,24 +1,14 @@
-export type regulationType = 'ACT' | 'DECREE' | 'STATUTE'
+import type { components } from '@/types/api/schema.ts'
 
-export type regulationPreparationStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PREPARED' | 'FAILED'
+export type regulationType = components['schemas']['RegulationType']
 
-export type regulationRepresentation = {
-  id: string
-  presentationName: string
-  regulationType?: regulationType | null
-  preparationStatus: regulationPreparationStatus
-}
+export type regulationPreparationStatus = components['schemas']['RegulationPreparationStatus']
 
-export type regulationData = {
-  name: string
-  regulation_type?: regulationType | null
-}
+export type regulationRepresentation = components['schemas']['RegulationRepresentation']
 
-export type regulationUploadTarget = {
-  id: string
-  url: string
-  fields: Record<string, string>
-}
+export type regulationData = components['schemas']['RegulationData']
+
+export type regulationUploadTarget = components['schemas']['RegulationUploadTarget']
 
 export type regulationUploadResult = {
   id: string

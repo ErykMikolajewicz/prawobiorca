@@ -94,7 +94,7 @@ class RefreshTokens:
 
             user_privileges = await self.users_repo.get_user_privileges(session, user_session.user_id)
             if user_privileges is None:
-                logger.error(f"Privileges for user {user_session.user_id} not found!")
+                logger.error("Privileges for user %s not found!", user_session.user_id)
                 raise InvalidRefreshToken
 
         claims = AccessTokenClaims(

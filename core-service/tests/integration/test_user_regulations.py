@@ -20,7 +20,7 @@ async def test_add_user_regulation(
     set_user,
     clean_user,
 ):
-    regulation_data = {"name": "user-regulation.pdf", "regulation_type": RegulationType.ACT}
+    regulation_data = {"name": "user-regulation.pdf", "regulationType": RegulationType.ACT}
 
     mock_regulations_storage.get_upload_target.side_effect = lambda id_: RegulationUploadTarget(
         id=id_, url="http://storage.local/bucket", fields={"key": str(id_)}

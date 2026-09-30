@@ -57,7 +57,7 @@ class PrepareRegulation:
         try:
             regulation_content = await self.regulations_storage.get_regulation(regulation_id)
         except RegulationContentNotFound:
-            logger.error(f"Regulation content not found! regulation id: {regulation_id}")
+            logger.error("Regulation content not found! regulation id: %s", regulation_id)
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
@@ -74,7 +74,7 @@ class PrepareRegulation:
                 )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during regulation preparation! {str(e)}")
+            logger.error("Unexpected error during regulation preparation! %s", e)
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
@@ -105,13 +105,13 @@ class RetryRegulationPreparation:
 
             match regulation_representation.preparation_status:
                 case RegulationPreparationStatus.PREPARED:
-                    logger.warning(f"Regulation already prepared! regulation id: {regulation_id}")
+                    logger.warning("Regulation already prepared! regulation id: %s", regulation_id)
                     raise RegulationAlreadyInitialized
                 case RegulationPreparationStatus.IN_PROGRESS:
-                    logger.warning(f"Regulation preparation already in progress! regulation id: {regulation_id}")
+                    logger.warning("Regulation preparation already in progress! regulation id: %s", regulation_id)
                     raise RegulationPreparationInProgress
                 case RegulationPreparationStatus.NOT_STARTED:
-                    logger.warning(f"Regulation content not uploaded yet! regulation id: {regulation_id}")
+                    logger.warning("Regulation content not uploaded yet! regulation id: %s", regulation_id)
                     raise RegulationInInvalidState
 
             await self.regulations_repository.set_preparation_status(
@@ -121,7 +121,7 @@ class RetryRegulationPreparation:
         try:
             await self.regulation_preparation_scheduler.schedule_regulation_preparation(user_id, regulation_id)
         except Exception as e:
-            logger.error(f"Failed to schedule regulation preparation! {str(e)}")
+            logger.error("Failed to schedule regulation preparation! %s", e)
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
@@ -161,26 +161,26 @@ class ConfirmRegulationUpload:
             )
 
             if regulation_representation is None:
-                logger.warning(f"Regulation to confirm upload not found! regulation id: {regulation_id}")
+                logger.warning("Regulation to confirm upload not found! regulation id: %s", regulation_id)
                 raise RegulationNotFound
 
             match regulation_representation.preparation_status:
                 case RegulationPreparationStatus.PREPARED:
                     logger.warning(
-                        f"Tried to confirm upload for already prepared regulation! regulation id: {regulation_id}"
+                        "Tried to confirm upload for already prepared regulation! regulation id: %s", regulation_id
                     )
                     raise RegulationAlreadyInitialized
                 case RegulationPreparationStatus.IN_PROGRESS:
-                    logger.warning(f"Regulation preparation already in progress! regulation id: {regulation_id}")
+                    logger.warning("Regulation preparation already in progress! regulation id: %s", regulation_id)
                     raise RegulationPreparationInProgress
                 case RegulationPreparationStatus.FAILED:
-                    logger.warning(f"Upload for failed regulation already confirmed! regulation id: {regulation_id}")
+                    logger.warning("Upload for failed regulation already confirmed! regulation id: %s", regulation_id)
                     raise RegulationInInvalidState
 
             is_in_storage = await self.regulations_storage.check_regulation_exists(regulation_id)
             if not is_in_storage:
                 logger.error(
-                    f"Cannot confirm upload: Regulation content not found in storage! regulation id: {regulation_id}"
+                    "Cannot confirm upload: Regulation content not found in storage! regulation id: %s", regulation_id
                 )
                 raise RegulationContentNotFound
 
@@ -191,7 +191,7 @@ class ConfirmRegulationUpload:
         try:
             await self.regulation_preparation_scheduler.schedule_regulation_preparation(user_id, regulation_id)
         except Exception as e:
-            logger.error(f"Failed to schedule regulation preparation! {str(e)}")
+            logger.error("Failed to schedule regulation preparation! %s", e)
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
                     session, user_id, regulation_id, RegulationPreparationStatus.FAILED
@@ -212,7 +212,7 @@ class GetRegulationDownloadUrl:
             )
 
         if regulation_representation is None:
-            logger.warning(f"Regulation to download not found! regulation id: {regulation_id}")
+            logger.warning("Regulation to download not found! regulation id: %s", regulation_id)
             raise RegulationNotFound
 
         return await self.regulations_storage.get_download_url(regulation_id)
@@ -244,7 +244,7 @@ class DeleteRegulation:
                 session, user_id, regulation_id
             )
             if regulation_representation is None:
-                logger.warning(f"Regulation not found! regulation id: {regulation_id}")
+                logger.warning("Regulation not found! regulation id: %s", regulation_id)
                 raise RegulationNotFound
 
             if regulation_representation.preparation_status == RegulationPreparationStatus.PREPARED:
@@ -255,7 +255,7 @@ class DeleteRegulation:
             # Orphaned files are tolerable, too much hassle with eventual consistency
             await self.regulations_storage.delete_regulation(regulation_id)
         except Exception:
-            logger.error(f"Failed to remove from storage regulation: {regulation_id}")
+            logger.error("Failed to remove from storage regulation: %s", regulation_id)
 
 
 @dataclass
@@ -276,18 +276,18 @@ class SearchRegulation:
                     session, user_id, regulation_id, query_vector, search_params
                 )
             except RegulationDocumentsNotFound:
-                logger.warning(f"Regulation to search has no prepared documents! regulation id: {regulation_id}")
+                logger.warning("Regulation to search has no prepared documents! regulation id: %s", regulation_id)
 
                 regulation_representation = await self.regulations_repository.get_regulation_representation(
                     session, user_id, regulation_id
                 )
 
                 if regulation_representation is None:
-                    logger.warning(f"Regulation not found! regulation id: {regulation_id}")
+                    logger.warning("Regulation not found! regulation id: %s", regulation_id)
                     raise RegulationNotFound
 
                 if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
-                    logger.warning(f"Regulation to search not prepared! regulation id: {regulation_id}")
+                    logger.warning("Regulation to search not prepared! regulation id: %s", regulation_id)
                     raise RegulationsNotPreparedToSearch(regulations_name=regulation_representation.presentation_name)
 
                 logger.error("Regulation prepared, but documents not found!")

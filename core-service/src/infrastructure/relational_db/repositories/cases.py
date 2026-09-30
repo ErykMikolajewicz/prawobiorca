@@ -65,5 +65,5 @@ class CaseDocumentsRepository:
         )
         result = await session.execute(statement)
 
-        if result.scalar_one() is None:
+        if result.scalar_one_or_none() is None:
             raise CaseNotFound

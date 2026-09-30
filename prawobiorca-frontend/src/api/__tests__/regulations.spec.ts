@@ -41,10 +41,10 @@ describe('regulations API', () => {
       fields: { key: 'val' },
     }
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ data: mockTarget })
-    const target = await createUserRegulation({ name: 'Regulamin', regulation_type: 'STATUTE' })
+    const target = await createUserRegulation({ name: 'Regulamin', regulationType: 'STATUTE' })
     expect(prawobiorcaClient.post).toHaveBeenCalledWith('/user/regulations', {
       name: 'Regulamin',
-      regulation_type: 'STATUTE',
+      regulationType: 'STATUTE',
     })
     expect(target).toEqual(mockTarget)
   })
@@ -56,10 +56,10 @@ describe('regulations API', () => {
       fields: { key: 'val' },
     }
     vi.mocked(prawobiorcaClient.post).mockResolvedValueOnce({ data: mockTarget })
-    const target = await createPublicRegulation({ name: 'Ustawa', regulation_type: 'ACT' })
+    const target = await createPublicRegulation({ name: 'Ustawa', regulationType: 'ACT' })
     expect(prawobiorcaClient.post).toHaveBeenCalledWith('/regulations', {
       name: 'Ustawa',
-      regulation_type: 'ACT',
+      regulationType: 'ACT',
     })
     expect(target).toEqual(mockTarget)
   })
@@ -146,7 +146,7 @@ describe('regulations API', () => {
     expect(result).toEqual({ id: 'uuid-user-1', preparationStatus: 'IN_PROGRESS' })
     expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(1, '/user/regulations', {
       name: 'User Doc',
-      regulation_type: 'STATUTE',
+      regulationType: 'STATUTE',
     })
     expect(axios.post).toHaveBeenCalledWith('https://s3.local/upload', expect.any(FormData))
     expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(
@@ -173,7 +173,7 @@ describe('regulations API', () => {
     expect(result).toEqual({ id: 'uuid-pub-1', preparationStatus: 'IN_PROGRESS' })
     expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(1, '/regulations', {
       name: 'Public Doc',
-      regulation_type: 'ACT',
+      regulationType: 'ACT',
     })
     expect(axios.post).toHaveBeenCalledWith('https://s3.local/upload', expect.any(FormData))
     expect(prawobiorcaClient.post).toHaveBeenNthCalledWith(

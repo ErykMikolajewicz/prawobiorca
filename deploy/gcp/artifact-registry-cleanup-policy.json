@@ -1,0 +1,17 @@
+[
+  {
+    "name": "delete-old-versions",
+    "action": {"type": "Delete"},
+    "condition": {"tagState": "any"}
+  },
+  {
+    "name": "keep-recent-versions",
+    "action": {"type": "Keep"},
+    "mostRecentVersions": {"keepCount": 10}
+  },
+  {
+    "name": "keep-latest",
+    "action": {"type": "Keep"},
+    "condition": {"tagState": "tagged", "tagPrefixes": ["latest"]}
+  }
+]

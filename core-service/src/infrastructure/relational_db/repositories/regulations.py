@@ -6,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.dtos.regulations import RegulationRepresentation
+from src.domain.exceptions.regulations import RegulationNotFound
+from src.domain.exceptions.users import UserNotFound
 from src.domain.value_objects.regulations import (
     RegulationPreparationStatus,
     RegulationRegistrationData,
@@ -42,7 +44,7 @@ class RegulationsManagerRepository:
         try:
             result = await session.execute(statement)
         except IntegrityError:
-            raise FileExistsError
+            raise UserNotFound
 
         regulation_id = result.scalar_one()
         return regulation_id
@@ -56,8 +58,8 @@ class RegulationsManagerRepository:
         )
         result = await session.execute(statement)
 
-        if result.scalar_one() is None:
-            raise FileNotFoundError
+        if result.scalar_one_or_none() is None:
+            raise RegulationNotFound
 
     @staticmethod
     async def set_preparation_status(
@@ -71,8 +73,8 @@ class RegulationsManagerRepository:
         )
         result = await session.execute(statement)
 
-        if result.scalar_one() is None:
-            raise FileNotFoundError
+        if result.scalar_one_or_none() is None:
+            raise RegulationNotFound
 
     @staticmethod
     async def get_regulation_representation(
