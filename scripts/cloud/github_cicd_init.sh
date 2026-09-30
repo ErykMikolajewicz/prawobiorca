@@ -12,12 +12,12 @@ gcloud iam workload-identity-pools providers create-oidc prawobiorca-backend \
   --display-name="prawobiorca-backend repo" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
-  --attribute-condition="assertion.repository == 'ErykMikolajewicz/prawobiorca-backend' && assertion.repository_id == '989302666' && assertion.ref == 'refs/heads/main'"
+  --attribute-condition="assertion.repository == 'ErykMikolajewicz/prawobiorca' && assertion.repository_id == '989302666' && assertion.ref == 'refs/heads/main'"
 
 gcloud iam service-accounts add-iam-policy-binding "prawobiorca-deployer@prawobiorca.iam.gserviceaccount.com" \
   --project=prawobiorca \
   --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/296630821006/locations/global/workloadIdentityPools/github/attribute.repository/ErykMikolajewicz/prawobiorca-backend"
+  --member="principalSet://iam.googleapis.com/projects/296630821006/locations/global/workloadIdentityPools/github/attribute.repository/ErykMikolajewicz/prawobiorca"
 
 gcloud projects add-iam-policy-binding prawobiorca \
   --member="serviceAccount:prawobiorca-deployer@prawobiorca.iam.gserviceaccount.com" \
