@@ -1221,6 +1221,45 @@
           }
         }
       }
+    },
+    "/api/case/generate-pdf": {
+      "post": {
+        "tags": [
+          "pdf"
+        ],
+        "summary": "Generate Case Pdf",
+        "operationId": "generate_case_pdf_api_case_generate_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateCasePDFRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1348,6 +1387,50 @@
           "content"
         ],
         "title": "CaseDocument"
+      },
+      "GenerateCasePDFRequest": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caseid"
+          },
+          "userName": {
+            "type": "string",
+            "title": "Username",
+            "default": "Student PWr"
+          },
+          "studentId": {
+            "type": "string",
+            "title": "Studentid",
+            "default": "000000"
+          },
+          "department": {
+            "type": "string",
+            "title": "Department",
+            "default": "Wydział Informatyki i Telekomunikacji"
+          },
+          "semester": {
+            "type": "string",
+            "title": "Semester",
+            "default": "4"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": "inż."
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "caseId"
+        ],
+        "title": "GenerateCasePDFRequest"
       },
       "HTTPValidationError": {
         "properties": {

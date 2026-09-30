@@ -49,7 +49,7 @@ const handleGeneratePdf = async (description: string) => {
       type: 'success',
       duration: 5000,
     })
-  } catch (error) {
+  } catch {
     ElMessage({
       message: 'Wystąpił błąd podczas generowania wniosku.',
       type: 'error',

@@ -399,6 +399,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/case/generate-pdf': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Generate Case Pdf */
+    post: operations['generate_case_pdf_api_case_generate_pdf_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -458,6 +475,41 @@ export interface components {
       presentationName: string
       /** Content */
       content: string
+    }
+    /** GenerateCasePDFRequest */
+    GenerateCasePDFRequest: {
+      /** Description */
+      description: string
+      /**
+       * Caseid
+       * Format: uuid
+       */
+      caseId: string
+      /**
+       * Username
+       * @default Student PWr
+       */
+      userName: string
+      /**
+       * Studentid
+       * @default 000000
+       */
+      studentId: string
+      /**
+       * Department
+       * @default Wydział Informatyki i Telekomunikacji
+       */
+      department: string
+      /**
+       * Semester
+       * @default 4
+       */
+      semester: string
+      /**
+       * Title
+       * @default inż.
+       */
+      title: string
     }
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -1632,6 +1684,39 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+    }
+  }
+  generate_case_pdf_api_case_generate_pdf_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GenerateCasePDFRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
       }
     }
   }
