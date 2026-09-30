@@ -65,7 +65,7 @@ async function retryPreparation(regulationId: string) {
 </script>
 
 <template>
-  <el-card shadow="hover" class="file-card" :class="{ 'file-card--prepared': isPrepared }">
+  <el-card shadow="never" class="file-card app-card" :class="{ 'file-card--prepared': isPrepared }">
     <RegulationTypeBadge :regulation-type="regulation.regulationType" class="type-badge" />
     <div class="card-content">
       <div class="regulation-info">
@@ -131,14 +131,7 @@ async function retryPreparation(regulationId: string) {
 <style scoped>
 .file-card {
   position: relative;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
   height: 100%;
-}
-
-.file-card:hover {
-  box-shadow: var(--app-card-shadow);
 }
 
 .card-content {

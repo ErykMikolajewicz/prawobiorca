@@ -16,8 +16,10 @@ import DarkModeToggle from '@/components/molecules/DarkModeToggle.vue'
 
 <style scoped>
 .app-navbar {
-  background-color: var(--el-bg-color-overlay);
-  border-bottom: 1px solid var(--app-border-color);
+  background-color: var(--app-navbar-bg);
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--el-color-primary), transparent) 1;
+  box-shadow: var(--app-navbar-shadow);
   display: flex;
   align-items: center;
   justify-content: space-between;
