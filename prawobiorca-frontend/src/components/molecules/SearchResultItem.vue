@@ -56,31 +56,28 @@ function handleAddToCase() {
 
 <template>
   <el-card shadow="never" class="app-result-card">
-    <div class="result-container">
-      <div class="result-text">
-        <div v-if="blocks.length" class="result-blocks">
-          <div
-            v-for="(block, blockIndex) in blocks"
-            :key="blockIndex"
-            class="result-block"
-            :class="{ 'result-block--highlighted': block.highlighted }"
+    <div class="result-text">
+      <div v-if="blocks.length" class="result-blocks">
+        <div
+          v-for="(block, blockIndex) in blocks"
+          :key="blockIndex"
+          class="result-block"
+          :class="{ 'result-block--highlighted': block.highlighted }"
+        >
+          <p
+            v-for="(line, lineIndex) in block.lines"
+            :key="lineIndex"
+            class="result-line"
+            :class="{ 'result-line--sub': isSubLine(line) }"
           >
-            <p
-              v-for="(line, lineIndex) in block.lines"
-              :key="lineIndex"
-              class="result-line"
-              :class="{ 'result-line--sub': isSubLine(line) }"
-            >
-              {{ line }}
-            </p>
-          </div>
+            {{ line }}
+          </p>
         </div>
-        <span v-else class="result-plain">{{ result }}</span>
       </div>
-      <div class="score-column">
-        <span class="score-label">Podobieństwo</span>
-        <span class="score-value">{{ score.toFixed(3) }}</span>
-      </div>
+      <span v-else class="result-plain">{{ result }}</span>
+    </div>
+    <div class="result-footer">
+      <span class="score">Podobieństwo: {{ score.toFixed(3) }}</span>
       <div class="actions">
         <el-tooltip
           v-if="canAddToCase"
@@ -105,15 +102,7 @@ function handleAddToCase() {
 </template>
 
 <style scoped>
-.result-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-
 .result-text {
-  flex: 1;
   white-space: pre-line;
 }
 
@@ -144,27 +133,17 @@ function handleAddToCase() {
   border-left-color: var(--el-color-primary);
 }
 
-.score-column {
-  flex-shrink: 0;
-  min-width: 60px;
+.result-footer {
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
   align-items: center;
-  justify-content: center;
+  gap: 16px;
+  margin-top: 0.75rem;
+}
+
+.score {
+  font-size: 0.8em;
   color: var(--el-text-color-secondary, #909399);
-}
-
-.score-label {
-  font-size: 0.75em;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 2px;
-}
-
-.score-value {
-  font-size: 1.1em;
-  font-weight: 500;
-  color: var(--el-text-color-primary, #303133);
 }
 
 .actions {
