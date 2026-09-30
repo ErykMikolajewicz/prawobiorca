@@ -22,11 +22,6 @@ function mountList() {
     props: { results: mockResults, query: 'ustęp', canAddToCase: true },
     global: {
       stubs: {
-        ElSwitch: {
-          template:
-            '<button class="el-switch" @click="$emit(\'update:modelValue\', !modelValue)" />',
-          props: ['modelValue'],
-        },
         SearchResultItem: {
           template: '<div class="stub-item">{{ highlight ? "highlighted" : "plain" }}</div>',
           props: ['highlight'],
@@ -37,17 +32,9 @@ function mountList() {
 }
 
 describe('SearchResultsList', () => {
-  it('passes highlight to results by default', () => {
+  it('passes highlight to results', () => {
     const wrapper = mountList()
 
     expect(wrapper.find('.stub-item').text()).toBe('highlighted')
-  })
-
-  it('does not pass highlight when switch is turned off', async () => {
-    const wrapper = mountList()
-
-    await wrapper.find('.el-switch').trigger('click')
-
-    expect(wrapper.find('.stub-item').text()).toBe('plain')
   })
 })

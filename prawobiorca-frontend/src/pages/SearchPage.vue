@@ -115,5 +115,7 @@ async function handleAddToCase(payload: { documentContent: string }) {
         @add-to-case="handleAddToCase"
       />
     </div>
+
+    <el-backtop />
   </AppLayout>
 </template>
