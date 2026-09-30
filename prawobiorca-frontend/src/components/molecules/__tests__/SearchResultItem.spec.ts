@@ -68,7 +68,7 @@ describe('SearchResultItem', () => {
     expect(wrapper.emitted('add-to-case')?.[0]).toEqual([{ documentContent: '1. Ustęp pierwszy' }])
   })
 
-  it('highlights the best chunk span across elements', () => {
+  it('highlights blocks containing the best chunk span', () => {
     const elements: Array<SearchResultElement> = [
       { text: '1. Ustęp pierwszy', subsection: '1' },
       { text: '2. Ustęp drugi', subsection: '2' },
@@ -78,9 +78,10 @@ describe('SearchResultItem', () => {
 
     const wrapper = mountItem('irrelevant', elements, 'case-1', highlight)
 
-    const marks = wrapper.findAll('mark')
-    expect(marks.map((mark) => mark.text())).toEqual(['Ustęp pierwszy', '2. Ustęp'])
-    expect(wrapper.findAll('.result-line')[1]!.text()).toBe('2. Ustęp drugi')
+    const blocks = wrapper.findAll('.result-block')
+    expect(blocks[0]!.classes()).toContain('result-block--highlighted')
+    expect(blocks[1]!.classes()).toContain('result-block--highlighted')
+    expect(blocks[2]!.classes()).not.toContain('result-block--highlighted')
   })
 
   it('does not highlight anything without highlight', () => {
@@ -88,7 +89,7 @@ describe('SearchResultItem', () => {
 
     const wrapper = mountItem('irrelevant', elements)
 
-    expect(wrapper.find('mark').exists()).toBe(false)
+    expect(wrapper.find('.result-block--highlighted').exists()).toBe(false)
     expect(wrapper.find('.result-line').text()).toBe('1. Ustęp pierwszy')
   })
 })

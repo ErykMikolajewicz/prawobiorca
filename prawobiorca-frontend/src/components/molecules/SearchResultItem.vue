@@ -17,29 +17,14 @@ const emit = defineEmits<{
 
 const SUB_ELEMENT_PATTERN = /^(\d+\)|[a-z]\))\s/
 
-type LineSegment = { text: string; highlighted: boolean }
-type ResultLine = { text: string; segments: Array<LineSegment> }
-type ResultBlock = { subsection: string | null; lines: Array<ResultLine> }
+type ResultBlock = { subsection: string | null; lines: Array<string>; highlighted: boolean }
 
-function createSegments(text: string, elementIndex: number): Array<LineSegment> {
+function isHighlighted(elementIndex: number) {
   const highlight = props.highlight
 
-  if (
-    !highlight ||
-    elementIndex < highlight.start_element ||
-    elementIndex > highlight.end_element
-  ) {
-    return [{ text, highlighted: false }]
-  }
-
-  const start = elementIndex === highlight.start_element ? highlight.start_offset : 0
-  const end = elementIndex === highlight.end_element ? highlight.end_offset : text.length
-
-  return [
-    { text: text.slice(0, start), highlighted: false },
-    { text: text.slice(start, end), highlighted: true },
-    { text: text.slice(end), highlighted: false },
-  ].filter((segment) => segment.text)
+  return (
+    !!highlight && elementIndex >= highlight.start_element && elementIndex <= highlight.end_element
+  )
 }
 
 const blocks = computed<Array<ResultBlock>>(() => {
@@ -47,12 +32,13 @@ const blocks = computed<Array<ResultBlock>>(() => {
 
   for (const [elementIndex, element] of (props.elements ?? []).entries()) {
     const lastBlock = result[result.length - 1]
-    const line = { text: element.text, segments: createSegments(element.text, elementIndex) }
+    const highlighted = isHighlighted(elementIndex)
 
     if (lastBlock && lastBlock.subsection === element.subsection) {
-      lastBlock.lines.push(line)
+      lastBlock.lines.push(element.text)
+      lastBlock.highlighted ||= highlighted
     } else {
-      result.push({ subsection: element.subsection, lines: [line] })
+      result.push({ subsection: element.subsection, lines: [element.text], highlighted })
     }
   }
 
@@ -73,17 +59,19 @@ function handleAddToCase() {
     <div class="result-container">
       <div class="result-text">
         <div v-if="blocks.length" class="result-blocks">
-          <div v-for="(block, blockIndex) in blocks" :key="blockIndex" class="result-block">
+          <div
+            v-for="(block, blockIndex) in blocks"
+            :key="blockIndex"
+            class="result-block"
+            :class="{ 'result-block--highlighted': block.highlighted }"
+          >
             <p
               v-for="(line, lineIndex) in block.lines"
               :key="lineIndex"
               class="result-line"
-              :class="{ 'result-line--sub': isSubLine(line.text) }"
+              :class="{ 'result-line--sub': isSubLine(line) }"
             >
-              <template v-for="(segment, segmentIndex) in line.segments" :key="segmentIndex">
-                <mark v-if="segment.highlighted" class="result-highlight">{{ segment.text }}</mark>
-                <template v-else>{{ segment.text }}</template>
-              </template>
+              {{ line }}
             </p>
           </div>
         </div>
@@ -152,13 +140,8 @@ function handleAddToCase() {
   margin-left: 1rem;
 }
 
-.result-highlight {
-  background-color: transparent;
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--el-color-primary);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
+.result-block--highlighted {
+  border-left-color: var(--el-color-primary);
 }
 
 .score-column {

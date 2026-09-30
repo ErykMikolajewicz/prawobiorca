@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import SearchResultItem from '@/components/molecules/SearchResultItem.vue'
 import type { SearchResult } from '@/api/generated/model'
 
@@ -13,8 +13,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'add-to-case', payload: { documentContent: string }): void
 }>()
-
-const showHighlight = ref(true)
 
 function onAddToCase(payload: { documentContent: string }) {
   emit('add-to-case', payload)
@@ -47,10 +45,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
     <el-divider />
 
     <div v-if="results.length">
-      <div class="results-header">
-        <h2>Wyniki:</h2>
-        <el-switch v-model="showHighlight" active-text="Podświetlaj najlepszy fragment" />
-      </div>
+      <h2>Wyniki:</h2>
       <div v-for="(group, groupIndex) in groupedResults" :key="groupIndex" class="result-group">
         <h3 class="result-group-header">{{ group.header }}</h3>
         <SearchResultItem
@@ -58,7 +53,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
           :key="id"
           :result="text"
           :elements="elements"
-          :highlight="showHighlight ? highlight : null"
+          :highlight="highlight"
           :score="score"
           :selected-case-id="selectedCaseId"
           :can-add-to-case="canAddToCase"
@@ -73,14 +68,6 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
 </template>
 
 <style scoped>
-.results-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 .result-group {
   margin-bottom: 1.5rem;
 }
