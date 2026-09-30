@@ -31,4 +31,3 @@ Lista kroków do wdrożenia obsługi szablonów, silnika Jinja2, Clean Architect
 - `TODO` **Wskaźnik ładowania:** Dodanie stanu ładowania (spinner / disabled button) w `GeneratePdfForm.vue` na czas generowania tekstu przez LLM i tworzenia PDF.
 - `TODO` **Pola danych studenta:** Umożliwienie wprowadzania/edycji danych studenta (imię, nazwisko, nr indeksu, wydział) w formularzu generowania wniosku.
 - `DONE` **Powiadomienia o statusie:** Pokazywanie powiadomień sukcesu/błędu (Element Plus notification/message) po zakończeniu generowania.
-tak
