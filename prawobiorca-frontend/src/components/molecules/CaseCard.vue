@@ -35,7 +35,7 @@ async function handleDelete() {
 </script>
 
 <template>
-  <el-card shadow="hover" class="case-card">
+  <el-card shadow="never" class="case-card app-card">
     <div class="card-content">
       <div class="case-info">
         <router-link
