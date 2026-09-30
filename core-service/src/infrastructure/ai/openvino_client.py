@@ -96,5 +96,3 @@ class OpenVINOClient:
         except Exception as e:
             logger.error(f"Nieoczekiwany błąd podczas generacji z OpenVINO na modelu '{self.model_name}': {e}")
             raise LLMGenerationError(f"Błąd podczas komunikacji z serwerem OpenVINO: {e}") from e
-
-

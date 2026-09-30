@@ -8,4 +8,3 @@ class LLMGenerationError(Exception):
 
 class PDFGenerationError(Exception):
     pass
-

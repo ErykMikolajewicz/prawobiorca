@@ -37,4 +37,3 @@ class OllamaClient:
         except Exception as e:
             logger.error(f"Błąd podczas komunikacji z Ollama (host={self.host}, model={self.model_name}): {e}")
             raise LLMGenerationError(f"Błąd podczas komunikacji z Ollama: {e}") from e
-

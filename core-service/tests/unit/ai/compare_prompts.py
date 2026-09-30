@@ -21,12 +21,18 @@ REPO_ROOT = os.path.dirname(CORE_SERVICE_DIR)
 sys.path.append(CORE_SERVICE_DIR)
 
 # Automatyczne przełączenie do core-service/.venv, jeśli uruchomiono z poziomu root venv w IDE
-CORE_VENV_PYTHON = os.path.join(CORE_SERVICE_DIR, ".venv", "Scripts" if sys.platform == "win32" else "bin", "python.exe" if sys.platform == "win32" else "python")
+CORE_VENV_PYTHON = os.path.join(
+    CORE_SERVICE_DIR,
+    ".venv",
+    "Scripts" if sys.platform == "win32" else "bin",
+    "python.exe" if sys.platform == "win32" else "python",
+)
 if os.path.exists(CORE_VENV_PYTHON) and os.path.abspath(sys.executable) != os.path.abspath(CORE_VENV_PYTHON):
     try:
         import openai  # noqa: F401
     except ImportError:
         import subprocess
+
         sys.exit(subprocess.run([CORE_VENV_PYTHON, *sys.argv]).returncode)
 
 from src.app.dtos.user import StudentData  # noqa: E402
@@ -106,7 +112,10 @@ def ensure_openvino_container_ready(model_name: str) -> str:
         return model_name
 
     print(f"\n[OPENVINO] Serwer na {base_url} nie odpowiada.")
-    print("Upewnij się, że uruchomiono środowisko deweloperskie (np. 'uv run poe dev' lub 'python scripts/local/dev.py').\n")
+    print(
+        "Upewnij się, że uruchomiono środowisko deweloperskie "
+        "(np. 'uv run poe dev' lub 'python scripts/local/dev.py').\n"
+    )
     return model_name
 
 

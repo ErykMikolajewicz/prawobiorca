@@ -68,4 +68,3 @@ class HTMLToPDFRenderer(PDFRenderer):
         await anyio.to_thread.run_sync(_generate_sync)
 
         return output_path
-
