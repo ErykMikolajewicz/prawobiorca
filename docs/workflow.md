@@ -82,13 +82,13 @@ Pipelines are defined with GitHub Actions in `.github/workflows/`.
 
 Runs on every push to `develop` and on every PR to `develop` and `main`:
 
-- **backend** – Ruff lint and format check, unit tests with coverage (`poe cov`, fails below 90%).
-- **integration** – integration tests (`poe test_integration`).
-- **frontend** – `pnpm check`, `pnpm type-check` and unit tests with Vitest.
-- **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `poe api_types` and fails if they differ from the committed files.
-- **e2e** – runs only on PRs to `main`: builds the backend and frontend images, deploys them with `poe run_e2e_env` and runs the Playwright tests (see [Tests](tests/tests.md#e2e-tests)). On failure it prints the backend and nginx logs and uploads the Playwright report as an artifact.
+- **backend** – `just check-backend`: Ruff lint and format check, unit tests with coverage (fails below 90%).
+- **integration** – integration tests (`just test-integration`).
+- **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest.
+- **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
+- **e2e** – runs only on PRs to `main`: builds the backend and frontend images, deploys them with `just run-e2e-env` and runs the Playwright tests (see [Tests](tests/tests.md#e2e-tests)). On failure it prints the backend and nginx logs and uploads the Playwright report as an artifact.
 
-When the API contract changes, run `poe api_types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
+When the API contract changes, run `just api-types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
 
 The e2e job pulls `embedding-service` from `ghcr.io/erykmikolajewicz/embedding-service:latest` instead of building it. The image is public and pushed manually; push it again whenever `embedding-service/Containerfile` changes:
 

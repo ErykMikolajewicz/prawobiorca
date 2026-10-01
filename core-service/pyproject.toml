@@ -27,7 +27,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "granian[reload]==2.8.*",
-    "poethepoet==0.48.*",
     "ruff==0.16.*",
     "taskiq[reload]==0.12.*",
 ]

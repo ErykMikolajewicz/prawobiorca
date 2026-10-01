@@ -29,6 +29,7 @@ The whole application lives in this repository:
     ```sh
     uv sync --all-groups
     ```
+    - Install [just](https://just.systems) (version `1.38` or newer), which runs the project tasks.
 
 2. **Install the frontend dependencies** (requires Node `^24.15.0` and pnpm `11.24.0`, easiest through `corepack enable`):
     ```sh
@@ -57,30 +58,21 @@ The whole application lives in this repository:
 
 ## Running the Application
 To check how the application works, launch it using the script below. Note that you must have **Podman** installed for it to work!
-Firstly, activate a virtual environment
-- on Linux:
-```bash
-source .venv/bin/activate
-```
-- on Windows:
-```powershell
-.venv/Scripts/activate
-```
 
 Start with building images with:
 ```sh
-poe build_images
+just build-images
 ```
 This builds the images of all services, including the frontend.
 
 Then run:
 ```sh
-poe run_locally
+just run-locally
 ```
 
 ## Initialize databases
 ```sh
-poe init_db
+just init-db
 ```
 This command may take a while, it is making some hard extraction from PDFs.
 
@@ -92,4 +84,4 @@ Everything is served by the nginx ingress on [http://localhost:8080](http://loca
 - [http://localhost:8080/openapi.json](http://localhost:8080/openapi.json) - the OpenAPI schema
 - [http://localhost:8080/storage/](http://localhost:8080/storage/) - the object storage
 
-To stop the deployment run `poe run_locally_down`.
+To stop the deployment run `just run-locally-down`.

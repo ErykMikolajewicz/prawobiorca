@@ -7,7 +7,7 @@ Within the project, we maintain the following types of tests:
 - **Unit tests**
 - **Integration tests**
 - **Integration tests of the AI services** (`extraction-service`) — the service keeps them in its own
-`tests/` directory and they are run with `poe test_extraction` (the service image must be built first).
+`tests/` directory and they are run with `just test-extraction` (the service image must be built first).
 - **Frontend unit tests** — the frontend lives in `prawobiorca-frontend/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest).
 - **E2E tests** — kept in `prawobiorca-frontend/e2e/`, written with Playwright, see [E2E Tests](#e2e-tests).
 
@@ -93,7 +93,7 @@ There is a single scenario (`prawobiorca-frontend/e2e/search.spec.ts`): register
 
 - The tests run against the built `prawobiorca-backend` and `prawobiorca-frontend` images, deployed like the local environment (`podman kube play` with `deploy/local/`), through the nginx ingress at `http://localhost:8080`.
 - `extraction-service`, `llm-service` and the Taskiq worker are not deployed. `embedding-service` is required, because every search embeds the query.
-- Before the application starts, `poe init_e2e_regulation` prepares a public legal act from the stored `extraction-service` output (`core-service/tests/data/ustawa-nauka_slice_30-31.json`), using the current parsing and chunking code and the real `embedding-service`. It also creates the object storage bucket. It is skipped when the act already exists.
+- Before the application starts, `just init-e2e-regulation` prepares a public legal act from the stored `extraction-service` output (`core-service/tests/data/ustawa-nauka_slice_30-31.json`), using the current parsing and chunking code and the real `embedding-service`. It also creates the object storage bucket. It is skipped when the act already exists.
 - Each run registers a new user with a unique name, so the tests need no cleanup.
 
 ### Running Locally
@@ -101,11 +101,11 @@ There is a single scenario (`prawobiorca-frontend/e2e/search.spec.ts`): register
 From the repository root:
 
 ```bash
-poe build_app
-poe build_frontend
-poe run_e2e_env
+just build-app
+just build-frontend
+just run-e2e-env
 cd prawobiorca-frontend && pnpm test:e2e
-poe run_locally_down
+just run-locally-down
 ```
 
-The environment uses the same volumes as `poe run_locally`, so the prepared act stays in the local database.
+The environment uses the same volumes as `just run-locally`, so the prepared act stays in the local database.

@@ -30,7 +30,7 @@ def main():
             wait_for_postgres()
         if manifest == BACKEND:
             wait_for_url(EMBEDDING_SERVICE_HEALTH_URL, EMBEDDING_SERVICE_READY_TIMEOUT, "Embedding service")
-            subprocess.run(["poe", "init_e2e_regulation"], check=True)
+            subprocess.run(["just", "init-e2e-regulation"], check=True)
         play_manifest(manifest, configmaps)
         if manifest == MIGRATIONS:
             wait_for_migrations()
@@ -38,7 +38,7 @@ def main():
     wait_for_url(APPLICATION_URL, APPLICATION_READY_TIMEOUT, "Application")
 
     print("\nE2E environment is running at http://localhost:8080")
-    print("To stop the deployment run: poe run_locally_down")
+    print("To stop the deployment run: just run-locally-down")
 
 
 if __name__ == "__main__":
