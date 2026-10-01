@@ -2,6 +2,9 @@ name: Setup backend
 runs:
   using: composite
   steps:
+    - uses: extractions/setup-just@v4
+      with:
+        just-version: 1.58.0
     - uses: astral-sh/setup-uv@v10.2.0
     - run: uv sync --locked
       shell: bash

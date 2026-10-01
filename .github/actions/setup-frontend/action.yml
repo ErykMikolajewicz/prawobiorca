@@ -2,6 +2,9 @@ name: Setup frontend
 runs:
   using: composite
   steps:
+    - uses: extractions/setup-just@v4
+      with:
+        just-version: 1.58.0
     - uses: pnpm/action-setup@v6
       with:
         package_json_file: prawobiorca-frontend/package.json

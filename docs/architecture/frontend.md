@@ -47,7 +47,7 @@ All application code lives in `prawobiorca-frontend/src`:
 * `withCredentials` is enabled — access and refresh tokens are carried in cookies, never stored by the application itself.
 * A response interceptor retries a request once after refreshing the tokens when `core-service` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
 * When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page, and the request is rejected with `SessionExpiredError`, which `showApiError` ignores so the user sees a single message.
-* The API client is generated with `poe api_types` (run from the repository root): it exports `core-service/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
+* The API client is generated with `just api-types` (run from the repository root): it exports `core-service/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
 * In development, presigned storage URLs pointing at `VITE_DEV_STORAGE_ORIGIN` (set in the committed `.env.development`) are rewritten to `/storage`, which the Vite dev server proxies to object storage. The variable is not set in production builds, so URLs are used as returned by `core-service`.
 
 ---
@@ -56,7 +56,7 @@ All application code lives in `prawobiorca-frontend/src`:
 
 `prawobiorca-frontend/Containerfile` defines a two-stage build: the first stage installs dependencies with pnpm and runs `pnpm run build`, the second copies the resulting `dist/` into an **nginx:alpine** image listening on port `8000`. The bundled `nginx.conf` falls back to `index.html` for unknown paths, which is what the history-mode router requires.
 
-The image is built as `prawobiorca-frontend` by `poe build_frontend` (and as part of `poe build_images`).
+The image is built as `prawobiorca-frontend` by `just build-frontend` (and as part of `just build-images`).
 
 In both deployment environments the frontend is served at the root path, behind the same entry point as the API:
 

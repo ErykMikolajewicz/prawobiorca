@@ -146,7 +146,7 @@ else:
 Before every commit:
 - Lint and format the code with Ruff
 - Check the frontend code with `pnpm check`
-- When `core-service/src/` is changed, regenerate the API types with `poe api_types`
+- When `core-service/src/` is changed, regenerate the API types with `just api-types`
 
 Tests are not run by the hook, they are run by CI.
 
