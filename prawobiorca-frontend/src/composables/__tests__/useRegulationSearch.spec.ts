@@ -30,10 +30,7 @@ function result(id: string): SearchResult {
     score: 0.5,
     header: null,
     text: `Tekst ${id}`,
-    unit_type: null,
-    unit_number: null,
-    unit_path: null,
-    elements: null,
+    elements: [],
     highlight: null,
   }
 }

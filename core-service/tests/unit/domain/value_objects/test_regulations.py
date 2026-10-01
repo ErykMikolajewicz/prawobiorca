@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from src.domain.value_objects import regulations as regulations_module
-from src.domain.value_objects.legal_units import RegulationElement, UnitType, UsefulLabels
+from src.domain.value_objects.legal_units import RegulationElement, UsefulLabels
 from src.domain.value_objects.regulations import RegulationAct
 
 DATA_DIR = Path(__file__).parents[3] / "data"
@@ -22,6 +22,8 @@ STUDY_REGULATIONS_FIXTURE = "pwr-regulamin_2025_slice_5-6"
 SUBSECTION_OR_POINT_START_PATTERN = re.compile(r"^\d+[a-z]*[.)]\s")
 
 LETTER_START_PATTERN = re.compile(r"^[a-z]\)\s")
+
+ARTICLE_NUMBER_PATTERN = re.compile(r"Art\. (\w+)$")
 
 CHUNK_MAX_TOKENS = 60
 
@@ -60,10 +62,16 @@ def create_subsections(subsections_count: int, words_per_subsection: int) -> lis
     return elements
 
 
+def find_unit_section(sections: list, unit_number: str):
+    unit_pattern = re.compile(rf"(^| > )(Art\.|§) {re.escape(unit_number)}( |$)")
+
+    return next(section for section in sections if section.header and unit_pattern.search(section.header))
+
+
 def find_section(regulation_name: str, unit_number: str):
     sections = create_sections(load_regulation_elements(regulation_name))
 
-    return next(section for section in sections if section.unit_number == unit_number)
+    return find_unit_section(sections, unit_number)
 
 
 def get_chunk_subsections(section, chunk) -> set[str | None]:
@@ -73,7 +81,11 @@ def get_chunk_subsections(section, chunk) -> set[str | None]:
 def test_each_article_becomes_separate_section():
     sections = create_sections(load_regulation_elements(ACT_FIXTURE))
 
-    article_numbers = [section.unit_number for section in sections if section.unit_type == UnitType.ARTICLE]
+    article_numbers = [
+        match.group(1)
+        for section in sections
+        if section.header and (match := ARTICLE_NUMBER_PATTERN.search(section.header))
+    ]
 
     assert sorted(set(article_numbers), key=int) == [
         "107",
@@ -92,20 +104,18 @@ def test_each_article_becomes_separate_section():
 def test_short_articles_are_not_merged_together():
     sections = create_sections(load_regulation_elements(ACT_FIXTURE))
 
-    short_article = next(section for section in sections if section.unit_number == "112")
+    short_article = find_unit_section(sections, "112")
 
     assert len(short_article.chunks) == 1
     assert "Art. 113" not in short_article.text
     assert "Nauczycielem akademickim" not in short_article.text
 
 
-def test_sections_carry_unit_metadata():
+def test_sections_carry_breadcrumb_header():
     sections = create_sections(load_regulation_elements(ACT_FIXTURE))
 
-    section = next(section for section in sections if section.unit_number == "112")
+    section = find_unit_section(sections, "112")
 
-    assert section.unit_type == UnitType.ARTICLE
-    assert section.unit_path == ["Rozdział 5 Pracownicy uczelni"]
     assert section.header == "Rozdział 5 Pracownicy uczelni > Art. 112"
 
 
@@ -228,16 +238,17 @@ def test_too_long_breadcrumb_is_trimmed_only_in_chunk_title():
     assert section.header.endswith("Art. 110")
     assert "DZIAŁ VII" not in section.chunks[0].embed_title
     assert section.chunks[0].embed_title.endswith("Art. 110")
-    assert section.unit_path == [
-        "DZIAŁ VII Bardzo długi tytuł działu o studiach i studentach oraz sprawach im podobnych",
-        "Rozdział 4 Samorząd studencki i organizacje studenckie w uczelni",
-    ]
+    assert section.header == (
+        "DZIAŁ VII Bardzo długi tytuł działu o studiach i studentach oraz sprawach im podobnych"
+        " > Rozdział 4 Samorząd studencki i organizacje studenckie w uczelni"
+        " > Art. 110"
+    )
 
 
 def test_elements_are_joined_with_separator():
     sections = create_sections(load_regulation_elements(ACT_FIXTURE))
 
-    article = next(section for section in sections if section.unit_number == "108")
+    article = find_unit_section(sections, "108")
 
     assert "studiów;\n2) rezygnacji" in article.text
     assert "studiów;2)" not in article.text
@@ -249,7 +260,6 @@ def test_unnumbered_content_has_no_header():
     sections = create_sections(elements)
 
     assert sections[0].header is None
-    assert sections[0].unit_type == UnitType.UNNUMBERED
 
 
 def test_section_order_is_continuous():
@@ -282,13 +292,11 @@ def test_chunk_span_covers_whole_elements():
     for chunk in section.chunks:
         start_text = section.elements[chunk.span.start_element].text
         end_text = section.elements[chunk.span.end_element].text
-        assert chunk.span.start_offset == 0
-        assert chunk.span.end_offset == len(end_text)
         assert chunk.text.startswith(start_text)
         assert chunk.text.endswith(end_text)
 
 
-def test_chunk_span_points_to_fragment_of_split_element():
+def test_chunk_span_points_to_split_element():
     sentence = " ".join(["słowo"] * 30)
     elements = [RegulationElement(label=UsefulLabels.TEXT, text=f"Art. 110. {sentence}. {sentence}. {sentence}.")]
 
@@ -297,7 +305,7 @@ def test_chunk_span_points_to_fragment_of_split_element():
     element_text = section.elements[0].text
     for chunk in section.chunks:
         assert chunk.span.start_element == chunk.span.end_element == 0
-        assert element_text[chunk.span.start_offset : chunk.span.end_offset] == chunk.text
+        assert chunk.text in element_text
 
 
 def test_long_subsection_is_split_between_points():

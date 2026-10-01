@@ -17,7 +17,7 @@ from src.infrastructure.relational_db.schemas.sections import regulations_chunks
 
 PRIMARY_CHUNK_SCORE_WEIGHT = 0.8
 
-SPAN_COLUMNS = ("span_start_element", "span_start_offset", "span_end_element", "span_end_offset")
+SPAN_COLUMNS = ("span_start_element", "span_end_element")
 
 
 class RegulationsSectionsRepository:
@@ -37,9 +37,6 @@ class RegulationsSectionsRepository:
                     "header": section.header,
                     "text": section.text,
                     "section_order": section.section_order,
-                    "unit_type": section.unit_type,
-                    "unit_number": section.unit_number,
-                    "unit_path": section.unit_path,
                     "elements": [asdict(element) for element in section.elements],
                     "regulation_id": regulation_id,
                     "user_id": user_id,
@@ -53,9 +50,7 @@ class RegulationsSectionsRepository:
                     "text": chunk.text,
                     "vector": chunk.vector,
                     "span_start_element": chunk.span.start_element if chunk.span else None,
-                    "span_start_offset": chunk.span.start_offset if chunk.span else None,
                     "span_end_element": chunk.span.end_element if chunk.span else None,
-                    "span_end_offset": chunk.span.end_offset if chunk.span else None,
                 }
                 for chunk in section.chunks
             )
@@ -146,9 +141,6 @@ class RegulationsSectionsRepository:
                 regulations_sections_table.c.id,
                 regulations_sections_table.c.header,
                 regulations_sections_table.c.text,
-                regulations_sections_table.c.unit_type,
-                regulations_sections_table.c.unit_number,
-                regulations_sections_table.c.unit_path,
                 regulations_sections_table.c.elements,
                 scored_sections.c.score,
                 *(scored_sections.c[column] for column in SPAN_COLUMNS),
@@ -169,16 +161,11 @@ class RegulationsSectionsRepository:
                 id=row.id,
                 header=row.header,
                 text=row.text,
-                unit_type=row.unit_type,
-                unit_number=row.unit_number,
-                unit_path=row.unit_path,
-                elements=[SearchResultElement(**element) for element in row.elements] if row.elements else None,
+                elements=[SearchResultElement(**element) for element in row.elements],
                 score=row.score,
                 highlight=SearchResultHighlight(
                     start_element=row.span_start_element,
-                    start_offset=row.span_start_offset,
                     end_element=row.span_end_element,
-                    end_offset=row.span_end_offset,
                 )
                 if row.span_start_element is not None
                 else None,

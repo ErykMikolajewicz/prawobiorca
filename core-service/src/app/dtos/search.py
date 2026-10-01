@@ -4,8 +4,6 @@ from uuid import UUID
 from fastapi import Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.domain.value_objects.legal_units import UnitType
-
 
 class SearchResultElement(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
@@ -16,9 +14,7 @@ class SearchResultElement(BaseModel):
 
 class SearchResultHighlight(BaseModel):
     start_element: int
-    start_offset: int
     end_element: int
-    end_offset: int
 
 
 class SearchResult(BaseModel):
@@ -28,10 +24,7 @@ class SearchResult(BaseModel):
     score: float = Field(ge=-1, le=1)
     header: str | None = None
     text: str
-    unit_type: UnitType | None = None
-    unit_number: str | None = None
-    unit_path: list[str] | None = None
-    elements: list[SearchResultElement] | None = None
+    elements: list[SearchResultElement]
     highlight: SearchResultHighlight | None = None
 
 

@@ -1861,53 +1861,11 @@
             "type": "string",
             "title": "Text"
           },
-          "unit_type": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/UnitType"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "unit_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit Number"
-          },
-          "unit_path": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit Path"
-          },
           "elements": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/SearchResultElement"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/SearchResultElement"
+            },
+            "type": "array",
             "title": "Elements"
           },
           "highlight": {
@@ -1927,9 +1885,6 @@
           "score",
           "header",
           "text",
-          "unit_type",
-          "unit_number",
-          "unit_path",
           "elements",
           "highlight"
         ],
@@ -1966,36 +1921,17 @@
             "type": "integer",
             "title": "Start Element"
           },
-          "start_offset": {
-            "type": "integer",
-            "title": "Start Offset"
-          },
           "end_element": {
             "type": "integer",
             "title": "End Element"
-          },
-          "end_offset": {
-            "type": "integer",
-            "title": "End Offset"
           }
         },
         "type": "object",
         "required": [
           "start_element",
-          "start_offset",
-          "end_element",
-          "end_offset"
+          "end_element"
         ],
         "title": "SearchResultHighlight"
-      },
-      "UnitType": {
-        "type": "string",
-        "enum": [
-          "ARTICLE",
-          "PARAGRAPH",
-          "UNNUMBERED"
-        ],
-        "title": "UnitType"
       },
       "ValidationError": {
         "properties": {

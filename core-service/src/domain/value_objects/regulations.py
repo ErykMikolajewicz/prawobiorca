@@ -34,8 +34,6 @@ class ChunkAtom:
     text: str
     subsection: str | None
     element_index: int
-    start: int
-    end: int
 
 
 @dataclass
@@ -87,9 +85,6 @@ class RegulationAct:
             header=unit.breadcrumb,
             text="\n".join(element.text for element in unit.elements),
             chunks=chunks,
-            unit_type=unit.unit_type,
-            unit_number=unit.number,
-            unit_path=list(unit.path),
             elements=list(unit.elements),
         )
 
@@ -104,12 +99,7 @@ class RegulationAct:
                 text=" ".join(atom.text for atom in part.atoms),
                 embed_title=part_title,
                 chunk_index=chunk_index,
-                span=ChunkSpan(
-                    part.atoms[0].element_index,
-                    part.atoms[0].start,
-                    part.atoms[-1].element_index,
-                    part.atoms[-1].end,
-                ),
+                span=ChunkSpan(part.atoms[0].element_index, part.atoms[-1].element_index),
             )
             for chunk_index, (part, part_title) in enumerate(zip(parts, part_titles, strict=True))
         ]
@@ -231,13 +221,7 @@ class RegulationAct:
     @staticmethod
     def _create_element_atoms(elements: list[LegalUnitElement], indices: list[int]) -> list[ChunkAtom]:
         return [
-            ChunkAtom(
-                elements[element_index].text,
-                elements[element_index].subsection,
-                element_index,
-                0,
-                len(elements[element_index].text),
-            )
+            ChunkAtom(elements[element_index].text, elements[element_index].subsection, element_index)
             for element_index in indices
         ]
 
@@ -274,20 +258,13 @@ class RegulationAct:
         self, element: LegalUnitElement, element_index: int, content_budget: int
     ) -> list[ChunkAtom]:
         if self._tokenizer.count_tokens(element.text) <= content_budget:
-            return [ChunkAtom(element.text, element.subsection, element_index, 0, len(element.text))]
+            return [ChunkAtom(element.text, element.subsection, element_index)]
 
         fragments = []
         for sentence in SENTENCE_SPLIT_PATTERN.split(element.text):
             fragments.extend(self._split_by_tokens(sentence, content_budget))
 
-        atoms = []
-        cursor = 0
-        for fragment in fragments:
-            start = element.text.find(fragment, cursor)
-            cursor = start + len(fragment)
-            atoms.append(ChunkAtom(fragment, element.subsection, element_index, start, cursor))
-
-        return atoms
+        return [ChunkAtom(fragment, element.subsection, element_index) for fragment in fragments]
 
     def _split_by_tokens(self, text: str, content_budget: int) -> list[str]:
         if self._tokenizer.count_tokens(text) <= content_budget:
