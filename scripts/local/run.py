@@ -121,7 +121,7 @@ def main():
     print("  - Docs:     http://localhost:8080/docs")
     print("  - OpenAPI:  http://localhost:8080/openapi.json")
     print("  - Storage:  http://localhost:8080/storage/")
-    print("\nTo stop the deployment run: poe run_locally_down")
+    print("\nTo stop the deployment run: just run-locally-down")
 
 
 if __name__ == "__main__":

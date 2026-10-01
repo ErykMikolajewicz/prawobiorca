@@ -4,7 +4,7 @@ import type { SearchResultElement, SearchResultHighlight } from '@/api/generated
 
 const props = defineProps<{
   result: string
-  elements?: Array<SearchResultElement> | null
+  elements: Array<SearchResultElement>
   highlight?: SearchResultHighlight | null
   score: number
   selectedCaseId?: string
@@ -30,7 +30,7 @@ function isHighlighted(elementIndex: number) {
 const blocks = computed<Array<ResultBlock>>(() => {
   const result: Array<ResultBlock> = []
 
-  for (const [elementIndex, element] of (props.elements ?? []).entries()) {
+  for (const [elementIndex, element] of props.elements.entries()) {
     const lastBlock = result[result.length - 1]
     const highlighted = isHighlighted(elementIndex)
 
@@ -57,7 +57,7 @@ function handleAddToCase() {
 <template>
   <el-card shadow="never" class="app-result-card">
     <div class="result-text">
-      <div v-if="blocks.length" class="result-blocks">
+      <div class="result-blocks">
         <div
           v-for="(block, blockIndex) in blocks"
           :key="blockIndex"
@@ -74,7 +74,6 @@ function handleAddToCase() {
           </p>
         </div>
       </div>
-      <span v-else class="result-plain">{{ result }}</span>
     </div>
     <div class="result-footer">
       <span class="score">Podobieństwo: {{ score.toFixed(3) }}</span>
@@ -102,6 +101,16 @@ function handleAddToCase() {
 </template>
 
 <style scoped>
+.app-result-card {
+  --el-card-bg-color: #faf9fd;
+  --el-card-border-color: #ebe8f1;
+}
+
+html.dark .app-result-card {
+  --el-card-bg-color: #18181a;
+  --el-card-border-color: #262628;
+}
+
 .result-text {
   white-space: pre-line;
 }

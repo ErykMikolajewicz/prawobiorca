@@ -124,9 +124,6 @@ chunking exists only so that a long article still embeds well.
   top when it grows too long, plus a subsection range suffix (`ust. 6-8`), extended with `(część 2/4)` when
   the ranges alone would not be unique. The suffixes never reach the user — `section.header` has none.
 
-Every section also stores its structural metadata (`unit_type`, `unit_number`, `unit_path`), which is what
-search results use for citations such as *"Art. 108, Prawo o szkolnictwie wyższym"*.
-
 ---
 
 ## Scoring

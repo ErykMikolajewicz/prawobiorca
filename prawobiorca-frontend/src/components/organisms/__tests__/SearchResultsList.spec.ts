@@ -9,11 +9,8 @@ const mockResults: SearchResult[] = [
     score: 0.5,
     text: 'Ustęp pierwszy',
     header: 'Art. 1',
-    unit_type: null,
-    unit_number: null,
-    unit_path: null,
     elements: [{ text: 'Ustęp pierwszy', subsection: null }],
-    highlight: { start_element: 0, start_offset: 0, end_element: 0, end_offset: 5 },
+    highlight: { start_element: 0, end_element: 0 },
   },
 ]
 

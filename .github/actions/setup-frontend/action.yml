@@ -1,0 +1,18 @@
+name: Setup frontend
+runs:
+  using: composite
+  steps:
+    - uses: extractions/setup-just@v4
+      with:
+        just-version: 1.58.0
+    - uses: pnpm/action-setup@v6
+      with:
+        package_json_file: prawobiorca-frontend/package.json
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: prawobiorca-frontend/package.json
+        cache: pnpm
+        cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+      working-directory: prawobiorca-frontend

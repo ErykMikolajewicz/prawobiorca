@@ -1,8 +1,4 @@
-import type {
-  RegulationPreparationStatus,
-  RegulationRepresentation,
-  RegulationType,
-} from '@/api/generated/model'
+import type { RegulationPreparationStatus, RegulationType } from '@/api/generated/model'
 
 export type RegulationScope = 'user' | 'public'
 
@@ -24,8 +20,4 @@ export const preparationStatusOptions: Record<
   NOT_STARTED: { label: 'Oczekuje', tagType: 'info' },
   IN_PROGRESS: { label: 'Przetwarzanie', tagType: 'warning' },
   FAILED: { label: 'Błąd przetwarzania', tagType: 'danger' },
-}
-
-export function isPending(regulation: RegulationRepresentation): boolean {
-  return regulation.preparationStatus === 'IN_PROGRESS'
 }
