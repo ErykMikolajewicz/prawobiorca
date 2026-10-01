@@ -5,7 +5,7 @@ import type { SearchResultElement, SearchResultHighlight } from '@/api/generated
 
 function mountItem(
   result: string,
-  elements?: Array<SearchResultElement> | null,
+  elements: Array<SearchResultElement>,
   selectedCaseId = 'case-1',
   highlight: SearchResultHighlight | null = null,
 ) {
@@ -22,13 +22,6 @@ function mountItem(
 }
 
 describe('SearchResultItem', () => {
-  it('falls back to the flat text when no elements are provided', () => {
-    const wrapper = mountItem('1. Ustęp pierwszy\n2. Ustęp drugi', null)
-
-    expect(wrapper.find('.result-blocks').exists()).toBe(false)
-    expect(wrapper.find('.result-plain').text()).toBe('1. Ustęp pierwszy\n2. Ustęp drugi')
-  })
-
   it('groups elements sharing a subsection into one block', () => {
     const elements: Array<SearchResultElement> = [
       { text: '1. Ustęp pierwszy', subsection: '1' },
@@ -74,7 +67,7 @@ describe('SearchResultItem', () => {
       { text: '2. Ustęp drugi', subsection: '2' },
       { text: '3. Ustęp trzeci', subsection: '3' },
     ]
-    const highlight = { start_element: 0, start_offset: 3, end_element: 1, end_offset: 8 }
+    const highlight = { start_element: 0, end_element: 1 }
 
     const wrapper = mountItem('irrelevant', elements, 'case-1', highlight)
 

@@ -7,7 +7,6 @@ from fastapi import status
 from sqlalchemy import delete, insert, select
 
 from src.app.dtos.regulations import RegulationUploadTarget
-from src.domain.value_objects.legal_units import UnitType
 from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
 from src.framework.dependencies.ai_services import get_texts_embedder
 from src.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
@@ -140,9 +139,7 @@ async def insert_section(session, regulation_id, user_id, unit_number, text, sec
                 "header": f"Rozdział 5 Pracownicy uczelni > Art. {unit_number}",
                 "text": text,
                 "section_order": section_order,
-                "unit_type": UnitType.ARTICLE,
-                "unit_number": unit_number,
-                "unit_path": ["Rozdział 5 Pracownicy uczelni"],
+                "elements": [{"text": text, "subsection": None}],
                 "regulation_id": regulation_id,
                 "user_id": user_id,
             }
@@ -159,9 +156,7 @@ async def insert_section(session, regulation_id, user_id, unit_number, text, sec
                     "text": f"{text} chunk {chunk_index}",
                     "vector": vector,
                     "span_start_element": chunk_index,
-                    "span_start_offset": 0,
                     "span_end_element": chunk_index,
-                    "span_end_offset": 10,
                 }
                 for chunk_index, vector in enumerate(chunk_vectors)
             ]
@@ -201,11 +196,8 @@ async def test_search_regulations_documents(client, override_session_maker, sess
                 "score": pytest.approx(1.0),
                 "header": "Rozdział 5 Pracownicy uczelni > Art. 112",
                 "text": "Matching public regulation section",
-                "unit_type": UnitType.ARTICLE,
-                "unit_number": "112",
-                "unit_path": ["Rozdział 5 Pracownicy uczelni"],
-                "elements": None,
-                "highlight": {"start_element": 0, "start_offset": 0, "end_element": 0, "end_offset": 10},
+                "elements": [{"text": "Matching public regulation section", "subsection": None}],
+                "highlight": {"start_element": 0, "end_element": 0},
             }
         ]
     finally:
@@ -281,12 +273,7 @@ async def test_search_highlights_best_chunk_of_section(
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()[0]["highlight"] == {
-            "start_element": 1,
-            "start_offset": 0,
-            "end_element": 1,
-            "end_offset": 10,
-        }
+        assert response.json()[0]["highlight"] == {"start_element": 1, "end_element": 1}
     finally:
         prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
         async with session_maker.begin() as session:
@@ -294,14 +281,14 @@ async def test_search_highlights_best_chunk_of_section(
 
 
 @pytest.mark.parametrize(
-    ("order_by", "expected_numbers"),
+    ("order_by", "expected_texts"),
     [
-        ("document", ["112", "113"]),
-        ("score", ["113", "112"]),
+        ("document", ["Lower score section", "Higher score section"]),
+        ("score", ["Higher score section", "Lower score section"]),
     ],
 )
 async def test_search_orders_results(
-    client, override_session_maker, session_maker, set_user, clean_user, order_by, expected_numbers
+    client, override_session_maker, session_maker, set_user, clean_user, order_by, expected_texts
 ):
     prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
 
@@ -320,7 +307,7 @@ async def test_search_orders_results(
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert [result["unit_number"] for result in response.json()] == expected_numbers
+        assert [result["text"] for result in response.json()] == expected_texts
     finally:
         prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
         async with session_maker.begin() as session:

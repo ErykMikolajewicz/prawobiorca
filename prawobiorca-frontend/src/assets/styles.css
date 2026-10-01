@@ -49,17 +49,7 @@ html.dark .el-empty {
   --el-empty-fill-color-9: #6f608c;
 }
 
-/*
- * Nadpisanie ciemnego motywu Element Plus (html.dark) marką fioletową.
- * Blok :root powyżej ma niższą specyficzność niż html.dark z
- * element-plus/theme-chalk/dark/css-vars.css, więc bez tego bloku tryb ciemny
- * wraca do domyślnego niebieskiego. Kolejność importów w main.ts ma znaczenie:
- * ./assets/styles.css musi być importowany PO dark/css-vars.css.
- */
 html.dark {
-  /* Rozjaśniony wariant #8a2be2 — kontrast 4.9:1 na tle #141414.
-     Odcienie wg formuły Element Plus dla dark mode:
-     light-N = mix(primary, #141414, (10-N)*10%), dark-2 = mix(primary, #fff, 20%). */
   --el-color-primary: #a860ee;
   --el-color-primary-light-3: #7c49ad;
   --el-color-primary-light-5: #5e3a81;
@@ -113,10 +103,6 @@ body {
   width: 3em;
 }
 
-.icon-btn-danger:hover {
-  color: var(--el-color-danger);
-}
-
 .icon-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -156,14 +142,4 @@ body {
 html.dark .app-card {
   --el-card-bg-color: #1b1920;
   --el-card-border-color: #2c2734;
-}
-
-.app-result-card {
-  --el-card-bg-color: #faf9fd;
-  --el-card-border-color: #ebe8f1;
-}
-
-html.dark .app-result-card {
-  --el-card-bg-color: #18181a;
-  --el-card-border-color: #262628;
 }
