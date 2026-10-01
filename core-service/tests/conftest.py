@@ -40,4 +40,8 @@ async def client() -> AsyncClient:
         yield client
 
 
-pytest_plugins = ["tests.fixtures.dependencies", "tests.integration.fixtures.users"]
+pytest_plugins = [
+    "tests.fixtures.dependencies",
+    "tests.integration.fixtures.tasks",
+    "tests.integration.fixtures.users",
+]

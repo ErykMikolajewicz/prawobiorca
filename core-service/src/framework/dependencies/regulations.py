@@ -23,7 +23,7 @@ from src.framework.dependencies.relational import get_session_maker
 from src.infrastructure.object_storage.repository import S3RegulationsStorage
 from src.infrastructure.relational_db.repositories.regulations import RegulationsManagerRepository
 from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
-from src.infrastructure.tasks.regulations import TaskiqRegulationPreparationScheduler
+from src.infrastructure.tasks.regulations import PostgresRegulationPreparationScheduler
 
 
 def get_sections_repository() -> SectionsRepository:
@@ -56,7 +56,7 @@ def get_broker(request: Request) -> Any:
 def get_regulations_preparation_scheduler(
     broker: Annotated[Any, Depends(get_broker)],
 ) -> RegulationPreparationScheduler:
-    return TaskiqRegulationPreparationScheduler(broker)
+    return PostgresRegulationPreparationScheduler(broker)
 
 
 def get_list_regulations(

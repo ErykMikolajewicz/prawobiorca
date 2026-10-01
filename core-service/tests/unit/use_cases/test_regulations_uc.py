@@ -13,6 +13,7 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    FailRegulationPreparation,
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
@@ -31,6 +32,7 @@ from src.domain.exceptions.regulations import (
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import RegulationDetails, RegulationPreparationStatus, RegulationType
+from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 
 
@@ -238,6 +240,45 @@ async def test_prepare_regulation_unexpected_exception(
     ]
 
 
+async def test_fail_regulation_preparation_deliveries_limit_exceeded(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    use_case = FailRegulationPreparation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    failed = await use_case.execute(user_id, regulation_id, MAX_REGULATION_PREPARATION_DELIVERIES + 1)
+
+    assert failed is True
+    mock_regulations_repository.set_preparation_status.assert_awaited_once_with(
+        mock_session_maker.begin.return_value.__aenter__.return_value,
+        user_id,
+        regulation_id,
+        RegulationPreparationStatus.FAILED,
+    )
+
+
+async def test_fail_regulation_preparation_deliveries_limit_not_exceeded(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    use_case = FailRegulationPreparation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    failed = await use_case.execute(user_id, regulation_id, MAX_REGULATION_PREPARATION_DELIVERIES)
+
+    assert failed is False
+    mock_regulations_repository.set_preparation_status.assert_not_awaited()
+
+
 async def test_retry_regulation_preparation_success(
     mock_session_maker,
     mock_regulations_repository,
@@ -261,7 +302,9 @@ async def test_retry_regulation_preparation_success(
     await use_case.execute(user_id, regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [RegulationPreparationStatus.IN_PROGRESS]
-    mock_scheduler.schedule_regulation_preparation.assert_awaited_once_with(user_id, regulation_id)
+    mock_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
+        mock_session_maker.begin.return_value.__aenter__.return_value, user_id, regulation_id
+    )
 
 
 async def test_retry_regulation_preparation_not_found(
@@ -379,7 +422,7 @@ async def test_retry_regulation_preparation_scheduler_unavailable(
     mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
 
     mock_scheduler = AsyncMock()
-    mock_scheduler.schedule_regulation_preparation.side_effect = Exception("Broker down")
+    mock_scheduler.schedule_regulation_preparation.side_effect = ServiceUnavailable()
 
     use_case = RetryRegulationPreparation(
         session_maker=mock_session_maker,
@@ -390,10 +433,7 @@ async def test_retry_regulation_preparation_scheduler_unavailable(
     with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
-    assert get_set_statuses(mock_regulations_repository) == [
-        RegulationPreparationStatus.IN_PROGRESS,
-        RegulationPreparationStatus.FAILED,
-    ]
+    assert get_set_statuses(mock_regulations_repository) == [RegulationPreparationStatus.IN_PROGRESS]
 
 
 async def test_add_public_regulation_success(
@@ -476,7 +516,9 @@ async def test_confirm_regulation_upload_success(
         regulation_id,
         RegulationPreparationStatus.IN_PROGRESS,
     )
-    mock_scheduler.schedule_regulation_preparation.assert_awaited_once_with(user_id, regulation_id)
+    mock_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
+        mock_session_maker.begin.return_value.__aenter__.return_value, user_id, regulation_id
+    )
 
 
 async def test_confirm_regulation_upload_not_found(
@@ -610,7 +652,7 @@ async def test_confirm_regulation_upload_scheduler_unavailable(
     mock_regulations_storage.check_regulation_exists.return_value = True
 
     mock_scheduler = AsyncMock()
-    mock_scheduler.schedule_regulation_preparation.side_effect = Exception("Broker down")
+    mock_scheduler.schedule_regulation_preparation.side_effect = ServiceUnavailable()
 
     use_case = ConfirmRegulationUpload(
         session_maker=mock_session_maker,
@@ -622,10 +664,7 @@ async def test_confirm_regulation_upload_scheduler_unavailable(
     with pytest.raises(ServiceUnavailable):
         await use_case.execute(user_id, regulation_id)
 
-    assert get_set_statuses(mock_regulations_repository) == [
-        RegulationPreparationStatus.IN_PROGRESS,
-        RegulationPreparationStatus.FAILED,
-    ]
+    assert get_set_statuses(mock_regulations_repository) == [RegulationPreparationStatus.IN_PROGRESS]
 
 
 async def test_get_regulation_download_url_success(

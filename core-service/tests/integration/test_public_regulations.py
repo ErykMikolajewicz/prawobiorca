@@ -400,7 +400,7 @@ async def test_confirm_public_regulation_upload_as_admin(
         assert response.status_code == status.HTTP_202_ACCEPTED
         mock_regulations_storage.check_regulation_exists.assert_awaited_once_with(regulation_id)
         mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
-            None, regulation_id
+            ANY, None, regulation_id
         )
 
         async with session_maker() as session:
