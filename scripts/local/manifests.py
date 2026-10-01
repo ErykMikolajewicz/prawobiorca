@@ -11,7 +11,6 @@ BACKEND = LOCAL_K8S_DIR / "prawobiorca-backend.yaml"
 MANIFESTS: tuple[tuple[Path, tuple[Path, ...]], ...] = (
     (LOCAL_K8S_DIR / "secrets.yaml", ()),
     (LOCAL_K8S_DIR / "postgres.yaml", ()),
-    (LOCAL_K8S_DIR / "redis.yaml", ()),
     (LOCAL_K8S_DIR / "rustfs.yaml", ()),
     (LOCAL_K8S_DIR / "embedding-service.yaml", ()),
     (LOCAL_K8S_DIR / "extraction-service.yaml", ()),
@@ -26,7 +25,6 @@ MANIFESTS: tuple[tuple[Path, tuple[Path, ...]], ...] = (
 E2E_MANIFESTS: tuple[tuple[Path, tuple[Path, ...]], ...] = (
     (LOCAL_K8S_DIR / "secrets.yaml", ()),
     (LOCAL_K8S_DIR / "postgres.yaml", ()),
-    (LOCAL_K8S_DIR / "redis.yaml", ()),
     (LOCAL_K8S_DIR / "rustfs.yaml", ()),
     (LOCAL_K8S_DIR / "embedding-service.yaml", ()),
     (MIGRATIONS, (BACKEND_CONFIG,)),

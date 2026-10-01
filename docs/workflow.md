@@ -108,4 +108,4 @@ Runs on every push to `main` and deploys to GKE:
 
 GitHub authenticates to GCP with Workload Identity Federation, configured once by `scripts/cloud/github_cicd_init.sh`.
 
-Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL, Redis) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction-service`, `embedding-service`, `embedding-batch-service`) by their own scripts in `scripts/cloud/`.
+Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction-service`, `embedding-service`, `embedding-batch-service`) by their own scripts in `scripts/cloud/`.

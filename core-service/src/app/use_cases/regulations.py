@@ -30,6 +30,7 @@ from src.domain.value_objects.regulations import (
     RegulationRegistrationData,
     RegulationType,
 )
+from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,23 @@ class PrepareRegulation:
 
 
 @dataclass
+class FailRegulationPreparation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, delivery_attempt: int) -> bool:
+        if delivery_attempt <= MAX_REGULATION_PREPARATION_DELIVERIES:
+            return False
+
+        logger.error("Regulation preparation exceeded deliveries limit! regulation id: %s", regulation_id)
+        async with self.session_maker.begin() as session:
+            await self.regulations_repository.set_preparation_status(
+                session, user_id, regulation_id, RegulationPreparationStatus.FAILED
+            )
+        return True
+
+
+@dataclass
 class RetryRegulationPreparation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
@@ -123,16 +141,7 @@ class RetryRegulationPreparation:
             await self.regulations_repository.set_preparation_status(
                 session, user_id, regulation_id, RegulationPreparationStatus.IN_PROGRESS
             )
-
-        try:
-            await self.regulation_preparation_scheduler.schedule_regulation_preparation(user_id, regulation_id)
-        except Exception as e:
-            logger.error("Failed to schedule regulation preparation! %s", e)
-            async with self.session_maker.begin() as session:
-                await self.regulations_repository.set_preparation_status(
-                    session, user_id, regulation_id, RegulationPreparationStatus.FAILED
-                )
-            raise ServiceUnavailable()
+            await self.regulation_preparation_scheduler.schedule_regulation_preparation(session, user_id, regulation_id)
 
 
 @dataclass
@@ -193,16 +202,7 @@ class ConfirmRegulationUpload:
             await self.regulations_repository.set_preparation_status(
                 session, user_id, regulation_id, RegulationPreparationStatus.IN_PROGRESS
             )
-
-        try:
-            await self.regulation_preparation_scheduler.schedule_regulation_preparation(user_id, regulation_id)
-        except Exception as e:
-            logger.error("Failed to schedule regulation preparation! %s", e)
-            async with self.session_maker.begin() as session:
-                await self.regulations_repository.set_preparation_status(
-                    session, user_id, regulation_id, RegulationPreparationStatus.FAILED
-                )
-            raise ServiceUnavailable()
+            await self.regulation_preparation_scheduler.schedule_regulation_preparation(session, user_id, regulation_id)
 
 
 @dataclass

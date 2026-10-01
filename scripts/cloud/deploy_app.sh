@@ -10,14 +10,8 @@ kubectl apply -f deploy/gcp/ingress.yaml
 echo "Applying databases..."
 kubectl apply -f deploy/gcp/postgres.yaml
 
-echo "Applying broker..."
-kubectl apply -f deploy/gcp/redis.yaml
-
 echo "Waiting for database..."
 kubectl rollout status deployment/postgres --timeout=180s
-
-echo "Waiting for broker..."
-kubectl rollout status deployment/redis --timeout=180s
 
 echo "Running migrations..."
 kubectl delete job prawobiorca-migrations --ignore-not-found
