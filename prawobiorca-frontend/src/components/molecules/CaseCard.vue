@@ -122,4 +122,8 @@ async function handleDelete() {
   position: absolute;
   inset: 0;
 }
+
+.icon-btn-danger:hover {
+  color: var(--el-color-danger);
+}
 </style>

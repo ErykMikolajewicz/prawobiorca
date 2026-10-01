@@ -2,12 +2,16 @@ import { computed, ref, watch } from 'vue'
 import { showApiError } from '@/utils/error'
 import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
 import { getUserRegulations } from '@/api/generated/endpoints/user-regulations/user-regulations'
-import { isPending, type RegulationScope } from '@/domain/regulations'
+import type { RegulationScope } from '@/domain/regulations'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 
 const loadErrorMessages: Record<RegulationScope, string> = {
   public: 'Nie udało się pobrać regulacji publicznych.',
   user: 'Nie udało się pobrać regulacji użytkownika.',
+}
+
+function isPending(regulation: RegulationRepresentation): boolean {
+  return regulation.preparationStatus === 'IN_PROGRESS'
 }
 
 export function useRegulations(scope: RegulationScope) {

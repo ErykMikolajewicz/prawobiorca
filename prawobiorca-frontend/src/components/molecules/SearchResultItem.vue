@@ -101,6 +101,16 @@ function handleAddToCase() {
 </template>
 
 <style scoped>
+.app-result-card {
+  --el-card-bg-color: #faf9fd;
+  --el-card-border-color: #ebe8f1;
+}
+
+html.dark .app-result-card {
+  --el-card-bg-color: #18181a;
+  --el-card-border-color: #262628;
+}
+
 .result-text {
   white-space: pre-line;
 }
