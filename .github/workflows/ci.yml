@@ -47,11 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
+      - uses: ./.github/actions/setup-backend
       - run: uv run ruff check .
       - run: uv run ruff format --check
-      - run: cp core-service/.env.example core-service/.env
       - run: uv run poe cov
 
   integration:
@@ -62,9 +60,7 @@ jobs:
       DOCKER_HOST: unix:///var/run/docker.sock
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
-      - run: cp core-service/.env.example core-service/.env
+      - uses: ./.github/actions/setup-backend
       - run: uv run poe test_integration
 
   frontend:
@@ -76,15 +72,7 @@ jobs:
         working-directory: prawobiorca-frontend
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: prawobiorca-frontend/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: prawobiorca-frontend/package.json
-          cache: pnpm
-          cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-frontend
       - run: pnpm check
       - run: pnpm type-check
       - run: pnpm test:unit --run
@@ -95,19 +83,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
-      - run: cp core-service/.env.example core-service/.env
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: prawobiorca-frontend/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: prawobiorca-frontend/package.json
-          cache: pnpm
-          cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-        working-directory: prawobiorca-frontend
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
       - run: uv run poe api_types
       - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/api/generated
 
@@ -121,19 +98,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
-      - run: cp core-service/.env.example core-service/.env
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: prawobiorca-frontend/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: prawobiorca-frontend/package.json
-          cache: pnpm
-          cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-        working-directory: prawobiorca-frontend
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
       - id: playwright-version
         run: echo "version=$(pnpm exec playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
         working-directory: prawobiorca-frontend
