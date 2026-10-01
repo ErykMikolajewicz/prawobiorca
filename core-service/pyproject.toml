@@ -21,7 +21,6 @@ dependencies = [
     "python-multipart==0.0.32",
     "sqlalchemy[asyncio]==2.0.*",
     "taskiq==0.12.*",
-    "taskiq-redis==1.2.*",
     "tokenizers==0.23.*",
 ]
 

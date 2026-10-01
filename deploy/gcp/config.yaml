@@ -14,8 +14,6 @@ data:
   EMBEDDING_SERVICE_URL: "https://embedding-service-296630821006.europe-central2.run.app"
   EXTRACTION_SERVICE_URL: "https://extraction-service-296630821006.europe-central2.run.app"
 
-  BROKER_URL: "redis://redis:6379"
-
   OBJECT_STORAGE_ENDPOINT_URL: "https://storage.googleapis.com"
   OBJECT_STORAGE_REGION: "europe-central2"
   OBJECT_STORAGE_BUCKET: "prawobiorca-regulations"
