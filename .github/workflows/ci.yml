@@ -111,8 +111,22 @@ jobs:
       - run: |
           podman pull ghcr.io/erykmikolajewicz/embedding-service:latest
           podman tag ghcr.io/erykmikolajewicz/embedding-service:latest localhost/embedding-service:latest
-      - run: just build-app
-      - run: just build-frontend
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: core-service
+          file: core-service/Containerfile
+          load: true
+          tags: localhost/prawobiorca-backend:latest
+          cache-from: type=gha,scope=prawobiorca-backend
+      - uses: docker/build-push-action@v7
+        with:
+          context: prawobiorca-frontend
+          file: prawobiorca-frontend/Containerfile
+          load: true
+          tags: localhost/prawobiorca-frontend:latest
+          cache-from: type=gha,scope=prawobiorca-frontend
+      - run: docker save localhost/prawobiorca-backend:latest localhost/prawobiorca-frontend:latest | podman load
       - run: just run-e2e-env
       - run: pnpm test:e2e
         working-directory: prawobiorca-frontend
