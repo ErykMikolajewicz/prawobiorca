@@ -94,15 +94,14 @@ export const deleteCaseDocument = (
 export const generateApplication = (
   caseId: string,
   newApplication: NewApplication,
-  options?: SecondParameter<typeof prawobiorcaRequest<Blob>>,
+  options?: SecondParameter<typeof prawobiorcaRequest<string>>,
 ) => {
-  return prawobiorcaRequest<Blob>(
+  return prawobiorcaRequest<string>(
     {
       url: `/api/user/cases/${caseId}/application`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       data: newApplication,
-      responseType: 'blob',
     },
     options,
   )

@@ -82,3 +82,10 @@ View available exclusively for **Logged Users**, serving to finalize work on a l
         - The application description, entered by the user.
         - The content of all pinned articles.
     - Based on this, it generates a formal document (application/letter) in **DOCX** format.
+    - Generation runs in the background: the user does not wait for the response, the new application appears in the list with the "Generating" status.
+
+4. **List of Generated Applications**:
+    - Displays all applications generated for this case, with their type, creation date and generation status ("Generating", "Generation failed").
+    - The list refreshes automatically while any application is being generated.
+    - Ability to download a generated application (DOCX) and to delete an application.
+    - Deleting the case deletes its applications as well.

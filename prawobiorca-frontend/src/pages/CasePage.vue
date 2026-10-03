@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
+import { computed, ref, onBeforeMount } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
@@ -10,10 +10,13 @@ import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 import GeneratedApplicationsList from '@/components/organisms/GeneratedApplicationsList.vue'
 
-import { downloadApplicationDocument, generateApplicationDocument } from '@/api/cases'
+import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
+
+import { downloadApplicationDocument } from '@/api/cases'
 import {
   deleteApplication,
   deleteCaseDocument,
+  generateApplication,
   getCaseApplications,
   getCaseDocuments,
 } from '@/api/generated/endpoints/cases/cases'
@@ -25,6 +28,11 @@ const caseId = route.params.id as string
 
 const documents = ref<Array<CaseDocument>>([])
 const applications = ref<Array<ApplicationRepresentation>>([])
+const pendingApplicationIds = computed(() =>
+  applications.value
+    .filter((application) => application.generationStatus === 'IN_PROGRESS')
+    .map((application) => application.id),
+)
 
 async function loadDocuments() {
   try {
@@ -44,6 +52,16 @@ async function loadApplications() {
   }
 }
 
+async function refreshApplications() {
+  try {
+    applications.value = await getCaseApplications(caseId)
+  } catch (error) {
+    console.error('Failed to refresh applications:', error)
+  }
+}
+
+useRegulationsPolling(() => pendingApplicationIds.value, refreshApplications)
+
 onBeforeMount(async () => {
   await Promise.all([loadDocuments(), loadApplications()])
 })
@@ -59,16 +77,16 @@ async function handleUnpin(documentId: string) {
 
 const handleGeneratePdf = async (newApplication: NewApplication) => {
   try {
-    await generateApplicationDocument(caseId, newApplication)
+    await generateApplication(caseId, newApplication)
     ElMessage({
-      message: 'Wniosek został pomyślnie wygenerowany.',
+      message: 'Wniosek jest generowany. Pobierzesz go z listy, gdy będzie gotowy.',
       type: 'success',
       duration: 5000,
     })
+    await loadApplications()
   } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się wygenerować wniosku.' })
+    showApiError(error, { defaultMessage: 'Nie udało się zlecić wygenerowania wniosku.' })
   }
-  await loadApplications()
 }
 
 async function handleDownloadApplication(applicationId: string) {

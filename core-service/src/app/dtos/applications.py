@@ -5,7 +5,7 @@ from pydantic import ConfigDict, Field
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
-from src.domain.value_objects.applications import ApplicationType
+from src.domain.value_objects.applications import ApplicationGenerationStatus, ApplicationType
 
 
 @dataclass(config=ConfigDict(alias_generator=to_camel))
@@ -25,3 +25,4 @@ class ApplicationRepresentation:
     case_id: UUID
     create_date: datetime
     application_type: ApplicationType
+    generation_status: ApplicationGenerationStatus

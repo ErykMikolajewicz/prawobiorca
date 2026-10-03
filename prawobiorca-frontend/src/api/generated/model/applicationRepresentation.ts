@@ -1,3 +1,4 @@
+import type { ApplicationGenerationStatus } from './applicationGenerationStatus'
 import type { ApplicationType } from './applicationType'
 
 export interface ApplicationRepresentation {
@@ -5,4 +6,5 @@ export interface ApplicationRepresentation {
   caseId: string
   createDate: string
   applicationType: ApplicationType
+  generationStatus: ApplicationGenerationStatus
 }

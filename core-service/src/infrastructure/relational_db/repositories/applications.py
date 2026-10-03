@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.dtos.applications import ApplicationRepresentation
 from src.domain.exceptions.applications import ApplicationNotFound
 from src.domain.exceptions.cases import CaseNotFound
-from src.domain.value_objects.applications import ApplicationType
+from src.domain.value_objects.applications import ApplicationGenerationStatus, ApplicationType
 from src.infrastructure.relational_db.schemas.applications import applications_table
 
 
@@ -54,6 +54,21 @@ class ApplicationsRepository:
             raise CaseNotFound
         application_id = result.scalar_one()
         return application_id
+
+    @staticmethod
+    async def set_generation_status(
+        session: AsyncSession, user_id: UUID, application_id: UUID, status: ApplicationGenerationStatus
+    ) -> None:
+        statement = (
+            update(applications_table)
+            .where(applications_table.c.id == application_id, applications_table.c.user_id == user_id)
+            .values(generation_status=status)
+            .returning(applications_table.c.id)
+        )
+        result = await session.execute(statement)
+
+        if result.scalar_one_or_none() is None:
+            raise ApplicationNotFound
 
     @staticmethod
     async def delete(session: AsyncSession, user_id: UUID, application_id: UUID) -> None:

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from src.app.dtos.applications import ApplicationRepresentation
 from src.app.interfaces.relational import AsyncSession
-from src.domain.value_objects.applications import ApplicationType
+from src.domain.value_objects.applications import ApplicationGenerationStatus, ApplicationType
 
 
 class ApplicationsRepository(Protocol):
@@ -20,6 +20,10 @@ class ApplicationsRepository(Protocol):
     async def add(
         self, session: AsyncSession, user_id: UUID, case_id: UUID, application_type: ApplicationType
     ) -> UUID: ...
+
+    async def set_generation_status(
+        self, session: AsyncSession, user_id: UUID, application_id: UUID, status: ApplicationGenerationStatus
+    ) -> None: ...
 
     async def delete(self, session: AsyncSession, user_id: UUID, application_id: UUID) -> None: ...
 

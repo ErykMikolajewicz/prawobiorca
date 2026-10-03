@@ -29,4 +29,6 @@
 - **Gdzie**: Widok szczegółów sprawy (Kontekst / Opis Wniosku)
 - **Input**: Wypełnij dane studenta (imię i nazwisko, numer albumu w formacie 6 cyfr, wydział, semestr, tytuł zawodowy) i opisz sytuację (np. "Wnoszę o uchylenie decyzji o skreśleniu z listy studentów z powodu długotrwałej hospitalizacji w trakcie sesji.")
 - **Akcja**: Kliknij "Generuj Wniosek (DOCX)"
+- **Rezultat**: Pojawia się komunikat, że wniosek jest generowany, a na liście "Wygenerowane Wnioski" pojawia się wniosek ze statusem "Generowanie". Po zakończeniu generowania status znika, a przycisk "Pobierz" staje się aktywny.
+- **Akcja**: Kliknij "Pobierz"
 - **Rezultat**: Przeglądarka powinna pobrać gotowy plik DOCX.

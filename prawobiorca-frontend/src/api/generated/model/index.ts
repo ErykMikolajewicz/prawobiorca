@@ -1,3 +1,4 @@
+export * from './applicationGenerationStatus'
 export * from './applicationRepresentation'
 export * from './applicationType'
 export * from './bodyAddCase'

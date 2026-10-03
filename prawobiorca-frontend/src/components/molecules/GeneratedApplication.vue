@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import ApplicationStatusBadge from '@/components/atoms/ApplicationStatusBadge.vue'
 import { applicationTypeOptions } from '@/domain/applications'
 import type { ApplicationRepresentation } from '@/api/generated/model'
 
@@ -17,6 +18,7 @@ const label = computed(
       ?.label,
 )
 const createDate = computed(() => new Date(props.application.createDate).toLocaleString('pl-PL'))
+const isGenerated = computed(() => props.application.generationStatus === 'GENERATED')
 
 function handleDownload() {
   emit('download', props.application.id)
@@ -32,7 +34,8 @@ function handleDelete() {
     <template #header>
       <strong>{{ label }}</strong>
       <em>{{ createDate }}</em>
-      <el-button type="primary" @click="handleDownload">Pobierz</el-button>
+      <ApplicationStatusBadge :generation-status="application.generationStatus" />
+      <el-button type="primary" :disabled="!isGenerated" @click="handleDownload">Pobierz</el-button>
       <el-popconfirm
         title="Czy na pewno chcesz usunąć ten wniosek?"
         confirm-button-text="Tak"

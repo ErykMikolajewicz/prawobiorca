@@ -953,13 +953,14 @@
           }
         },
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+              "application/json": {
                 "schema": {
                   "type": "string",
-                  "format": "binary"
+                  "format": "uuid",
+                  "title": "Response Generate Application"
                 }
               }
             }
@@ -1069,6 +1070,9 @@
           },
           "404": {
             "description": "Application not found!"
+          },
+          "409": {
+            "description": "Application not generated!"
           },
           "422": {
             "description": "Validation Error",
@@ -1682,6 +1686,15 @@
   },
   "components": {
     "schemas": {
+      "ApplicationGenerationStatus": {
+        "type": "string",
+        "enum": [
+          "IN_PROGRESS",
+          "GENERATED",
+          "FAILED"
+        ],
+        "title": "ApplicationGenerationStatus"
+      },
       "ApplicationRepresentation": {
         "properties": {
           "id": {
@@ -1701,6 +1714,9 @@
           },
           "applicationType": {
             "$ref": "#/components/schemas/ApplicationType"
+          },
+          "generationStatus": {
+            "$ref": "#/components/schemas/ApplicationGenerationStatus"
           }
         },
         "type": "object",
@@ -1708,7 +1724,8 @@
           "id",
           "caseId",
           "createDate",
-          "applicationType"
+          "applicationType",
+          "generationStatus"
         ],
         "title": "ApplicationRepresentation"
       },
