@@ -9,7 +9,7 @@ spec:
   containers:
     - name: prawobiorca-worker
       image: localhost/prawobiorca-backend:latest
-      command: ["taskiq", "worker", "src.framework.workers.regulations:broker"]
+      command: ["taskiq", "worker", "src.framework.workers.regulations:broker", "src.framework.workers.applications"]
       envFrom:
         - configMapRef:
             name: prawobiorca-backend-config

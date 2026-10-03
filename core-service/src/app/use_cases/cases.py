@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from src.app.dtos.cases import CaseData, CaseDocument, NewCaseDocument
+from src.app.interfaces.applications import ApplicationsRepository, ApplicationsStorage
 from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
 from src.app.interfaces.relational import SessionMaker
 from src.domain.exceptions.cases import CaseNotFound
@@ -25,14 +26,23 @@ class ListCases:
 class DeleteCase:
     session_maker: SessionMaker
     cases_repo: CasesRepository
+    applications_repo: ApplicationsRepository
+    applications_storage: ApplicationsStorage
 
     async def execute(self, user_id: UUID, case_id: UUID) -> None:
         async with self.session_maker.begin() as session:
+            application_ids = await self.applications_repo.list_ids_by_case_id(session, user_id, case_id)
             try:
                 await self.cases_repo.delete(session, user_id, case_id)
             except CaseNotFound:
                 logger.warning("Case not found!")
                 raise
+
+        for application_id in application_ids:
+            try:
+                await self.applications_storage.delete_application(application_id)
+            except Exception:
+                logger.error("Failed to remove from storage application: %s", application_id)
 
 
 @dataclass

@@ -72,7 +72,13 @@ async def test_add_case(
 
 
 async def test_delete_case(
-    client, override_session_maker, session_maker, override_authorize_normal_user, set_user, clean_user
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_applications_storage,
+    set_user,
+    clean_user,
 ):
     async with session_maker.begin() as session:
         statement = (

@@ -49,7 +49,7 @@ The application drafts with **Gemma 4 26B A4B** (`gemma-4-26b-a4b-it`), reached 
 - **Local development**: OVMS with the lighter `OpenVINO/Qwen3.5-9B-int4-ov`.
 
 ### Scope of Use
-OpenAI-compatible `/chat/completions` endpoint (model name `google/gemma-4-26b-a4b-it-maas` on GCP, `gemma-4-26b` on-premise, `qwen-3.5-9b` locally), consumed by `core-service` for automated application/letter drafting.
+OpenAI-compatible `/chat/completions` endpoint (model name `google/gemma-4-26b-a4b-it-maas` on GCP, `gemma-4-26b` on-premise, `qwen-3.5-9b` locally), consumed by the `core-service` Taskiq worker for automated application/letter drafting in the background.
 
 ### Abstraction Layer and Integration
 On-premise and locally, OVMS pulls the model repository from Hugging Face on first start (`--source_model`) into a mounted persistent volume, so restarts reuse the cached model instead of re-downloading it. No custom image build or model-baking step is needed.

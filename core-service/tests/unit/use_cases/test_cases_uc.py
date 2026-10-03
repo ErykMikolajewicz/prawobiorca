@@ -24,27 +24,83 @@ async def test_list_cases_success(mock_session_maker, mock_opened_session, mock_
     mock_cases_repo.list_by_user_id.assert_awaited_once_with(mock_opened_session, user_id)
 
 
-async def test_delete_case_success(mock_session_maker, mock_opened_session, mock_cases_repo, uuid_generator):
+async def test_delete_case_success(
+    mock_session_maker,
+    mock_opened_session,
+    mock_cases_repo,
+    mock_applications_repo,
+    mock_applications_storage,
+    uuid_generator,
+):
     user_id = next(uuid_generator)
     case_id = next(uuid_generator)
+    application_id = next(uuid_generator)
+    mock_applications_repo.list_ids_by_case_id.return_value = [application_id]
 
-    use_case = DeleteCase(session_maker=mock_session_maker, cases_repo=mock_cases_repo)
+    use_case = DeleteCase(
+        session_maker=mock_session_maker,
+        cases_repo=mock_cases_repo,
+        applications_repo=mock_applications_repo,
+        applications_storage=mock_applications_storage,
+    )
     await use_case.execute(user_id, case_id)
 
+    mock_applications_repo.list_ids_by_case_id.assert_awaited_once_with(mock_opened_session, user_id, case_id)
     mock_cases_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id)
+    mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
 
 
-async def test_delete_case_not_found(mock_session_maker, mock_opened_session, mock_cases_repo, uuid_generator):
+async def test_delete_case_storage_failure_ignored(
+    mock_session_maker,
+    mock_opened_session,
+    mock_cases_repo,
+    mock_applications_repo,
+    mock_applications_storage,
+    uuid_generator,
+):
     user_id = next(uuid_generator)
     case_id = next(uuid_generator)
+    first_application_id = next(uuid_generator)
+    second_application_id = next(uuid_generator)
+    mock_applications_repo.list_ids_by_case_id.return_value = [first_application_id, second_application_id]
+    mock_applications_storage.delete_application.side_effect = Exception()
+
+    use_case = DeleteCase(
+        session_maker=mock_session_maker,
+        cases_repo=mock_cases_repo,
+        applications_repo=mock_applications_repo,
+        applications_storage=mock_applications_storage,
+    )
+    await use_case.execute(user_id, case_id)
+
+    assert mock_applications_storage.delete_application.await_count == 2
+
+
+async def test_delete_case_not_found(
+    mock_session_maker,
+    mock_opened_session,
+    mock_cases_repo,
+    mock_applications_repo,
+    mock_applications_storage,
+    uuid_generator,
+):
+    user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
+    mock_applications_repo.list_ids_by_case_id.return_value = []
     mock_cases_repo.delete.side_effect = CaseNotFound()
 
-    use_case = DeleteCase(session_maker=mock_session_maker, cases_repo=mock_cases_repo)
+    use_case = DeleteCase(
+        session_maker=mock_session_maker,
+        cases_repo=mock_cases_repo,
+        applications_repo=mock_applications_repo,
+        applications_storage=mock_applications_storage,
+    )
 
     with pytest.raises(CaseNotFound):
         await use_case.execute(user_id, case_id)
 
     mock_cases_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id)
+    mock_applications_storage.delete_application.assert_not_awaited()
 
 
 async def test_add_case_success(mock_session_maker, mock_opened_session, mock_cases_repo, uuid_generator):

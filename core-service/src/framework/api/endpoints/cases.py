@@ -1,11 +1,16 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Path, Response, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Path, status
 
-from src.app.dtos.applications import NewApplication
+from src.app.dtos.applications import ApplicationRepresentation, NewApplication
 from src.app.dtos.cases import CaseData, CaseDocument, NewCaseDocument
-from src.app.use_cases.applications import GenerateApplication
+from src.app.use_cases.applications import (
+    AddApplication,
+    DeleteApplication,
+    GetApplicationDownloadUrl,
+    ListApplications,
+)
 from src.app.use_cases.cases import (
     AddCase,
     AddCaseDocument,
@@ -14,8 +19,14 @@ from src.app.use_cases.cases import (
     ListCaseDocuments,
     ListCases,
 )
+from src.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from src.domain.exceptions.cases import CaseNotFound
-from src.framework.dependencies.applications import get_generate_application
+from src.framework.dependencies.applications import (
+    get_add_application,
+    get_application_download_url,
+    get_delete_application,
+    get_list_applications,
+)
 from src.framework.dependencies.authentication import authorize_user, require_logged_user
 from src.framework.dependencies.cases import (
     get_add_case_document,
@@ -110,27 +121,68 @@ async def delete_case_document(
 
 @cases_router.post(
     "/user/cases/{caseId}/application",
-    response_class=Response,
+    status_code=status.HTTP_202_ACCEPTED,
     responses={
-        status.HTTP_200_OK: {
-            "content": {
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
-                    "schema": {"type": "string", "format": "binary"}
-                }
-            }
-        },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"},
+        status.HTTP_404_NOT_FOUND: {"description": "No case with that id!"},
     },
 )
 async def generate_application(
     user_id: Annotated[UUID, Depends(require_logged_user)],
-    generate_application_: Annotated[GenerateApplication, Depends(get_generate_application)],
+    add_application_: Annotated[AddApplication, Depends(get_add_application)],
     case_id: Annotated[UUID, Path(alias="caseId")],
     new_application: NewApplication,
-) -> Response:
-    document = await generate_application_.execute(user_id, case_id, new_application)
-    return Response(
-        content=document,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename=wniosek_{case_id}.docx"},
-    )
+) -> UUID:
+    try:
+        return await add_application_.execute(user_id, case_id, new_application)
+    except CaseNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No case with that id!")
+
+
+@cases_router.get(
+    "/user/cases/{caseId}/applications",
+    response_model=list[ApplicationRepresentation],
+)
+async def get_case_applications(
+    user_id: Annotated[UUID, Depends(require_logged_user)],
+    list_applications: Annotated[ListApplications, Depends(get_list_applications)],
+    case_id: Annotated[UUID, Path(alias="caseId")],
+) -> list[ApplicationRepresentation]:
+    return await list_applications.execute(user_id, case_id)
+
+
+@cases_router.get(
+    "/user/cases/applications/{applicationId}/download-url",
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Application not found!"},
+        status.HTTP_409_CONFLICT: {"description": "Application not generated!"},
+    },
+)
+async def get_case_application_download_url(
+    user_id: Annotated[UUID, Depends(require_logged_user)],
+    get_download_url: Annotated[GetApplicationDownloadUrl, Depends(get_application_download_url)],
+    application_id: Annotated[UUID, Path(alias="applicationId")],
+) -> str:
+    try:
+        return await get_download_url.execute(user_id, application_id)
+    except ApplicationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found!")
+    except ApplicationNotGenerated:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Application not generated!")
+
+
+@cases_router.delete(
+    "/user/cases/applications/{applicationId}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Application not found!"},
+    },
+)
+async def delete_application(
+    user_id: Annotated[UUID, Depends(require_logged_user)],
+    delete_application_: Annotated[DeleteApplication, Depends(get_delete_application)],
+    application_id: Annotated[UUID, Path(alias="applicationId")],
+):
+    try:
+        await delete_application_.execute(user_id, application_id)
+    except ApplicationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found!")

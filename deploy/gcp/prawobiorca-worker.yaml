@@ -20,7 +20,7 @@ spec:
       containers:
         - name: prawobiorca-worker
           image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/prawobiorca-backend:latest
-          command: ["taskiq", "worker", "src.framework.workers.regulations:broker"]
+          command: ["taskiq", "worker", "src.framework.workers.regulations:broker", "src.framework.workers.applications"]
           resources:
             requests:
               cpu: "100m"
