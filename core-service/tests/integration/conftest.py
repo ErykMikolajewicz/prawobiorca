@@ -1,6 +1,6 @@
 """Common pytest fixtures for integration tests.
 
-These fixtures handle container initialization (PostgresSQL, Redis)
+These fixtures handle container initialization (PostgresSQL)
 and dependency overrides for FastAPI, ensuring test isolation.
 """
 

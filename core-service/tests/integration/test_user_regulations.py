@@ -1,4 +1,5 @@
-from uuid import UUID
+from unittest.mock import ANY
+from uuid import UUID, uuid4
 
 from fastapi import status
 from sqlalchemy import insert, select
@@ -48,6 +49,99 @@ async def test_add_user_regulation(
     assert regulation.presentation_name == "user-regulation.pdf"
     assert regulation.preparation_status == RegulationPreparationStatus.NOT_STARTED
     assert regulation.regulation_type == RegulationType.ACT
+
+
+async def test_get_user_regulation(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(
+                user_id=USER_ID,
+                presentation_name="user-regulation.pdf",
+                regulation_type=RegulationType.ACT,
+            )
+            .returning(regulations_table.c.id)
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.get(f"/api/user/regulations/{regulation_id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "id": str(regulation_id),
+        "createDate": ANY,
+        "presentationName": "user-regulation.pdf",
+        "description": None,
+        "regulationType": RegulationType.ACT,
+        "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+    }
+
+
+async def test_update_user_regulation(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(
+                user_id=USER_ID,
+                presentation_name="user-regulation.pdf",
+                regulation_type=RegulationType.ACT,
+            )
+            .returning(regulations_table.c.id)
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.patch(
+        f"/api/user/regulations/{regulation_id}",
+        json={"name": "renamed-regulation.pdf", "description": "Opis regulacji"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "id": str(regulation_id),
+        "createDate": ANY,
+        "presentationName": "renamed-regulation.pdf",
+        "description": "Opis regulacji",
+        "regulationType": RegulationType.ACT,
+        "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+    }
+
+    async with session_maker() as session:
+        statement = select(regulations_table).where(regulations_table.c.id == regulation_id)
+        result = await session.execute(statement)
+    regulation = result.one()
+
+    assert regulation.presentation_name == "renamed-regulation.pdf"
+    assert regulation.description == "Opis regulacji"
+
+
+async def test_update_user_regulation_not_found(
+    client,
+    override_session_maker,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.patch(f"/api/user/regulations/{uuid4()}", json={"name": "renamed-regulation.pdf"})
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_delete_user_regulation(
@@ -118,7 +212,7 @@ async def test_confirm_user_regulation_upload(
     assert response.status_code == status.HTTP_202_ACCEPTED
     mock_regulations_storage.check_regulation_exists.assert_awaited_once_with(regulation_id)
     mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
-        USER_ID, regulation_id
+        ANY, USER_ID, regulation_id
     )
 
     async with session_maker() as session:
@@ -237,7 +331,7 @@ async def test_retry_user_regulation_preparation(
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
-        USER_ID, regulation_id
+        ANY, USER_ID, regulation_id
     )
 
     async with session_maker() as session:

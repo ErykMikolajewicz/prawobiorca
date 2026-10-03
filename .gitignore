@@ -7,7 +7,6 @@ __pycache__/
 
 .idea
 .vscode
-/secrets/
 
 /site/
 
@@ -16,9 +15,6 @@ __pycache__/
 
 /deploy/gcp/secrets
 
-postman/
-.postman
-/regulations/
 /logs/
 
 /scratch/
@@ -26,3 +22,6 @@ postman/
 
 /core-service/tests/unit/ai/benchmark_results/*
 .coverage
+
+/CLAUDE.md
+/AGENTS.md

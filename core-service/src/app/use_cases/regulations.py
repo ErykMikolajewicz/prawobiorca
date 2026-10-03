@@ -2,7 +2,12 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
-from src.app.dtos.regulations import RegulationData, RegulationRepresentation, RegulationUploadTarget
+from src.app.dtos.regulations import (
+    RegulationData,
+    RegulationDetailsData,
+    RegulationRepresentation,
+    RegulationUploadTarget,
+)
 from src.app.dtos.search import SearchParams, SearchResult
 from src.app.interfaces.regulations import RegulationsRepository, RegulationsStorage
 from src.app.interfaces.relational import SessionMaker
@@ -17,14 +22,16 @@ from src.domain.exceptions.regulations import (
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
-    RegulationServiceUnavailable,
     RegulationsNotPreparedToSearch,
 )
 from src.domain.value_objects.regulations import (
+    RegulationDetails,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
 )
+from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
+from src.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +73,7 @@ class PrepareRegulation:
 
         try:
             sections_collection = await self.regulation_preparator.prepare_regulation(regulation_content)
-        except RegulationServiceUnavailable:
+        except ServiceUnavailable:
             logger.error("Service to prepare regulation not working!")
             async with self.session_maker.begin() as session:
                 await self.regulations_repository.set_preparation_status(
@@ -86,6 +93,23 @@ class PrepareRegulation:
             await self.regulations_repository.set_preparation_status(
                 session, user_id, regulation_id, RegulationPreparationStatus.PREPARED
             )
+
+
+@dataclass
+class FailRegulationPreparation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, delivery_attempt: int) -> bool:
+        if delivery_attempt <= MAX_REGULATION_PREPARATION_DELIVERIES:
+            return False
+
+        logger.error("Regulation preparation exceeded deliveries limit! regulation id: %s", regulation_id)
+        async with self.session_maker.begin() as session:
+            await self.regulations_repository.set_preparation_status(
+                session, user_id, regulation_id, RegulationPreparationStatus.FAILED
+            )
+        return True
 
 
 @dataclass
@@ -117,16 +141,7 @@ class RetryRegulationPreparation:
             await self.regulations_repository.set_preparation_status(
                 session, user_id, regulation_id, RegulationPreparationStatus.IN_PROGRESS
             )
-
-        try:
-            await self.regulation_preparation_scheduler.schedule_regulation_preparation(user_id, regulation_id)
-        except Exception as e:
-            logger.error("Failed to schedule regulation preparation! %s", e)
-            async with self.session_maker.begin() as session:
-                await self.regulations_repository.set_preparation_status(
-                    session, user_id, regulation_id, RegulationPreparationStatus.FAILED
-                )
-            raise RegulationServiceUnavailable()
+            await self.regulation_preparation_scheduler.schedule_regulation_preparation(session, user_id, regulation_id)
 
 
 @dataclass
@@ -187,16 +202,7 @@ class ConfirmRegulationUpload:
             await self.regulations_repository.set_preparation_status(
                 session, user_id, regulation_id, RegulationPreparationStatus.IN_PROGRESS
             )
-
-        try:
-            await self.regulation_preparation_scheduler.schedule_regulation_preparation(user_id, regulation_id)
-        except Exception as e:
-            logger.error("Failed to schedule regulation preparation! %s", e)
-            async with self.session_maker.begin() as session:
-                await self.regulations_repository.set_preparation_status(
-                    session, user_id, regulation_id, RegulationPreparationStatus.FAILED
-                )
-            raise RegulationServiceUnavailable()
+            await self.regulation_preparation_scheduler.schedule_regulation_preparation(session, user_id, regulation_id)
 
 
 @dataclass
@@ -219,6 +225,24 @@ class GetRegulationDownloadUrl:
 
 
 @dataclass
+class GetRegulation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> RegulationRepresentation:
+        async with self.session_maker() as session:
+            regulation_representation = await self.regulations_repository.get_regulation_representation(
+                session, user_id, regulation_id
+            )
+
+        if regulation_representation is None:
+            logger.warning("Regulation not found! regulation id: %s", regulation_id)
+            raise RegulationNotFound
+
+        return regulation_representation
+
+
+@dataclass
 class ListRegulations:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
@@ -229,6 +253,23 @@ class ListRegulations:
         async with self.session_maker() as session:
             files = await self.regulations_repository.list_regulations(session, user_id, regulation_type)
         return files
+
+
+@dataclass
+class UpdateRegulation:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(
+        self, user_id: UUID | None, regulation_id: UUID, regulation_details_data: RegulationDetailsData
+    ) -> RegulationRepresentation:
+        regulation_details = RegulationDetails(
+            presentation_name=regulation_details_data.name, description=regulation_details_data.description
+        )
+        async with self.session_maker.begin() as session:
+            return await self.regulations_repository.update_regulation_details(
+                session, user_id, regulation_id, regulation_details
+            )
 
 
 @dataclass

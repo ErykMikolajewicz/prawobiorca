@@ -40,3 +40,7 @@ __screenshots__/
 
 .vscode
 /.env
+
+# Playwright
+/test-results/
+/playwright-report/

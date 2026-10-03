@@ -1,21 +1,17 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 
-import type { searchParams } from '@/types/api/search.ts'
+import type { SearchRegulationDocumentsParams } from '@/api/generated/model'
 
 const props = defineProps<{
-  searchParams: searchParams
+  searchParams: SearchRegulationDocumentsParams
 }>()
 
 const emit = defineEmits<{
-  (e: 'search', searchConfig: searchParams): void
+  (e: 'search', searchConfig: SearchRegulationDocumentsParams): void
 }>()
 
-const searchParams = reactive<searchParams>({
-  ...props.searchParams,
-  threshold: props.searchParams.threshold ?? 0.2,
-  order_by: props.searchParams.order_by ?? 'document',
-})
+const searchParams = reactive<SearchRegulationDocumentsParams>({ ...props.searchParams })
 
 function onSubmit() {
   if (searchParams.query.trim()) {
@@ -32,23 +28,16 @@ function onSubmit() {
     <el-row :gutter="20">
       <el-col :span="12" :xs="24">
         <el-form-item label="Poziom istotności:">
-          <div style="display: flex; align-items: center; gap: 15px; width: 100%">
+          <div class="threshold-control">
             <el-slider
               v-model="searchParams.threshold"
               :min="-1"
               :max="1"
               :step="0.1"
               :show-tooltip="false"
-              style="flex: 1"
+              class="threshold-slider"
             />
-            <span
-              style="
-                color: var(--el-text-color-primary);
-                min-width: 40px;
-                text-align: center;
-                font-weight: 500;
-              "
-            >
+            <span class="threshold-value">
               {{ searchParams.threshold.toFixed(1) }}
             </span>
           </div>
@@ -61,7 +50,7 @@ function onSubmit() {
             :min="1"
             :step="1"
             placeholder="Brak limitu"
-            style="width: 100%"
+            class="limit-input"
           />
         </el-form-item>
       </el-col>
@@ -77,3 +66,27 @@ function onSubmit() {
     </el-form-item>
   </el-form>
 </template>
+
+<style scoped>
+.threshold-control {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.threshold-slider {
+  flex: 1;
+}
+
+.threshold-value {
+  color: var(--el-text-color-primary);
+  min-width: 40px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.limit-input {
+  width: 100%;
+}
+</style>

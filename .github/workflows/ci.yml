@@ -1,74 +1,141 @@
 name: CI
 
 on:
-  push:
-    branches: [develop]
   pull_request:
     branches: [develop, main]
 
 jobs:
+  changes:
+    if: github.repository_id == '989302666'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            python:
+              - '**/*.py'
+              - pyproject.toml
+              - uv.lock
+              - ruff.toml
+              - .github/workflows/ci.yml
+            backend:
+              - core-service/**
+              - pyproject.toml
+              - uv.lock
+              - justfile
+              - .github/workflows/ci.yml
+            frontend:
+              - prawobiorca-frontend/**
+              - justfile
+              - .github/workflows/ci.yml
+            e2e:
+              - scripts/local/**
+              - deploy/local/**
+
   backend:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
-      - run: uv run ruff check .
-      - run: uv run ruff format --check
-      - run: cp core-service/.env.example core-service/.env
-      - run: uv run poe cov
+      - uses: ./.github/actions/setup-backend
+      - run: just check-backend
 
   integration:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     env:
       DOCKER_HOST: unix:///var/run/docker.sock
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
-      - run: cp core-service/.env.example core-service/.env
-      - run: uv run poe test_integration
+      - uses: ./.github/actions/setup-backend
+      - run: just test-integration
 
   frontend:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: prawobiorca-frontend
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: prawobiorca-frontend/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: prawobiorca-frontend/package.json
-          cache: pnpm
-          cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm type-check
-      - run: pnpm test:unit --run
+      - uses: ./.github/actions/setup-frontend
+      - run: just check-frontend
 
   api-types:
-    if: github.repository == 'ErykMikolajewicz/prawobiorca-backend'
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --locked
-      - run: cp core-service/.env.example core-service/.env
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: prawobiorca-frontend/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: prawobiorca-frontend/package.json
-          cache: pnpm
-          cache-dependency-path: prawobiorca-frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
+      - run: just api-types
+      - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/api/generated
+
+  e2e:
+    needs: changes
+    if: >
+      github.base_ref == 'main' && (
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.e2e == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
+      - id: playwright-version
+        run: echo "version=$(pnpm exec playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
         working-directory: prawobiorca-frontend
-      - run: uv run poe api_types
-      - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/types/api/schema.ts
+      - id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: prawobiorca-frontend
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+        working-directory: prawobiorca-frontend
+      - run: |
+          podman pull ghcr.io/erykmikolajewicz/embedding-service:latest
+          podman tag ghcr.io/erykmikolajewicz/embedding-service:latest localhost/embedding-service:latest
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: core-service
+          file: core-service/Containerfile
+          load: true
+          tags: localhost/prawobiorca-backend:latest
+          cache-from: type=gha,scope=prawobiorca-backend
+      - uses: docker/build-push-action@v7
+        with:
+          context: prawobiorca-frontend
+          file: prawobiorca-frontend/Containerfile
+          load: true
+          tags: localhost/prawobiorca-frontend:latest
+          cache-from: type=gha,scope=prawobiorca-frontend
+      - run: docker save localhost/prawobiorca-backend:latest localhost/prawobiorca-frontend:latest | podman load
+      - run: just run-e2e-env
+      - run: pnpm test:e2e
+        working-directory: prawobiorca-frontend
+      - if: failure()
+        run: |
+          podman logs prawobiorca-backend-prawobiorca-backend
+          podman logs nginx-nginx
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: prawobiorca-frontend/playwright-report/

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { DocumentData } from '@/types/api/documents.ts'
+import type { CaseDocument } from '@/api/generated/model'
 
-type Props = { document: DocumentData }
+type Props = { document: CaseDocument }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'unpin', id: string): void
 }>()
 
-const handleUnpin = () => {
+function handleUnpin() {
   emit('unpin', props.document.id)
 }
 </script>

@@ -4,14 +4,14 @@ import { mount } from '@vue/test-utils'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
 function mountPolling(
-  hasPending: () => boolean,
+  pendingIds: () => Array<string>,
   refresh: () => Promise<void>,
   options?: { intervalMs?: number; timeoutMs?: number },
 ) {
   return mount(
     defineComponent({
       setup() {
-        useRegulationsPolling(hasPending, refresh, options)
+        useRegulationsPolling(pendingIds, refresh, options)
         return () => h('div')
       },
     }),
@@ -28,7 +28,7 @@ describe('useRegulationsPolling', () => {
   })
 
   it('polls while some regulation is pending and stops once none is', async () => {
-    const pending = ref(true)
+    const pending = ref(['a'])
     const refresh = vi.fn().mockResolvedValue(undefined)
 
     mountPolling(() => pending.value, refresh, { intervalMs: 1000 })
@@ -36,7 +36,7 @@ describe('useRegulationsPolling', () => {
     await vi.advanceTimersByTimeAsync(2000)
     expect(refresh).toHaveBeenCalledTimes(2)
 
-    pending.value = false
+    pending.value = []
     await vi.advanceTimersByTimeAsync(5000)
     expect(refresh).toHaveBeenCalledTimes(2)
   })
@@ -44,7 +44,7 @@ describe('useRegulationsPolling', () => {
   it('does not poll when nothing is pending', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
 
-    mountPolling(() => false, refresh, { intervalMs: 1000 })
+    mountPolling(() => [], refresh, { intervalMs: 1000 })
 
     await vi.advanceTimersByTimeAsync(5000)
     expect(refresh).not.toHaveBeenCalled()
@@ -53,16 +53,30 @@ describe('useRegulationsPolling', () => {
   it('stops polling after the timeout is reached', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
 
-    mountPolling(() => true, refresh, { intervalMs: 1000, timeoutMs: 3000 })
+    mountPolling(() => ['a'], refresh, { intervalMs: 1000, timeoutMs: 3000 })
 
     await vi.advanceTimersByTimeAsync(10000)
     expect(refresh).toHaveBeenCalledTimes(2)
   })
 
+  it('resumes polling after the timeout when a new regulation becomes pending', async () => {
+    const pending = ref(['a'])
+    const refresh = vi.fn().mockResolvedValue(undefined)
+
+    mountPolling(() => pending.value, refresh, { intervalMs: 1000, timeoutMs: 3000 })
+
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(refresh).toHaveBeenCalledTimes(2)
+
+    pending.value = ['a', 'b']
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(refresh).toHaveBeenCalledTimes(4)
+  })
+
   it('stops polling when the component is unmounted', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
 
-    const wrapper = mountPolling(() => true, refresh, { intervalMs: 1000 })
+    const wrapper = mountPolling(() => ['a'], refresh, { intervalMs: 1000 })
 
     await vi.advanceTimersByTimeAsync(1000)
     expect(refresh).toHaveBeenCalledTimes(1)

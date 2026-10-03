@@ -92,6 +92,15 @@ def wait_for_migrations():
         raise RuntimeError(f"Migrations failed, check logs: podman logs {MIGRATIONS_CONTAINER}")
 
 
+def play_manifest(manifest: Path, configmaps: tuple[Path, ...]):
+    print(f"Applying {manifest.name}...")
+    command = ["podman", "kube", "play", "--replace", "--network", "prawobiorca-net"]
+    for configmap in configmaps:
+        command += ["--configmap", str(configmap)]
+    command.append(str(manifest))
+    subprocess.run(command, check=True)
+
+
 def main():
     build_images()
 
@@ -101,12 +110,7 @@ def main():
     for manifest, configmaps in MANIFESTS:
         if manifest == MIGRATIONS:
             wait_for_postgres()
-        print(f"Applying {manifest.name}...")
-        command = ["podman", "kube", "play", "--replace", "--network", "prawobiorca-net"]
-        for configmap in configmaps:
-            command += ["--configmap", str(configmap)]
-        command.append(str(manifest))
-        subprocess.run(command, check=True)
+        play_manifest(manifest, configmaps)
         if manifest == MIGRATIONS:
             wait_for_migrations()
 
@@ -117,7 +121,7 @@ def main():
     print("  - Docs:     http://localhost:8080/docs")
     print("  - OpenAPI:  http://localhost:8080/openapi.json")
     print("  - Storage:  http://localhost:8080/storage/")
-    print("\nTo stop the deployment run: poe run_locally_down")
+    print("\nTo stop the deployment run: just run-locally-down")
 
 
 if __name__ == "__main__":

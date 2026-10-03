@@ -1,3 +1,5 @@
+import asyncio
+
 from src.app.ports.regulations import RegulationSplitter
 from src.app.ports.tokenizer import Tokenizer
 from src.app.services.embedding import SectionsEmbedder
@@ -20,7 +22,7 @@ class RegulationPreparator:
         regulations_elements = await self._regulation_splitter.split(regulation)
         regulation_act = RegulationAct(regulations_elements, self._tokenizer)
 
-        sections = regulation_act.get_sections_to_embed()
+        sections = await asyncio.to_thread(regulation_act.get_sections_to_embed)
 
         await self._sections_embedder.embed_sections(sections)
 

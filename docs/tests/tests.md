@@ -7,10 +7,10 @@ Within the project, we maintain the following types of tests:
 - **Unit tests**
 - **Integration tests**
 - **Integration tests of the AI services** (`extraction-service`) — the service keeps them in its own
-`tests/` directory and they are run with `poe test_extraction` (the service image must be built first).
+`tests/` directory and they are run with `just test-extraction` (the service image must be built first).
 - **Frontend unit tests** — the frontend lives in `prawobiorca-frontend/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest).
 - **Manual E2E / UAT tests** — see [Manual E2E Test Case](manual_e2e_test.md) for step-by-step verification of full user flows (login, case creation, article search, and PDF generation).
-- **E2E tests** are not currently automated. They will be placed in `prawobiorca-frontend/`, probably using the `playwright` library.
+- **E2E tests** — kept in `prawobiorca-frontend/e2e/`, written with Playwright, see [E2E Tests](#e2e-tests).
 
 ## Technology Stack
 
@@ -83,3 +83,30 @@ Please note that during these tests, storage and external services are running i
 - **Before creating integration tests, carefully review the fixture documentation in `../../core-service/tests/integration/conftest.py`.**
 
 When writing tests, use existing examples from the repository as a reference.
+
+## E2E Tests
+
+E2E tests cover only the most basic functionality of the application — searching a legal act. Keep their number minimal; everything else belongs to unit and integration tests.
+
+There is a single scenario (`prawobiorca-frontend/e2e/search.spec.ts`): register and log in, create a case, search a legal act and add the result to the case.
+
+### Environment
+
+- The tests run against the built `prawobiorca-backend` and `prawobiorca-frontend` images, deployed like the local environment (`podman kube play` with `deploy/local/`), through the nginx ingress at `http://localhost:8080`.
+- `extraction-service`, `llm-service` and the Taskiq worker are not deployed. `embedding-service` is required, because every search embeds the query.
+- Before the application starts, `just init-e2e-regulation` prepares a public legal act from the stored `extraction-service` output (`core-service/tests/data/ustawa-nauka_slice_30-31.json`), using the current parsing and chunking code and the real `embedding-service`. It also creates the object storage bucket. It is skipped when the act already exists.
+- Each run registers a new user with a unique name, so the tests need no cleanup.
+
+### Running Locally
+
+From the repository root:
+
+```bash
+just build-app
+just build-frontend
+just run-e2e-env
+cd prawobiorca-frontend && pnpm test:e2e
+just run-locally-down
+```
+
+The environment uses the same volumes as `just run-locally`, so the prepared act stays in the local database.

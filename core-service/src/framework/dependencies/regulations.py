@@ -11,17 +11,19 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
     RetryRegulationPreparation,
     SearchRegulation,
+    UpdateRegulation,
 )
 from src.framework.dependencies.ai_services import get_texts_embedder
 from src.framework.dependencies.relational import get_session_maker
 from src.infrastructure.object_storage.repository import S3RegulationsStorage
 from src.infrastructure.relational_db.repositories.regulations import RegulationsManagerRepository
 from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
-from src.infrastructure.tasks.regulations import TaskiqRegulationPreparationScheduler
+from src.infrastructure.tasks.regulations import PostgresRegulationPreparationScheduler
 
 
 def get_sections_repository() -> SectionsRepository:
@@ -54,7 +56,7 @@ def get_broker(request: Request) -> Any:
 def get_regulations_preparation_scheduler(
     broker: Annotated[Any, Depends(get_broker)],
 ) -> RegulationPreparationScheduler:
-    return TaskiqRegulationPreparationScheduler(broker)
+    return PostgresRegulationPreparationScheduler(broker)
 
 
 def get_list_regulations(
@@ -65,6 +67,13 @@ def get_list_regulations(
     return ListRegulations(session_maker, regulation_manager)
 
 
+def get_regulation(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+) -> GetRegulation:
+    return GetRegulation(session_maker, regulations_repository)
+
+
 def get_retry_regulation_preparation(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
@@ -73,6 +82,13 @@ def get_retry_regulation_preparation(
     ],
 ) -> RetryRegulationPreparation:
     return RetryRegulationPreparation(session_maker, regulations_repository, regulation_preparation_scheduler)
+
+
+def get_update_regulation(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+) -> UpdateRegulation:
+    return UpdateRegulation(session_maker, regulations_repository)
 
 
 def get_delete_regulation(

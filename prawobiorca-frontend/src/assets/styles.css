@@ -7,37 +7,22 @@
   --el-color-primary-light-9: #f3eafa;
   --el-color-primary-dark-2: #6e22b5;
 
-  --el-bg-color: #f5f7fa;
-  --el-bg-color-page: #ebeef5;
+  --el-bg-color: #faf9fc;
+  --el-bg-color-page: #f4f3f8;
   --el-bg-color-overlay: #ffffff;
 
   --el-text-color-primary: #303133;
   --el-text-color-regular: #606266;
   --el-text-color-secondary: #909399;
 
+  --el-font-family: 'Inter Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
   --app-border-color: #e4e7ed;
   --app-card-shadow: 0 4px 12px rgba(138, 43, 226, 0.12);
-}
-
-html.dark {
-  --el-color-primary: #ad66eb;
-  --el-color-primary-light-3: #8a2be2;
-  --el-color-primary-light-5: #6e22b5;
-  --el-color-primary-light-7: #55197f;
-  --el-color-primary-light-8: #3d1259;
-  --el-color-primary-light-9: #2a0d3d;
-  --el-color-primary-dark-2: #c491f0;
-
-  --el-bg-color: #1d1e1f;
-  --el-bg-color-page: #141414;
-  --el-bg-color-overlay: #262727;
-
-  --el-text-color-primary: #e5eaf3;
-  --el-text-color-regular: #cfd3dc;
-  --el-text-color-secondary: #a3a6ad;
-
-  --app-border-color: #3f4143;
-  --app-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --app-card-shadow-rest: 0 1px 3px rgba(60, 40, 90, 0.05);
+  --app-navbar-bg: var(--el-bg-color);
+  --app-navbar-shadow: 0 1px 4px rgba(60, 40, 90, 0.05);
+  --app-page-glow: none;
 }
 
 .el-empty {
@@ -64,17 +49,7 @@ html.dark .el-empty {
   --el-empty-fill-color-9: #6f608c;
 }
 
-/*
- * Nadpisanie ciemnego motywu Element Plus (html.dark) marką fioletową.
- * Blok :root powyżej ma niższą specyficzność niż html.dark z
- * element-plus/theme-chalk/dark/css-vars.css, więc bez tego bloku tryb ciemny
- * wraca do domyślnego niebieskiego. Kolejność importów w main.ts ma znaczenie:
- * ./assets/styles.css musi być importowany PO dark/css-vars.css.
- */
 html.dark {
-  /* Rozjaśniony wariant #8a2be2 — kontrast 4.9:1 na tle #141414.
-     Odcienie wg formuły Element Plus dla dark mode:
-     light-N = mix(primary, #141414, (10-N)*10%), dark-2 = mix(primary, #fff, 20%). */
   --el-color-primary: #a860ee;
   --el-color-primary-light-3: #7c49ad;
   --el-color-primary-light-5: #5e3a81;
@@ -83,22 +58,30 @@ html.dark {
   --el-color-primary-light-9: #231c2a;
   --el-color-primary-dark-2: #b980f1;
 
+  --el-bg-color: #1d1e1f;
+  --el-bg-color-page: #141414;
+  --el-bg-color-overlay: #262727;
+
   --app-border-color: var(--el-border-color-light);
   --app-card-shadow: 0 4px 12px rgba(138, 43, 226, 0.35);
+  --app-card-shadow-rest: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --app-navbar-bg: var(--el-bg-color-overlay);
+  --app-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --app-page-glow: radial-gradient(
+    ellipse 1000px 500px at 50% 0,
+    rgba(168, 96, 238, 0.08),
+    transparent
+  );
 }
 
 body {
   background-color: var(--el-bg-color-page);
+  background-image: var(--app-page-glow);
+  background-repeat: no-repeat;
   color: var(--el-text-color-primary);
   margin: 0;
-  font-family:
-    'Inter', 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-    '微软雅黑', Arial, sans-serif;
+  font-family: var(--el-font-family);
   min-height: 100vh;
-}
-
-main {
-  margin: auto;
 }
 
 #app {
@@ -120,7 +103,43 @@ main {
   width: 3em;
 }
 
-.icon-btn :deep(svg) {
-  width: 1.5em;
-  height: 1.5em;
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  padding-left: 12px;
+  border-left: 4px solid var(--el-color-primary);
+}
+
+.cards-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.app-card {
+  --el-card-bg-color: #faf9fd;
+  --el-card-border-color: #ebe8f1;
+  box-shadow: var(--app-card-shadow-rest);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.app-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--app-card-shadow);
+  border-color: var(--el-color-primary-light-5);
+}
+
+html.dark .app-card {
+  --el-card-bg-color: #1b1920;
+  --el-card-border-color: #2c2734;
 }

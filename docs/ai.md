@@ -32,7 +32,7 @@ Skrypt `core-service/tests/unit/ai/compare_prompts.py` umożliwia testowanie jak
 
 ```bash
 # Uruchomienie jako zadanie Poe:
-uv run poe compare_prompts
+just compare-prompts
 
 # Uruchomienie z flagami CLI:
 uv run python tests/unit/ai/compare_prompts.py --openvino --model qwen-2.5-7b-it

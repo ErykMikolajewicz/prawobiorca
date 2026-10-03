@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { showApiError } from '@/utils/error'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 async function handleLogin() {
-  await router.push('/auth/login')
+  await router.push({ name: 'LoginPage' })
 }
 
 async function handleLogout() {
-  await authStore.logout()
-  await router.push('/')
+  try {
+    await authStore.logout()
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się wylogować.' })
+  }
+  await router.push({ name: 'MainPage' })
 }
 </script>
 

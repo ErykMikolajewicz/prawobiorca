@@ -1,18 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
 import SearchResultItem from '../SearchResultItem.vue'
-import { useAuthStore } from '@/stores/auth'
-import type { searchResultElement, searchResultHighlight } from '@/types/api/search.ts'
+import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
 
 function mountItem(
   result: string,
-  elements?: Array<searchResultElement> | null,
+  elements: Array<SearchResultElement>,
   selectedCaseId = 'case-1',
-  highlight: searchResultHighlight | null = null,
+  highlight: SearchResultHighlight | null = null,
 ) {
   return mount(SearchResultItem, {
-    props: { result, elements, score: 0.5, selectedCaseId, highlight },
+    props: { result, elements, score: 0.5, selectedCaseId, highlight, canAddToCase: true },
     global: {
       stubs: {
         ElCard: { template: '<div class="el-card"><slot /></div>' },
@@ -24,20 +22,8 @@ function mountItem(
 }
 
 describe('SearchResultItem', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    useAuthStore().isUserLogged = true
-  })
-
-  it('falls back to the flat text when no elements are provided', () => {
-    const wrapper = mountItem('1. Ustęp pierwszy\n2. Ustęp drugi', null)
-
-    expect(wrapper.find('.result-blocks').exists()).toBe(false)
-    expect(wrapper.find('label').text()).toBe('1. Ustęp pierwszy\n2. Ustęp drugi')
-  })
-
   it('groups elements sharing a subsection into one block', () => {
-    const elements: Array<searchResultElement> = [
+    const elements: Array<SearchResultElement> = [
       { text: '1. Ustęp pierwszy', subsection: '1' },
       { text: '1) punkt pierwszy', subsection: '1' },
       { text: '2. Ustęp drugi', subsection: '2' },
@@ -52,7 +38,7 @@ describe('SearchResultItem', () => {
   })
 
   it('marks punkt/litera lines for extra indentation', () => {
-    const elements: Array<searchResultElement> = [
+    const elements: Array<SearchResultElement> = [
       { text: '1. Ustęp pierwszy', subsection: '1' },
       { text: '1) punkt pierwszy', subsection: '1' },
       { text: 'a) litera pierwsza', subsection: '1' },
@@ -67,7 +53,7 @@ describe('SearchResultItem', () => {
   })
 
   it('emits add-to-case with the flat text regardless of structured elements', async () => {
-    const elements: Array<searchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
+    const elements: Array<SearchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
     const wrapper = mountItem('1. Ustęp pierwszy', elements)
 
     await wrapper.find('button').trigger('click')
@@ -75,27 +61,28 @@ describe('SearchResultItem', () => {
     expect(wrapper.emitted('add-to-case')?.[0]).toEqual([{ documentContent: '1. Ustęp pierwszy' }])
   })
 
-  it('highlights the best chunk span across elements', () => {
-    const elements: Array<searchResultElement> = [
+  it('highlights blocks containing the best chunk span', () => {
+    const elements: Array<SearchResultElement> = [
       { text: '1. Ustęp pierwszy', subsection: '1' },
       { text: '2. Ustęp drugi', subsection: '2' },
       { text: '3. Ustęp trzeci', subsection: '3' },
     ]
-    const highlight = { start_element: 0, start_offset: 3, end_element: 1, end_offset: 8 }
+    const highlight = { start_element: 0, end_element: 1 }
 
     const wrapper = mountItem('irrelevant', elements, 'case-1', highlight)
 
-    const marks = wrapper.findAll('mark')
-    expect(marks.map((mark) => mark.text())).toEqual(['Ustęp pierwszy', '2. Ustęp'])
-    expect(wrapper.findAll('.result-line')[1]!.text()).toBe('2. Ustęp drugi')
+    const blocks = wrapper.findAll('.result-block')
+    expect(blocks[0]!.classes()).toContain('result-block--highlighted')
+    expect(blocks[1]!.classes()).toContain('result-block--highlighted')
+    expect(blocks[2]!.classes()).not.toContain('result-block--highlighted')
   })
 
   it('does not highlight anything without highlight', () => {
-    const elements: Array<searchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
+    const elements: Array<SearchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
 
     const wrapper = mountItem('irrelevant', elements)
 
-    expect(wrapper.find('mark').exists()).toBe(false)
+    expect(wrapper.find('.result-block--highlighted').exists()).toBe(false)
     expect(wrapper.find('.result-line').text()).toBe('1. Ustęp pierwszy')
   })
 })

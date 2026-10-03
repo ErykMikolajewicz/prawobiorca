@@ -1,9 +1,11 @@
-from typing import Awaitable, Callable
+from contextlib import asynccontextmanager
+from typing import AsyncIterator, Awaitable, Callable
 
-from sqlalchemy import text
+from sqlalchemy import exc, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, registry
 
+from src.shared.exceptions import ServiceUnavailable
 from src.shared.settings.relational_database import relational_db_settings
 
 mapper_registry = registry()
@@ -22,13 +24,40 @@ engine = create_async_engine(
     max_overflow=db_settings.MAX_OVERFLOW,
     pool_timeout=db_settings.POOL_TIMEOUT,
     pool_recycle=db_settings.POOL_RECYCLE,
+    pool_pre_ping=True,
 )
 
 
-async_session_maker = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
+DATABASE_UNAVAILABLE_ERRORS = (exc.InterfaceError, exc.OperationalError, exc.TimeoutError, OSError)
+
+
+class DatabaseSessionMaker:
+    def __init__(self, session_maker: async_sessionmaker[AsyncSession]):
+        self._session_maker = session_maker
+
+    @asynccontextmanager
+    async def begin(self) -> AsyncIterator[AsyncSession]:
+        try:
+            async with self._session_maker.begin() as session:
+                yield session
+        except DATABASE_UNAVAILABLE_ERRORS as e:
+            raise ServiceUnavailable() from e
+
+    @asynccontextmanager
+    async def __call__(self) -> AsyncIterator[AsyncSession]:
+        try:
+            async with self._session_maker() as session:
+                yield session
+        except DATABASE_UNAVAILABLE_ERRORS as e:
+            raise ServiceUnavailable() from e
+
+
+async_session_maker = DatabaseSessionMaker(
+    async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
 )
 
 

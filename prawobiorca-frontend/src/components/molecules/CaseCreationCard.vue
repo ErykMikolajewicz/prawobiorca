@@ -1,51 +1,54 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Add2RoundedIcon from '@iconify-vue/material-symbols/add-2-rounded'
-import { addCase } from '@/api/cases'
+import type { InputInstance } from 'element-plus'
+import { addCase } from '@/api/generated/endpoints/cases/cases'
+import { showApiError } from '@/utils/error'
+import type { CaseData } from '@/api/generated/model'
 
 const newCaseName = ref('')
-const inputRef = ref<HTMLInputElement>()
+const isCreating = ref(false)
+const inputRef = ref<InputInstance>()
 
 const emit = defineEmits<{
-  (e: 'case-created', newCase: { id: string; name: string }): void
+  (e: 'case-created', newCase: CaseData): void
 }>()
 
-const triggerInput = () => {
-  inputRef.value?.focus()
-}
-
 async function createCase() {
-  if (newCaseName.value.trim() === '') {
+  if (newCaseName.value.trim() === '' || isCreating.value) {
     return
   }
 
-  const caseId: string = await addCase(newCaseName.value)
-  const newCase = {
-    id: caseId,
-    name: newCaseName.value.trim(),
+  isCreating.value = true
+  try {
+    const caseId: string = await addCase({ caseName: newCaseName.value.trim() })
+    const newCase: CaseData = {
+      id: caseId,
+      name: newCaseName.value.trim(),
+    }
+    emit('case-created', newCase)
+    newCaseName.value = ''
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się utworzyć sprawy.' })
+  } finally {
+    isCreating.value = false
   }
-  emit('case-created', newCase)
-  newCaseName.value = ''
 }
-
-defineExpose({
-  triggerInput,
-})
 </script>
 
 <template>
   <el-card shadow="never" class="form-card" @click="inputRef?.focus()">
-    <form class="case-form" action="/user/cases" method="post" @submit.prevent="createCase">
-      <input
+    <form class="case-form" @submit.prevent="createCase">
+      <el-input
         id="case_name"
         ref="inputRef"
         v-model="newCaseName"
         name="case_name"
         placeholder="Utwórz nową sprawę..."
         required
-        class="flex-grow-input"
+        class="case-name-input"
       />
-      <button type="submit" class="icon-btn">
+      <button type="submit" class="icon-btn" aria-label="Utwórz sprawę" :disabled="isCreating">
         <Add2RoundedIcon />
       </button>
     </form>
@@ -68,11 +71,13 @@ defineExpose({
   }
 }
 
-input {
-  border: none;
-  background: transparent;
-  outline: none;
-  width: 100%;
+.case-name-input {
   font-size: 1.1em;
+
+  :deep(.el-input__wrapper) {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
 }
 </style>

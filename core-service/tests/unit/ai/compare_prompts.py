@@ -112,10 +112,7 @@ def ensure_openvino_container_ready(model_name: str) -> str:
         return model_name
 
     print(f"\n[OPENVINO] Serwer na {base_url} nie odpowiada.")
-    print(
-        "Upewnij się, że uruchomiono środowisko deweloperskie "
-        "(np. 'uv run poe dev' lub 'python scripts/local/dev.py').\n"
-    )
+    print("Upewnij się, że uruchomiono środowisko deweloperskie (np. 'just dev' lub 'python scripts/local/dev.py').\n")
     return model_name
 
 

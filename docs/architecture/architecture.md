@@ -22,22 +22,21 @@ flowchart TD
     Ingress["nginx / Ingress"]
     Frontend["prawobiorca-frontend<br/>(Vue SPA served by nginx)"]
     Core["core-service<br/>(Auth, Cases, Files, Search Engine)"]
-    Broker(["Broker"])
     Worker["Taskiq Worker<br/>(File Preparator / Chunking / Indexing)"]
     Embeddings["embeddings-service<br/>(OpenVINO Model Server)"]
     Extraction["extraction-service"]
-    DB[("PostgreSQL + pgvector<br/>(Metadata, Chunks, DB)")]
+    DB[("PostgreSQL + pgvector<br/>(Metadata, Chunks, Task Queue)")]
     Storage[("Object Storage<br/>RustFS (on-premise) / GCS (cloud)")]
 
     Browser --> Ingress
     Ingress -->|"/"| Frontend
     Ingress -->|"/api"| Core
-    Core -->|Dispatches Task| Broker
+    Core -->|Dispatches Task| DB
     Core -->|Generates Query Embed| Embeddings
     Core -->|Vector & Relational DB| DB
     Core -->|"Generates presigned upload/download URL"| Storage
     Browser -->|"Uploads/downloads file directly<br/>(presigned URL, bypasses Core)"| Storage
-    Broker -->|Consumes Task| Worker
+    DB -->|Consumes Task| Worker
     Worker -->|Batch Embed| Embeddings
     Worker -->|extract text| Extraction
     Worker -->|Reads file bytes| Storage
@@ -50,13 +49,13 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * Case (*Sprawy*) management and document metadata handling (filenames, upload status, permissions).
   * Storage orchestration: generates presigned upload/download URLs (S3 presigned POST/GET) so the browser transfers file bytes directly with object storage — `core-service` never proxies the bytes itself. The Taskiq worker separately reads the raw bytes back from storage for processing.
   * Fast synchronous search execution: requests single query embeddings from `embeddings-service` and performs vector similarity search against PostgreSQL (`pgvector`).
-  * Dispatches asynchronous file processing tasks to the broker using **Taskiq**, automatically upon upload confirmation — no separate request is needed to start indexing.
+  * Dispatches asynchronous file processing tasks using **Taskiq**, automatically upon upload confirmation — no separate request is needed to start indexing. The task is written to PostgreSQL in the same transaction that marks the document as in progress.
 * **File Preparator (Taskiq Worker)**:
-  * Consumes document preparation jobs from the Taskiq broker.
+  * Consumes document preparation jobs from the PostgreSQL task queue.
   * Coordinates document processing pipeline: sends file to `extraction-service`, chunks structured text, requests batch embeddings from `embeddings-service`, and persists vector embeddings into PostgreSQL.
   * Chunking follows the editorial structure of the act (article / paragraph, with its chapter breadcrumb) recovered from the text itself, not the layout labels returned by `extraction-service` — see [Legal documents parsing](legal_documents_parsing.md).
   * Updates document processing status in PostgreSQL directly without inter-service RPC overhead.
-  * Retries a document up to 3 times when `extraction-service` or `embeddings-service` is unavailable; after the last attempt the document is marked as failed and can be retried on demand.
+  * Retries a document up to 3 times when `extraction-service` or `embeddings-service` is unavailable; after the last attempt the document is marked as failed and can be retried on demand. A document whose processing crashed the worker 3 times is marked as failed as well.
 
 ### 2.2. `embeddings-service`
 * **Responsibilities**:
@@ -66,7 +65,8 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * **Independent Scaling**: Can be scaled independently (e.g., on GPU or high-CPU compute instances) based on search traffic and document ingestion volume.
   * **Fast cold start**: the OpenVINO int8 export of the model is baked into the image at build time, so no model download or conversion happens at startup and no volume is needed; it runs on CPU in every environment.
   * A single endpoint accepts both single texts and batches.
-  * **Separate batch instance on GCP**: the GKE deployment serves only search queries from `core-service`. The Taskiq worker embeds document chunks through `embedding-batch-service`, a second instance of the same image on **Cloud Run** (8 CPU, 8 inference threads), so batch ingestion never competes with user queries. It scales to zero and is billed only while a request is being handled; the only caller is the worker, so the cold start is absorbed by a background job. Deployed by `scripts/cloud/deploy_embedding_batch_service.sh` with `--ingress=internal`; the worker overrides `EMBEDDING_SERVICE_URL` (and `EMBEDDING_SERVICE_BATCH_SIZE`) in its own deployment.
+  * **Scale-to-0 on GCP**: search queries from `core-service` are embedded by `embedding-service` on **Cloud Run** (2 CPU, 2 inference threads), deployed by `scripts/cloud/deploy_embedding_service.sh` with `--ingress=internal`. It scales to zero, so the first search after a period of inactivity waits roughly 10–20 s for the cold start.
+  * **Separate batch instance on GCP**: the Taskiq worker embeds document chunks through `embedding-batch-service`, a second instance of the same image on **Cloud Run** (8 CPU, 8 inference threads), so batch ingestion never competes with user queries. It scales to zero and is billed only while a request is being handled; the only caller is the worker, so the cold start is absorbed by a background job. Deployed by `scripts/cloud/deploy_embedding_batch_service.sh` with `--ingress=internal`; the worker overrides `EMBEDDING_SERVICE_URL` (and `EMBEDDING_SERVICE_BATCH_SIZE`) in its own deployment.
 
 ### 2.3. `extraction-service`
 * **Responsibilities**:
@@ -105,7 +105,13 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 
 ### 3.2. Asynchronous Job Processing with Taskiq
 * **Modern Async-First Design**: Native integration with FastAPI and asynchronous Python runtimes.
-* **Broker Agnostic**: Supports Redis, RabbitMQ, or other brokers with minimal configuration changes.
+* **PostgreSQL Broker**: Tasks are stored in the `task_messages` table of the main database by a custom broker (`infrastructure/tasks/broker.py`), so no separate broker service is needed. A task is kept in the table until it is executed:
+  * **Transactional dispatch**: the task is inserted in the same transaction as the related status change, so it exists only if that change is committed.
+  * **Claiming**: a worker takes a task with `SELECT ... FOR UPDATE SKIP LOCKED` and locks it for a lease (`TASK_LEASE_SECONDS`), so concurrent workers never take the same task.
+  * **Wake-up**: `NOTIFY` wakes the worker immediately, and polling every `TASK_POLL_INTERVAL_SECONDS` picks up tasks sent while no worker was listening.
+  * **Heartbeat**: while a task runs, the worker extends its lease every `TASK_HEARTBEAT_SECONDS`. If the worker crashes, the lease expires and the task is delivered again.
+  * **Acknowledgement**: the row is deleted only after the task has been executed.
+  * **Poison messages**: each delivery is counted and passed to the task in the `delivery_attempt` label; above the limit, the task marks the document as failed instead of processing it.
 * **Resilience**: Provides built-in retry mechanisms, failure handling, and transparent task parameter serialization.
 
 ### 3.3. Compute Decoupling (Embeddings & Extraction)

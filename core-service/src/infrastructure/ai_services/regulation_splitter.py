@@ -2,8 +2,8 @@ from collections.abc import Iterable
 
 from httpx2 import AsyncClient, HTTPError
 
-from src.domain.exceptions.regulations import RegulationServiceUnavailable
 from src.domain.value_objects.legal_units import RegulationElement
+from src.shared.exceptions import ServiceUnavailable
 
 
 class RegulationSplitter:
@@ -18,6 +18,6 @@ class RegulationSplitter:
             )
             response.raise_for_status()
         except HTTPError as e:
-            raise RegulationServiceUnavailable() from e
+            raise ServiceUnavailable() from e
 
         return [RegulationElement(label=item["label"], text=item["text"]) for item in response.json()]

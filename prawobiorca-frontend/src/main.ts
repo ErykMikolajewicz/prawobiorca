@@ -3,21 +3,22 @@ import { createPinia } from 'pinia'
 import ElementPlus, { ElMessage } from 'element-plus'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
+import '@fontsource-variable/inter'
 import './assets/styles.css'
 import { useAuthStore } from './stores/auth'
 import { setSessionExpiredHandler } from './api/sessionExpiry'
-import { useDarkMode } from './composables/useDarkMode'
+import { initDarkMode } from './composables/useDarkMode'
+import { getApiErrorMessage } from './utils/error'
 
 import App from './App.vue'
 import router from './router'
 
-useDarkMode()
+initDarkMode()
 
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-app.use(router)
 app.use(ElementPlus)
 
 const authStore = useAuthStore(pinia)
@@ -27,10 +28,18 @@ setSessionExpiredHandler(() => {
   authStore.resetSession()
   if (wasLogged) {
     ElMessage.error('Sesja wygasła. Zaloguj się ponownie.')
-    void router.push('/auth/login')
+    void router.push({
+      name: 'LoginPage',
+      query: { redirect: router.currentRoute.value.fullPath },
+    })
   }
 })
 
-await authStore.checkIsLogged()
+try {
+  await authStore.checkIsLogged()
+} catch (error: unknown) {
+  ElMessage.error(getApiErrorMessage(error))
+}
 
+app.use(router)
 app.mount('#app')

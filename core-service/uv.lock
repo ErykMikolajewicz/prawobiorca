@@ -437,7 +437,6 @@ dependencies = [
     { name = "python-multipart" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "taskiq" },
-    { name = "taskiq-redis" },
     { name = "tokenizers" },
     { name = "weasyprint" },
 ]
@@ -445,7 +444,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "granian", extra = ["reload"] },
-    { name = "poethepoet" },
     { name = "ruff" },
     { name = "taskiq", extra = ["reload"] },
 ]
@@ -480,7 +478,6 @@ requires-dist = [
     { name = "python-multipart", specifier = "==0.0.32" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.*" },
     { name = "taskiq", specifier = "==0.12.*" },
-    { name = "taskiq-redis", specifier = "==1.2.*" },
     { name = "tokenizers", specifier = "==0.23.*" },
     { name = "weasyprint", specifier = ">=69.0" },
 ]
@@ -488,7 +485,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "granian", extras = ["reload"], specifier = "==2.8.*" },
-    { name = "poethepoet", specifier = "==0.48.*" },
     { name = "ruff", specifier = "==0.16.*" },
     { name = "taskiq", extras = ["reload"], specifier = "==0.12.*" },
 ]
@@ -1231,15 +1227,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pastel"
-version = "0.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/76/f1/4594f5e0fcddb6953e5b8fe00da8c317b8b41b547e2b3ae2da7512943c62/pastel-0.2.1.tar.gz", hash = "sha256:e6581ac04e973cac858828c6202c1e1e81fee1dc7de7683f3e1ffe0bfd8a573d", size = 7555, upload-time = "2020-09-16T19:21:12.43Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/aa/18/a8444036c6dd65ba3624c63b734d3ba95ba63ace513078e1580590075d21/pastel-0.2.1-py2.py3-none-any.whl", hash = "sha256:4349225fcdf6c2bb34d483e523475de5bb04a5c10ef711263452cb37d7dd4364", size = 5955, upload-time = "2020-09-16T19:21:11.409Z" },
-]
-
-[[package]]
 name = "pathspec"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1302,19 +1289,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
-]
-
-[[package]]
-name = "poethepoet"
-version = "0.48.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pastel" },
-    { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/92/93a4af9511b8c7c647874521d9e6c904266be98067c2ee1eb2e74520d208/poethepoet-0.48.0.tar.gz", hash = "sha256:a06f49d244fadfc2e2e7faa78b54e64a9694727e4ce1d50e08f23cea3ded74f1", size = 148679, upload-time = "2026-07-05T21:48:30.106Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/8d/d7c9455b15f8d2d7ce57e7b71a8ef8d02d9992ae4283c9777120620c9022/poethepoet-0.48.0-py3-none-any.whl", hash = "sha256:98da6096d060f49b8d84034770265863fb7dc92a40233b7694b9d216ac68737d", size = 185808, upload-time = "2026-07-05T21:48:28.601Z" },
 ]
 
 [[package]]
@@ -1618,15 +1592,6 @@ wheels = [
 ]
 
 [[package]]
-name = "redis"
-version = "8.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a8/99/604f0b666d4c616d891cf77ebb9db6bb21601344c051aebf1b72b9ff915f/redis-8.1.0.tar.gz", hash = "sha256:6e1a19beef9225c83efd689c7e6b7da2d5215b1f42cd13b7fc3714d0a09c7b25", size = 5254356, upload-time = "2026-07-30T08:51:00.269Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/9d/c5731f6e3608663d4d3656fd8d3aecee8b509c3082818f5a13eae925baea/redis-8.1.0-py3-none-any.whl", hash = "sha256:a4fe1aac3d3b3cc791d4b3d5931c5a956045dc951ee74d1c913ee3ac4d2ee9fb", size = 560618, upload-time = "2026-07-30T08:50:58.497Z" },
-]
-
-[[package]]
 name = "requests"
 version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1752,19 +1717,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/47/90/47a627696e53bfdcacabc3e8c05b73bf1424685bcb5f17209cb8b12da1bf/taskiq_dependencies-1.5.7.tar.gz", hash = "sha256:0d3b240872ef152b719153b9526d866d2be978aeeaea6600e878414babc2dcb4", size = 14875, upload-time = "2025-02-26T22:07:39.876Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/6d/4a012f2de002c2e93273f5e7d3e3feea02f7fdbb7b75ca2ca1dd10703091/taskiq_dependencies-1.5.7-py3-none-any.whl", hash = "sha256:6fcee5d159bdb035ef915d4d848826169b6f06fe57cc2297a39b62ea3e76036f", size = 13801, upload-time = "2025-02-26T22:07:38.622Z" },
-]
-
-[[package]]
-name = "taskiq-redis"
-version = "1.2.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "redis" },
-    { name = "taskiq" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/99/09/8476b1b12db94d53eb8d0a5e8ffffd453af7626d477bfbd8ab12bf1d3445/taskiq_redis-1.2.3.tar.gz", hash = "sha256:da427db1f68bb71ee90d93c416b82d1bf4a1ed4087f4b0f95b61bf6d8bba3e67", size = 14657, upload-time = "2026-06-23T01:09:07.783Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/68/93/64d90e5ff71b0dbb3c5dc74d62fd74361586b972b4eb49b6a84c06b01091/taskiq_redis-1.2.3-py3-none-any.whl", hash = "sha256:bcab686287e23e0b9922e7809783ef2af8e8e8ce833e790308af40e96f67d549", size = 20904, upload-time = "2026-06-23T01:09:06.822Z" },
 ]
 
 [[package]]

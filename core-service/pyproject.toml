@@ -25,14 +25,12 @@ dependencies = [
     "jinja2==3.1.*",
     "weasyprint>=69.0",
     "taskiq==0.12.*",
-    "taskiq-redis==1.2.*",
     "tokenizers==0.23.*",
 ]
 
 [dependency-groups]
 dev = [
     "granian[reload]==2.8.*",
-    "poethepoet==0.48.*",
     "ruff==0.16.*",
     "taskiq[reload]==0.12.*",
 ]

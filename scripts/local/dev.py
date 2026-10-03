@@ -106,7 +106,6 @@ def main():
         " --model_repository_path=/models --task=text_generation"
         " --target_device=AUTO --rest_port=8080",
     )
-    run_container_if_not_running("redis", "-p 127.0.0.1:6379:6379 redis:8-alpine")
 
     worker = run_worker()
     try:

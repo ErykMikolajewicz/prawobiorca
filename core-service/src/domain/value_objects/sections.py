@@ -3,15 +3,13 @@ from itertools import batched
 from typing import Iterable
 from uuid import UUID, uuid4
 
-from src.domain.value_objects.legal_units import LegalUnitElement, UnitType
+from src.domain.value_objects.legal_units import LegalUnitElement
 
 
 @dataclass
 class ChunkSpan:
     start_element: int
-    start_offset: int
     end_element: int
-    end_offset: int
 
 
 @dataclass
@@ -36,9 +34,6 @@ class RegulationSection:
     text: str
     chunks: list[SectionChunk]
     section_order: int | None = None
-    unit_type: UnitType | None = None
-    unit_number: str | None = None
-    unit_path: list[str] | None = None
     elements: list[LegalUnitElement] = field(default_factory=list)
     id: UUID = field(default_factory=uuid4)
 

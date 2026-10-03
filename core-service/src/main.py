@@ -3,10 +3,11 @@ import logging
 import tomllib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from src.framework.api.exception_handlers import include_exception_handlers
 from src.framework.api.router import include_all_routers
 from src.framework.dependencies.file_storage import init_file_storage_client
 from src.infrastructure.ai_services.initialization import init_ai_services_client
@@ -90,8 +91,13 @@ class FixMultipartBoundaryMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-app = FastAPI(lifespan=lifespan, title="PRAWOBIORCA", version=version)
-prawobiorca = app
+prawobiorca = FastAPI(
+    lifespan=lifespan,
+    title="PRAWOBIORCA",
+    version=version,
+    responses={status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"}},
+    generate_unique_id_function=lambda route: route.name,
+)
 
 origins = ["http://localhost:5173", "http://localhost:5174"]
 
@@ -106,6 +112,7 @@ prawobiorca.add_middleware(
 # UWAGA: Obejście problemu z brakiem 'boundary' w multipart/form-data wysyłanym z frontendu.
 prawobiorca.add_middleware(FixMultipartBoundaryMiddleware)
 include_all_routers(prawobiorca)
+include_exception_handlers(prawobiorca)
 
 
 if __name__ == "__main__":

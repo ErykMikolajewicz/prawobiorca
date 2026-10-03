@@ -5,21 +5,12 @@ description = "Law acts search engine with AI features."
 license = "MIT"
 readme = "README.md"
 requires-python = "==3.14.*"
-[dependency-groups]
-dev = [
-    "poethepoet==0.48.*",
+dependencies = [
     "ruff==0.16.*",
-    "playwright==1.61.*",
-]
-docs = [
     "mkdocstrings[python]==1.0.*",
-    "zensical==0.0.63",
-    "google-auth[requests]==2.58.*",
+    "zensical==0.0.67",
+    "google-auth[requests]==2.59.*",
 ]
-
-[tool.poe]
-include = "poe.toml"
-executor.type = "simple"
 
 [tool.ruff]
 extend = "ruff.toml"

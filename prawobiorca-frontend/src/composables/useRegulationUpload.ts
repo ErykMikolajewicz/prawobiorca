@@ -1,21 +1,64 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { uploadUserRegulation, uploadPublicRegulation } from '@/api/regulations'
-import type { regulationRepresentation, regulationType } from '@/types/api/regulations.ts'
+import { showApiError } from '@/utils/error'
+import {
+  addPublicRegulation,
+  confirmPublicRegulationUpload,
+} from '@/api/generated/endpoints/regulations/regulations'
+import {
+  addUserRegulation,
+  confirmUserRegulationUpload,
+} from '@/api/generated/endpoints/user-regulations/user-regulations'
+import { uploadFileToStorage } from '@/utils/storage'
+import type { RegulationScope } from '@/domain/regulations'
+import type {
+  RegulationPreparationStatus,
+  RegulationRepresentation,
+  RegulationType,
+} from '@/api/generated/model'
 
-export type uploadTarget = 'user' | 'public'
+type RegulationUploadResult = {
+  id: string
+  preparationStatus: RegulationPreparationStatus
+}
 
-export const regulationTypeOptions: Array<{ label: string; value: regulationType }> = [
-  { label: 'Ustawa', value: 'ACT' },
-  { label: 'Rozporządzenie', value: 'DECREE' },
-  { label: 'Regulamin', value: 'STATUTE' },
-]
+async function confirmUpload(
+  regulationId: string,
+  confirm: (regulationId: string) => Promise<unknown>,
+): Promise<RegulationUploadResult> {
+  try {
+    await confirm(regulationId)
+    return { id: regulationId, preparationStatus: 'IN_PROGRESS' }
+  } catch (error) {
+    console.error('Failed to confirm regulation upload:', error)
+    return { id: regulationId, preparationStatus: 'NOT_STARTED' }
+  }
+}
+
+async function uploadRegulation(
+  target: RegulationScope,
+  regulation: File,
+  presentationName: string,
+  regulationType?: RegulationType,
+): Promise<RegulationUploadResult> {
+  const addRegulation = target === 'public' ? addPublicRegulation : addUserRegulation
+  const confirm = target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
+
+  const uploadTarget = await addRegulation({
+    name: presentationName,
+    regulationType: regulationType || null,
+  })
+
+  await uploadFileToStorage(uploadTarget, regulation)
+
+  return await confirmUpload(uploadTarget.id, confirm)
+}
 
 export function useRegulationUpload() {
   const selectedFile = ref<File | null>(null)
   const presentationName = ref('')
-  const selectedRegulationType = ref<regulationType | ''>('')
-  const target = ref<uploadTarget>('user')
+  const selectedRegulationType = ref<RegulationType | ''>('')
+  const target = ref<RegulationScope>('user')
   const isSubmitting = ref(false)
 
   function resetForm() {
@@ -33,8 +76,8 @@ export function useRegulationUpload() {
   }
 
   async function submit(): Promise<{
-    regulation: regulationRepresentation
-    target: uploadTarget
+    regulation: RegulationRepresentation
+    target: RegulationScope
   } | null> {
     if (!selectedFile.value) {
       ElMessage.warning('Wybierz plik do przesłania.')
@@ -49,9 +92,8 @@ export function useRegulationUpload() {
     isSubmitting.value = true
     try {
       const regulationTypeValue = selectedRegulationType.value || undefined
-      const uploadFn = target.value === 'public' ? uploadPublicRegulation : uploadUserRegulation
-
-      const uploadResult = await uploadFn(
+      const uploadResult = await uploadRegulation(
+        target.value,
         selectedFile.value,
         presentationName.value.trim(),
         regulationTypeValue,
@@ -66,14 +108,16 @@ export function useRegulationUpload() {
       return {
         regulation: {
           id: uploadResult.id,
+          createDate: new Date().toISOString(),
           presentationName: presentationName.value.trim(),
+          description: null,
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
         },
         target: target.value,
       }
-    } catch {
-      ElMessage.error('Wystąpił błąd podczas dodawania pliku.')
+    } catch (error) {
+      showApiError(error, { defaultMessage: 'Wystąpił błąd podczas dodawania pliku.' })
       return null
     } finally {
       isSubmitting.value = false
