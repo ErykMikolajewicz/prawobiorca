@@ -5,12 +5,13 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 ## 1. Architektura i integracja
 
 - **Endpoint:** `POST /api/user/cases/{caseId}/application` (`src/framework/api/endpoints/cases.py`) – przyjmuje `NewApplication` (`src/app/dtos/applications.py`), zwraca plik DOCX.
+- **Typ wniosku:** `ApplicationType` (`src/domain/value_objects/applications.py`), pole `applicationType` w `NewApplication`, domyślnie `OTHER`. Każdy typ ma własny prompt (`prompts/applications/{typ}.md`) i szablon DOCX (`templates/applications/{typ}.docx`), gdzie `{typ}` to wartość enuma małymi literami. Dodanie nowego typu: wartość w enumie, oba pliki oraz etykieta we frontendzie (`prawobiorca-frontend/src/domain/applications.ts`).
 - **Use case:** `GenerateApplication` (`src/app/use_cases/applications.py`).
 - **Porty:** `src/app/ports/applications.py` (`ApplicationWriter`, `ApplicationRenderer`).
 - **Adaptery:**
-  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/application.md`) i generuje treść przez `LlmChat`.
+  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/applications/{typ}.md`) i generuje treść przez `LlmChat`.
   - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu przez API zgodne z OpenAI: na GCP Vertex AI Model-as-a-Service, on-premise i lokalnie kontener `llm-service` z OVMS (port 8083 na hoście / 8080 w klastrze).
-  - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX (`src/infrastructure/docx/templates/application.docx`) i zwraca go jako `bytes`.
+  - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX (`src/infrastructure/docx/templates/applications/{typ}.docx`) i zwraca go jako `bytes`.
 - **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL` (bazowy URL API razem z `/v1`). Na GCP `LLM_SERVICE_USE_GOOGLE_AUTH=true` – klient uwierzytelnia się tokenem OAuth z Workload Identity (`src/infrastructure/ai_services/openai_client/google_auth.py`).
 
 ## 2. Pipeline generowania wniosku

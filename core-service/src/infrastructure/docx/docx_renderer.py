@@ -7,7 +7,7 @@ from docxtpl import DocxTemplate
 
 from src.app.dtos.applications import NewApplication
 
-TEMPLATE_PATH = Path(__file__).parent / "templates" / "application.docx"
+TEMPLATES_DIR = Path(__file__).parent / "templates" / "applications"
 
 
 class DocxApplicationRenderer:
@@ -16,7 +16,7 @@ class DocxApplicationRenderer:
 
     @staticmethod
     def _render(new_application: NewApplication, content: str) -> bytes:
-        document = DocxTemplate(TEMPLATE_PATH)
+        document = DocxTemplate(TEMPLATES_DIR / f"{new_application.application_type.lower()}.docx")
         document.render(
             {
                 "current_date": datetime.now().strftime("%d.%m.%Y"),

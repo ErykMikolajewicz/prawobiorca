@@ -238,13 +238,13 @@ async def main():
             "temp": 0.8,
         },
         {
-            "path": "src/infrastructure/ai_services/prompts/application.md",
+            "path": "src/infrastructure/ai_services/prompts/applications/other.md",
             "version": "V3_optymalny_szablon",
             "is_jinja": True,
             "temp": 0.8,
         },
         {
-            "path": "src/infrastructure/ai_services/prompts/application.md",
+            "path": "src/infrastructure/ai_services/prompts/applications/other.md",
             "version": "V3_optymalny_szablon_temp_0.7",
             "is_jinja": True,
             "temp": 0.7,

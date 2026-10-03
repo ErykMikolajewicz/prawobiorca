@@ -1537,6 +1537,14 @@
   },
   "components": {
     "schemas": {
+      "ApplicationType": {
+        "type": "string",
+        "enum": [
+          "OTHER",
+          "DIPLOMA_DEADLINE_EXTENSION"
+        ],
+        "title": "ApplicationType"
+      },
       "Body_add_case": {
         "properties": {
           "caseName": {
@@ -1739,6 +1747,10 @@
           "title": {
             "type": "string",
             "title": "Title"
+          },
+          "applicationType": {
+            "$ref": "#/components/schemas/ApplicationType",
+            "default": "OTHER"
           }
         },
         "type": "object",

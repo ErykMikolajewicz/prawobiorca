@@ -2,8 +2,10 @@
 import { reactive } from 'vue'
 
 import type { NewApplication } from '@/api/generated/model'
+import { applicationTypeOptions } from '@/domain/applications'
 
 const form = reactive<NewApplication>({
+  applicationType: 'OTHER',
   description: '',
   userName: '',
   studentId: '',
@@ -23,6 +25,16 @@ const handleSubmit = () => {
 
 <template>
   <el-form :model="form" label-position="top" @submit.prevent="handleSubmit">
+    <el-form-item label="Rodzaj wniosku:">
+      <el-select v-model="form.applicationType">
+        <el-option
+          v-for="option in applicationTypeOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </el-select>
+    </el-form-item>
     <el-form-item label="Imię i nazwisko:">
       <el-input v-model="form.userName" required />
     </el-form-item>
