@@ -113,3 +113,9 @@ gcloud iam service-accounts create embedding-service-runner \
 gcloud iam service-accounts create embedding-batch-service-runner \
   --project=prawobiorca \
   --display-name="Prawobiorca embedding-batch-service runner"
+
+gcloud services enable aiplatform.googleapis.com
+
+gcloud projects add-iam-policy-binding prawobiorca \
+  --role=roles/aiplatform.user \
+  --member="principal://iam.googleapis.com/projects/296630821006/locations/global/workloadIdentityPools/prawobiorca.svc.id.goog/subject/ns/default/sa/prawobiorca-runner"

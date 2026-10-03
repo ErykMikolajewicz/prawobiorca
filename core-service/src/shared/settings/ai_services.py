@@ -33,10 +33,11 @@ class ExtractionServiceSettings(BaseSettings):
 
 class LlmServiceSettings(BaseSettings):
     URL: str = ...
-    MODEL_NAME: str = "qwen-2.5-7b-it"
+    MODEL_NAME: str = "qwen-3.5-9b"
     TEMPERATURE: float = 0.7
     TOP_P: float = 0.9
     MAX_TOKENS: int = Field(default=1000, gt=0)
+    USE_GOOGLE_AUTH: bool = False
 
     model_config = SettingsConfigDict(
         env_file=Path(".env"),
