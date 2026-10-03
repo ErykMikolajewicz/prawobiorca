@@ -1,3 +1,4 @@
+export * from './applicationRepresentation'
 export * from './applicationType'
 export * from './bodyAddCase'
 export * from './bodyLogUser'

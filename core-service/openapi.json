@@ -967,6 +967,151 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "404": {
+            "description": "No case with that id!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/cases/{caseId}/applications": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Get Case Applications",
+        "operationId": "get_case_applications",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caseid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationRepresentation"
+                  },
+                  "title": "Response Get Case Applications"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/cases/applications/{applicationId}/download-url": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Get Case Application Download Url",
+        "operationId": "get_case_application_download_url",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Applicationid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "title": "Response Get Case Application Download Url"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/cases/applications/{applicationId}": {
+      "delete": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Delete Application",
+        "operationId": "delete_application",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Applicationid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application not found!"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1537,6 +1682,36 @@
   },
   "components": {
     "schemas": {
+      "ApplicationRepresentation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caseid"
+          },
+          "createDate": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdate"
+          },
+          "applicationType": {
+            "$ref": "#/components/schemas/ApplicationType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "caseId",
+          "createDate",
+          "applicationType"
+        ],
+        "title": "ApplicationRepresentation"
+      },
       "ApplicationType": {
         "type": "string",
         "enum": [

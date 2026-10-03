@@ -8,16 +8,23 @@ import AppLayout from '@/components/templates/AppLayout.vue'
 import BackToMainButton from '@/components/atoms/BackToMainButton.vue'
 import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
+import GeneratedApplicationsList from '@/components/organisms/GeneratedApplicationsList.vue'
 
-import { generateApplicationDocument } from '@/api/cases'
-import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
+import { downloadApplicationDocument, generateApplicationDocument } from '@/api/cases'
+import {
+  deleteApplication,
+  deleteCaseDocument,
+  getCaseApplications,
+  getCaseDocuments,
+} from '@/api/generated/endpoints/cases/cases'
 
-import type { CaseDocument, NewApplication } from '@/api/generated/model'
+import type { ApplicationRepresentation, CaseDocument, NewApplication } from '@/api/generated/model'
 
 const route = useRoute()
 const caseId = route.params.id as string
 
 const documents = ref<Array<CaseDocument>>([])
+const applications = ref<Array<ApplicationRepresentation>>([])
 
 async function loadDocuments() {
   try {
@@ -28,8 +35,17 @@ async function loadDocuments() {
   }
 }
 
+async function loadApplications() {
+  try {
+    applications.value = await getCaseApplications(caseId)
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się pobrać wygenerowanych wniosków.' })
+    applications.value = []
+  }
+}
+
 onBeforeMount(async () => {
-  await loadDocuments()
+  await Promise.all([loadDocuments(), loadApplications()])
 })
 
 async function handleUnpin(documentId: string) {
@@ -52,6 +68,26 @@ const handleGeneratePdf = async (newApplication: NewApplication) => {
   } catch (error) {
     showApiError(error, { defaultMessage: 'Nie udało się wygenerować wniosku.' })
   }
+  await loadApplications()
+}
+
+async function handleDownloadApplication(applicationId: string) {
+  try {
+    await downloadApplicationDocument(applicationId)
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się pobrać wniosku.' })
+  }
+}
+
+async function handleDeleteApplication(applicationId: string) {
+  try {
+    await deleteApplication(applicationId)
+    applications.value = applications.value.filter(
+      (application) => application.id !== applicationId,
+    )
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się usunąć wniosku.' })
+  }
 }
 </script>
 
@@ -72,6 +108,14 @@ const handleGeneratePdf = async (newApplication: NewApplication) => {
         <section>
           <h2>Kontekst / Opis Wniosku</h2>
           <GeneratePdfForm @generate-pdf="handleGeneratePdf" />
+        </section>
+        <section>
+          <h2>Wygenerowane Wnioski</h2>
+          <GeneratedApplicationsList
+            :applications="applications"
+            @download="handleDownloadApplication"
+            @delete="handleDeleteApplication"
+          />
         </section>
       </el-col>
     </el-row>

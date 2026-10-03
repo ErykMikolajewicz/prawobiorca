@@ -1,4 +1,5 @@
 import type {
+  ApplicationRepresentation,
   BodyAddCase,
   CaseData,
   CaseDocument,
@@ -106,6 +107,42 @@ export const generateApplication = (
     options,
   )
 }
+/**
+ * @summary Get Case Applications
+ */
+export const getCaseApplications = (
+  caseId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<ApplicationRepresentation[]>>,
+) => {
+  return prawobiorcaRequest<ApplicationRepresentation[]>(
+    { url: `/api/user/cases/${caseId}/applications`, method: 'GET' },
+    options,
+  )
+}
+/**
+ * @summary Get Case Application Download Url
+ */
+export const getCaseApplicationDownloadUrl = (
+  applicationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<string>>,
+) => {
+  return prawobiorcaRequest<string>(
+    { url: `/api/user/cases/applications/${applicationId}/download-url`, method: 'GET' },
+    options,
+  )
+}
+/**
+ * @summary Delete Application
+ */
+export const deleteApplication = (
+  applicationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<void>>,
+) => {
+  return prawobiorcaRequest<void>(
+    { url: `/api/user/cases/applications/${applicationId}`, method: 'DELETE' },
+    options,
+  )
+}
 export type GetCasesListResult = NonNullable<Awaited<ReturnType<typeof getCasesList>>>
 export type AddCaseResult = NonNullable<Awaited<ReturnType<typeof addCase>>>
 export type DeleteUserCaseResult = NonNullable<Awaited<ReturnType<typeof deleteUserCase>>>
@@ -113,3 +150,8 @@ export type AddCaseDocumentResult = NonNullable<Awaited<ReturnType<typeof addCas
 export type GetCaseDocumentsResult = NonNullable<Awaited<ReturnType<typeof getCaseDocuments>>>
 export type DeleteCaseDocumentResult = NonNullable<Awaited<ReturnType<typeof deleteCaseDocument>>>
 export type GenerateApplicationResult = NonNullable<Awaited<ReturnType<typeof generateApplication>>>
+export type GetCaseApplicationsResult = NonNullable<Awaited<ReturnType<typeof getCaseApplications>>>
+export type GetCaseApplicationDownloadUrlResult = NonNullable<
+  Awaited<ReturnType<typeof getCaseApplicationDownloadUrl>>
+>
+export type DeleteApplicationResult = NonNullable<Awaited<ReturnType<typeof deleteApplication>>>

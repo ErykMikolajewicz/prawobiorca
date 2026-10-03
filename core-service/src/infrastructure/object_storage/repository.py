@@ -57,3 +57,31 @@ class S3RegulationsStorage:
             return True
         except ClientError:
             return False
+
+
+@dataclass
+class S3ApplicationsStorage:
+    client: Any
+    presign_client: Any
+
+    async def upload_application(self, id_: UUID, file_data: bytes) -> None:
+        await self.client.put_object(Bucket=object_storage_settings.BUCKET, Key=self._get_key(id_), Body=file_data)
+
+    async def delete_application(self, id_: UUID) -> None:
+        await self.client.delete_object(Bucket=object_storage_settings.BUCKET, Key=self._get_key(id_))
+
+    async def get_download_url(self, id_: UUID) -> str:
+        return await self.presign_client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": object_storage_settings.BUCKET,
+                "Key": self._get_key(id_),
+                "ResponseContentDisposition": f"attachment; filename=wniosek_{id_}.docx",
+                "ResponseContentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            },
+            ExpiresIn=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+        )
+
+    @staticmethod
+    def _get_key(id_: UUID) -> str:
+        return f"applications/{id_}"
