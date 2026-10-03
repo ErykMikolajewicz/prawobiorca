@@ -32,7 +32,7 @@ if os.path.exists(CORE_VENV_PYTHON) and os.path.abspath(sys.executable) != os.pa
 from src.app.dtos.applications import NewApplication  # noqa: E402
 from src.infrastructure.ai_services.llm_chat import LlmChat  # noqa: E402
 from src.infrastructure.ai_services.openai_client.connection import client  # noqa: E402
-from src.infrastructure.pdf.html_renderer import HtmlApplicationRenderer  # noqa: E402
+from src.infrastructure.docx.docx_renderer import DocxApplicationRenderer  # noqa: E402
 from src.shared.settings.ai_services import llm_service_settings  # noqa: E402
 
 # KONFIGURACJA BENCHMARKU (DLA URUCHOMIENIA Z IDE LUB TERMINALA)
@@ -44,7 +44,7 @@ CUSTOM_MODEL_NAME = None
 # 2. Czyszczenie starych wyników: zmień na True, aby skasować folder benchmark_results przed startem
 CLEANUP_OLD_RESULTS = True
 
-SKIP_PDF = "--skip-pdf" in sys.argv
+SKIP_DOCX = "--skip-docx" in sys.argv
 
 CLI_MODEL_NAME = CUSTOM_MODEL_NAME or llm_service_settings.MODEL_NAME
 for i, arg in enumerate(sys.argv):
@@ -140,7 +140,7 @@ async def test_prompt(
     temperature: float = 0.8,
     model_override: str | None = None,
 ) -> List[Dict[str, Any]]:
-    pdf_renderer = HtmlApplicationRenderer() if not SKIP_PDF else None
+    docx_renderer = DocxApplicationRenderer() if not SKIP_DOCX else None
 
     # optymalizacja: kompilacja szablonu tylko raz przed pętlą
     template = jinja2.Template(prompt_content) if is_jinja_template else None
@@ -186,16 +186,16 @@ async def test_prompt(
         with open(os.path.join(BENCHMARK_DIR, f"{test_name}.md"), "w", encoding="utf-8") as f:
             f.write(content)
 
-        # renderowanie pdfa przy użyciu adaptera weasyprint / html
-        if not error_msg and pdf_renderer:
+        # renderowanie docx przy użyciu adaptera docxtpl
+        if not error_msg and docx_renderer:
             try:
-                pdf_path = os.path.join(BENCHMARK_DIR, f"{test_name}.pdf")
-                pdf = await pdf_renderer.render(new_application, content)
-                with open(pdf_path, "wb") as f:
-                    f.write(pdf)
-                print(f"[{test_name}] Zapisano PDF: {pdf_path}")
+                docx_path = os.path.join(BENCHMARK_DIR, f"{test_name}.docx")
+                document = await docx_renderer.render(new_application, content)
+                with open(docx_path, "wb") as f:
+                    f.write(document)
+                print(f"[{test_name}] Zapisano DOCX: {docx_path}")
             except Exception as e:
-                print(f"[{test_name}] Błąd podczas renderowania PDF: {e}")
+                print(f"[{test_name}] Błąd podczas renderowania DOCX: {e}")
 
         # zbieranie statystyk
         prompt_summaries.append(
@@ -287,7 +287,7 @@ async def main():
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(benchmark_summary, f, indent=2, ensure_ascii=False)
 
-    print(f"\nGotowe! Wygenerowano pliki PDF oraz MD, a podsumowanie zapisano do {summary_path}")
+    print(f"\nGotowe! Wygenerowano pliki DOCX oraz MD, a podsumowanie zapisano do {summary_path}")
 
 
 if __name__ == "__main__":

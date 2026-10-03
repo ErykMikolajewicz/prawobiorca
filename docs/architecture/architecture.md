@@ -81,7 +81,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 * **Responsibilities**:
   * LLM inference (Gemma 4 26B A4B) exposed through an OpenAI-compatible chat completions API.
 * **Characteristics**:
-  * Used by `core-service` to draft student applications (*wnioski*) rendered to PDF — see [AI module](../ai.md).
+  * Used by `core-service` to draft student applications (*wnioski*) rendered to DOCX — see [AI module](../ai.md).
   * **GCP**: no service is deployed — `core-service` calls the serverless **Vertex AI Model-as-a-Service** endpoint (`google/gemma-4-26b-a4b-it-maas`, billed per token) with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
   * **On-Premise**: served directly by **OpenVINO Model Server (OVMS)** (`OpenVINO/gemma-4-26b-a4b-it-int4-ov`) — no custom application code. OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), and runs with `--target_device=AUTO` and `/dev/dri` passed through, so it uses the Intel iGPU when the host exposes one and falls back to CPU otherwise.
   * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `scripts/local/dev.py`.

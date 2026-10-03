@@ -112,7 +112,13 @@ async def delete_case_document(
     "/user/cases/{caseId}/application",
     response_class=Response,
     responses={
-        status.HTTP_200_OK: {"content": {"application/pdf": {}}},
+        status.HTTP_200_OK: {
+            "content": {
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            }
+        },
         status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"},
     },
 )
@@ -122,9 +128,9 @@ async def generate_application(
     case_id: Annotated[UUID, Path(alias="caseId")],
     new_application: NewApplication,
 ) -> Response:
-    pdf = await generate_application_.execute(user_id, case_id, new_application)
+    document = await generate_application_.execute(user_id, case_id, new_application)
     return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=wniosek_{case_id}.pdf"},
+        content=document,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename=wniosek_{case_id}.docx"},
     )

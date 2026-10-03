@@ -2,11 +2,6 @@ FROM python:3.14-slim-trixie
 
 RUN pip install --no-cache uv==0.12.*
 
-# instalacja natywnych bibliotek graficznych C (Pango, HarfBuzz) wymaganych przez renderer WeasyPrint
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 && \
-    rm -rf /var/lib/apt/lists/*
-
 RUN useradd -r prawobiorca_app
 
 WORKDIR /prawobiorca

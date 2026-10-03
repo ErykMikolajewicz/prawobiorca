@@ -6,7 +6,7 @@ Its goal is to help students defend and assert their rights.
 The core part of the application is a regulations search engine. It allows collecting information in a simple and accessible way by entering queries, which are then processed based on their meaning rather than exact text matching.
 
 Plans include:
-- **Application Generator** - create elegant PDF documents by simply describing what you want to achieve.
+- **Application Generator** - create elegant DOCX documents by simply describing what you want to achieve.
 - **Court Judgments Search Engine** - check if other students have defended their cases in court and what the outcomes were.
 - **Court Judgments Summarizer** - easily extract important facts from a sea of legal jargon!
 - **Dean's Office Simulator** - practice in front of a computer to avoid stress at the counter.

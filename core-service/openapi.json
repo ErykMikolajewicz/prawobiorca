@@ -956,7 +956,12 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "application/pdf": {}
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
             }
           },
           "503": {
