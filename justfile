@@ -26,6 +26,10 @@ test-extraction:
     uv run --group test pytest tests/integration
 
 [working-directory: 'core-service']
+compare-prompts:
+    uv run python scripts/prompts_benchmark/compare_prompts.py
+
+[working-directory: 'core-service']
 cov:
     uv run coverage erase
     uv run pytest tests/unit --cov=src --cov-config=coverage.toml

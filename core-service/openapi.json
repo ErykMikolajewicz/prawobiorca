@@ -923,6 +923,58 @@
         }
       }
     },
+    "/api/user/cases/{caseId}/application": {
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Generate Application",
+        "operationId": "generate_application",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caseid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewApplication"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user/regulations": {
       "get": {
         "tags": [
@@ -1651,6 +1703,49 @@
           "password"
         ],
         "title": "LoginData"
+      },
+      "NewApplication": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Description"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Username"
+          },
+          "studentId": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "title": "Studentid"
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Department"
+          },
+          "semester": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Semester"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "userName",
+          "studentId",
+          "department",
+          "semester",
+          "title"
+        ],
+        "title": "NewApplication"
       },
       "NewCaseDocument": {
         "properties": {

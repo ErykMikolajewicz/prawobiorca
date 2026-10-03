@@ -79,11 +79,11 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 
 ### 2.4. `llm-service`
 * **Responsibilities**:
-  * Conversational LLM inference (Gemma-4 E4B, int8-quantized), served directly by **OpenVINO Model Server (OVMS)** — no custom application code — exposing an OpenAI-compatible `/v3/chat/completions` HTTP endpoint.
+  * LLM inference (Qwen2.5-7B-Instruct, int4-quantized), served directly by **OpenVINO Model Server (OVMS)** — no custom application code — exposing an OpenAI-compatible `/v1/chat/completions` HTTP endpoint.
 * **Characteristics**:
-  * Not yet wired into `core-service` — this is a first, isolated deployment step; a future iteration will add the client/use-case integration needed to expose a conversational feature to end users.
+  * Used by `core-service` to draft student applications (*wnioski*) rendered to PDF — see [AI module](../ai.md).
   * OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), so no image build/model-baking step is needed for this service.
-  * On-Premise uses `--target_device=AUTO` with `/dev/dri` passed through, so it runs on the Intel iGPU when the host exposes one and transparently falls back to CPU otherwise. GCP stays on CPU (GKE Autopilot only supports NVIDIA GPU passthrough). This model has no continuous-batching support yet, so there's no throughput benefit from OVMS's usual batching path either way.
+  * On-Premise uses `--target_device=AUTO` with `/dev/dri` passed through, so it runs on the Intel iGPU when the host exposes one and transparently falls back to CPU otherwise. GCP stays on CPU (GKE Autopilot only supports NVIDIA GPU passthrough).
   * **No scale-to-0 yet**: runs as a single always-on replica on GKE. The service is not deployed by `scripts/cloud/deploy_app.sh`, so it costs nothing today; the scaling model has to be settled together with the `core-service` integration, since the model's RAM footprint is too large to keep idle once it is actually serving traffic.
 
 ### 2.5. `prawobiorca-frontend`

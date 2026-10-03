@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
@@ -11,7 +12,7 @@ import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 import { generatePdf } from '@/api/cases'
 import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
-import type { CaseDocument } from '@/api/generated/model'
+import type { CaseDocument, NewApplication } from '@/api/generated/model'
 
 const route = useRoute()
 const caseId = route.params.id as string
@@ -40,9 +41,14 @@ async function handleUnpin(documentId: string) {
   }
 }
 
-const handleGeneratePdf = async (description: string) => {
+const handleGeneratePdf = async (newApplication: NewApplication) => {
   try {
-    await generatePdf(caseId, description)
+    await generatePdf(caseId, newApplication)
+    ElMessage({
+      message: 'Wniosek został pomyślnie wygenerowany.',
+      type: 'success',
+      duration: 5000,
+    })
   } catch (error) {
     showApiError(error, { defaultMessage: 'Nie udało się wygenerować wniosku.' })
   }
