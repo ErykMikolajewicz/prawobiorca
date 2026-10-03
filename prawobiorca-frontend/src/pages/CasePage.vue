@@ -9,7 +9,7 @@ import BackToMainButton from '@/components/atoms/BackToMainButton.vue'
 import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 
-import { generatePdf } from '@/api/cases'
+import { generateApplicationDocument } from '@/api/cases'
 import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
 import type { CaseDocument, NewApplication } from '@/api/generated/model'
@@ -43,7 +43,7 @@ async function handleUnpin(documentId: string) {
 
 const handleGeneratePdf = async (newApplication: NewApplication) => {
   try {
-    await generatePdf(caseId, newApplication)
+    await generateApplicationDocument(caseId, newApplication)
     ElMessage({
       message: 'Wniosek został pomyślnie wygenerowany.',
       type: 'success',

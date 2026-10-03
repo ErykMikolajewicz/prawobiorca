@@ -11,7 +11,7 @@ from src.framework.dependencies.relational import get_session_maker
 from src.infrastructure.ai_services.application_writer import ApplicationWriter as LlmApplicationWriter
 from src.infrastructure.ai_services.llm_chat import LlmChat
 from src.infrastructure.ai_services.openai_client.connection import client
-from src.infrastructure.pdf.html_renderer import HtmlApplicationRenderer
+from src.infrastructure.docx.docx_renderer import DocxApplicationRenderer
 from src.shared.settings.ai_services import llm_service_settings
 
 
@@ -27,7 +27,7 @@ def get_application_writer() -> ApplicationWriter:
 
 
 def get_application_renderer() -> ApplicationRenderer:
-    return HtmlApplicationRenderer()
+    return DocxApplicationRenderer()
 
 
 def get_generate_application(

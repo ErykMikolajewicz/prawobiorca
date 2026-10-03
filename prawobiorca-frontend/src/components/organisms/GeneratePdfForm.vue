@@ -48,7 +48,7 @@ const handleSubmit = () => {
       />
     </el-form-item>
     <el-form-item>
-      <el-button type="primary" native-type="submit"> Generuj Wniosek (PDF) </el-button>
+      <el-button type="primary" native-type="submit"> Generuj Wniosek (DOCX) </el-button>
     </el-form-item>
   </el-form>
 </template>
