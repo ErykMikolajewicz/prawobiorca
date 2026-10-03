@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 **Prawobiorca** is an application designed for intelligent searching of legal acts. The system uses Vector Search to enable users to find relevant regulations using natural language queries.
-For logged-in users, the application offers a "Cases" management function, which allows aggregating regulations from various sources and generating ready-made legal applications in PDF format.
+For logged-in users, the application offers a "Cases" management function, which allows aggregating regulations from various sources and generating ready-made legal applications in DOCX format.
 ---
 
 ## 2. User Roles
@@ -16,7 +16,7 @@ For logged-in users, the application offers a "Cases" management function, which
 - Has all Guest permissions.
 - Can add their own documents.
 - Can create and manage "Cases."
-- Can generate PDF applications based on gathered materials.
+- Can generate DOCX applications based on gathered materials.
 ---
 
 ## 3. Views and Functionalities
@@ -76,9 +76,16 @@ View available exclusively for **Logged Users**, serving to finalize work on a l
 2. **Context / Application Description**:
     - Text field (Input/Textarea) where the user describes their situation or the purpose of the letter (e.g., *"I request financial aid due to the difficult situation I found myself in after the death of a parent..."*).
 
-3. **PDF Generator**:
+3. **DOCX Generator**:
     - "Generate Application" button.
     - **Logic of operation**: The system (LLM) retrieves:
         - The application description, entered by the user.
         - The content of all pinned articles.
-    - Based on this, it generates a formal document (application/letter) in **PDF** format.
+    - Based on this, it generates a formal document (application/letter) in **DOCX** format.
+    - Generation runs in the background: the user does not wait for the response, the new application appears in the list with the "Generating" status.
+
+4. **List of Generated Applications**:
+    - Displays all applications generated for this case, with their type, creation date and generation status ("Generating", "Generation failed").
+    - The list refreshes automatically while any application is being generated.
+    - Ability to download a generated application (DOCX) and to delete an application.
+    - Deleting the case deletes its applications as well.

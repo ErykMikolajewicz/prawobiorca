@@ -1,3 +1,5 @@
+import type { ApplicationType } from './applicationType'
+
 export interface NewApplication {
   /** @minLength 1 */
   description: string
@@ -10,4 +12,5 @@ export interface NewApplication {
   /** @minLength 1 */
   semester: string
   title: string
+  applicationType?: ApplicationType
 }

@@ -5,10 +5,13 @@ from unittest.mock import create_autospec
 import pytest
 from fastapi.requests import Request
 
+from src.app.interfaces.applications import ApplicationsStorage
 from src.app.interfaces.regulations import RegulationsStorage
-from src.app.ports.tasks import RegulationPreparationScheduler
+from src.app.ports.tasks import ApplicationGenerationScheduler, RegulationPreparationScheduler
 from src.domain.value_objects.users import UserPrivileges
+from src.framework.dependencies.applications import get_application_generation_scheduler
 from src.framework.dependencies.authentication import authorize_user
+from src.framework.dependencies.cases import get_applications_storage
 from src.framework.dependencies.regulations import get_regulations_preparation_scheduler, get_regulations_storage
 from src.main import prawobiorca
 from src.shared.consts import ACCESS_COOKIE_NAME
@@ -28,6 +31,18 @@ def override_get_regulations_storage(mock_regulations_storage):
 
 
 @pytest.fixture
+def mock_applications_storage():
+    return create_autospec(ApplicationsStorage)
+
+
+@pytest.fixture
+def override_get_applications_storage(mock_applications_storage):
+    prawobiorca.dependency_overrides[get_applications_storage] = lambda: mock_applications_storage
+    yield
+    prawobiorca.dependency_overrides.pop(get_applications_storage, None)
+
+
+@pytest.fixture
 def mock_regulation_preparation_scheduler():
     return create_autospec(RegulationPreparationScheduler)
 
@@ -39,6 +54,20 @@ def override_get_regulations_preparation_scheduler(mock_regulation_preparation_s
     )
     yield
     prawobiorca.dependency_overrides.pop(get_regulations_preparation_scheduler, None)
+
+
+@pytest.fixture
+def mock_application_generation_scheduler():
+    return create_autospec(ApplicationGenerationScheduler)
+
+
+@pytest.fixture
+def override_get_application_generation_scheduler(mock_application_generation_scheduler):
+    prawobiorca.dependency_overrides[get_application_generation_scheduler] = lambda: (
+        mock_application_generation_scheduler
+    )
+    yield
+    prawobiorca.dependency_overrides.pop(get_application_generation_scheduler, None)
 
 
 class UserType(StrEnum):

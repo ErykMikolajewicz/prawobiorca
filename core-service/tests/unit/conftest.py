@@ -2,6 +2,7 @@ from unittest.mock import create_autospec
 
 import pytest
 
+from src.app.interfaces.applications import ApplicationsRepository
 from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
 from src.app.interfaces.regulations import RegulationsRepository
 from src.app.interfaces.relational import AsyncSession, SessionMaker
@@ -84,3 +85,9 @@ def mock_application_writer():
 def mock_application_renderer():
     port = create_autospec(ApplicationRenderer)
     return port
+
+
+@pytest.fixture
+def mock_applications_repo():
+    repo = create_autospec(ApplicationsRepository)
+    return repo

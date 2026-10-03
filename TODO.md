@@ -28,6 +28,6 @@ Lista kroków do wdrożenia obsługi szablonów, silnika Jinja2, Clean Architect
 
 ### Krok 7: Frontend (`prawobiorca-frontend`)
 - `DONE` **Pobieranie PDF:** Obsługa automatycznego pobierania wygenerowanego pliku PDF z backendu.
-- `TODO` **Wskaźnik ładowania:** Dodanie stanu ładowania (spinner / disabled button) w `GeneratePdfForm.vue` na czas generowania tekstu przez LLM i tworzenia PDF.
+- `TODO` **Wskaźnik ładowania:** Dodanie stanu ładowania (spinner / disabled button) w `GeneratePdfForm.vue` na czas generowania tekstu przez LLM i tworzenia DOCX.
 - `TODO` **Pola danych studenta:** Umożliwienie wprowadzania/edycji danych studenta (imię, nazwisko, nr indeksu, wydział) w formularzu generowania wniosku.
 - `DONE` **Powiadomienia o statusie:** Pokazywanie powiadomień sukcesu/błędu (Element Plus notification/message) po zakończeniu generowania.

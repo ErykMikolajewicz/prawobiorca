@@ -21,7 +21,7 @@ class ApplicationWriter:
         self._llm_chat = llm_chat
 
     async def write(self, new_application: NewApplication, legal_basis: list[CaseDocument]) -> str:
-        system_prompt = prompts_env.get_template("application.md").render(
+        system_prompt = prompts_env.get_template(f"applications/{new_application.application_type.lower()}.md").render(
             user_name=new_application.user_name,
             student_id=new_application.student_id,
             situation_description=new_application.description,

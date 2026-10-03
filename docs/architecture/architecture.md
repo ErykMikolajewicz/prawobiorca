@@ -22,9 +22,10 @@ flowchart TD
     Ingress["nginx / Ingress"]
     Frontend["prawobiorca-frontend<br/>(Vue SPA served by nginx)"]
     Core["core-service<br/>(Auth, Cases, Files, Search Engine)"]
-    Worker["Taskiq Worker<br/>(File Preparator / Chunking / Indexing)"]
+    Worker["Taskiq Worker<br/>(File Preparator / Chunking / Indexing,<br/>Application Generation)"]
     Embeddings["embeddings-service<br/>(OpenVINO Model Server)"]
     Extraction["extraction-service"]
+    LLM["llm-service"]
     DB[("PostgreSQL + pgvector<br/>(Metadata, Chunks, Task Queue)")]
     Storage[("Object Storage<br/>RustFS (on-premise) / GCS (cloud)")]
 
@@ -39,7 +40,8 @@ flowchart TD
     DB -->|Consumes Task| Worker
     Worker -->|Batch Embed| Embeddings
     Worker -->|extract text| Extraction
-    Worker -->|Reads file bytes| Storage
+    Worker -->|Drafts application| LLM
+    Worker -->|"Reads / writes file bytes"| Storage
 ```
 
 ### 2.1. `core-service` (Main API & Taskiq Worker)
@@ -50,12 +52,16 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * Storage orchestration: generates presigned upload/download URLs (S3 presigned POST/GET) so the browser transfers file bytes directly with object storage — `core-service` never proxies the bytes itself. The Taskiq worker separately reads the raw bytes back from storage for processing.
   * Fast synchronous search execution: requests single query embeddings from `embeddings-service` and performs vector similarity search against PostgreSQL (`pgvector`).
   * Dispatches asynchronous file processing tasks using **Taskiq**, automatically upon upload confirmation — no separate request is needed to start indexing. The task is written to PostgreSQL in the same transaction that marks the document as in progress.
+  * Dispatches application (*wniosek*) generation tasks the same way: the application is saved with the `IN_PROGRESS` status and the task is written in the same transaction; the endpoint returns immediately and the frontend polls the status.
 * **File Preparator (Taskiq Worker)**:
   * Consumes document preparation jobs from the PostgreSQL task queue.
   * Coordinates document processing pipeline: sends file to `extraction-service`, chunks structured text, requests batch embeddings from `embeddings-service`, and persists vector embeddings into PostgreSQL.
   * Chunking follows the editorial structure of the act (article / paragraph, with its chapter breadcrumb) recovered from the text itself, not the layout labels returned by `extraction-service` — see [Legal documents parsing](legal_documents_parsing.md).
   * Updates document processing status in PostgreSQL directly without inter-service RPC overhead.
   * Retries a document up to 3 times when `extraction-service` or `embeddings-service` is unavailable; after the last attempt the document is marked as failed and can be retried on demand. A document whose processing crashed the worker 3 times is marked as failed as well.
+* **Application Generator (Taskiq Worker)**:
+  * Drafts the application text with `llm-service`, renders it to DOCX, stores the file in object storage and marks the application as generated — see [AI module](../ai.md).
+  * Retries when `llm-service` is unavailable; after the delivery limit the application is marked as failed.
 
 ### 2.2. `embeddings-service`
 * **Responsibilities**:
@@ -81,8 +87,8 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 * **Responsibilities**:
   * LLM inference (Gemma 4 26B A4B) exposed through an OpenAI-compatible chat completions API.
 * **Characteristics**:
-  * Used by `core-service` to draft student applications (*wnioski*) rendered to PDF — see [AI module](../ai.md).
-  * **GCP**: no service is deployed — `core-service` calls the serverless **Vertex AI Model-as-a-Service** endpoint (`google/gemma-4-26b-a4b-it-maas`, billed per token) with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
+  * Used by the `core-service` Taskiq worker to draft student applications (*wnioski*) rendered to DOCX — see [AI module](../ai.md).
+  * **GCP**: no service is deployed — the worker calls the serverless **Vertex AI Model-as-a-Service** endpoint (`google/gemma-4-26b-a4b-it-maas`, billed per token) with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
   * **On-Premise**: served directly by **OpenVINO Model Server (OVMS)** (`OpenVINO/gemma-4-26b-a4b-it-int4-ov`) — no custom application code. OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), and runs with `--target_device=AUTO` and `/dev/dri` passed through, so it uses the Intel iGPU when the host exposes one and falls back to CPU otherwise.
   * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `scripts/local/dev.py`.
 
@@ -111,7 +117,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * **Wake-up**: `NOTIFY` wakes the worker immediately, and polling every `TASK_POLL_INTERVAL_SECONDS` picks up tasks sent while no worker was listening.
   * **Heartbeat**: while a task runs, the worker extends its lease every `TASK_HEARTBEAT_SECONDS`. If the worker crashes, the lease expires and the task is delivered again.
   * **Acknowledgement**: the row is deleted only after the task has been executed.
-  * **Poison messages**: each delivery is counted and passed to the task in the `delivery_attempt` label; above the limit, the task marks the document as failed instead of processing it.
+  * **Poison messages**: each delivery is counted and passed to the task in the `delivery_attempt` label; above the limit, the task marks the document (or application) as failed instead of processing it.
 * **Resilience**: Provides built-in retry mechanisms, failure handling, and transparent task parameter serialization.
 
 ### 3.3. Compute Decoupling (Embeddings & Extraction)
