@@ -4,6 +4,7 @@ import tomllib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.framework.api.exception_handlers import include_exception_handlers
 from src.framework.api.router import include_all_routers
@@ -74,7 +75,15 @@ prawobiorca = FastAPI(
     generate_unique_id_function=lambda route: route.name,
 )
 
-origins = ["http://localhost:5173"]
+origins = ["http://localhost:5173", "http://localhost:5174"]
+
+prawobiorca.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 include_all_routers(prawobiorca)
 include_exception_handlers(prawobiorca)

@@ -8,13 +8,12 @@ metadata:
 spec:
   containers:
     - name: llm-service
-      image: docker.io/openvino/model_server:2026.3-gpu
+      image: docker.io/openvino/model_server:2026.4.0-gpu
       args:
-        - --source_model=OpenVINO/gemma-4-E4B-it-int8-ov
-        - --model_name=gemma-4-e4b-it
+        - --source_model=OpenVINO/gemma-4-26b-a4b-it-int4-ov
+        - --model_name=gemma-4-26b
         - --model_repository_path=/models
         - --task=text_generation
-        - --pipeline_type=VLM
         - --target_device=AUTO
         - --rest_port=8080
       securityContext:

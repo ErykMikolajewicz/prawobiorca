@@ -43,16 +43,19 @@ Changing the model requires re-embedding all regulations — the vector column l
 ## LLM Service
 
 ### Technology Choice and Justification
-**OpenVINO Model Server (OVMS)** serves the conversational LLM directly — no custom application code — using a pre-quantized int8 OpenVINO IR build of Gemma-4 E4B (`OpenVINO/gemma-4-E4B-it-int8-ov` on Hugging Face). An earlier iteration wrapped **OpenVINO GenAI** in a custom FastAPI app; OVMS replaced it once Gemma-4 VLM support landed there (OVMS 2026.3), since it removes that app entirely in favor of a maintained server with an OpenAI-compatible API, at the cost of continuous batching, which isn't available for this model yet (no PagedAttention support — see [openvinotoolkit/model_server#4178](https://github.com/openvinotoolkit/model_server/issues/4178)). This keeps the service consistent with the rest of the stack's preference for Intel-hardware-friendly, CPU-first inference (as in `embedding-service`).
+The application drafts with **Gemma 4 26B A4B** (`gemma-4-26b-a4b-it`), reached through an OpenAI-compatible chat completions API in every environment, so `core-service` uses the same client code everywhere and only the URL, model name and authentication differ:
+- **Cloud (GCP)**: **Vertex AI Model-as-a-Service** (`google/gemma-4-26b-a4b-it-maas`), serverless and billed per token, so no LLM service is deployed and nothing is paid while idle. `core-service` authenticates with an OAuth access token of its Workload Identity, which needs the `roles/aiplatform.user` role.
+- **On-Premise**: **OpenVINO Model Server (OVMS)** serves the int4 OpenVINO IR build (`OpenVINO/gemma-4-26b-a4b-it-int4-ov` on Hugging Face) — no custom application code — with continuous batching and PagedAttention for CPU and Intel iGPU inference, consistent with the stack's preference for Intel-hardware-friendly, CPU-first inference.
+- **Local development**: OVMS with the lighter `OpenVINO/Qwen3.5-9B-int4-ov`.
 
 ### Scope of Use
-Standalone service exposing an OpenAI-compatible `/v3/chat/completions` endpoint (model name `gemma-4-e4b-it`). It has no consumers yet — `core-service` integration (a chat feature usable by application users) is planned future work, not part of this iteration.
+OpenAI-compatible `/chat/completions` endpoint (model name `google/gemma-4-26b-a4b-it-maas` on GCP, `gemma-4-26b` on-premise, `qwen-3.5-9b` locally), consumed by `core-service` for automated application/letter drafting.
 
 ### Abstraction Layer and Integration
-OVMS pulls the model repository from Hugging Face on first start (`--source_model`) into a mounted persistent volume, so restarts reuse the cached model instead of re-downloading it. No custom image build or model-baking step is needed.
+On-premise and locally, OVMS pulls the model repository from Hugging Face on first start (`--source_model`) into a mounted persistent volume, so restarts reuse the cached model instead of re-downloading it. No custom image build or model-baking step is needed.
 
 ### Capabilities and Future Plans
-Planned follow-ups: wiring a client into `core-service` (port/adapter/use case, mirroring the existing `TextsEmbedder`/`RegulationSplitter` pattern), streaming responses, and revisiting continuous batching once OVMS/OpenVINO GenAI add PagedAttention support for Gemma-4.
+Planned follow-ups: streaming responses, and exploring multi-turn conversational agents.
 
 ---
 

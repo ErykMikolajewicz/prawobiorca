@@ -1,9 +1,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Path, Response, status
 
+from src.app.dtos.applications import NewApplication
 from src.app.dtos.cases import CaseData, CaseDocument, NewCaseDocument
+from src.app.use_cases.applications import GenerateApplication
 from src.app.use_cases.cases import (
     AddCase,
     AddCaseDocument,
@@ -13,6 +15,7 @@ from src.app.use_cases.cases import (
     ListCases,
 )
 from src.domain.exceptions.cases import CaseNotFound
+from src.framework.dependencies.applications import get_generate_application
 from src.framework.dependencies.authentication import authorize_user, require_logged_user
 from src.framework.dependencies.cases import (
     get_add_case_document,
@@ -103,3 +106,25 @@ async def delete_case_document(
     document_id: Annotated[UUID, Path(alias="documentId")],
 ):
     await delete_case_document_.execute(user_id, document_id)
+
+
+@cases_router.post(
+    "/user/cases/{caseId}/application",
+    response_class=Response,
+    responses={
+        status.HTTP_200_OK: {"content": {"application/pdf": {}}},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"},
+    },
+)
+async def generate_application(
+    user_id: Annotated[UUID, Depends(require_logged_user)],
+    generate_application_: Annotated[GenerateApplication, Depends(get_generate_application)],
+    case_id: Annotated[UUID, Path(alias="caseId")],
+    new_application: NewApplication,
+) -> Response:
+    pdf = await generate_application_.execute(user_id, case_id, new_application)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=wniosek_{case_id}.pdf"},
+    )

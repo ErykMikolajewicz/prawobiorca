@@ -31,5 +31,24 @@ class ExtractionServiceSettings(BaseSettings):
     )
 
 
+class LlmServiceSettings(BaseSettings):
+    URL: str = ...
+    MODEL_NAME: str = "qwen-3.5-9b"
+    TEMPERATURE: float = 0.7
+    TOP_P: float = 0.9
+    MAX_TOKENS: int = Field(default=1000, gt=0)
+    USE_GOOGLE_AUTH: bool = False
+
+    model_config = SettingsConfigDict(
+        env_file=Path(".env"),
+        extra="forbid",
+        dotenv_filtering="match_prefix",
+        case_sensitive=True,
+        frozen=True,
+        env_prefix="LLM_SERVICE_",
+    )
+
+
 embedding_service_settings = EmbeddingServiceSettings()
 extraction_service_settings = ExtractionServiceSettings()
+llm_service_settings = LlmServiceSettings()

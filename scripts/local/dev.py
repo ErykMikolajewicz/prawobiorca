@@ -99,9 +99,9 @@ def main():
         "llm-service",
         "-p 127.0.0.1:8083:8080 --device /dev/dri"
         " --group-add $(stat -c '%g' /dev/dri/render* | head -n1) -v llm-model:/models"
-        " docker.io/openvino/model_server:2026.3-gpu"
-        " --source_model=OpenVINO/gemma-4-E4B-it-int8-ov --model_name=gemma-4-e4b-it"
-        " --model_repository_path=/models --task=text_generation --pipeline_type=VLM"
+        " docker.io/openvino/model_server:2026.4.0-gpu"
+        " --source_model=OpenVINO/Qwen3.5-9B-int4-ov --model_name=qwen-3.5-9b"
+        " --model_repository_path=/models --task=text_generation"
         " --target_device=AUTO --rest_port=8080",
     )
 

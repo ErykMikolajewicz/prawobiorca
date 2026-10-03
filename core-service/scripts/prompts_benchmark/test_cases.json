@@ -1,0 +1,37 @@
+{
+  "default_student": {
+    "userName": "Jan Kowalski",
+    "studentId": "250000",
+    "department": "Wydział Informatyki i Telekomunikacji",
+    "semester": "4",
+    "title": "inż."
+  },
+  "cases": [
+    {
+      "id": "pozar_laptop",
+      "title": "WNIOSEK O ZAPOMOGĘ",
+      "situation": "Proszę o przyznanie zapomogi, ponieważ znalazłem się w trudnej sytuacji materialnej w związku ze zniszczeniem mojego laptopa w pożarze mieszkania studenckiego w zeszłym tygodniu. Laptop jest mi niezbędny do nauki.",
+      "articles": [
+        "Regulamin Pomocy Materialnej PWr, § 5 ust. 1: Zapomoga może być przyznana studentowi, który z przyczyn losowych znalazł się przejściowo w trudnej sytuacji życiowej.",
+        "Regulamin Pomocy Materialnej PWr, § 5 ust. 3: Zdarzeniem losowym może być pożar, kradzież lub inne nieszczęśliwe wypadki."
+      ]
+    },
+    {
+      "id": "choroba_szpital",
+      "title": "WNIOSEK O ZAPOMOGĘ",
+      "situation": "Przez ostatni miesiąc przebywałem w szpitalu z powodu ciężkiego zapalenia płuc. Z tego powodu nie mogłem pracować i straciłem źródło utrzymania, a koszty leków znacznie nadwyrężyły mój budżet.",
+      "articles": [
+        "Regulamin Pomocy Materialnej PWr, § 5 ust. 1: Zapomoga może być przyznana studentowi, który z przyczyn losowych znalazł się przejściowo w trudnej sytuacji życiowej.",
+        "Regulamin Pomocy Materialnej PWr, § 5 ust. 4: Do zdarzeń losowych zalicza się również ciężką chorobę studenta lub członka jego najbliższej rodziny."
+      ]
+    },
+    {
+      "id": "urlop_dziekanski",
+      "title": "WNIOSEK O URLOP DZIEKAŃSKI",
+      "situation": "Zwracam się z prośbą o udzielenie urlopu dziekańskiego w semestrze zimowym 2026/2027 z powodów zdrowotnych (załączam zaświadczenie lekarskie). Nie jestem w stanie uczęszczać na zajęcia.",
+      "articles": [
+        "Regulamin Studiów PWr, § 20 ust. 1: Dziekan może udzielić studentowi urlopu długoterminowego w przypadku długotrwałej choroby, potwierdzonej odpowiednim zaświadczeniem lekarskim."
+      ]
+    }
+  ]
+}

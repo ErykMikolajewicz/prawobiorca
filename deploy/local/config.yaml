@@ -13,6 +13,8 @@ data:
 
   EMBEDDING_SERVICE_URL: "http://embedding-service:8080"
   EXTRACTION_SERVICE_URL: "http://extraction-service:8080"
+  LLM_SERVICE_URL: "http://llm-service:8080/v1"
+  LLM_SERVICE_MODEL_NAME: "gemma-4-26b"
 
   OBJECT_STORAGE_ENDPOINT_URL: "http://rustfs:9000"
   # Used only to sign urls handed to the browser, which can not resolve the in-cluster hostname.

@@ -6,13 +6,21 @@ __pycache__/
 .env
 
 .idea
+.vscode
 
 /site/
 
 .cache
+/files/
 
 /deploy/gcp/secrets
 
+/logs/
+
+/scratch/
+/core-service/storage/
+
+/core-service/scripts/prompts_benchmark/benchmark_results/*
 .coverage
 
 /CLAUDE.md
