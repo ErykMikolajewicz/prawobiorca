@@ -23,6 +23,7 @@ class LlmChat:
                 max_tokens=self._max_tokens,
                 top_p=self._top_p,
                 presence_penalty=0.1,
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
         except APIError as e:
             raise ServiceUnavailable() from e

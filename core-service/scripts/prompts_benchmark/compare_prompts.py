@@ -84,7 +84,7 @@ def get_openvino_running_models(base_url: str) -> List[str]:
 
 
 def ensure_openvino_container_ready(model_name: str) -> str:
-    base_url = f"{llm_service_settings.URL}/v1"
+    base_url = llm_service_settings.URL
     running_models = get_openvino_running_models(base_url)
 
     if model_name in running_models or any(model_name in r for r in running_models):

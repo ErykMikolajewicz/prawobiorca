@@ -9,9 +9,9 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 - **Porty:** `src/app/ports/applications.py` (`ApplicationWriter`, `ApplicationRenderer`).
 - **Adaptery:**
   - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/application.md`) i generuje treść przez `LlmChat`.
-  - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu do kontenera `llm-service` (port 8083 na hoście / 8080 w klastrze, API zgodne z OpenAI).
+  - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu przez API zgodne z OpenAI: na GCP Vertex AI Model-as-a-Service, on-premise i lokalnie kontener `llm-service` z OVMS (port 8083 na hoście / 8080 w klastrze).
   - `HtmlApplicationRenderer` (`src/infrastructure/pdf/html_renderer.py`) – kompiluje szablon HTML (`src/infrastructure/pdf/templates/application.html`) do PDF i zwraca go jako `bytes`.
-- **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL`.
+- **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL` (bazowy URL API razem z `/v1`). Na GCP `LLM_SERVICE_USE_GOOGLE_AUTH=true` – klient uwierzytelnia się tokenem OAuth z Workload Identity (`src/infrastructure/ai_services/openai_client/google_auth.py`).
 
 ## 2. Pipeline generowania wniosku
 
@@ -20,13 +20,15 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 3. Inferencja LLM (generowanie merytorycznej treści uzasadnienia).
 4. Połączenie tekstu z szablonem HTML i wygenerowanie dokumentu PDF przez WeasyPrint. Wniosek nie jest zapisywany, trafia bezpośrednio do przeglądarki.
 
-## 3. Przetestowane modele
+## 3. Modele
 
-| Model | Status | Pamięć RAM | Uwagi |
-|---|---|---|---|
-| **`OpenVINO/Qwen2.5-7B-Instruct-int4-ov`** | **Domyślny (rekomendowany)** | ~4.5 GB | Oficjalny model Intela, pełne wsparcie ChatML (`system`/`user`), wysoka kultura polszczyzny urzędowej. |
-| **`OpenVINO/gemma-2b-it-int8-ov`** | Awaryjny / fallback | ~2.0 GB | Pobrany lokalnie; brak roli `system`, ubogi korpus polski (czeskie słowa), ucinanie tekstu przy temp. < 0.7. |
-| **`OpenVINO/gemma-4-E4B-it-int8-ov`** | Odrzucony | - | Model multimodalny (VLM); błąd `Segmentation fault` (139) w OVMS 2026.3. |
+| Środowisko | Model | Uwagi |
+|---|---|---|
+| **GCP** | `google/gemma-4-26b-a4b-it-maas` (Vertex AI MaaS) | Serverless, płatność za tokeny. Wymaga włączenia modelu w Model Garden i roli `roles/aiplatform.user` (`scripts/cloud/cloud_inith.sh`). |
+| **On-premise** | `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (OVMS, `gemma-4-26b`) | `deploy/local/llm-service.yaml`. |
+| **Lokalnie** | `OpenVINO/Qwen3.5-9B-int4-ov` (OVMS, `qwen-3.5-9b`) | `scripts/local/dev.py`, lżejszy model do testów. |
+
+Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3).
 
 ## 4. Narzędzie testowe (benchmark promptów)
 
@@ -36,7 +38,7 @@ Skrypt `core-service/scripts/prompts_benchmark/compare_prompts.py` umożliwia te
 just compare-prompts
 
 # Uruchomienie z flagami CLI:
-uv run python scripts/prompts_benchmark/compare_prompts.py --model qwen-2.5-7b-it --skip-pdf
+uv run python scripts/prompts_benchmark/compare_prompts.py --model qwen-3.5-9b --skip-pdf
 
 # Uruchomienie z IDE:
 # Ustaw zmienną CUSTOM_MODEL_NAME na początku pliku compare_prompts.py.

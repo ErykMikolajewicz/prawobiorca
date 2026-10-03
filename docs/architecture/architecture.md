@@ -79,12 +79,12 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 
 ### 2.4. `llm-service`
 * **Responsibilities**:
-  * LLM inference (Qwen2.5-7B-Instruct, int4-quantized), served directly by **OpenVINO Model Server (OVMS)** — no custom application code — exposing an OpenAI-compatible `/v1/chat/completions` HTTP endpoint.
+  * LLM inference (Gemma 4 26B A4B) exposed through an OpenAI-compatible chat completions API.
 * **Characteristics**:
   * Used by `core-service` to draft student applications (*wnioski*) rendered to PDF — see [AI module](../ai.md).
-  * OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), so no image build/model-baking step is needed for this service.
-  * On-Premise uses `--target_device=AUTO` with `/dev/dri` passed through, so it runs on the Intel iGPU when the host exposes one and transparently falls back to CPU otherwise. GCP stays on CPU (GKE Autopilot only supports NVIDIA GPU passthrough).
-  * **No scale-to-0 yet**: runs as a single always-on replica on GKE. The service is not deployed by `scripts/cloud/deploy_app.sh`, so it costs nothing today; the scaling model has to be settled together with the `core-service` integration, since the model's RAM footprint is too large to keep idle once it is actually serving traffic.
+  * **GCP**: no service is deployed — `core-service` calls the serverless **Vertex AI Model-as-a-Service** endpoint (`google/gemma-4-26b-a4b-it-maas`, billed per token) with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
+  * **On-Premise**: served directly by **OpenVINO Model Server (OVMS)** (`OpenVINO/gemma-4-26b-a4b-it-int4-ov`) — no custom application code. OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), and runs with `--target_device=AUTO` and `/dev/dri` passed through, so it uses the Intel iGPU when the host exposes one and falls back to CPU otherwise.
+  * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `scripts/local/dev.py`.
 
 ### 2.5. `prawobiorca-frontend`
 * **Responsibilities**:
