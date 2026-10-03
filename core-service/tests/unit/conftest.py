@@ -7,6 +7,7 @@ from src.app.interfaces.regulations import RegulationsRepository
 from src.app.interfaces.relational import AsyncSession, SessionMaker
 from src.app.interfaces.sections import SectionsRepository
 from src.app.interfaces.users import UsersRepository, UsersSessionsRepository
+from src.app.ports.applications import ApplicationRenderer, ApplicationWriter
 from src.app.ports.texts import TextsEmbedder
 
 
@@ -71,3 +72,15 @@ def mock_cases_repo():
 def mock_case_documents_repo():
     repo = create_autospec(CaseDocumentsRepository)
     return repo
+
+
+@pytest.fixture
+def mock_application_writer():
+    port = create_autospec(ApplicationWriter)
+    return port
+
+
+@pytest.fixture
+def mock_application_renderer():
+    port = create_autospec(ApplicationRenderer)
+    return port

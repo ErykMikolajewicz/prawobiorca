@@ -1,70 +1,29 @@
-import logging
-import os
 from datetime import datetime
+from pathlib import Path
 
 import anyio
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML
 
-from src.app.dtos.user import StudentData
-from src.app.interfaces.pdf_generation import PDFRenderer
-from src.domain.exceptions.cases import PDFGenerationError
-from src.shared.config.jinja import jinja_html_env
+from src.app.dtos.applications import NewApplication
 
-logger = logging.getLogger("app.pdf.html_renderer")
+PDF_RESOURCES_DIR = Path(__file__).parent
 
-# obliczanie ścieżki do folderu resources na potrzeby weasyprint base_url
-INFRASTRUCTURE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APP_DIR = os.path.dirname(INFRASTRUCTURE_DIR)
-RESOURCES_DIR = os.path.join(APP_DIR, "shared", "resources")
+templates_env = Environment(
+    loader=FileSystemLoader(PDF_RESOURCES_DIR / "templates"),
+    autoescape=True,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
 
 
-class HTMLToPDFRenderer(PDFRenderer):
-    async def render_pdf(
-        self,
-        applicant_data: StudentData,
-        recipient_info: str,
-        title: str,
-        content: str,
-        output_path: str,
-    ) -> str:
-        """
-        Kompiluje treść wniosku oraz dane studenta do profesjonalnego pliku PDF
-        przy użyciu szablonu HTML i silnika WeasyPrint.
-        """
-        current_date = datetime.now().strftime("%d.%m.%Y")
+class HtmlApplicationRenderer:
+    async def render(self, new_application: NewApplication, content: str) -> bytes:
+        html_content = templates_env.get_template("application.html").render(
+            current_date=datetime.now().strftime("%d.%m.%Y"),
+            application=new_application,
+            content=content,
+        )
+        html = HTML(string=html_content, base_url=PDF_RESOURCES_DIR.as_uri())
 
-        # renderowanie szablonu za pomocą Jinja
-        try:
-            template = jinja_html_env.get_template("application_template.html")
-            html_content = template.render(
-                current_date=current_date,
-                student=applicant_data,
-                recipient_info=recipient_info,
-                title=title,
-                content=content,
-            )
-        except Exception as e:
-            logger.error(f"Błąd podczas ładowania lub renderowania szablonu HTML: {e}")
-            raise PDFGenerationError(f"Nie udało się wyrenderować szablonu HTML: {e}") from e
-
-        # inicjalizacja katalogu docelowego
-        try:
-            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-        except OSError as e:
-            logger.error(f"Błąd tworzenia katalogu dla pliku PDF '{output_path}': {e}")
-            raise PDFGenerationError(f"Nie udało się utworzyć katalogu docelowego dla PDF: {e}") from e
-
-        # zapis do PDF z użyciem biblioteki WeasyPrint
-        base_url = f"file:///{os.path.abspath(RESOURCES_DIR).replace(os.sep, '/')}"
-
-        def _generate_sync():
-            try:
-                from weasyprint import HTML
-
-                HTML(string=html_content, base_url=base_url).write_pdf(output_path)
-            except Exception as e:
-                logger.error(f"Błąd kompilacji PDF przez silnik WeasyPrint: {e}")
-                raise PDFGenerationError(f"Błąd silnika generowania PDF (WeasyPrint): {e}") from e
-
-        await anyio.to_thread.run_sync(_generate_sync)
-
-        return output_path
+        return await anyio.to_thread.run_sync(html.write_pdf)

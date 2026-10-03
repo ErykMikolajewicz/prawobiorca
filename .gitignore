@@ -20,7 +20,7 @@ __pycache__/
 /scratch/
 /core-service/storage/
 
-/core-service/tests/unit/ai/benchmark_results/*
+/core-service/scripts/prompts_benchmark/benchmark_results/*
 .coverage
 
 /CLAUDE.md

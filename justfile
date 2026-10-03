@@ -27,7 +27,7 @@ test-extraction:
 
 [working-directory: 'core-service']
 compare-prompts:
-    uv run python tests/unit/ai/compare_prompts.py
+    uv run python scripts/prompts_benchmark/compare_prompts.py
 
 [working-directory: 'core-service']
 cov:

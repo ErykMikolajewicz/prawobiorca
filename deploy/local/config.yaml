@@ -5,8 +5,6 @@ metadata:
 data:
   APP_LOGGING_LEVEL: "INFO"
   APP_COOKIE_SECURE: "false"
-  OLLAMA_MODEL_NAME: "gemma4:e4b-it-q4_K_M"
-  OLLAMA_HOST: "http://192.168.88.238:11434"
 
   RELATIONAL_DB_USER: "postgres"
   RELATIONAL_DB_HOST: "postgres"
@@ -15,6 +13,7 @@ data:
 
   EMBEDDING_SERVICE_URL: "http://embedding-service:8080"
   EXTRACTION_SERVICE_URL: "http://extraction-service:8080"
+  LLM_SERVICE_URL: "http://llm-service:8080"
 
   OBJECT_STORAGE_ENDPOINT_URL: "http://rustfs:9000"
   # Used only to sign urls handed to the browser, which can not resolve the in-cluster hostname.

@@ -1,4 +1,10 @@
-import type { BodyAddCase, CaseData, CaseDocument, NewCaseDocument } from '../../model'
+import type {
+  BodyAddCase,
+  CaseData,
+  CaseDocument,
+  NewApplication,
+  NewCaseDocument,
+} from '../../model'
 
 import { prawobiorcaRequest } from '../../../axios'
 
@@ -81,9 +87,29 @@ export const deleteCaseDocument = (
     options,
   )
 }
+/**
+ * @summary Generate Application
+ */
+export const generateApplication = (
+  caseId: string,
+  newApplication: NewApplication,
+  options?: SecondParameter<typeof prawobiorcaRequest<Blob>>,
+) => {
+  return prawobiorcaRequest<Blob>(
+    {
+      url: `/api/user/cases/${caseId}/application`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: newApplication,
+      responseType: 'blob',
+    },
+    options,
+  )
+}
 export type GetCasesListResult = NonNullable<Awaited<ReturnType<typeof getCasesList>>>
 export type AddCaseResult = NonNullable<Awaited<ReturnType<typeof addCase>>>
 export type DeleteUserCaseResult = NonNullable<Awaited<ReturnType<typeof deleteUserCase>>>
 export type AddCaseDocumentResult = NonNullable<Awaited<ReturnType<typeof addCaseDocument>>>
 export type GetCaseDocumentsResult = NonNullable<Awaited<ReturnType<typeof getCaseDocuments>>>
 export type DeleteCaseDocumentResult = NonNullable<Awaited<ReturnType<typeof deleteCaseDocument>>>
+export type GenerateApplicationResult = NonNullable<Awaited<ReturnType<typeof generateApplication>>>

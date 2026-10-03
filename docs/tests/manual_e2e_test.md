@@ -27,6 +27,6 @@
 
 ## 6. Generowanie Wniosku
 - **Gdzie**: Widok szczegółów sprawy (Kontekst / Opis Wniosku)
-- **Input**: Opisz sytuację (np. "Wnoszę o uchylenie decyzji o skreśleniu z listy studentów z powodu długotrwałej hospitalizacji w trakcie sesji.")
+- **Input**: Wypełnij dane studenta (imię i nazwisko, numer albumu w formacie 6 cyfr, wydział, semestr, tytuł zawodowy) i opisz sytuację (np. "Wnoszę o uchylenie decyzji o skreśleniu z listy studentów z powodu długotrwałej hospitalizacji w trakcie sesji.")
 - **Akcja**: Kliknij "Generuj Wniosek (PDF)"
 - **Rezultat**: Przeglądarka powinna pobrać gotowy plik PDF.

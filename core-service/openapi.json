@@ -923,6 +923,58 @@
         }
       }
     },
+    "/api/user/cases/{caseId}/application": {
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Generate Application",
+        "operationId": "generate_application",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caseid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewApplication"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user/regulations": {
       "get": {
         "tags": [
@@ -1476,48 +1528,6 @@
           }
         }
       }
-    },
-    "/api/case/generate-pdf": {
-      "post": {
-        "tags": [
-          "pdf"
-        ],
-        "summary": "Generate Case Pdf",
-        "operationId": "generate_case_pdf",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerateCasePDFRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -1659,50 +1669,6 @@
         ],
         "title": "CurrentUser"
       },
-      "GenerateCasePDFRequest": {
-        "properties": {
-          "description": {
-            "type": "string",
-            "title": "Description"
-          },
-          "caseId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Caseid"
-          },
-          "userName": {
-            "type": "string",
-            "title": "Username",
-            "default": "Student PWr"
-          },
-          "studentId": {
-            "type": "string",
-            "title": "Studentid",
-            "default": "000000"
-          },
-          "department": {
-            "type": "string",
-            "title": "Department",
-            "default": "Wydział Informatyki i Telekomunikacji"
-          },
-          "semester": {
-            "type": "string",
-            "title": "Semester",
-            "default": "4"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "default": "inż."
-          }
-        },
-        "type": "object",
-        "required": [
-          "description",
-          "caseId"
-        ],
-        "title": "GenerateCasePDFRequest"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1737,6 +1703,49 @@
           "password"
         ],
         "title": "LoginData"
+      },
+      "NewApplication": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Description"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Username"
+          },
+          "studentId": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "title": "Studentid"
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Department"
+          },
+          "semester": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Semester"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "userName",
+          "studentId",
+          "department",
+          "semester",
+          "title"
+        ],
+        "title": "NewApplication"
       },
       "NewCaseDocument": {
         "properties": {

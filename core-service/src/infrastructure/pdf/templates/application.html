@@ -94,19 +94,18 @@
     </div>
 
     <div class="applicant-info">
-        <strong>{{ student.user_name }}</strong><br>
-        Nr albumu: {{ student.student_id }}<br>
-        {{ student.title }}<br>
-        {{ student.department }}<br>
-        Semestr: {{ student.semester }}
+        <strong>{{ application.user_name }}</strong><br>
+        Nr albumu: {{ application.student_id }}<br>
+        {{ application.title }}<br>
+        {{ application.department }}<br>
+        Semestr: {{ application.semester }}
     </div>
 
-    <div class="recipient-info">
-        {{ recipient_info }}
-    </div>
+    <div class="recipient-info">Sz. P. Dziekan
+Politechnika Wrocławska</div>
 
     <div class="document-title">
-        {{ title | upper }}
+        WNIOSEK
     </div>
 
     <div class="content">

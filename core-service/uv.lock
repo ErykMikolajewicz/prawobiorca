@@ -428,7 +428,6 @@ dependencies = [
     { name = "granian" },
     { name = "httpx2" },
     { name = "jinja2" },
-    { name = "ollama" },
     { name = "openai" },
     { name = "pgvector" },
     { name = "pydantic" },
@@ -469,8 +468,7 @@ requires-dist = [
     { name = "granian", specifier = "==2.8.*" },
     { name = "httpx2", specifier = "==2.12.*" },
     { name = "jinja2", specifier = "==3.1.*" },
-    { name = "ollama", specifier = "==0.6.*" },
-    { name = "openai", specifier = ">=1.0.0" },
+    { name = "openai", specifier = "==3.15.*" },
     { name = "pgvector", specifier = "==0.5.*" },
     { name = "pydantic", specifier = "==2.13.*" },
     { name = "pydantic-settings", specifier = "==2.15.*" },
@@ -479,7 +477,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.*" },
     { name = "taskiq", specifier = "==0.12.*" },
     { name = "tokenizers", specifier = "==0.23.*" },
-    { name = "weasyprint", specifier = ">=69.0" },
+    { name = "weasyprint", specifier = "==70.*" },
 ]
 
 [package.metadata.requires-dev]
@@ -1185,19 +1183,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/30/7f/e27fb699b70ad24dbd02ddee604658acb36f907c03c045baffe4ea774501/multidict-6.8.0-cp314-cp314t-win_amd64.whl", hash = "sha256:d0be2b832435001bc623ca7f1499ca1a853d4f082fb61221a80ce71132f50b26", size = 55592, upload-time = "2026-09-09T13:56:19.652Z" },
     { url = "https://files.pythonhosted.org/packages/eb/7a/76de70b2f6733696803f1ee56abe44a3757a52777383032c7373d3fea0f4/multidict-6.8.0-cp314-cp314t-win_arm64.whl", hash = "sha256:62b8e291a4f7edbf7cde7a43d831d893ba443a1b627498b53581943b0e348feb", size = 50300, upload-time = "2026-09-09T13:56:21.516Z" },
     { url = "https://files.pythonhosted.org/packages/b1/ee/be4e1a4b7a2b27f4fb6936510d4bebcb41b0562c946930ad26916e069cf9/multidict-6.8.0-py3-none-any.whl", hash = "sha256:75daa15ca16d6285eb2e104b2f05ee6f8d9836c68da3ce5c85f615a0450eed0e", size = 16297, upload-time = "2026-09-09T13:57:56.106Z" },
-]
-
-[[package]]
-name = "ollama"
-version = "0.6.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/72/5f12423b6b39ca8430fbe56f77fcf4ef60f63067c7c4a2e30e200ed9ec16/ollama-0.6.2.tar.gz", hash = "sha256:936d55daa684f474364c098611c933626f8d6c7d67065c5b7ae0c477b508b07f", size = 53145, upload-time = "2026-04-29T21:21:15.018Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/ab/d6722beeb2d10f7a3b9ff49375708904fde18f82b5609a0bc4aeb5996a4d/ollama-0.6.2-py3-none-any.whl", hash = "sha256:3ad7daab28e5a973445c36a73882a3ef698c2ebb00e21e308652741577509f7d", size = 15115, upload-time = "2026-04-29T21:21:13.794Z" },
 ]
 
 [[package]]

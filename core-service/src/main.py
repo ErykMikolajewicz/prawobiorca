@@ -3,9 +3,8 @@ import logging
 import tomllib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.framework.api.exception_handlers import include_exception_handlers
 from src.framework.api.router import include_all_routers
@@ -68,29 +67,6 @@ async def lifespan(app: FastAPI):
                 logger.error("Error during clean up: %s", e)
 
 
-class FixMultipartBoundaryMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        content_type = request.headers.get("content-type", "")
-        if content_type == "multipart/form-data":
-            body = await request.body()
-            if body:
-                try:
-                    first_line = body.split(b"\r\n")[0]
-                    boundary = first_line.decode("utf-8").lstrip("-")
-                    if boundary:
-                        new_headers = request.headers.mutablecopy()
-                        new_headers["content-type"] = f"multipart/form-data; boundary={boundary}"
-                        request.scope["headers"] = new_headers.raw
-
-                        async def receive():
-                            return {"type": "http.request", "body": body}
-
-                        request._receive = receive
-                except Exception as e:
-                    logger.error(f"Failed to fix multipart boundary: {e}")
-        return await call_next(request)
-
-
 prawobiorca = FastAPI(
     lifespan=lifespan,
     title="PRAWOBIORCA",
@@ -109,8 +85,6 @@ prawobiorca.add_middleware(
     allow_headers=["*"],
 )
 
-# UWAGA: Obejście problemu z brakiem 'boundary' w multipart/form-data wysyłanym z frontendu.
-prawobiorca.add_middleware(FixMultipartBoundaryMiddleware)
 include_all_routers(prawobiorca)
 include_exception_handlers(prawobiorca)
 

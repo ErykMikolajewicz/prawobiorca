@@ -12,7 +12,7 @@ import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 import { generatePdf } from '@/api/cases'
 import { deleteCaseDocument, getCaseDocuments } from '@/api/generated/endpoints/cases/cases'
 
-import type { CaseDocument } from '@/api/generated/model'
+import type { CaseDocument, NewApplication } from '@/api/generated/model'
 
 const route = useRoute()
 const caseId = route.params.id as string
@@ -41,9 +41,9 @@ async function handleUnpin(documentId: string) {
   }
 }
 
-const handleGeneratePdf = async (description: string) => {
+const handleGeneratePdf = async (newApplication: NewApplication) => {
   try {
-    await generatePdf(caseId, description)
+    await generatePdf(caseId, newApplication)
     ElMessage({
       message: 'Wniosek został pomyślnie wygenerowany.',
       type: 'success',

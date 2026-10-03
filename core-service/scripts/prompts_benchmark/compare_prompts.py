@@ -5,19 +5,13 @@ import shutil
 import sys
 import time
 import urllib.request
+from dataclasses import asdict
 from typing import Any, Dict, List, Tuple
 
 import jinja2
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Flaga wykluczająca plik z automatycznego zbierania testów przez Pytest
-__test__ = False
 
 # dodawanie katalogu głównego do ścieżki wyszukiwania modułów
-CORE_SERVICE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-REPO_ROOT = os.path.dirname(CORE_SERVICE_DIR)
+CORE_SERVICE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(CORE_SERVICE_DIR)
 
 # Automatyczne przełączenie do core-service/.venv, jeśli uruchomiono z poziomu root venv w IDE
@@ -35,40 +29,30 @@ if os.path.exists(CORE_VENV_PYTHON) and os.path.abspath(sys.executable) != os.pa
 
         sys.exit(subprocess.run([CORE_VENV_PYTHON, *sys.argv]).returncode)
 
-from src.app.dtos.user import StudentData  # noqa: E402
-from src.infrastructure.ai.openvino_client import OpenVINOClient  # noqa: E402
-from src.infrastructure.pdf.html_renderer import HTMLToPDFRenderer  # noqa: E402
+from src.app.dtos.applications import NewApplication  # noqa: E402
+from src.infrastructure.ai_services.llm_chat import LlmChat  # noqa: E402
+from src.infrastructure.ai_services.openai_client.connection import client  # noqa: E402
+from src.infrastructure.pdf.html_renderer import HtmlApplicationRenderer  # noqa: E402
+from src.shared.settings.ai_services import llm_service_settings  # noqa: E402
 
 # KONFIGURACJA BENCHMARKU (DLA URUCHOMIENIA Z IDE LUB TERMINALA)
 
-# 1. Silnik AI: "openvino" lub "ollama" (lub flaga w terminalu: --openvino / --ollama)
-DEFAULT_LLM_PROVIDER = "openvino"
-
-# 2. Nazwa modelu (DLA IDE): wpisz tutaj model, np. "gemma-2b-it" lub "qwen-2.5-7b-it"
+# 1. Nazwa modelu (DLA IDE): wpisz tutaj model, np. "gemma-2b-it" lub "qwen-2.5-7b-it"
 #    Jeśli None: model zostanie pobrany z pliku .env lub flagi --model w CLI
-CUSTOM_MODEL_NAME = "qwen-2.5-7b-it"
+CUSTOM_MODEL_NAME = None
 
-# 3. Czyszczenie starych wyników: zmień na True, aby skasować folder benchmark_results przed startem
+# 2. Czyszczenie starych wyników: zmień na True, aby skasować folder benchmark_results przed startem
 CLEANUP_OLD_RESULTS = True
 
 SKIP_PDF = "--skip-pdf" in sys.argv
 
-if "--ollama" in sys.argv:
-    LLM_PROVIDER = "ollama"
-elif "--openvino" in sys.argv:
-    LLM_PROVIDER = "openvino"
-else:
-    LLM_PROVIDER = os.getenv("LLM_PROVIDER", DEFAULT_LLM_PROVIDER).lower()
-
-CLI_MODEL_NAME = CUSTOM_MODEL_NAME
+CLI_MODEL_NAME = CUSTOM_MODEL_NAME or llm_service_settings.MODEL_NAME
 for i, arg in enumerate(sys.argv):
     if arg == "--model" and i + 1 < len(sys.argv):
         CLI_MODEL_NAME = sys.argv[i + 1]
         break
 
-print(f"[KONFIGURACJA] Wybrany silnik AI: {LLM_PROVIDER.upper()}")
-if CLI_MODEL_NAME:
-    print(f"[KONFIGURACJA] Wybrany model: {CLI_MODEL_NAME}")
+print(f"[KONFIGURACJA] Wybrany model: {CLI_MODEL_NAME}")
 
 # wczytywanie przypadków testowych z pliku json
 TEST_CASES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_cases.json")
@@ -100,7 +84,7 @@ def get_openvino_running_models(base_url: str) -> List[str]:
 
 
 def ensure_openvino_container_ready(model_name: str) -> str:
-    base_url = os.getenv("OPENVINO_BASE_URL", "http://localhost:8083/v1")
+    base_url = f"{llm_service_settings.URL}/v1"
     running_models = get_openvino_running_models(base_url)
 
     if model_name in running_models or any(model_name in r for r in running_models):
@@ -118,7 +102,7 @@ def ensure_openvino_container_ready(model_name: str) -> str:
 
 def _prepare_prompts(
     case: Dict[str, Any],
-    student_data: StudentData,
+    new_application: NewApplication,
     prompt_content: str,
     is_jinja_template: bool,
     template: jinja2.Template | None,
@@ -127,19 +111,19 @@ def _prepare_prompts(
 
     if is_jinja_template and template:
         system_prompt = template.render(
-            **student_data.model_dump(),
-            situation_description=case.get("situation", ""),
+            **asdict(new_application),
+            situation_description=new_application.description,
             pinned_articles=case.get("articles", []),
         )
         user_message = "Napisz formalne pismo na podstawie powyższych informacji."
     else:
         system_prompt = prompt_content
         user_message = f"""Dane studenta:
-- Imię i nazwisko: {student_data.user_name}
-- Numer albumu: {student_data.student_id}
+- Imię i nazwisko: {new_application.user_name}
+- Numer albumu: {new_application.student_id}
 
 Opis sytuacji studenta:
-{case.get("situation", "")}
+{new_application.description}
 
 Znalezione paragrafy regulaminu:
 {articles_text}
@@ -152,35 +136,33 @@ Napisz formalne pismo na podstawie powyższych informacji."""
 async def test_prompt(
     prompt_content: str,
     prompt_version: str,
-    backend: str = "ollama",
     is_jinja_template: bool = False,
     temperature: float = 0.8,
     model_override: str | None = None,
 ) -> List[Dict[str, Any]]:
-    pdf_renderer = HTMLToPDFRenderer() if not SKIP_PDF else None
+    pdf_renderer = HtmlApplicationRenderer() if not SKIP_PDF else None
 
     # optymalizacja: kompilacja szablonu tylko raz przed pętlą
     template = jinja2.Template(prompt_content) if is_jinja_template else None
     prompt_summaries = []
 
-    if backend == "ollama":
-        try:
-            import ollama
-        except ImportError:
-            print("[BŁĄD] Wybrano backend Ollama, ale biblioteka 'ollama' nie jest zainstalowana w środowisku.")
-            sys.exit(1)
-        model_name = model_override or os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:3b")
-        ollama_client = ollama.AsyncClient()
-    else:
-        model_name = model_override or os.getenv("OPENVINO_MODEL_NAME", "qwen-2.5-7b-it")
-        openvino_client = OpenVINOClient(model_name=model_name, temperature=temperature)
+    model_name = model_override or llm_service_settings.MODEL_NAME
+    llm_chat = LlmChat(
+        client=client,
+        model_name=model_name,
+        temperature=temperature,
+        top_p=llm_service_settings.TOP_P,
+        max_tokens=llm_service_settings.MAX_TOKENS,
+    )
 
     for case in TEST_CASES:
         student_info = case.get("student", DEFAULT_STUDENT)
         test_name = f"{prompt_version}_{case['id']}"
-        student_data = StudentData(**student_info)
+        new_application = NewApplication(**student_info, description=case.get("situation", ""))
 
-        system_prompt, user_message = _prepare_prompts(case, student_data, prompt_content, is_jinja_template, template)
+        system_prompt, user_message = _prepare_prompts(
+            case, new_application, prompt_content, is_jinja_template, template
+        )
 
         print(f"[{test_name}] Generowanie treści przez AI...")
         start_time = time.perf_counter()
@@ -189,24 +171,13 @@ async def test_prompt(
         error_msg = None
 
         try:
-            if backend == "ollama":
-                response = await ollama_client.chat(
-                    model=model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_message},
-                    ],
-                    options={"temperature": temperature},
-                )
-                content = response["message"]["content"].strip()
-            else:
-                content = await openvino_client.generate_text(system_prompt, user_message)
+            content = await llm_chat.generate_text(system_prompt, user_message)
 
             end_time = time.perf_counter()
             generation_time = end_time - start_time
             print(f"[{test_name}] Czas generowania wniosku przez AI: {generation_time:.2f} s")
         except Exception as e:
-            error_msg = str(e)
+            error_msg = repr(e)
             print(f"[{test_name}] Błąd podczas generowania: {error_msg}")
             content = f"Wystąpił błąd podczas generowania:\n{error_msg}"
 
@@ -219,13 +190,9 @@ async def test_prompt(
         if not error_msg and pdf_renderer:
             try:
                 pdf_path = os.path.join(BENCHMARK_DIR, f"{test_name}.pdf")
-                await pdf_renderer.render_pdf(
-                    applicant_data=student_data,
-                    recipient_info="Sz. P. Dziekan\nPolitechnika Wrocławska",
-                    title=case.get("title", "WNIOSEK"),
-                    content=content,
-                    output_path=pdf_path,
-                )
+                pdf = await pdf_renderer.render(new_application, content)
+                with open(pdf_path, "wb") as f:
+                    f.write(pdf)
                 print(f"[{test_name}] Zapisano PDF: {pdf_path}")
             except Exception as e:
                 print(f"[{test_name}] Błąd podczas renderowania PDF: {e}")
@@ -237,7 +204,6 @@ async def test_prompt(
                 "case_id": case["id"],
                 "prompt_version": prompt_version,
                 "temperature": temperature,
-                "backend": backend,
                 "model_name": model_name,
                 "generation_time_seconds": round(generation_time, 2) if not error_msg else 0.0,
                 "content_length_chars": len(content),
@@ -256,44 +222,41 @@ async def main():
 
     os.makedirs(BENCHMARK_DIR, exist_ok=True)
 
-    global CLI_MODEL_NAME
-    if LLM_PROVIDER == "openvino":
-        target_model = CLI_MODEL_NAME or os.getenv("OPENVINO_MODEL_NAME", "qwen-2.5-7b-it")
-        CLI_MODEL_NAME = ensure_openvino_container_ready(target_model)
+    ensure_openvino_container_ready(CLI_MODEL_NAME)
 
     test_configs = [
         {
-            "path": "core-service/src/shared/resources/prompts/archive/prompts_v1.md",
+            "path": "scripts/prompts_benchmark/archive/prompts_v1.md",
             "version": "V1_oryginalny",
             "is_jinja": False,
             "temp": 0.8,
         },
         {
-            "path": "core-service/src/shared/resources/prompts/archive/prompts_v2.md",
+            "path": "scripts/prompts_benchmark/archive/prompts_v2.md",
             "version": "V2_drugi",
             "is_jinja": False,
             "temp": 0.8,
         },
         {
-            "path": "core-service/src/shared/resources/prompts/system_prompt.md",
+            "path": "src/infrastructure/ai_services/prompts/application.md",
             "version": "V3_optymalny_szablon",
             "is_jinja": True,
             "temp": 0.8,
         },
         {
-            "path": "core-service/src/shared/resources/prompts/system_prompt.md",
+            "path": "src/infrastructure/ai_services/prompts/application.md",
             "version": "V3_optymalny_szablon_temp_0.7",
             "is_jinja": True,
             "temp": 0.7,
         },
         {
-            "path": "core-service/src/shared/resources/prompts/archive/prompts_v3.md",
+            "path": "scripts/prompts_benchmark/archive/prompts_v3.md",
             "version": "V4_temp_0.8_domyslna",
             "is_jinja": True,
             "temp": 0.8,
         },
         {
-            "path": "core-service/src/shared/resources/prompts/archive/prompts_v3.md",
+            "path": "scripts/prompts_benchmark/archive/prompts_v3.md",
             "version": "V4_temp_0.2_sztywna",
             "is_jinja": True,
             "temp": 0.2,
@@ -305,7 +268,7 @@ async def main():
     benchmark_summary = []
 
     for config in test_configs:
-        prompt_file = os.path.join(REPO_ROOT, config["path"]) if not os.path.isabs(config["path"]) else config["path"]
+        prompt_file = os.path.join(CORE_SERVICE_DIR, config["path"])
         with open(prompt_file, "r", encoding="utf-8") as f:
             prompt_content = f.read()
 
@@ -313,7 +276,6 @@ async def main():
         summaries = await test_prompt(
             prompt_content,
             config["version"],
-            backend=LLM_PROVIDER,
             is_jinja_template=config["is_jinja"],
             temperature=config["temp"],
             model_override=CLI_MODEL_NAME,

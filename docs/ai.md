@@ -4,19 +4,21 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 
 ## 1. Architektura i integracja
 
-- **Interfejs (`Port`):** `src/app/interfaces/pdf_generation.py` (`LLMClient`, `PDFRenderer`)
+- **Endpoint:** `POST /api/user/cases/{caseId}/application` (`src/framework/api/endpoints/cases.py`) – przyjmuje `NewApplication` (`src/app/dtos/applications.py`), zwraca plik PDF.
+- **Use case:** `GenerateApplication` (`src/app/use_cases/applications.py`).
+- **Porty:** `src/app/ports/applications.py` (`ApplicationWriter`, `ApplicationRenderer`).
 - **Adaptery:**
-  - `OpenVINOClient` (`src/infrastructure/ai/openvino_client.py`) – domyślny, łączy się z kontenerem `llm-service` (port 8083 na hoście / 8080 w klastrze, API zgodne z OpenAI).
-  - `OllamaClient` (`src/infrastructure/ai/ollama_client.py`) – alternatywny dla kart graficznych NVIDIA (port 11434).
-  - `HTMLToPDFRenderer` (`src/infrastructure/pdf/html_renderer.py`) – kompiluje szablon HTML do pliku PDF na dysku pod wskazaną ścieżką (`output_path`).
-- **Konfiguracja:** Zmienne środowiskowe w pliku `.env` (`LLM_PROVIDER`, `OPENVINO_*`, `OLLAMA_*`). Przełącznik silnika: `LLM_PROVIDER=openvino` lub `LLM_PROVIDER=ollama`. Fabryka w `src/framework/dependencies/pdf_generation.py` automatycznie inicjalizuje odpowiedniego klienta.
+  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/application.md`) i generuje treść przez `LlmChat`.
+  - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu do kontenera `llm-service` (port 8083 na hoście / 8080 w klastrze, API zgodne z OpenAI).
+  - `HtmlApplicationRenderer` (`src/infrastructure/pdf/html_renderer.py`) – kompiluje szablon HTML (`src/infrastructure/pdf/templates/application.html`) do PDF i zwraca go jako `bytes`.
+- **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL`.
 
 ## 2. Pipeline generowania wniosku
 
-1. Pobranie danych studenta (`StudentData` w `src/app/dtos/user.py` na podstawie `GenerateCasePDFRequest`) oraz artykułów powiązanych ze sprawą (`ListCaseDocuments`).
-2. Renderowanie promptu w Jinja2 (`src/shared/resources/prompts/system_prompt.md`) z danymi w blokach XML (`<dane_studenta>`, `<opis_sytuacji>`, `<podstawa_prawna>`).
+1. Pobranie danych studenta i opisu sytuacji z formularza (`NewApplication`) oraz dokumentów przypiętych do sprawy.
+2. Renderowanie promptu w Jinja2 z danymi w blokach XML (`<dane_studenta>`, `<opis_sytuacji>`, `<podstawa_prawna>`).
 3. Inferencja LLM (generowanie merytorycznej treści uzasadnienia).
-4. Połączenie tekstu z szablonem HTML (`application_template.html`) i wygenerowanie dokumentu PDF na dysku przez WeasyPrint (`HTMLToPDFRenderer`).
+4. Połączenie tekstu z szablonem HTML i wygenerowanie dokumentu PDF przez WeasyPrint. Wniosek nie jest zapisywany, trafia bezpośrednio do przeglądarki.
 
 ## 3. Przetestowane modele
 
@@ -28,20 +30,19 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 
 ## 4. Narzędzie testowe (benchmark promptów)
 
-Skrypt `core-service/tests/unit/ai/compare_prompts.py` umożliwia testowanie jakości promptów i temperatur na przygotowanych sprawach testowych (`test_cases.json`):
+Skrypt `core-service/scripts/prompts_benchmark/compare_prompts.py` umożliwia testowanie jakości promptów i temperatur na przygotowanych sprawach testowych (`test_cases.json`):
 
 ```bash
-# Uruchomienie jako zadanie Poe:
 just compare-prompts
 
 # Uruchomienie z flagami CLI:
-uv run python tests/unit/ai/compare_prompts.py --openvino --model qwen-2.5-7b-it
+uv run python scripts/prompts_benchmark/compare_prompts.py --model qwen-2.5-7b-it --skip-pdf
 
 # Uruchomienie z IDE:
-# Ustaw zmienne DEFAULT_LLM_PROVIDER oraz CUSTOM_MODEL_NAME na początku pliku compare_prompts.py.
+# Ustaw zmienną CUSTOM_MODEL_NAME na początku pliku compare_prompts.py.
 ```
 
-Wyniki zapisywane są w `tests/unit/ai/benchmark_results/` w formatach `.md`, `.pdf` oraz `summary.json`.
+Wyniki zapisywane są w `scripts/prompts_benchmark/benchmark_results/` w formatach `.md`, `.pdf` oraz `summary.json`.
 
 ## 5. Testowanie E2E (weryfikacja ręczna)
 
