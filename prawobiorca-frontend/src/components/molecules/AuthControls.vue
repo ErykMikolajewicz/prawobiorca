@@ -2,6 +2,14 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { showApiError } from '@/utils/error'
+import LoginRoundedIcon from '@iconify-vue/material-symbols/login-rounded'
+import LogoutRoundedIcon from '@iconify-vue/material-symbols/logout-rounded'
+
+type Props = {
+  collapsed?: boolean
+}
+
+defineProps<Props>()
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -22,9 +30,27 @@ async function handleLogout() {
 
 <template>
   <div class="auth-controls">
-    <el-button v-if="authStore.isUserLogged" @click="handleLogout"> Wyloguj się </el-button>
+    <template v-if="collapsed">
+      <button
+        v-if="authStore.isUserLogged"
+        type="button"
+        class="icon-btn"
+        title="Wyloguj się"
+        @click="handleLogout"
+      >
+        <LogoutRoundedIcon />
+      </button>
 
-    <el-button v-else type="primary" @click="handleLogin"> Zaloguj się </el-button>
+      <button v-else type="button" class="icon-btn" title="Zaloguj się" @click="handleLogin">
+        <LoginRoundedIcon />
+      </button>
+    </template>
+
+    <template v-else>
+      <el-button v-if="authStore.isUserLogged" @click="handleLogout"> Wyloguj się </el-button>
+
+      <el-button v-else type="primary" @click="handleLogin"> Zaloguj się </el-button>
+    </template>
   </div>
 </template>
 
