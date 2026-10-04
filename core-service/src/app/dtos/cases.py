@@ -11,6 +11,7 @@ from src.shared.consts import MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
 class NewCaseDocument:
     presentation_name: str = Field(min_length=1)
     content: str = Field(min_length=1)
+    header: str | None = None
 
 
 @dataclass
@@ -25,3 +26,4 @@ class CaseDocument:
     case_id: UUID
     presentation_name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     content: str = Field(min_length=1)
+    header: str | None = None

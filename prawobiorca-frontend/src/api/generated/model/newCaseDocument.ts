@@ -3,4 +3,5 @@ export interface NewCaseDocument {
   presentationName: string
   /** @minLength 1 */
   content: string
+  header?: string | null
 }

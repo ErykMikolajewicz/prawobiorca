@@ -124,7 +124,7 @@ async function handleDeleteApplication(applicationId: string) {
       </el-col>
       <el-col :span="12" :xs="24">
         <section>
-          <h2>Przypięte Dokumenty</h2>
+          <h2>Przypięte Artykuły</h2>
           <PinnedDocumentsList :documents="documents" @unpin="handleUnpin" />
         </section>
         <section>

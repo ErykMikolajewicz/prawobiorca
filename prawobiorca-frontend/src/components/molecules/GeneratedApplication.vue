@@ -17,7 +17,12 @@ const label = computed(
     applicationTypeOptions.find((option) => option.value === props.application.applicationType)
       ?.label,
 )
-const createDate = computed(() => new Date(props.application.createDate).toLocaleString('pl-PL'))
+const createDate = computed(() =>
+  new Date(props.application.createDate).toLocaleString('pl-PL', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }),
+)
 const isGenerated = computed(() => props.application.generationStatus === 'GENERATED')
 
 function handleDownload() {

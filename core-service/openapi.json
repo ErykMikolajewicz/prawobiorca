@@ -1850,6 +1850,17 @@
             "type": "string",
             "minLength": 1,
             "title": "Content"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
           }
         },
         "type": "object",
@@ -1967,6 +1978,17 @@
             "type": "string",
             "minLength": 1,
             "title": "Content"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
           }
         },
         "type": "object",
