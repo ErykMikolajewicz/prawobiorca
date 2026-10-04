@@ -30,3 +30,11 @@ class ApplicationWriter:
         user_prompt = "Napisz formalne pismo na podstawie powyższych informacji."
 
         return await self._llm_chat.generate_text(system_prompt, user_prompt)
+
+    async def write_name(self, new_application: NewApplication) -> str:
+        system_prompt = prompts_env.get_template("application_name.md").render(
+            situation_description=new_application.description,
+        )
+        user_prompt = "Podaj nazwę wniosku."
+
+        return await self._llm_chat.generate_text(system_prompt, user_prompt)

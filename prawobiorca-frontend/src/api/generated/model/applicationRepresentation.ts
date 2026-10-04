@@ -7,4 +7,5 @@ export interface ApplicationRepresentation {
   createDate: string
   applicationType: ApplicationType
   generationStatus: ApplicationGenerationStatus
+  name: string | null
 }

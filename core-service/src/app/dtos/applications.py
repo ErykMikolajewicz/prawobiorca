@@ -26,3 +26,4 @@ class ApplicationRepresentation:
     create_date: datetime
     application_type: ApplicationType
     generation_status: ApplicationGenerationStatus
+    name: str | None

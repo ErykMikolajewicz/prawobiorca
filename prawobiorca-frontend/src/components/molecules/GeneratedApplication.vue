@@ -12,11 +12,12 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
 }>()
 
-const label = computed(
+const typeLabel = computed(
   () =>
     applicationTypeOptions.find((option) => option.value === props.application.applicationType)
       ?.label,
 )
+const name = computed(() => props.application.name ?? typeLabel.value)
 const createDate = computed(() =>
   new Date(props.application.createDate).toLocaleString('pl-PL', {
     dateStyle: 'short',
@@ -35,12 +36,9 @@ function handleDelete() {
 </script>
 
 <template>
-  <el-card shadow="hover">
+  <el-card shadow="hover" class="generated-application">
     <div class="card-content">
-      <div class="application-info">
-        <strong>{{ label }}</strong>
-        <em>{{ createDate }}</em>
-      </div>
+      <strong class="name">{{ name }}</strong>
       <div class="actions">
         <el-button v-if="isGenerated" type="primary" @click="handleDownload">Pobierz</el-button>
         <ApplicationStatusBadge v-else :generation-status="application.generationStatus" />
@@ -56,10 +54,15 @@ function handleDelete() {
         </el-popconfirm>
       </div>
     </div>
+    <div class="meta">Szablon: {{ typeLabel }} · {{ createDate }}</div>
   </el-card>
 </template>
 
 <style scoped>
+.generated-application :deep(.el-card__body) {
+  padding-bottom: 6px;
+}
+
 .card-content {
   display: flex;
   justify-content: space-between;
@@ -67,12 +70,11 @@ function handleDelete() {
   gap: 16px;
 }
 
-.application-info {
+.name {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  font-size: 1.15em;
+  overflow-wrap: anywhere;
 }
 
 .actions {
@@ -80,5 +82,12 @@ function handleDelete() {
   gap: 8px;
   flex-shrink: 0;
   align-items: center;
+}
+
+.meta {
+  margin-top: 14px;
+  text-align: right;
+  font-size: 0.75em;
+  color: var(--el-text-color-secondary);
 }
 </style>

@@ -65,6 +65,7 @@ class GenerateApplication:
 
         try:
             content = await self.application_writer.write(new_application, legal_basis)
+            name = await self.application_writer.write_name(new_application)
             document = await self.application_renderer.render(new_application, content)
         except ServiceUnavailable:
             logger.error("Service to generate application not working!")
@@ -77,6 +78,7 @@ class GenerateApplication:
 
         try:
             async with self.session_maker.begin() as session:
+                await self.applications_repo.set_name(session, user_id, application_id, name)
                 await self.applications_repo.set_generation_status(
                     session, user_id, application_id, ApplicationGenerationStatus.GENERATED
                 )
