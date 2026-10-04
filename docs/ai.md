@@ -10,12 +10,13 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
   - `GET /api/user/cases/applications/{applicationId}/download-url` zwraca presigned URL do pliku DOCX. Dla wniosku, który nie ma statusu `GENERATED`, zwraca `409`.
   - `DELETE /api/user/cases/applications/{applicationId}` usuwa wniosek i jego plik.
 - **Typ wniosku:** `ApplicationType` (`src/domain/value_objects/applications.py`), pole `applicationType` w `NewApplication`, domyślnie `OTHER`. Każdy typ ma własny prompt (`prompts/applications/{typ}.md`) i szablon DOCX (`templates/applications/{typ}.docx`), gdzie `{typ}` to wartość enuma małymi literami. Dodanie nowego typu: wartość w enumie, oba pliki oraz etykieta we frontendzie (`prawobiorca-frontend/src/domain/applications.ts`).
+- **Nazwa wniosku:** pole `name` w `ApplicationRepresentation`, nadawane przez LLM na podstawie opisu sytuacji (prompt `prompts/application_name.md`) i zapisywane razem ze statusem `GENERATED`. Do tego czasu ma wartość `null`, a frontend pokazuje w jej miejscu etykietę typu wniosku.
 - **Status generowania:** `ApplicationGenerationStatus` (`src/domain/value_objects/applications.py`): `IN_PROGRESS`, `GENERATED`, `FAILED`.
 - **Use case'y** (`src/app/use_cases/applications.py`): `AddApplication` (zapis i zlecenie zadania), `GenerateApplication` (wykonywany przez worker), `FailApplicationGeneration`, `ListApplications`, `GetApplicationDownloadUrl`, `DeleteApplication`.
 - **Zadanie w tle:** `generate_application` (`src/framework/workers/applications.py`), zlecane przez `PostgresApplicationGenerationScheduler` (`src/infrastructure/tasks/applications.py`) w tej samej transakcji, w której zapisywany jest wniosek.
 - **Porty:** `src/app/ports/applications.py` (`ApplicationWriter`, `ApplicationRenderer`).
 - **Adaptery:**
-  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/applications/{typ}.md`) i generuje treść przez `LlmChat`.
+  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/applications/{typ}.md`) i generuje treść przez `LlmChat`; osobnym wywołaniem (`write_name`, prompt `src/infrastructure/ai_services/prompts/application_name.md`) generuje nazwę wniosku.
   - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu przez API zgodne z OpenAI: na GCP Vertex AI Model-as-a-Service, on-premise i lokalnie kontener `llm-service` z OVMS (port 8083 na hoście / 8080 w klastrze).
   - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX (`src/infrastructure/docx/templates/applications/{typ}.docx`) i zwraca go jako `bytes`.
   - `ApplicationsRepository` (`src/infrastructure/relational_db/repositories/applications.py`) – tabela `applications` (wniosek należy do sprawy, usuwany kaskadowo razem z nią).
@@ -27,9 +28,9 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 1. `core-service` zapisuje wniosek ze statusem `IN_PROGRESS` i w tej samej transakcji wstawia zadanie do kolejki Taskiq. Dane z formularza (`NewApplication`) trafiają wyłącznie do argumentów zadania, nie są zapisywane przy wniosku. Wiersz zadania jest usuwany po jego wykonaniu.
 2. Worker pobiera dokumenty przypięte do sprawy.
 3. Renderowanie promptu w Jinja2 z danymi w blokach XML (`<dane_studenta>`, `<opis_sytuacji>`, `<podstawa_prawna>`).
-4. Inferencja LLM (generowanie merytorycznej treści uzasadnienia).
+4. Inferencja LLM (generowanie merytorycznej treści uzasadnienia), a następnie osobne wywołanie generujące krótką nazwę wniosku.
 5. Połączenie tekstu z szablonem DOCX i wygenerowanie dokumentu przez docxtpl.
-6. Zapis pliku w object storage i zmiana statusu na `GENERATED`. Frontend odpytuje listę wniosków, dopóki któryś ma status `IN_PROGRESS`, a gotowy plik pobiera przez presigned URL.
+6. Zapis nazwy, pliku w object storage i zmiana statusu na `GENERATED`. Frontend odpytuje listę wniosków, dopóki któryś ma status `IN_PROGRESS`, a gotowy plik pobiera przez presigned URL.
 
 Obsługa błędów:
 - Niedostępność LLM (`ServiceUnavailable`) ustawia status `FAILED` i ponawia zadanie (`SimpleRetryMiddleware`). Kolejna próba przywraca `IN_PROGRESS`.

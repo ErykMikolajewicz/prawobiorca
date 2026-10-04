@@ -71,6 +71,19 @@ class ApplicationsRepository:
             raise ApplicationNotFound
 
     @staticmethod
+    async def set_name(session: AsyncSession, user_id: UUID, application_id: UUID, name: str) -> None:
+        statement = (
+            update(applications_table)
+            .where(applications_table.c.id == application_id, applications_table.c.user_id == user_id)
+            .values(name=name)
+            .returning(applications_table.c.id)
+        )
+        result = await session.execute(statement)
+
+        if result.scalar_one_or_none() is None:
+            raise ApplicationNotFound
+
+    @staticmethod
     async def delete(session: AsyncSession, user_id: UUID, application_id: UUID) -> None:
         statement = (
             delete(applications_table)

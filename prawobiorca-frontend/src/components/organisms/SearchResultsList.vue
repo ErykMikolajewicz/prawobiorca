@@ -11,10 +11,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'add-to-case', payload: { documentContent: string }): void
+  (e: 'add-to-case', payload: { documentContent: string; header: string | null }): void
 }>()
 
-function onAddToCase(payload: { documentContent: string }) {
+function onAddToCase(payload: { documentContent: string; header: string | null }) {
   emit('add-to-case', payload)
 }
 
@@ -57,7 +57,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
           :score="score"
           :selected-case-id="selectedCaseId"
           :can-add-to-case="canAddToCase"
-          @add-to-case="onAddToCase"
+          @add-to-case="(payload) => onAddToCase({ ...payload, header: group.header })"
         />
       </div>
     </div>
