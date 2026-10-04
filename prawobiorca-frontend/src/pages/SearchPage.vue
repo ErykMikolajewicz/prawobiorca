@@ -28,9 +28,9 @@ const isUserRegulation = route.name === 'SearchUserRegulation'
 const regulationName = ref('')
 const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
-  threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.2,
-  limit: route.query.limit ? Number(route.query.limit) : undefined,
-  order_by: (route.query.order_by as SearchOrder) || 'document',
+  threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.5,
+  limit: route.query.limit ? Number(route.query.limit) : 10,
+  order_by: (route.query.order_by as SearchOrder) || 'score',
 })
 
 const cases = ref<Array<CaseData>>([])
@@ -106,7 +106,11 @@ async function handleAddToCase(payload: { documentContent: string; header: strin
     <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
 
     <div v-loading="isSearching">
-      <SearchForm :search-params="searchParams" @search="handleSearch" />
+      <SearchForm
+        :search-params="searchParams"
+        :can-use-advanced-threshold="isUserLogged"
+        @search="handleSearch"
+      />
 
       <SearchResultsList
         :results="results"
