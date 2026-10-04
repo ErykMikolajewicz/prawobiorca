@@ -6,15 +6,14 @@ import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
-import BackToMainButton from '@/components/atoms/BackToMainButton.vue'
 import SearchForm from '@/components/organisms/SearchForm.vue'
-import CaseSelector from '@/components/molecules/CaseSelector.vue'
 import SearchResultsList from '@/components/organisms/SearchResultsList.vue'
 import { useRegulationSearch } from '@/composables/useRegulationSearch'
 
 import { useAuthStore } from '@/stores/auth'
-import { addCaseDocument, getCasesList } from '@/api/generated/endpoints/cases/cases'
-import type { CaseData, SearchOrder, SearchRegulationDocumentsParams } from '@/api/generated/model'
+import { useCasesStore } from '@/stores/cases'
+import { addCaseDocument } from '@/api/generated/endpoints/cases/cases'
+import type { SearchOrder, SearchRegulationDocumentsParams } from '@/api/generated/model'
 import { getPublicRegulation } from '@/api/generated/endpoints/regulations/regulations'
 import { getUserRegulation } from '@/api/generated/endpoints/user-regulations/user-regulations'
 
@@ -28,33 +27,23 @@ const isUserRegulation = route.name === 'SearchUserRegulation'
 const regulationName = ref('')
 const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
-  threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.2,
-  limit: route.query.limit ? Number(route.query.limit) : undefined,
-  order_by: (route.query.order_by as SearchOrder) || 'document',
+  threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.5,
+  limit: route.query.limit ? Number(route.query.limit) : 10,
+  order_by: (route.query.order_by as SearchOrder) || 'score',
 })
 
-const cases = ref<Array<CaseData>>([])
-const selectedCaseId = ref<string>('')
+const { activeCaseId, activeCase } = storeToRefs(useCasesStore())
 const {
   results,
   isSearching,
   search: performSearch,
 } = useRegulationSearch(isUserRegulation ? 'user' : 'public', regulationId)
 
-onBeforeMount(async () => {
+onBeforeMount(() => {
   void loadRegulationName()
 
   if (searchParams.value.query) {
     void performSearch(searchParams.value)
-  }
-
-  if (isUserLogged.value) {
-    try {
-      cases.value = await getCasesList()
-    } catch (error) {
-      console.error('Failed to fetch cases:', error)
-      cases.value = []
-    }
   }
 })
 
@@ -79,18 +68,18 @@ async function handleSearch(newSearchParams: SearchRegulationDocumentsParams) {
 }
 
 async function handleAddToCase(payload: { documentContent: string; header: string | null }) {
-  if (!selectedCaseId.value) {
-    ElMessage.warning('Wybierz sprawę z listy.')
+  if (!activeCase.value) {
+    ElMessage.warning('Wybierz aktywną sprawę w panelu bocznym.')
     return
   }
 
   try {
-    await addCaseDocument(selectedCaseId.value, {
+    await addCaseDocument(activeCase.value.id, {
       presentationName: regulationName.value,
       content: payload.documentContent,
       header: payload.header,
     })
-    ElMessage.success('Dodano do sprawy.')
+    ElMessage.success(`Dodano do sprawy: ${activeCase.value.name}`)
   } catch (error) {
     showApiError(error, { defaultMessage: 'Wystąpił błąd podczas dodawania do sprawy.' })
   }
@@ -99,18 +88,18 @@ async function handleAddToCase(payload: { documentContent: string; header: strin
 
 <template>
   <AppLayout>
-    <BackToMainButton />
-
-    <CaseSelector v-if="isUserLogged" v-model:selected-case-id="selectedCaseId" :cases="cases" />
-
     <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
 
     <div v-loading="isSearching">
-      <SearchForm :search-params="searchParams" @search="handleSearch" />
+      <SearchForm
+        :search-params="searchParams"
+        :can-use-advanced-threshold="isUserLogged"
+        @search="handleSearch"
+      />
 
       <SearchResultsList
         :results="results"
-        :selected-case-id="selectedCaseId"
+        :selected-case-id="activeCaseId"
         :can-add-to-case="isUserLogged"
         :query="searchParams.query"
         @add-to-case="handleAddToCase"

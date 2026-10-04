@@ -5,7 +5,6 @@ import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
-import BackToMainButton from '@/components/atoms/BackToMainButton.vue'
 import PinnedDocumentsList from '@/components/organisms/PinnedDocumentsList.vue'
 import GeneratePdfForm from '@/components/organisms/GeneratePdfForm.vue'
 import GeneratedApplicationsList from '@/components/organisms/GeneratedApplicationsList.vue'
@@ -111,8 +110,6 @@ async function handleDeleteApplication(applicationId: string) {
 
 <template>
   <AppLayout>
-    <BackToMainButton />
-
     <h1>Szczegóły Sprawy</h1>
 
     <el-row :gutter="20">

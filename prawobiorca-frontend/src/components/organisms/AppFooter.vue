@@ -8,7 +8,7 @@
 
 <style scoped>
 .app-footer {
-  background-color: var(--el-bg-color);
+  background-color: transparent;
   border-top: 1px solid var(--app-border-color);
 
   display: flex;

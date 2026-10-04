@@ -37,47 +37,55 @@ async function createCase() {
 </script>
 
 <template>
-  <el-card shadow="never" class="form-card" @click="inputRef?.focus()">
-    <form class="case-form" @submit.prevent="createCase">
-      <el-input
-        id="case_name"
-        ref="inputRef"
-        v-model="newCaseName"
-        name="case_name"
-        placeholder="Utwórz nową sprawę..."
-        required
-        class="case-name-input"
-      />
-      <button type="submit" class="icon-btn" aria-label="Utwórz sprawę" :disabled="isCreating">
-        <Add2RoundedIcon />
-      </button>
-    </form>
-  </el-card>
+  <form class="case-form" @click="inputRef?.focus()" @submit.prevent="createCase">
+    <button
+      type="submit"
+      class="icon-btn add-btn"
+      aria-label="Utwórz sprawę"
+      :disabled="isCreating"
+    >
+      <Add2RoundedIcon />
+    </button>
+    <el-input
+      id="case_name"
+      ref="inputRef"
+      v-model="newCaseName"
+      name="case_name"
+      placeholder="Nowa sprawa..."
+      required
+      class="case-name-input"
+    />
+  </form>
 </template>
 
 <style scoped>
-.form-card {
-  border: dashed 2px var(--el-color-primary-light-8);
-  background-color: var(--el-color-primary-light-9);
+.case-form {
+  display: flex;
+  align-items: center;
+  height: var(--el-menu-item-height);
+  padding-left: var(--el-menu-base-level-padding);
+  border-radius: 4px;
   cursor: text;
 
   &:hover {
-    background-color: var(--el-color-primary-light-7);
-    border-color: var(--el-color-primary-light-5);
-  }
-
-  form {
-    display: flex;
+    background-color: var(--el-menu-hover-bg-color);
   }
 }
 
-.case-name-input {
-  font-size: 1.1em;
+.add-btn {
+  flex-shrink: 0;
+  width: var(--el-menu-icon-width);
+  margin-right: 5px;
+  padding: 0;
+}
 
-  :deep(.el-input__wrapper) {
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-  }
+.case-name-input {
+  font-size: var(--el-menu-item-font-size);
+}
+
+.case-name-input :deep(.el-input__wrapper) {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
 </style>

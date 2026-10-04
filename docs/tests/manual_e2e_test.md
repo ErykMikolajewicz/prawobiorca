@@ -16,8 +16,8 @@
 - **Akcja**: Ustawić (lub >)
 
 ## 4. Wybór sprawy
-- **Gdzie**: Bieżąca sprawa
-- **Wybierz**: "Odwołanie od skreślenia" (nazwę z kroku 2)
+- **Gdzie**: Panel boczny, lista "Moje sprawy"
+- **Sprawdź**: "Odwołanie od skreślenia" (nazwa z kroku 2) ma wypełnioną pinezkę, czyli jest aktywna. Inną sprawę ustawia się jako aktywną kliknięciem jej pinezki
 
 ## 5. Zapytanie
 - **Gdzie**: Twoje zapytanie

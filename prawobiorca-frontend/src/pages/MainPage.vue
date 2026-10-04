@@ -2,18 +2,15 @@
 import { computed, reactive, ref, onBeforeMount } from 'vue'
 
 import { storeToRefs } from 'pinia'
-import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
-import UserCasesList from '@/components/organisms/UserCasesList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
 import { useRegulations } from '@/composables/useRegulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
-import type { CaseData, RegulationRepresentation } from '@/api/generated/model'
+import type { RegulationRepresentation } from '@/api/generated/model'
 import type { RegulationScope } from '@/domain/regulations'
-import { getCasesList } from '@/api/generated/endpoints/cases/cases'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -23,31 +20,13 @@ const { isUserLogged, isAdmin } = storeToRefs(authStore)
 const publicRegulations = reactive(useRegulations('public'))
 const userRegulations = reactive(useRegulations('user'))
 
-const cases = ref<Array<CaseData>>([])
-
 const isUploadDialogVisible = ref(false)
-
-function handleCaseCreated(newCase: CaseData) {
-  cases.value.push(newCase)
-}
-
-function handleCaseDeleted(caseId: string) {
-  cases.value = cases.value.filter((c) => c.id !== caseId)
-}
 
 function handleRegulationCreated(regulation: RegulationRepresentation, target: RegulationScope) {
   if (target === 'public') {
     publicRegulations.add(regulation)
   } else {
     userRegulations.add(regulation)
-  }
-}
-
-async function loadCases() {
-  try {
-    cases.value = await getCasesList()
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się pobrać spraw.' })
   }
 }
 
@@ -72,7 +51,7 @@ useRegulationsPolling(() => pendingRegulationIds.value, refreshRegulations)
 onBeforeMount(async () => {
   await Promise.all([
     publicRegulations.load(),
-    ...(isUserLogged.value ? [userRegulations.load(), loadCases()] : []),
+    ...(isUserLogged.value ? [userRegulations.load()] : []),
   ])
 })
 </script>
@@ -110,14 +89,6 @@ onBeforeMount(async () => {
         @regulation-updated="userRegulations.update"
         @regulation-deleted="userRegulations.remove"
         @regulation-preparation-retried="userRegulations.markAsInProgress"
-      />
-
-      <el-divider />
-
-      <UserCasesList
-        :cases="cases"
-        @case-deleted="handleCaseDeleted"
-        @case-created="handleCaseCreated"
       />
     </template>
 

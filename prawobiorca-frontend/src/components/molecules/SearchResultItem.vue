@@ -81,7 +81,7 @@ function handleAddToCase() {
         <el-tooltip
           v-if="canAddToCase"
           :disabled="!!selectedCaseId"
-          content="Wybierz bieżącą sprawę, by dodać do niej wyszukany element."
+          content="Wybierz aktywną sprawę w panelu bocznym, by dodać do niej wyszukany element."
           placement="top"
         >
           <span class="tooltip-wrapper">

@@ -29,10 +29,10 @@ All application code lives in `prawobiorca-frontend/src`:
 
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. `cases.ts` holds the only hand-written helper, which fetches a generated application's presigned URL and triggers the browser download.
 * **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`).
-* **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (navbar, footer, forms, lists) and `templates/` (`AppLayout`, the navbar–content–footer page layout).
-* **`composables/`** — reusable stateful logic (dark mode, regulation lists, regulation search, regulation upload flow, preparation status polling).
+* **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (sidebar, footer, forms, lists) and `templates/` (`AppLayout`, the sidebar–content–footer page layout).
+* **`composables/`** — reusable stateful logic (dark mode, sidebar collapse state, regulation lists, regulation search, regulation upload flow, preparation status polling).
 * **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope).
-* **`stores/`** — Pinia stores; currently `auth`, holding the session state.
+* **`stores/`** — Pinia stores: `auth`, holding the session state, and `cases`, holding the user's cases shown in the sidebar.
 * **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in.
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite) and global styles.
 * **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover.

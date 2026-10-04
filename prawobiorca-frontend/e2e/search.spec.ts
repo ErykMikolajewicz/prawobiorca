@@ -18,24 +18,20 @@ test('user searches regulation and adds result to case', async ({ page }) => {
   await page.getByRole('button', { name: 'Zaloguj', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Wyloguj się' })).toBeVisible()
 
-  await page.getByPlaceholder('Utwórz nową sprawę...').fill(caseName)
-  await page.getByPlaceholder('Utwórz nową sprawę...').press('Enter')
+  await page.getByPlaceholder('Nowa sprawa...').fill(caseName)
+  await page.getByPlaceholder('Nowa sprawa...').press('Enter')
   await expect(page.getByText(caseName)).toBeVisible()
 
   await page.getByText(REGULATION_NAME).click()
   await expect(page.getByRole('heading', { name: `Przeszukaj regulacje: ${REGULATION_NAME}` })).toBeVisible()
 
-  await page.getByText('-- Wybierz z listy --').click()
-  await page.getByRole('option', { name: caseName }).click()
-
   await page.getByText('Wg trafności').click()
   await page.getByPlaceholder('Wpisz treść...').fill('obowiązki studenta')
   await page.getByRole('button', { name: 'Przeszukaj' }).click()
   await page.getByRole('button', { name: 'Dodaj do sprawy' }).first().click()
-  await expect(page.getByText('Dodano do sprawy.')).toBeVisible()
+  await expect(page.getByText(`Dodano do sprawy: ${caseName}`)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Powrót do głównego ekranu' }).click()
-  await page.getByText(caseName).click()
+  await page.getByRole('link', { name: caseName }).click()
   await page.locator('.pinned-document').first().click()
   await expect(page.getByText('Student jest obowiązany').first()).toBeVisible()
 })
