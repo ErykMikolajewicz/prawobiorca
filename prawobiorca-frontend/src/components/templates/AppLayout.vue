@@ -1,25 +1,33 @@
 <script setup lang="ts">
-import AppNavbar from '@/components/organisms/AppNavbar.vue'
+import AppSidebar from '@/components/organisms/AppSidebar.vue'
 import AppFooter from '@/components/organisms/AppFooter.vue'
 </script>
 
 <template>
   <div class="page-container">
-    <AppNavbar />
+    <AppSidebar />
 
-    <main class="main-content">
-      <slot />
-    </main>
+    <div class="content-column">
+      <main class="main-content">
+        <slot />
+      </main>
 
-    <AppFooter />
+      <AppFooter />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .page-container {
   display: flex;
-  flex-direction: column;
   min-height: 100vh;
+}
+
+.content-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .main-content {
