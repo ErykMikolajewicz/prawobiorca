@@ -16,6 +16,7 @@ data:
   LLM_SERVICE_URL: "https://aiplatform.googleapis.com/v1/projects/prawobiorca/locations/global/endpoints/openapi"
   LLM_SERVICE_MODEL_NAME: "google/gemma-4-26b-a4b-it-maas"
   LLM_SERVICE_USE_GOOGLE_AUTH: "true"
+  LLM_SERVICE_MONTHLY_COST_LIMIT_PLN: "50"
 
   OBJECT_STORAGE_ENDPOINT_URL: "https://storage.googleapis.com"
   OBJECT_STORAGE_REGION: "europe-central2"

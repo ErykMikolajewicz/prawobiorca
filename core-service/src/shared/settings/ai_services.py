@@ -38,6 +38,7 @@ class LlmServiceSettings(BaseSettings):
     TOP_P: float = 0.9
     MAX_TOKENS: int = Field(default=1000, gt=0)
     USE_GOOGLE_AUTH: bool = False
+    MONTHLY_COST_LIMIT_PLN: float | None = Field(default=None, gt=0)
 
     model_config = SettingsConfigDict(
         env_file=Path(".env"),
