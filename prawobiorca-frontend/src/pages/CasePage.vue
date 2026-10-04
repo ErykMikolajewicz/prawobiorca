@@ -115,17 +115,17 @@ async function handleDeleteApplication(applicationId: string) {
 
     <h1>Szczegóły Sprawy</h1>
 
-    <el-row>
-      <el-col :span="12" :xs="24">
-        <section>
-          <h2>Przypięte Dokumenty</h2>
-          <PinnedDocumentsList :documents="documents" @unpin="handleUnpin" />
-        </section>
-      </el-col>
+    <el-row :gutter="20">
       <el-col :span="12" :xs="24">
         <section>
           <h2>Kontekst / Opis Wniosku</h2>
           <GeneratePdfForm @generate-pdf="handleGeneratePdf" />
+        </section>
+      </el-col>
+      <el-col :span="12" :xs="24">
+        <section>
+          <h2>Przypięte Artykuły</h2>
+          <PinnedDocumentsList :documents="documents" @unpin="handleUnpin" />
         </section>
         <section>
           <h2>Wygenerowane Wnioski</h2>

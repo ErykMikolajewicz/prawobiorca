@@ -75,6 +75,7 @@ async def test_get_case_applications(
             "createDate": "2026-01-02T10:00:00",
             "applicationType": "OTHER",
             "generationStatus": "GENERATED",
+            "name": None,
         },
         {
             "id": str(first_application_id),
@@ -82,6 +83,7 @@ async def test_get_case_applications(
             "createDate": "2026-01-01T10:00:00",
             "applicationType": "OTHER",
             "generationStatus": "GENERATED",
+            "name": None,
         },
     ]
 

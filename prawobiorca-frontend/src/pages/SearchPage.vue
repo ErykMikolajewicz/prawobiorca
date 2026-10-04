@@ -78,7 +78,7 @@ async function handleSearch(newSearchParams: SearchRegulationDocumentsParams) {
   await performSearch(newSearchParams)
 }
 
-async function handleAddToCase(payload: { documentContent: string }) {
+async function handleAddToCase(payload: { documentContent: string; header: string | null }) {
   if (!selectedCaseId.value) {
     ElMessage.warning('Wybierz sprawę z listy.')
     return
@@ -88,6 +88,7 @@ async function handleAddToCase(payload: { documentContent: string }) {
     await addCaseDocument(selectedCaseId.value, {
       presentationName: regulationName.value,
       content: payload.documentContent,
+      header: payload.header,
     })
     ElMessage.success('Dodano do sprawy.')
   } catch (error) {

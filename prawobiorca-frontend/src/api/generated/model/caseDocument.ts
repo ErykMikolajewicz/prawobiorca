@@ -8,4 +8,5 @@ export interface CaseDocument {
   presentationName: string
   /** @minLength 1 */
   content: string
+  header?: string | null
 }

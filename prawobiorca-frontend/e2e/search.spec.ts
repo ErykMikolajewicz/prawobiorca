@@ -36,5 +36,6 @@ test('user searches regulation and adds result to case', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Powrót do głównego ekranu' }).click()
   await page.getByText(caseName).click()
+  await page.locator('.pinned-document').first().click()
   await expect(page.getByText('Student jest obowiązany').first()).toBeVisible()
 })

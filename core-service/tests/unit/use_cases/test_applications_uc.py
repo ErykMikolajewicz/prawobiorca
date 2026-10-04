@@ -57,6 +57,7 @@ def create_application(application_id, case_id, generation_status):
         createDate=datetime(2026, 1, 1, 10, 0, 0),
         applicationType=ApplicationType.OTHER,
         generationStatus=generation_status,
+        name=None,
     )
 
 
@@ -130,12 +131,17 @@ async def test_generate_application_success(
     )
     mock_case_documents_repo.list_by_case_id.return_value = [document]
     mock_application_writer.write.return_value = "Szanowny Panie Dziekanie"
+    mock_application_writer.write_name.return_value = "Wniosek o urlop dziekański"
     mock_application_renderer.render.return_value = b"PK"
 
     await generate_application.execute(user_id, application_id, new_application)
 
     mock_case_documents_repo.list_by_case_id.assert_awaited_once_with(mock_opened_session, user_id, case_id)
     mock_application_writer.write.assert_awaited_once_with(new_application, [document])
+    mock_application_writer.write_name.assert_awaited_once_with(new_application)
+    mock_applications_repo.set_name.assert_awaited_once_with(
+        mock_opened_session, user_id, application_id, "Wniosek o urlop dziekański"
+    )
     mock_application_renderer.render.assert_awaited_once_with(new_application, "Szanowny Panie Dziekanie")
     mock_applications_storage.upload_application.assert_awaited_once_with(application_id, b"PK")
     assert mock_applications_repo.set_generation_status.await_args_list[-1].args == (

@@ -23,7 +23,7 @@ async def test_add_case_document(
 
     response = await client.post(
         f"/api/user/cases/{case_id}/documents",
-        json={"presentationName": "document.pdf", "content": "Document content"},
+        json={"presentationName": "document.pdf", "content": "Document content", "header": "Art. 1"},
     )
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -38,6 +38,7 @@ async def test_add_case_document(
     assert case_document.user_id == USER_ID
     assert case_document.presentation_name == "document.pdf"
     assert case_document.content == "Document content"
+    assert case_document.header == "Art. 1"
 
 
 async def test_delete_case_document(
@@ -113,24 +114,28 @@ async def test_get_case_documents(
                         "user_id": USER_ID,
                         "presentation_name": "first-document.pdf",
                         "content": "First document content",
+                        "header": "Art. 1",
                     },
                     {
                         "case_id": target_case_id,
                         "user_id": USER_ID,
                         "presentation_name": "second-document.pdf",
                         "content": "Second document content",
+                        "header": None,
                     },
                     {
                         "case_id": other_case_id,
                         "user_id": USER_ID,
                         "presentation_name": "other-case-document.pdf",
                         "content": "Other case document content",
+                        "header": None,
                     },
                     {
                         "case_id": target_case_id,
                         "user_id": ADMIN_ID,
                         "presentation_name": "other-user-document.pdf",
                         "content": "Other user document content",
+                        "header": None,
                     },
                 ]
             )
@@ -149,11 +154,13 @@ async def test_get_case_documents(
             "caseId": str(target_case_id),
             "presentationName": "first-document.pdf",
             "content": "First document content",
+            "header": "Art. 1",
         },
         {
             "id": str(second_document_id),
             "caseId": str(target_case_id),
             "presentationName": "second-document.pdf",
             "content": "Second document content",
+            "header": None,
         },
     ]

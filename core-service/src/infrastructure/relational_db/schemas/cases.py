@@ -22,6 +22,7 @@ case_documents_table = sqla.Table(
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     sqla.Column("presentation_name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
     sqla.Column("content", sqla.Text, nullable=False),
+    sqla.Column("header", sqla.Text, nullable=True),
 )
 
 

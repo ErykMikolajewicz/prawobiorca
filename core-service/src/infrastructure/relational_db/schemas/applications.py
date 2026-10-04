@@ -18,6 +18,7 @@ applications_table = sqla.Table(
         nullable=False,
         default=ApplicationGenerationStatus.IN_PROGRESS,
     ),
+    sqla.Column("name", sqla.Text, nullable=True),
 )
 
 

@@ -1717,6 +1717,17 @@
           },
           "generationStatus": {
             "$ref": "#/components/schemas/ApplicationGenerationStatus"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           }
         },
         "type": "object",
@@ -1725,7 +1736,8 @@
           "caseId",
           "createDate",
           "applicationType",
-          "generationStatus"
+          "generationStatus",
+          "name"
         ],
         "title": "ApplicationRepresentation"
       },
@@ -1850,6 +1862,17 @@
             "type": "string",
             "minLength": 1,
             "title": "Content"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
           }
         },
         "type": "object",
@@ -1967,6 +1990,17 @@
             "type": "string",
             "minLength": 1,
             "title": "Content"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
           }
         },
         "type": "object",
