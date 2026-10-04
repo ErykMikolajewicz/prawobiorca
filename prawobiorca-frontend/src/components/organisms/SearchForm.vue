@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref, watch } from 'vue'
 
 import type { SearchRegulationDocumentsParams } from '@/api/generated/model'
 
 const props = defineProps<{
   searchParams: SearchRegulationDocumentsParams
+  canUseAdvancedThreshold: boolean
 }>()
 
 const emit = defineEmits<{
@@ -12,6 +13,35 @@ const emit = defineEmits<{
 }>()
 
 const searchParams = reactive<SearchRegulationDocumentsParams>({ ...props.searchParams })
+
+const defaultThreshold = 0.5
+
+const thresholdPresets = [
+  { label: 'Szeroki', value: defaultThreshold },
+  { label: 'Średni', value: 0.6 },
+  { label: 'Ścisły', value: 0.7 },
+  { label: 'Bardzo ścisły', value: 0.8 },
+]
+
+const thresholdMarks = { 0.5: '0.5', 0.6: '0.6', 0.7: '0.7', 0.8: '0.8' }
+
+function isPresetThreshold(threshold: number) {
+  return thresholdPresets.some((preset) => preset.value === threshold)
+}
+
+const isAdvancedThreshold = ref(
+  props.canUseAdvancedThreshold && !isPresetThreshold(searchParams.threshold),
+)
+
+watch(
+  isAdvancedThreshold,
+  (isAdvanced) => {
+    if (!isAdvanced && !isPresetThreshold(searchParams.threshold)) {
+      searchParams.threshold = defaultThreshold
+    }
+  },
+  { immediate: true },
+)
 
 function onSubmit() {
   if (searchParams.query.trim()) {
@@ -30,17 +60,30 @@ function onSubmit() {
         <el-form-item label="Poziom istotności:">
           <div class="threshold-control">
             <el-slider
+              v-if="isAdvancedThreshold"
               v-model="searchParams.threshold"
-              :min="-1"
-              :max="1"
-              :step="0.1"
+              :min="0.3"
+              :max="0.9"
+              :step="0.01"
+              :marks="thresholdMarks"
               :show-tooltip="false"
               class="threshold-slider"
             />
-            <span class="threshold-value">
-              {{ searchParams.threshold.toFixed(1) }}
+            <span v-if="isAdvancedThreshold" class="threshold-value">
+              {{ searchParams.threshold.toFixed(2) }}
             </span>
+            <el-select v-else v-model="searchParams.threshold">
+              <el-option
+                v-for="preset in thresholdPresets"
+                :key="preset.value"
+                :label="preset.label"
+                :value="preset.value"
+              />
+            </el-select>
           </div>
+          <el-checkbox v-if="canUseAdvancedThreshold" v-model="isAdvancedThreshold">
+            Zaawansowane
+          </el-checkbox>
         </el-form-item>
       </el-col>
       <el-col :span="12" :xs="24">
@@ -57,8 +100,8 @@ function onSubmit() {
     </el-row>
     <el-form-item label="Kolejność wyników:">
       <el-radio-group v-model="searchParams.order_by" @change="onSubmit">
-        <el-radio-button value="document">Wg aktu prawnego</el-radio-button>
         <el-radio-button value="score">Wg trafności</el-radio-button>
+        <el-radio-button value="document">Wg aktu prawnego</el-radio-button>
       </el-radio-group>
     </el-form-item>
     <el-form-item>
