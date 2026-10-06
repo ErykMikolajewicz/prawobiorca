@@ -5,6 +5,7 @@ import { showApiError } from '@/utils/error'
 import { downloadApplicationTemplate } from '@/api/applicationTemplates'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
+import ApplicationTemplatePreviewDialog from '@/components/molecules/ApplicationTemplatePreviewDialog.vue'
 import {
   publishApplicationTemplate,
   unpublishApplicationTemplate,
@@ -35,6 +36,7 @@ const form = reactive({
 const isSaving = ref(false)
 const isPublishing = ref(false)
 const isDownloading = ref(false)
+const isPreviewVisible = ref(false)
 
 const isDraft = computed(() => props.template.status === 'DRAFT')
 const isPublished = computed(() => props.template.status === 'PUBLISHED')
@@ -142,6 +144,7 @@ async function handleDownload() {
       <el-button v-if="!isNotUploaded" :loading="isDownloading" @click="handleDownload">
         Pobierz szablon
       </el-button>
+      <el-button v-if="!isNotUploaded" @click="isPreviewVisible = true">Pokaż podgląd</el-button>
       <template v-if="isDraft">
         <el-button :loading="isSaving" @click="handleSave">Zapisz</el-button>
         <el-button type="primary" :loading="isPublishing" @click="handlePublish">
@@ -199,6 +202,8 @@ async function handleDownload() {
         </el-col>
       </el-row>
     </el-form>
+
+    <ApplicationTemplatePreviewDialog v-model="isPreviewVisible" :template-id="template.id" />
   </div>
 </template>
 

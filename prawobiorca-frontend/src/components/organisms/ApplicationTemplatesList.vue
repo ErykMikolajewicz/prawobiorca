@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
+import ApplicationTemplatePreviewDialog from '@/components/molecules/ApplicationTemplatePreviewDialog.vue'
 import type { ApplicationTemplateRepresentation } from '@/api/generated/model'
 
 type Props = {
@@ -13,6 +15,14 @@ const emit = defineEmits<{
   (e: 'select', templateId: string): void
   (e: 'delete', templateId: string): void
 }>()
+
+const previewTemplateId = ref('')
+const isPreviewVisible = ref(false)
+
+function showPreview(templateId: string) {
+  previewTemplateId.value = templateId
+  isPreviewVisible.value = true
+}
 </script>
 
 <template>
@@ -26,6 +36,13 @@ const emit = defineEmits<{
       >
         <span class="template-name" :title="template.name">{{ template.name }}</span>
         <ApplicationTemplateStatusBadge :status="template.status" />
+        <el-button
+          v-if="template.status !== 'NOT_UPLOADED'"
+          size="small"
+          @click.stop="showPreview(template.id)"
+        >
+          Pokaż podgląd
+        </el-button>
         <el-popconfirm
           title="Czy na pewno chcesz usunąć ten szablon?"
           confirm-button-text="Tak"
@@ -40,6 +57,8 @@ const emit = defineEmits<{
     </template>
 
     <el-empty v-else-if="!loading" description="Brak szablonów wniosków." />
+
+    <ApplicationTemplatePreviewDialog v-model="isPreviewVisible" :template-id="previewTemplateId" />
   </div>
 </template>
 
