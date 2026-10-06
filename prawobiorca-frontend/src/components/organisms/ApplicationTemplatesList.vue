@@ -11,22 +11,32 @@ defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'select', templateId: string): void
+  (e: 'delete', templateId: string): void
 }>()
 </script>
 
 <template>
   <div v-loading="loading" class="templates-list">
     <template v-if="templates.length">
-      <button
+      <div
         v-for="template in templates"
         :key="template.id"
-        type="button"
         class="template-item app-card"
         @click="emit('select', template.id)"
       >
         <span class="template-name" :title="template.name">{{ template.name }}</span>
         <ApplicationTemplateStatusBadge :status="template.status" />
-      </button>
+        <el-popconfirm
+          title="Czy na pewno chcesz usunąć ten szablon?"
+          confirm-button-text="Tak"
+          cancel-button-text="Nie"
+          @confirm="emit('delete', template.id)"
+        >
+          <template #reference>
+            <el-button type="danger" plain size="small" @click.stop>Usuń</el-button>
+          </template>
+        </el-popconfirm>
+      </div>
     </template>
 
     <el-empty v-else-if="!loading" description="Brak szablonów wniosków." />
@@ -46,7 +56,6 @@ const emit = defineEmits<{
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  width: 100%;
   padding: 14px 16px;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
@@ -58,6 +67,7 @@ const emit = defineEmits<{
 }
 
 .template-name {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

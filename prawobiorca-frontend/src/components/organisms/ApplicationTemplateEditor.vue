@@ -6,7 +6,6 @@ import { downloadApplicationTemplate } from '@/api/applicationTemplates'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
 import {
-  deleteApplicationTemplate,
   publishApplicationTemplate,
   unpublishApplicationTemplate,
   updateApplicationTemplate,
@@ -25,7 +24,6 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'updated', template: ApplicationTemplateRepresentation): void
-  (e: 'deleted', templateId: string): void
 }>()
 
 const form = reactive({
@@ -36,7 +34,6 @@ const form = reactive({
 
 const isSaving = ref(false)
 const isPublishing = ref(false)
-const isDeleting = ref(false)
 const isDownloading = ref(false)
 
 const isDraft = computed(() => props.template.status === 'DRAFT')
@@ -129,33 +126,30 @@ async function handleDownload() {
     isDownloading.value = false
   }
 }
-
-async function handleDelete() {
-  isDeleting.value = true
-  try {
-    await deleteApplicationTemplate(props.template.id)
-    ElMessage.success('Szablon został usunięty.')
-    emit('deleted', props.template.id)
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się usunąć szablonu.' })
-  } finally {
-    isDeleting.value = false
-  }
-}
 </script>
 
 <template>
   <div class="template-editor">
     <div class="editor-header">
-      <h2 class="section-title">{{ template.name }}</h2>
+      <div v-if="isDraft" class="section-title name-title">
+        <el-input v-model="form.name" class="name-input" placeholder="Nazwa szablonu" />
+      </div>
+      <h2 v-else class="section-title">{{ template.name }}</h2>
       <ApplicationTemplateStatusBadge :status="template.status" />
-      <el-button
-        v-if="!isNotUploaded"
-        class="download-button"
-        :loading="isDownloading"
-        @click="handleDownload"
-      >
+    </div>
+
+    <div class="editor-actions">
+      <el-button v-if="!isNotUploaded" :loading="isDownloading" @click="handleDownload">
         Pobierz szablon
+      </el-button>
+      <template v-if="isDraft">
+        <el-button :loading="isSaving" @click="handleSave">Zapisz</el-button>
+        <el-button type="primary" :loading="isPublishing" @click="handlePublish">
+          Zapisz i opublikuj
+        </el-button>
+      </template>
+      <el-button v-else-if="isPublished" :loading="isPublishing" @click="handleUnpublish">
+        Wycofaj publikację
       </el-button>
     </div>
 
@@ -182,15 +176,11 @@ async function handleDelete() {
     >
       <el-row :gutter="24">
         <el-col :span="12" :xs="24">
-          <el-form-item label="Nazwa:">
-            <el-input v-model="form.name" />
-          </el-form-item>
-
           <el-form-item label="Instrukcje dla AI:">
             <el-input
               v-model="form.instructions"
               type="textarea"
-              :rows="8"
+              class="instructions-input"
               placeholder="np. Sporządź wniosek do Dziekana o przedłużenie terminu złożenia pracy dyplomowej. Podziel treść na 3 akapity: ..."
             />
           </el-form-item>
@@ -209,31 +199,6 @@ async function handleDelete() {
         </el-col>
       </el-row>
     </el-form>
-
-    <div class="editor-actions">
-      <el-popconfirm
-        title="Czy na pewno chcesz usunąć ten szablon?"
-        confirm-button-text="Tak"
-        cancel-button-text="Nie"
-        @confirm="handleDelete"
-      >
-        <template #reference>
-          <el-button type="danger" plain :loading="isDeleting">Usuń</el-button>
-        </template>
-      </el-popconfirm>
-
-      <div class="editor-actions-main">
-        <template v-if="isDraft">
-          <el-button :loading="isSaving" @click="handleSave">Zapisz</el-button>
-          <el-button type="primary" :loading="isPublishing" @click="handlePublish">
-            Zapisz i opublikuj
-          </el-button>
-        </template>
-        <el-button v-else-if="isPublished" :loading="isPublishing" @click="handleUnpublish">
-          Wycofaj publikację
-        </el-button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -250,8 +215,36 @@ async function handleDelete() {
   gap: 12px;
 }
 
-.download-button {
-  margin-left: auto;
+.name-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.name-input {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.name-input :deep(.el-input__wrapper) {
+  padding-left: 4px;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.name-input :deep(.el-input__wrapper:hover),
+.name-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--el-input-hover-border-color) inset;
+}
+
+.name-input :deep(.el-input__inner) {
+  height: auto;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.instructions-input :deep(.el-textarea__inner) {
+  min-height: 50vh !important;
 }
 
 .fields-title {
@@ -273,12 +266,6 @@ async function handleDelete() {
 }
 
 .editor-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.editor-actions-main {
   display: flex;
   gap: 8px;
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
@@ -11,7 +11,6 @@ import { getAdminApplicationTemplate } from '@/api/generated/endpoints/applicati
 import type { ApplicationTemplateRepresentation } from '@/api/generated/model'
 
 const route = useRoute()
-const router = useRouter()
 const templateId = route.params.id as string
 
 const template = ref<ApplicationTemplateRepresentation | null>(null)
@@ -28,10 +27,6 @@ async function loadTemplate() {
   }
 }
 
-async function handleTemplateDeleted() {
-  await router.push({ name: 'ApplicationTemplatesPage' })
-}
-
 onBeforeMount(loadTemplate)
 </script>
 
@@ -42,7 +37,6 @@ onBeforeMount(loadTemplate)
         v-if="template"
         :template="template"
         @updated="(updatedTemplate) => (template = updatedTemplate)"
-        @deleted="handleTemplateDeleted"
       />
       <el-empty v-else-if="!isLoading" description="Nie znaleziono szablonu." />
     </div>
