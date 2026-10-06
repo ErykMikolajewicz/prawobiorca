@@ -5,10 +5,12 @@ from unittest.mock import create_autospec
 import pytest
 from fastapi.requests import Request
 
+from src.app.interfaces.application_templates import ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsStorage
 from src.app.interfaces.regulations import RegulationsStorage
 from src.app.ports.tasks import ApplicationGenerationScheduler, RegulationPreparationScheduler
 from src.domain.value_objects.users import UserPrivileges
+from src.framework.dependencies.application_templates import get_application_templates_storage
 from src.framework.dependencies.applications import get_application_generation_scheduler
 from src.framework.dependencies.authentication import authorize_user
 from src.framework.dependencies.cases import get_applications_storage
@@ -40,6 +42,18 @@ def override_get_applications_storage(mock_applications_storage):
     prawobiorca.dependency_overrides[get_applications_storage] = lambda: mock_applications_storage
     yield
     prawobiorca.dependency_overrides.pop(get_applications_storage, None)
+
+
+@pytest.fixture
+def mock_application_templates_storage():
+    return create_autospec(ApplicationTemplatesStorage)
+
+
+@pytest.fixture
+def override_get_application_templates_storage(mock_application_templates_storage):
+    prawobiorca.dependency_overrides[get_application_templates_storage] = lambda: mock_application_templates_storage
+    yield
+    prawobiorca.dependency_overrides.pop(get_application_templates_storage, None)
 
 
 @pytest.fixture

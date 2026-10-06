@@ -1631,6 +1631,448 @@
         }
       }
     },
+    "/api/application-templates": {
+      "get": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Get Published Application Templates",
+        "operationId": "get_published_application_templates",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublishedApplicationTemplate"
+                  },
+                  "type": "array",
+                  "title": "Response Get Published Application Templates"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          }
+        }
+      }
+    },
+    "/api/admin/application-templates": {
+      "get": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Get Application Templates",
+        "operationId": "get_application_templates",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationTemplateRepresentation"
+                  },
+                  "type": "array",
+                  "title": "Response Get Application Templates"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Add Application Template",
+        "operationId": "add_application_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationTemplateData"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTemplateUploadTarget"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/application-templates/{templateId}": {
+      "get": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Get Admin Application Template",
+        "operationId": "get_admin_application_template",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTemplateRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Update Application Template",
+        "operationId": "update_application_template",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationTemplateDetailsData"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTemplateRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "409": {
+            "description": "Only draft application template can be updated!"
+          },
+          "422": {
+            "description": "Invalid fields configuration!"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Delete Application Template",
+        "operationId": "delete_application_template",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/application-templates/{templateId}/confirm-upload": {
+      "post": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Confirm Application Template Upload",
+        "operationId": "confirm_application_template_upload",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTemplateRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "409": {
+            "description": "Application template upload already confirmed, or its content not found on storage!"
+          },
+          "422": {
+            "description": "Invalid application template!"
+          }
+        }
+      }
+    },
+    "/api/admin/application-templates/{templateId}/download-url": {
+      "get": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Get Admin Application Template Download Url",
+        "operationId": "get_admin_application_template_download_url",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "title": "Response Get Admin Application Template Download Url"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "409": {
+            "description": "Application template not uploaded!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/application-templates/{templateId}/publish": {
+      "post": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Publish Application Template",
+        "operationId": "publish_application_template",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTemplateRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "409": {
+            "description": "Only draft application template with instructions can be published!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/application-templates/{templateId}/unpublish": {
+      "post": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Unpublish Application Template",
+        "operationId": "unpublish_application_template",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTemplateRepresentation"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "409": {
+            "description": "Application template not published!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/liveness": {
       "get": {
         "tags": [
@@ -1686,6 +2128,16 @@
   },
   "components": {
     "schemas": {
+      "ApplicationFieldType": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "NUMBER",
+          "SELECT",
+          "DATE"
+        ],
+        "title": "ApplicationFieldType"
+      },
       "ApplicationGenerationStatus": {
         "type": "string",
         "enum": [
@@ -1740,6 +2192,201 @@
           "name"
         ],
         "title": "ApplicationRepresentation"
+      },
+      "ApplicationTemplateData": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ApplicationTemplateData"
+      },
+      "ApplicationTemplateDetailsData": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationTemplateField"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "fields"
+        ],
+        "title": "ApplicationTemplateDetailsData"
+      },
+      "ApplicationTemplateField": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "fieldType": {
+            "$ref": "#/components/schemas/ApplicationFieldType",
+            "default": "TEXT"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          },
+          "passToAi": {
+            "type": "boolean",
+            "title": "Passtoai",
+            "default": true
+          },
+          "defaultValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvalue"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label"
+        ],
+        "title": "ApplicationTemplateField"
+      },
+      "ApplicationTemplateRepresentation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "createDate": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdate"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationTemplateStatus"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationTemplateField"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "createDate",
+          "name",
+          "status",
+          "fields",
+          "instructions"
+        ],
+        "title": "ApplicationTemplateRepresentation"
+      },
+      "ApplicationTemplateStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_UPLOADED",
+          "DRAFT",
+          "PUBLISHED"
+        ],
+        "title": "ApplicationTemplateStatus"
+      },
+      "ApplicationTemplateUploadTarget": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "fields"
+        ],
+        "title": "ApplicationTemplateUploadTarget"
       },
       "ApplicationType": {
         "type": "string",
@@ -2009,6 +2656,92 @@
           "content"
         ],
         "title": "NewCaseDocument"
+      },
+      "PublishedApplicationField": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "fieldType": {
+            "$ref": "#/components/schemas/ApplicationFieldType"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "defaultValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvalue"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "fieldType",
+          "required",
+          "defaultValue",
+          "pattern",
+          "options"
+        ],
+        "title": "PublishedApplicationField"
+      },
+      "PublishedApplicationTemplate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/PublishedApplicationField"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "fields"
+        ],
+        "title": "PublishedApplicationTemplate"
       },
       "RegulationData": {
         "properties": {
