@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { MdEditor, type ToolbarNames } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 import { showApiError } from '@/utils/error'
+import { useDarkMode } from '@/composables/useDarkMode'
 import { downloadApplicationTemplate } from '@/api/applicationTemplates'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
@@ -32,6 +35,24 @@ const form = reactive({
   instructions: '',
   fields: [] as Array<EditableTemplateField>,
 })
+
+const instructionsToolbars: Array<ToolbarNames> = [
+  'bold',
+  'italic',
+  'title',
+  '-',
+  'unorderedList',
+  'orderedList',
+  'quote',
+  '-',
+  'revoke',
+  'next',
+  '=',
+  'preview',
+  'pageFullscreen',
+]
+
+const { isDark } = useDarkMode()
 
 const isSaving = ref(false)
 const isPublishing = ref(false)
@@ -180,10 +201,13 @@ async function handleDownload() {
       <el-row :gutter="24">
         <el-col :span="12" :xs="24">
           <el-form-item label="Instrukcje dla AI:">
-            <el-input
+            <MdEditor
               v-model="form.instructions"
-              type="textarea"
               class="instructions-input"
+              language="en-US"
+              :theme="isDark ? 'dark' : 'light'"
+              :toolbars="instructionsToolbars"
+              :read-only="!isDraft"
               placeholder="np. Sporządź wniosek do Dziekana o przedłużenie terminu złożenia pracy dyplomowej. Podziel treść na 3 akapity: ..."
             />
           </el-form-item>
@@ -248,8 +272,8 @@ async function handleDownload() {
   color: inherit;
 }
 
-.instructions-input :deep(.el-textarea__inner) {
-  min-height: 50vh !important;
+.instructions-input {
+  height: 50vh;
 }
 
 .fields-title {

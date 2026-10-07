@@ -4,7 +4,10 @@ from fastapi import Depends
 
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.relational import SessionMaker
-from src.app.ports.application_templates import ApplicationTemplateInspector
+from src.app.ports.application_templates import (
+    ApplicationTemplateInspector,
+    ApplicationTemplateInstructionsProvider,
+)
 from src.app.use_cases.application_templates import (
     AddApplicationTemplate,
     ConfirmApplicationTemplateUpload,
@@ -19,6 +22,9 @@ from src.app.use_cases.application_templates import (
 )
 from src.framework.dependencies.regulations import get_file_storage_client, get_file_storage_presign_client
 from src.framework.dependencies.relational import get_session_maker
+from src.infrastructure.ai_services.application_template_instructions import (
+    PromptsApplicationTemplateInstructionsProvider,
+)
 from src.infrastructure.docx.template_inspector import DocxTemplateInspector
 from src.infrastructure.object_storage.repository import S3ApplicationTemplatesStorage
 from src.infrastructure.relational_db.repositories.application_templates import (
@@ -39,6 +45,10 @@ def get_application_templates_storage(
 
 def get_application_template_inspector() -> ApplicationTemplateInspector:
     return DocxTemplateInspector()
+
+
+def get_application_template_instructions_provider() -> ApplicationTemplateInstructionsProvider:
+    return PromptsApplicationTemplateInstructionsProvider()
 
 
 def get_list_application_templates(
@@ -66,8 +76,16 @@ def get_add_application_template(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
     application_templates_storage: Annotated[ApplicationTemplatesStorage, Depends(get_application_templates_storage)],
+    application_template_instructions_provider: Annotated[
+        ApplicationTemplateInstructionsProvider, Depends(get_application_template_instructions_provider)
+    ],
 ) -> AddApplicationTemplate:
-    return AddApplicationTemplate(session_maker, application_templates_repo, application_templates_storage)
+    return AddApplicationTemplate(
+        session_maker,
+        application_templates_repo,
+        application_templates_storage,
+        application_template_instructions_provider,
+    )
 
 
 def get_confirm_application_template_upload(

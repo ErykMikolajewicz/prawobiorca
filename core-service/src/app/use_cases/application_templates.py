@@ -12,7 +12,10 @@ from src.app.dtos.application_templates import (
 )
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.relational import SessionMaker
-from src.app.ports.application_templates import ApplicationTemplateInspector
+from src.app.ports.application_templates import (
+    ApplicationTemplateInspector,
+    ApplicationTemplateInstructionsProvider,
+)
 from src.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
     ApplicationTemplateInInvalidState,
@@ -88,10 +91,13 @@ class AddApplicationTemplate:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
     application_templates_storage: ApplicationTemplatesStorage
+    application_template_instructions_provider: ApplicationTemplateInstructionsProvider
 
     async def execute(self, template_data: ApplicationTemplateData) -> ApplicationTemplateUploadTarget:
+        instructions = await self.application_template_instructions_provider.get_default_instructions()
+
         async with self.session_maker.begin() as session:
-            template_id = await self.application_templates_repo.add(session, template_data.name)
+            template_id = await self.application_templates_repo.add(session, template_data.name, instructions)
 
         return await self.application_templates_storage.get_upload_target(template_id)
 

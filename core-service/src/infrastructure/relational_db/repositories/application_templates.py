@@ -35,8 +35,12 @@ class ApplicationTemplatesRepository:
         return template
 
     @staticmethod
-    async def add(session: AsyncSession, name: str) -> UUID:
-        statement = insert(application_templates_table).values(name=name).returning(application_templates_table.c.id)
+    async def add(session: AsyncSession, name: str, instructions: str) -> UUID:
+        statement = (
+            insert(application_templates_table)
+            .values(name=name, instructions=instructions)
+            .returning(application_templates_table.c.id)
+        )
         result = await session.execute(statement)
         template_id = result.scalar_one()
         return template_id

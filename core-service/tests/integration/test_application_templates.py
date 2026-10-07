@@ -193,6 +193,7 @@ async def test_add_application_template(
         assert template.name == "Wniosek"
         assert template.status == ApplicationTemplateStatus.NOT_UPLOADED
         assert template.fields == []
+        assert template.instructions
     finally:
         await delete_templates(session_maker, template_id)
 

@@ -114,18 +114,23 @@ async def test_add_application_template(
     mock_opened_session,
     mock_application_templates_repo,
     mock_application_templates_storage,
+    mock_application_template_instructions_provider,
     uuid_generator,
 ):
     template_id = next(uuid_generator)
     mock_application_templates_repo.add.return_value = template_id
+    mock_application_template_instructions_provider.get_default_instructions.return_value = "Instrukcje"
 
     use_case = AddApplicationTemplate(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
+        mock_session_maker,
+        mock_application_templates_repo,
+        mock_application_templates_storage,
+        mock_application_template_instructions_provider,
     )
 
     upload_target = await use_case.execute(ApplicationTemplateData(name="Wniosek"))
 
-    mock_application_templates_repo.add.assert_awaited_once_with(mock_opened_session, "Wniosek")
+    mock_application_templates_repo.add.assert_awaited_once_with(mock_opened_session, "Wniosek", "Instrukcje")
     mock_application_templates_storage.get_upload_target.assert_awaited_once_with(template_id)
     assert upload_target == mock_application_templates_storage.get_upload_target.return_value
 
