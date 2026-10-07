@@ -910,6 +910,9 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "404": {
+            "description": "No document with that id!"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
