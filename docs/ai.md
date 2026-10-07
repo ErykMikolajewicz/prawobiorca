@@ -23,7 +23,39 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
   - `S3ApplicationsStorage` (`src/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `applications/{id}`.
 - **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL` (bazowy URL API razem z `/v1`). Na GCP `LLM_SERVICE_USE_GOOGLE_AUTH=true` – klient uwierzytelnia się tokenem OAuth z Workload Identity (`src/infrastructure/ai_services/openai_client/google_auth.py`).
 
-## 2. Pipeline generowania wniosku
+## 2. Szablony wniosków
+
+Szablonami zarządza administrator (`require_admin`), a zalogowany użytkownik widzi tylko szablony opublikowane.
+
+- **Endpointy** (`src/framework/api/endpoints/application_templates.py`):
+  - `GET /api/application-templates` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
+  - `GET /api/admin/application-templates` i `GET /api/admin/application-templates/{templateId}` zwracają szablony (`ApplicationTemplateRepresentation`) niezależnie od statusu.
+  - `POST /api/admin/application-templates` przyjmuje nazwę szablonu, zapisuje go z domyślnymi instrukcjami i zwraca presigned POST do wgrania pliku DOCX.
+  - `POST /api/admin/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Zwraca `409`, jeśli wgranie było już potwierdzone albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
+  - `PUT /api/admin/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól zwraca `422`.
+  - `POST /api/admin/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (inaczej `409`).
+  - `POST /api/admin/application-templates/{templateId}/unpublish` przywraca opublikowanemu szablonowi status `DRAFT` (inaczej `409`).
+  - `GET /api/admin/application-templates/{templateId}/download-url` zwraca presigned URL do pliku DOCX (`409`, jeśli plik nie został wgrany). Frontend używa go do pobrania i podglądu szablonu.
+  - `DELETE /api/admin/application-templates/{templateId}` usuwa szablon i jego plik. Wygenerowane wnioski zostają, z `template_id` ustawionym na `NULL`.
+- **Status:** `ApplicationTemplateStatus` (`src/domain/value_objects/application_templates.py`): `NOT_UPLOADED` → `DRAFT` ⇄ `PUBLISHED`.
+- **Plik DOCX:** szablon Jinja2 dla docxtpl. Musi zawierać zmienną `paragraphs` (treść wygenerowana przez LLM), `current_date` jest wypełniana automatycznie. Pozostałe zmienne stają się polami szablonu (`create_default_fields`, `src/domain/services/application_fields.py`).
+- **Pola** (`ApplicationTemplateField`): nazwa zmiennej, etykieta, typ (`TEXT`, `NUMBER`, `SELECT`, `DATE`), `required`, `passToAi`, opcjonalnie wartość domyślna, `pattern` i `options`. Reguły konfiguracji (`validate_fields_config`):
+  - zbiór pól musi odpowiadać zmiennym szablonu, bez duplikatów,
+  - `pattern` (poprawny regex) tylko dla `TEXT`,
+  - `options` wymagane dla `SELECT` i niedozwolone dla innych typów,
+  - wartość domyślna musi przechodzić walidację pola.
+
+  Wartości wpisane przez użytkownika waliduje `validate_field_values`: `NUMBER` – skończona liczba, `SELECT` – jedna z opcji, `DATE` – format `dd.mm.yyyy`, `TEXT` – pełne dopasowanie do `pattern`.
+- **Instrukcje dla AI:** Markdown edytowany przez administratora. Nowy szablon dostaje domyślne instrukcje z `src/infrastructure/ai_services/prompts/application_template_instructions.md`.
+- **Use case'y** (`src/app/use_cases/application_templates.py`): `ListApplicationTemplates`, `GetApplicationTemplate`, `ListPublishedApplicationTemplates`, `AddApplicationTemplate`, `ConfirmApplicationTemplateUpload`, `UpdateApplicationTemplate`, `PublishApplicationTemplate`, `UnpublishApplicationTemplate`, `DeleteApplicationTemplate`, `GetApplicationTemplateDownloadUrl`.
+- **Porty:** `src/app/ports/application_templates.py` (`ApplicationTemplateInspector`, `ApplicationTemplateInstructionsProvider`).
+- **Adaptery:**
+  - `DocxTemplateInspector` (`src/infrastructure/docx/template_inspector.py`) – odczytuje zmienne szablonu DOCX (w `SandboxedEnvironment`).
+  - `PromptsApplicationTemplateInstructionsProvider` (`src/infrastructure/ai_services/application_template_instructions.py`) – domyślne instrukcje dla AI.
+  - `ApplicationTemplatesRepository` (`src/infrastructure/relational_db/repositories/application_templates.py`) – tabela `application_templates`.
+  - `S3ApplicationTemplatesStorage` (`src/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `application_templates/{id}`.
+
+## 3. Pipeline generowania wniosku
 
 1. `core-service` zapisuje wniosek ze statusem `IN_PROGRESS` i w tej samej transakcji wstawia zadanie do kolejki Taskiq. Dane z formularza (`NewApplication`) trafiają wyłącznie do argumentów zadania, nie są zapisywane przy wniosku. Wiersz zadania jest usuwany po jego wykonaniu.
 2. Worker pobiera szablon (instrukcje, pola i plik DOCX) oraz dokumenty przypięte do sprawy. Jeśli szablon został usunięty, wniosek dostaje status `FAILED`.
@@ -37,7 +69,7 @@ Obsługa błędów:
 - Po przekroczeniu limitu dostarczeń (`MAX_APPLICATION_GENERATION_DELIVERIES`) wniosek dostaje status `FAILED` bez kolejnej próby.
 - Jeśli wniosek albo sprawa zostaną usunięte w trakcie generowania, worker kończy zadanie bez zapisu pliku.
 
-## 3. Modele
+## 4. Modele
 
 | Środowisko | Model | Uwagi |
 |---|---|---|
@@ -47,6 +79,6 @@ Obsługa błędów:
 
 Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3).
 
-## 4. Testowanie E2E (weryfikacja ręczna)
+## 5. Testowanie E2E (weryfikacja ręczna)
 
 Instrukcja weryfikacji całego przepływu użytkownika (logowanie -> sprawa -> regulamin -> generowanie i pobranie DOCX) znajduje się w [docs/tests/manual_e2e_test.md](tests/manual_e2e_test.md).

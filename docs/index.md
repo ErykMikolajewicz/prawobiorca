@@ -11,7 +11,7 @@ Both the backend services and the Vue frontend are kept in a single repository.
 ## What will you find in this documentation?
 
 * **[Application logic explanation](app_logic.md)**: What is the purpose of the app and how should it behave.
-* **[AI / LLM Service](ai.md)**: AI module architecture, supported models, and DOCX application generation.
+* **[AI / LLM Service](ai.md)**: AI module architecture, supported models, application templates and DOCX application generation.
 * **[Workflow](workflow.md)**: General information about team workflow and CI/CD.
 * **[Application architecture](architecture/architecture.md)**: Reference for developers.
 * **[Frontend](architecture/frontend.md)**: Stack, structure and development commands of the Vue application.
