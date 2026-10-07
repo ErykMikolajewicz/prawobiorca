@@ -19,14 +19,21 @@ import {
   getCaseApplications,
   getCaseDocuments,
 } from '@/api/generated/endpoints/cases/cases'
+import { getPublishedApplicationTemplates } from '@/api/generated/endpoints/application-templates/application-templates'
 
-import type { ApplicationRepresentation, CaseDocument, NewApplication } from '@/api/generated/model'
+import type {
+  ApplicationRepresentation,
+  CaseDocument,
+  NewApplication,
+  PublishedApplicationTemplate,
+} from '@/api/generated/model'
 
 const route = useRoute()
 const caseId = route.params.id as string
 
 const documents = ref<Array<CaseDocument>>([])
 const applications = ref<Array<ApplicationRepresentation>>([])
+const templates = ref<Array<PublishedApplicationTemplate>>([])
 const pendingApplicationIds = computed(() =>
   applications.value
     .filter((application) => application.generationStatus === 'IN_PROGRESS')
@@ -51,6 +58,15 @@ async function loadApplications() {
   }
 }
 
+async function loadTemplates() {
+  try {
+    templates.value = await getPublishedApplicationTemplates()
+  } catch (error) {
+    showApiError(error, { defaultMessage: 'Nie udało się pobrać szablonów wniosków.' })
+    templates.value = []
+  }
+}
+
 async function refreshApplications() {
   try {
     applications.value = await getCaseApplications(caseId)
@@ -62,7 +78,7 @@ async function refreshApplications() {
 useRegulationsPolling(() => pendingApplicationIds.value, refreshApplications)
 
 onBeforeMount(async () => {
-  await Promise.all([loadDocuments(), loadApplications()])
+  await Promise.all([loadDocuments(), loadApplications(), loadTemplates()])
 })
 
 async function handleUnpin(documentId: string) {
@@ -116,7 +132,7 @@ async function handleDeleteApplication(applicationId: string) {
       <el-col :span="12" :xs="24">
         <section>
           <h2>Kontekst / Opis Wniosku</h2>
-          <GeneratePdfForm @generate-pdf="handleGeneratePdf" />
+          <GeneratePdfForm :templates="templates" @generate-pdf="handleGeneratePdf" />
         </section>
       </el-col>
       <el-col :span="12" :xs="24">

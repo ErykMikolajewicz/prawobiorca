@@ -3,7 +3,7 @@ from uuid import UUID
 
 from src.app.dtos.applications import ApplicationRepresentation
 from src.app.interfaces.relational import AsyncSession
-from src.domain.value_objects.applications import ApplicationGenerationStatus, ApplicationType
+from src.domain.value_objects.applications import ApplicationGenerationStatus
 
 
 class ApplicationsRepository(Protocol):
@@ -18,7 +18,7 @@ class ApplicationsRepository(Protocol):
     ) -> ApplicationRepresentation | None: ...
 
     async def add(
-        self, session: AsyncSession, user_id: UUID, case_id: UUID, application_type: ApplicationType
+        self, session: AsyncSession, user_id: UUID, case_id: UUID, template_id: UUID, template_name: str
     ) -> UUID: ...
 
     async def set_generation_status(

@@ -3,11 +3,13 @@ from datetime import datetime
 
 from fastapi import status
 from pydantic import TypeAdapter
-from sqlalchemy import insert, select
+from sqlalchemy import delete, insert, select
 
 from src.app.dtos.applications import NewApplication
+from src.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from src.domain.value_objects.applications import ApplicationGenerationStatus
 from src.framework.dependencies.regulations import get_broker
+from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
 from src.infrastructure.relational_db.schemas.applications import applications_table
 from src.infrastructure.relational_db.schemas.cases import cases_table
 from src.main import prawobiorca
@@ -16,15 +18,34 @@ from tests.consts import ACCESS_TOKEN, USER_ID
 
 LISTEN_TIMEOUT = 3
 
-NEW_APPLICATION = {
-    "description": "Proszę o urlop dziekański.",
-    "userName": "Jan Kowalski",
-    "studentId": "123456",
-    "department": "Wydział Informatyki i Telekomunikacji",
-    "semester": "4",
-    "title": "inż.",
-    "applicationType": "OTHER",
-}
+FIELDS = [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")]
+
+
+def create_new_application(template_id, field_values: dict[str, str] | None = None):
+    return {
+        "templateId": str(template_id),
+        "description": "Proszę o urlop dziekański.",
+        "fieldValues": field_values or {"student_id": "123456"},
+    }
+
+
+async def insert_template(
+    session_maker, template_status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED
+):
+    async with session_maker.begin() as session:
+        statement = (
+            insert(application_templates_table)
+            .values(name="Wniosek o urlop", status=template_status, fields=FIELDS, instructions="Instrukcje")
+            .returning(application_templates_table.c.id)
+        )
+        return await session.scalar(statement)
+
+
+async def delete_template(session_maker, template_id):
+    async with session_maker.begin() as session:
+        await session.execute(
+            delete(application_templates_table).where(application_templates_table.c.id == template_id)
+        )
 
 
 async def insert_case(session_maker, name: str = "Case"):
@@ -45,7 +66,7 @@ async def insert_application(
             .values(
                 case_id=case_id,
                 user_id=USER_ID,
-                application_type="OTHER",
+                template_name="Wniosek o urlop",
                 create_date=create_date,
                 generation_status=generation_status,
             )
@@ -73,7 +94,7 @@ async def test_get_case_applications(
             "id": str(second_application_id),
             "caseId": str(case_id),
             "createDate": "2026-01-02T10:00:00",
-            "applicationType": "OTHER",
+            "templateName": "Wniosek o urlop",
             "generationStatus": "GENERATED",
             "name": None,
         },
@@ -81,7 +102,7 @@ async def test_get_case_applications(
             "id": str(first_application_id),
             "caseId": str(case_id),
             "createDate": "2026-01-01T10:00:00",
-            "applicationType": "OTHER",
+            "templateName": "Wniosek o urlop",
             "generationStatus": "GENERATED",
             "name": None,
         },
@@ -215,10 +236,15 @@ async def test_generate_application_schedules_task(
 ):
     prawobiorca.dependency_overrides[get_broker] = lambda: task_broker
     case_id = await insert_case(session_maker)
+    template_id = await insert_template(session_maker)
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/cases/{case_id}/application", json=NEW_APPLICATION)
+    response = await client.post(
+        f"/api/user/cases/{case_id}/application",
+        json=create_new_application(template_id, {"student_id": " 123456 "}),
+    )
+    await delete_template(session_maker, template_id)
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     application_id = response.json()
@@ -228,6 +254,7 @@ async def test_generate_application_schedules_task(
         application = (await session.execute(statement)).one()
 
     assert application.case_id == case_id
+    assert application.template_name == "Wniosek o urlop"
     assert application.generation_status == ApplicationGenerationStatus.IN_PROGRESS
 
     delivered = await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
@@ -237,12 +264,15 @@ async def test_generate_application_schedules_task(
     user_id, scheduled_application_id, new_application = taskiq_message.args
     assert user_id == str(USER_ID)
     assert scheduled_application_id == application_id
-    assert TypeAdapter(NewApplication).validate_python(new_application) == NewApplication(**NEW_APPLICATION)
+    assert TypeAdapter(NewApplication).validate_python(new_application) == NewApplication(
+        **create_new_application(template_id)
+    )
 
 
 async def test_generate_application_case_not_found(
     client,
     override_session_maker,
+    session_maker,
     override_authorize_normal_user,
     override_get_application_generation_scheduler,
     mock_application_generation_scheduler,
@@ -250,11 +280,63 @@ async def test_generate_application_case_not_found(
     clean_user,
     uuid_generator,
 ):
+    template_id = await insert_template(session_maker)
+
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/cases/{next(uuid_generator)}/application", json=NEW_APPLICATION)
+    response = await client.post(
+        f"/api/user/cases/{next(uuid_generator)}/application", json=create_new_application(template_id)
+    )
+    await delete_template(session_maker, template_id)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
+
+
+async def test_generate_application_template_not_published(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_application_generation_scheduler,
+    mock_application_generation_scheduler,
+    set_user,
+    clean_user,
+):
+    case_id = await insert_case(session_maker)
+    template_id = await insert_template(session_maker, ApplicationTemplateStatus.DRAFT)
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.post(f"/api/user/cases/{case_id}/application", json=create_new_application(template_id))
+    await delete_template(session_maker, template_id)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
+
+
+async def test_generate_application_invalid_field_values(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_application_generation_scheduler,
+    mock_application_generation_scheduler,
+    set_user,
+    clean_user,
+):
+    case_id = await insert_case(session_maker)
+    template_id = await insert_template(session_maker)
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.post(
+        f"/api/user/cases/{case_id}/application", json=create_new_application(template_id, {"student_id": "abc"})
+    )
+    await delete_template(session_maker, template_id)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.json()["detail"] == ["student_id"]
     mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
 
 

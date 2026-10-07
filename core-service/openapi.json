@@ -972,17 +972,10 @@
             "description": "Service unavailable!"
           },
           "404": {
-            "description": "No case with that id!"
+            "description": "No case or published application template with that id!"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Invalid application field values!"
           }
         }
       }
@@ -2167,8 +2160,9 @@
             "format": "date-time",
             "title": "Createdate"
           },
-          "applicationType": {
-            "$ref": "#/components/schemas/ApplicationType"
+          "templateName": {
+            "type": "string",
+            "title": "Templatename"
           },
           "generationStatus": {
             "$ref": "#/components/schemas/ApplicationGenerationStatus"
@@ -2190,7 +2184,7 @@
           "id",
           "caseId",
           "createDate",
-          "applicationType",
+          "templateName",
           "generationStatus",
           "name"
         ],
@@ -2391,14 +2385,6 @@
         ],
         "title": "ApplicationTemplateUploadTarget"
       },
-      "ApplicationType": {
-        "type": "string",
-        "enum": [
-          "OTHER",
-          "DIPLOMA_DEADLINE_EXTENSION"
-        ],
-        "title": "ApplicationType"
-      },
       "Body_add_case": {
         "properties": {
           "caseName": {
@@ -2584,48 +2570,28 @@
       },
       "NewApplication": {
         "properties": {
+          "templateId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Templateid"
+          },
           "description": {
             "type": "string",
             "minLength": 1,
             "title": "Description"
           },
-          "userName": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Username"
-          },
-          "studentId": {
-            "type": "string",
-            "pattern": "^\\d{6}$",
-            "title": "Studentid"
-          },
-          "department": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Department"
-          },
-          "semester": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Semester"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "applicationType": {
-            "$ref": "#/components/schemas/ApplicationType",
-            "default": "OTHER"
+          "fieldValues": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Fieldvalues"
           }
         },
         "type": "object",
         "required": [
-          "description",
-          "userName",
-          "studentId",
-          "department",
-          "semester",
-          "title"
+          "templateId",
+          "description"
         ],
         "title": "NewApplication"
       },

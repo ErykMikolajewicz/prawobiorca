@@ -19,6 +19,7 @@ from src.app.use_cases.cases import (
     ListCaseDocuments,
     ListCases,
 )
+from src.domain.exceptions.application_templates import ApplicationTemplateNotFound, InvalidApplicationFieldValues
 from src.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from src.domain.exceptions.cases import CaseNotFound
 from src.framework.dependencies.applications import (
@@ -132,7 +133,8 @@ async def delete_case_document(
     "/user/cases/{caseId}/application",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
-        status.HTTP_404_NOT_FOUND: {"description": "No case with that id!"},
+        status.HTTP_404_NOT_FOUND: {"description": "No case or published application template with that id!"},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Invalid application field values!"},
     },
 )
 async def generate_application(
@@ -145,6 +147,12 @@ async def generate_application(
         return await add_application_.execute(user_id, case_id, new_application)
     except CaseNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No case with that id!")
+    except ApplicationTemplateNotFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No published application template with that id!"
+        )
+    except InvalidApplicationFieldValues as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.field_names)
 
 
 @cases_router.get(
