@@ -7,13 +7,32 @@ spec:
     - www.prawobiorca.pl
 
 ---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: prawobiorca-apex-cert
+spec:
+  domains:
+    - prawobiorca.pl
+
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: prawobiorca-frontend-config
+spec:
+  redirectToHttps:
+    enabled: true
+
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: prawobiorca-backend
   annotations:
     kubernetes.io/ingress.class: "gce"
-    networking.gke.io/managed-certificates: prawobiorca-backend-cert
+    networking.gke.io/managed-certificates: prawobiorca-backend-cert,prawobiorca-apex-cert
+    networking.gke.io/v1beta1.FrontendConfig: prawobiorca-frontend-config
 spec:
   rules:
     - host: www.prawobiorca.pl
@@ -26,6 +45,16 @@ spec:
                 name: prawobiorca-backend
                 port:
                   number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prawobiorca-frontend
+                port:
+                  number: 8000
+    - host: prawobiorca.pl
+      http:
+        paths:
           - path: /
             pathType: Prefix
             backend:
