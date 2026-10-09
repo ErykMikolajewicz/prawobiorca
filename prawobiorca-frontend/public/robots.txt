@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /user/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://www.prawobiorca.pl/sitemap.xml
