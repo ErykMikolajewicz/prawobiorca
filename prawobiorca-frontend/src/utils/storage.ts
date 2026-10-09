@@ -22,3 +22,11 @@ export async function uploadFileToStorage(
 
   await axios.post(toBrowserStorageUrl(target.url), formData)
 }
+
+export function downloadFromStorage(url: string): void {
+  const link = document.createElement('a')
+  link.href = toBrowserStorageUrl(url)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}

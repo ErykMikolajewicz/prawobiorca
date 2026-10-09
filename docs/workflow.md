@@ -98,6 +98,14 @@ podman tag localhost/embedding-service:latest ghcr.io/erykmikolajewicz/embedding
 podman push ghcr.io/erykmikolajewicz/embedding-service:latest
 ```
 
+The integration tests pull PostgreSQL with pgvector from `ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie` instead of Docker Hub, to avoid its unauthenticated pull rate limit. The image is a public copy of `pgvector/pgvector:0.8.4-pg18-trixie`, pushed manually; push a new tag and update `POSTGRES_IMAGE_VERSION` in `core-service/tests/integration/conftest.py` when changing the version:
+
+```bash
+podman pull docker.io/pgvector/pgvector:0.8.4-pg18-trixie
+podman tag docker.io/pgvector/pgvector:0.8.4-pg18-trixie ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
+podman push ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
+```
+
 ### 6.2 CD (`cd.yml`)
 
 Runs on every push to `main` and deploys to GKE:

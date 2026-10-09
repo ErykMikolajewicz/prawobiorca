@@ -1,4 +1,5 @@
 export * from './account/account'
+export * from './application-templates/application-templates'
 export * from './auth/auth'
 export * from './cases/cases'
 export * from './regulations/regulations'

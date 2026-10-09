@@ -6,6 +6,7 @@ import HomeRoundedIcon from '@iconify-vue/material-symbols/home-rounded'
 import MenuRoundedIcon from '@iconify-vue/material-symbols/menu-rounded'
 import MenuOpenRoundedIcon from '@iconify-vue/material-symbols/menu-open-rounded'
 import FolderRoundedIcon from '@iconify-vue/material-symbols/folder-rounded'
+import DescriptionRoundedIcon from '@iconify-vue/material-symbols/description-rounded'
 import AuthControls from '@/components/molecules/AuthControls.vue'
 import DarkModeToggle from '@/components/molecules/DarkModeToggle.vue'
 import SidebarCasesList from '@/components/organisms/SidebarCasesList.vue'
@@ -15,7 +16,7 @@ import { useCasesStore } from '@/stores/cases'
 
 const route = useRoute()
 const { isCollapsed, toggleCollapsed } = useSidebar()
-const { isUserLogged } = storeToRefs(useAuthStore())
+const { isUserLogged, isAdmin } = storeToRefs(useAuthStore())
 const casesStore = useCasesStore()
 
 onMounted(async () => {
@@ -53,6 +54,10 @@ onMounted(async () => {
       <el-menu-item index="/">
         <el-icon><HomeRoundedIcon /></el-icon>
         <template #title>Strona główna</template>
+      </el-menu-item>
+      <el-menu-item v-if="isAdmin" index="/admin/application-templates">
+        <el-icon><DescriptionRoundedIcon /></el-icon>
+        <template #title>Szablony wniosków</template>
       </el-menu-item>
     </el-menu>
 

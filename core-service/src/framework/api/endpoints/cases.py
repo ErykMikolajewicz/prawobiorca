@@ -19,6 +19,7 @@ from src.app.use_cases.cases import (
     ListCaseDocuments,
     ListCases,
 )
+from src.domain.exceptions.application_templates import ApplicationTemplateNotFound, InvalidApplicationFieldValues
 from src.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from src.domain.exceptions.cases import CaseNotFound
 from src.framework.dependencies.applications import (
@@ -110,20 +111,30 @@ async def get_case_documents(
     return await list_case_documents.execute(user_id, case_id)
 
 
-@cases_router.delete("/user/cases/documents/{documentId}", status_code=status.HTTP_204_NO_CONTENT)
+@cases_router.delete(
+    "/user/cases/documents/{documentId}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "No document with that id!"},
+    },
+)
 async def delete_case_document(
     user_id: Annotated[UUID, Depends(require_logged_user)],
     delete_case_document_: Annotated[DeleteCaseDocument, Depends(get_delete_case_document)],
     document_id: Annotated[UUID, Path(alias="documentId")],
 ):
-    await delete_case_document_.execute(user_id, document_id)
+    try:
+        await delete_case_document_.execute(user_id, document_id)
+    except CaseNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No document with that id!")
 
 
 @cases_router.post(
     "/user/cases/{caseId}/application",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
-        status.HTTP_404_NOT_FOUND: {"description": "No case with that id!"},
+        status.HTTP_404_NOT_FOUND: {"description": "No case or published application template with that id!"},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Invalid application field values!"},
     },
 )
 async def generate_application(
@@ -136,6 +147,12 @@ async def generate_application(
         return await add_application_.execute(user_id, case_id, new_application)
     except CaseNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No case with that id!")
+    except ApplicationTemplateNotFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No published application template with that id!"
+        )
+    except InvalidApplicationFieldValues as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.field_names)
 
 
 @cases_router.get(
