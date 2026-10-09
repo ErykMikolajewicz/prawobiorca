@@ -5,29 +5,61 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 ## 1. Architektura i integracja
 
 - **Endpointy** (`src/framework/api/endpoints/cases.py`):
-  - `POST /api/user/cases/{caseId}/application` przyjmuje `NewApplication` (`src/app/dtos/applications.py`), zapisuje wniosek ze statusem `IN_PROGRESS`, zleca generowanie w tle i zwraca `202` z identyfikatorem wniosku.
+  - `POST /api/user/cases/{caseId}/application` przyjmuje `NewApplication` (`src/app/dtos/applications.py`), zapisuje wniosek ze statusem `IN_PROGRESS`, zleca generowanie w tle i zwraca `202` z identyfikatorem wniosku. Dla nieistniejącego lub nieopublikowanego szablonu zwraca `404`, dla błędnych wartości pól `422` z listą nazw pól.
   - `GET /api/user/cases/{caseId}/applications` zwraca listę wniosków sprawy (`ApplicationRepresentation`) ze statusem generowania.
   - `GET /api/user/cases/applications/{applicationId}/download-url` zwraca presigned URL do pliku DOCX. Dla wniosku, który nie ma statusu `GENERATED`, zwraca `409`.
   - `DELETE /api/user/cases/applications/{applicationId}` usuwa wniosek i jego plik.
-- **Typ wniosku:** `ApplicationType` (`src/domain/value_objects/applications.py`), pole `applicationType` w `NewApplication`, domyślnie `OTHER`. Każdy typ ma własny prompt (`prompts/applications/{typ}.md`) i szablon DOCX (`templates/applications/{typ}.docx`), gdzie `{typ}` to wartość enuma małymi literami. Dodanie nowego typu: wartość w enumie, oba pliki oraz etykieta we frontendzie (`prawobiorca-frontend/src/domain/applications.ts`).
-- **Nazwa wniosku:** pole `name` w `ApplicationRepresentation`, nadawane przez LLM na podstawie opisu sytuacji (prompt `prompts/application_name.md`) i zapisywane razem ze statusem `GENERATED`. Do tego czasu ma wartość `null`, a frontend pokazuje w jej miejscu etykietę typu wniosku.
+- **Szablon wniosku:** `NewApplication` zawiera `templateId` opublikowanego szablonu (zarządzanego przez administratora), opis sytuacji (`description`) i wartości pól szablonu (`fieldValues`), walidowane przez `validate_field_values` (`src/domain/services/application_fields.py`). Szablon dostarcza instrukcje dla AI (`instructions`), definicje pól i plik DOCX w object storage. Wniosek przechowuje `template_id` (po usunięciu szablonu `NULL`) i kopię nazwy szablonu (`template_name`).
+- **Nazwa wniosku:** pole `name` w `ApplicationRepresentation`, nadawane przez LLM na podstawie opisu sytuacji (prompt `prompts/application_name.md`) i zapisywane razem ze statusem `GENERATED`. Do tego czasu ma wartość `null`, a frontend pokazuje w jej miejscu nazwę szablonu.
 - **Status generowania:** `ApplicationGenerationStatus` (`src/domain/value_objects/applications.py`): `IN_PROGRESS`, `GENERATED`, `FAILED`.
 - **Use case'y** (`src/app/use_cases/applications.py`): `AddApplication` (zapis i zlecenie zadania), `GenerateApplication` (wykonywany przez worker), `FailApplicationGeneration`, `ListApplications`, `GetApplicationDownloadUrl`, `DeleteApplication`.
 - **Zadanie w tle:** `generate_application` (`src/framework/workers/applications.py`), zlecane przez `PostgresApplicationGenerationScheduler` (`src/infrastructure/tasks/applications.py`) w tej samej transakcji, w której zapisywany jest wniosek.
 - **Porty:** `src/app/ports/applications.py` (`ApplicationWriter`, `ApplicationRenderer`).
 - **Adaptery:**
-  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/applications/{typ}.md`) i generuje treść przez `LlmChat`; osobnym wywołaniem (`write_name`, prompt `src/infrastructure/ai_services/prompts/application_name.md`) generuje nazwę wniosku.
+  - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/application.md`) z instrukcjami szablonu i danymi wniosku i generuje treść przez `LlmChat`; osobnym wywołaniem (`write_name`, prompt `src/infrastructure/ai_services/prompts/application_name.md`) generuje nazwę wniosku.
   - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu przez API zgodne z OpenAI: na GCP Vertex AI Model-as-a-Service, on-premise i lokalnie kontener `llm-service` z OVMS (port 8083 na hoście / 8080 w klastrze).
-  - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX (`src/infrastructure/docx/templates/applications/{typ}.docx`) i zwraca go jako `bytes`.
+  - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX pobrany z object storage (w `SandboxedEnvironment`) z wartościami pól, `current_date` i `paragraphs` i zwraca go jako `bytes`.
   - `ApplicationsRepository` (`src/infrastructure/relational_db/repositories/applications.py`) – tabela `applications` (wniosek należy do sprawy, usuwany kaskadowo razem z nią).
   - `S3ApplicationsStorage` (`src/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `applications/{id}`.
 - **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL` (bazowy URL API razem z `/v1`). Na GCP `LLM_SERVICE_USE_GOOGLE_AUTH=true` – klient uwierzytelnia się tokenem OAuth z Workload Identity (`src/infrastructure/ai_services/openai_client/google_auth.py`).
 
-## 2. Pipeline generowania wniosku
+## 2. Szablony wniosków
+
+Szablonami zarządza administrator (`require_admin`), a zalogowany użytkownik widzi tylko szablony opublikowane.
+
+- **Endpointy** (`src/framework/api/endpoints/application_templates.py`):
+  - `GET /api/application-templates` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
+  - `GET /api/admin/application-templates` i `GET /api/admin/application-templates/{templateId}` zwracają szablony (`ApplicationTemplateRepresentation`) niezależnie od statusu.
+  - `POST /api/admin/application-templates` przyjmuje nazwę szablonu, zapisuje go z domyślnymi instrukcjami i zwraca presigned POST do wgrania pliku DOCX.
+  - `POST /api/admin/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Zwraca `409`, jeśli wgranie było już potwierdzone albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
+  - `PUT /api/admin/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól zwraca `422`.
+  - `POST /api/admin/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (inaczej `409`).
+  - `POST /api/admin/application-templates/{templateId}/unpublish` przywraca opublikowanemu szablonowi status `DRAFT` (inaczej `409`).
+  - `GET /api/admin/application-templates/{templateId}/download-url` zwraca presigned URL do pliku DOCX (`409`, jeśli plik nie został wgrany). Frontend używa go do pobrania i podglądu szablonu.
+  - `DELETE /api/admin/application-templates/{templateId}` usuwa szablon i jego plik. Wygenerowane wnioski zostają, z `template_id` ustawionym na `NULL`.
+- **Status:** `ApplicationTemplateStatus` (`src/domain/value_objects/application_templates.py`): `NOT_UPLOADED` → `DRAFT` ⇄ `PUBLISHED`.
+- **Plik DOCX:** szablon Jinja2 dla docxtpl. Musi zawierać zmienną `paragraphs` (treść wygenerowana przez LLM), `current_date` jest wypełniana automatycznie. Pozostałe zmienne stają się polami szablonu (`create_default_fields`, `src/domain/services/application_fields.py`).
+- **Pola** (`ApplicationTemplateField`): nazwa zmiennej, etykieta, typ (`TEXT`, `NUMBER`, `SELECT`, `DATE`), `required`, `passToAi`, opcjonalnie wartość domyślna, `pattern` i `options`. Reguły konfiguracji (`validate_fields_config`):
+  - zbiór pól musi odpowiadać zmiennym szablonu, bez duplikatów,
+  - `pattern` (poprawny regex) tylko dla `TEXT`,
+  - `options` wymagane dla `SELECT` i niedozwolone dla innych typów,
+  - wartość domyślna musi przechodzić walidację pola.
+
+  Wartości wpisane przez użytkownika waliduje `validate_field_values`: `NUMBER` – skończona liczba, `SELECT` – jedna z opcji, `DATE` – format `dd.mm.yyyy`, `TEXT` – pełne dopasowanie do `pattern`.
+- **Instrukcje dla AI:** Markdown edytowany przez administratora. Nowy szablon dostaje domyślne instrukcje z `src/infrastructure/ai_services/prompts/application_template_instructions.md`.
+- **Use case'y** (`src/app/use_cases/application_templates.py`): `ListApplicationTemplates`, `GetApplicationTemplate`, `ListPublishedApplicationTemplates`, `AddApplicationTemplate`, `ConfirmApplicationTemplateUpload`, `UpdateApplicationTemplate`, `PublishApplicationTemplate`, `UnpublishApplicationTemplate`, `DeleteApplicationTemplate`, `GetApplicationTemplateDownloadUrl`.
+- **Porty:** `src/app/ports/application_templates.py` (`ApplicationTemplateInspector`, `ApplicationTemplateInstructionsProvider`).
+- **Adaptery:**
+  - `DocxTemplateInspector` (`src/infrastructure/docx/template_inspector.py`) – odczytuje zmienne szablonu DOCX (w `SandboxedEnvironment`).
+  - `PromptsApplicationTemplateInstructionsProvider` (`src/infrastructure/ai_services/application_template_instructions.py`) – domyślne instrukcje dla AI.
+  - `ApplicationTemplatesRepository` (`src/infrastructure/relational_db/repositories/application_templates.py`) – tabela `application_templates`.
+  - `S3ApplicationTemplatesStorage` (`src/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `application_templates/{id}`.
+
+## 3. Pipeline generowania wniosku
 
 1. `core-service` zapisuje wniosek ze statusem `IN_PROGRESS` i w tej samej transakcji wstawia zadanie do kolejki Taskiq. Dane z formularza (`NewApplication`) trafiają wyłącznie do argumentów zadania, nie są zapisywane przy wniosku. Wiersz zadania jest usuwany po jego wykonaniu.
-2. Worker pobiera dokumenty przypięte do sprawy.
-3. Renderowanie promptu w Jinja2 z danymi w blokach XML (`<dane_studenta>`, `<opis_sytuacji>`, `<podstawa_prawna>`).
+2. Worker pobiera szablon (instrukcje, pola i plik DOCX) oraz dokumenty przypięte do sprawy. Jeśli szablon został usunięty, wniosek dostaje status `FAILED`.
+3. Renderowanie promptu w Jinja2: instrukcje szablonu, a po nich dane w blokach XML (`<dane_wniosku>` z polami oznaczonymi `passToAi`, `<opis_sytuacji>`, `<podstawa_prawna>`).
 4. Inferencja LLM (generowanie merytorycznej treści uzasadnienia), a następnie osobne wywołanie generujące krótką nazwę wniosku.
 5. Połączenie tekstu z szablonem DOCX i wygenerowanie dokumentu przez docxtpl.
 6. Zapis nazwy, pliku w object storage i zmiana statusu na `GENERATED`. Frontend odpytuje listę wniosków, dopóki któryś ma status `IN_PROGRESS`, a gotowy plik pobiera przez presigned URL.
@@ -37,7 +69,7 @@ Obsługa błędów:
 - Po przekroczeniu limitu dostarczeń (`MAX_APPLICATION_GENERATION_DELIVERIES`) wniosek dostaje status `FAILED` bez kolejnej próby.
 - Jeśli wniosek albo sprawa zostaną usunięte w trakcie generowania, worker kończy zadanie bez zapisu pliku.
 
-## 3. Modele
+## 4. Modele
 
 | Środowisko | Model | Uwagi |
 |---|---|---|
@@ -46,22 +78,6 @@ Obsługa błędów:
 | **Lokalnie** | `OpenVINO/Qwen3.5-9B-int4-ov` (OVMS, `qwen-3.5-9b`) | `scripts/local/dev.py`, lżejszy model do testów. |
 
 Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3).
-
-## 4. Narzędzie testowe (benchmark promptów)
-
-Skrypt `core-service/scripts/prompts_benchmark/compare_prompts.py` umożliwia testowanie jakości promptów i temperatur na przygotowanych sprawach testowych (`test_cases.json`):
-
-```bash
-just compare-prompts
-
-# Uruchomienie z flagami CLI:
-uv run python scripts/prompts_benchmark/compare_prompts.py --model qwen-3.5-9b --skip-docx
-
-# Uruchomienie z IDE:
-# Ustaw zmienną CUSTOM_MODEL_NAME na początku pliku compare_prompts.py.
-```
-
-Wyniki zapisywane są w `scripts/prompts_benchmark/benchmark_results/` w formatach `.md`, `.docx` oraz `summary.json`.
 
 ## 5. Testowanie E2E (weryfikacja ręczna)
 

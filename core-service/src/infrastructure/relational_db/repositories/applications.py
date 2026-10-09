@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.app.dtos.applications import ApplicationRepresentation
 from src.domain.exceptions.applications import ApplicationNotFound
 from src.domain.exceptions.cases import CaseNotFound
-from src.domain.value_objects.applications import ApplicationGenerationStatus, ApplicationType
+from src.domain.value_objects.applications import ApplicationGenerationStatus
 from src.infrastructure.relational_db.schemas.applications import applications_table
 
 
@@ -42,10 +42,10 @@ class ApplicationsRepository:
         return application
 
     @staticmethod
-    async def add(session: AsyncSession, user_id: UUID, case_id: UUID, application_type: ApplicationType) -> UUID:
+    async def add(session: AsyncSession, user_id: UUID, case_id: UUID, template_id: UUID, template_name: str) -> UUID:
         statement = (
             insert(applications_table)
-            .values(case_id=case_id, user_id=user_id, application_type=application_type)
+            .values(case_id=case_id, user_id=user_id, template_id=template_id, template_name=template_name)
             .returning(applications_table.c.id)
         )
         try:

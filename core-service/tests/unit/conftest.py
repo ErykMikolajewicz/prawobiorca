@@ -2,12 +2,14 @@ from unittest.mock import create_autospec
 
 import pytest
 
+from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsRepository
 from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
 from src.app.interfaces.regulations import RegulationsRepository
 from src.app.interfaces.relational import AsyncSession, SessionMaker
 from src.app.interfaces.sections import SectionsRepository
 from src.app.interfaces.users import UsersRepository, UsersSessionsRepository
+from src.app.ports.application_templates import ApplicationTemplateInspector, ApplicationTemplateInstructionsProvider
 from src.app.ports.applications import ApplicationRenderer, ApplicationWriter
 from src.app.ports.texts import TextsEmbedder
 
@@ -91,3 +93,27 @@ def mock_application_renderer():
 def mock_applications_repo():
     repo = create_autospec(ApplicationsRepository)
     return repo
+
+
+@pytest.fixture
+def mock_application_templates_repo():
+    repo = create_autospec(ApplicationTemplatesRepository)
+    return repo
+
+
+@pytest.fixture
+def mock_application_templates_storage():
+    storage = create_autospec(ApplicationTemplatesStorage)
+    return storage
+
+
+@pytest.fixture
+def mock_application_template_inspector():
+    port = create_autospec(ApplicationTemplateInspector)
+    return port
+
+
+@pytest.fixture
+def mock_application_template_instructions_provider():
+    port = create_autospec(ApplicationTemplateInstructionsProvider)
+    return port

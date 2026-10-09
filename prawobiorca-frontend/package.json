@@ -27,7 +27,9 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@iconify-vue/material-symbols": "^1.0.34",
     "axios": "^1.15.2",
+    "docx-preview": "^0.4.1",
     "element-plus": "^2.13.7",
+    "md-editor-v3": "^7.1.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.33",
     "vue-router": "^5.0.6"

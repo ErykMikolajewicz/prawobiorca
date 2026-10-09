@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ApplicationStatusBadge from '@/components/atoms/ApplicationStatusBadge.vue'
-import { applicationTypeOptions } from '@/domain/applications'
 import type { ApplicationRepresentation } from '@/api/generated/model'
 
 type Props = { application: ApplicationRepresentation }
@@ -12,12 +11,7 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
 }>()
 
-const typeLabel = computed(
-  () =>
-    applicationTypeOptions.find((option) => option.value === props.application.applicationType)
-      ?.label,
-)
-const name = computed(() => props.application.name ?? typeLabel.value)
+const name = computed(() => props.application.name ?? props.application.templateName)
 const createDate = computed(() =>
   new Date(props.application.createDate).toLocaleString('pl-PL', {
     dateStyle: 'short',
@@ -54,7 +48,7 @@ function handleDelete() {
         </el-popconfirm>
       </div>
     </div>
-    <div class="meta">Szablon: {{ typeLabel }} · {{ createDate }}</div>
+    <div class="meta">Szablon: {{ application.templateName }} · {{ createDate }}</div>
   </el-card>
 </template>
 

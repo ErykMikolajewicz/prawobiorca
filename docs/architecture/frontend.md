@@ -17,6 +17,7 @@ It talks to `core-service` exclusively over the HTTP REST API — it has no dire
 * **Pinia** for shared application state.
 * **Element Plus** as the component library, including its dark theme variables.
 * **axios** as the HTTP client, with the API client generated from the OpenAPI contract by **Orval**.
+* **md-editor-v3** for editing the AI instructions and **docx-preview** for previewing DOCX files of application templates.
 * **Vitest** for unit tests, **oxlint** + **ESLint** for linting and **oxfmt** for formatting.
 
 Required toolchain versions are declared in `prawobiorca-frontend/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
@@ -27,13 +28,13 @@ Required toolchain versions are declared in `prawobiorca-frontend/package.json`:
 
 All application code lives in `prawobiorca-frontend/src`:
 
-* **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. `cases.ts` holds the only hand-written helper, which fetches a generated application's presigned URL and triggers the browser download.
-* **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`).
+* **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. The only hand-written helpers fetch a presigned URL and trigger the browser download: `cases.ts` for a generated application, `applicationTemplates.ts` for an application template.
+* **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (sidebar, footer, forms, lists) and `templates/` (`AppLayout`, the sidebar–content–footer page layout).
-* **`composables/`** — reusable stateful logic (dark mode, sidebar collapse state, regulation lists, regulation search, regulation upload flow, preparation status polling).
-* **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope).
+* **`composables/`** — reusable stateful logic (dark mode, sidebar collapse state, regulation lists, regulation search, regulation upload flow, application template upload flow, preparation status polling).
+* **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope, application generation statuses, application template statuses and field types).
 * **`stores/`** — Pinia stores: `auth`, holding the session state, and `cases`, holding the user's cases shown in the sidebar.
-* **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in.
+* **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in. Routes marked `requiresAdmin` redirect a non-administrator to the main page.
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite) and global styles.
 * **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover.
 

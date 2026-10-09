@@ -7,8 +7,9 @@ from taskiq import Context, TaskiqDepends
 from src.app.dtos.applications import NewApplication
 from src.app.use_cases.applications import FailApplicationGeneration, GenerateApplication
 from src.framework.dependencies.applications import get_application_renderer, get_application_writer
-from src.infrastructure.object_storage.repository import S3ApplicationsStorage
+from src.infrastructure.object_storage.repository import S3ApplicationsStorage, S3ApplicationTemplatesStorage
 from src.infrastructure.relational_db.connection import async_session_maker
+from src.infrastructure.relational_db.repositories.application_templates import ApplicationTemplatesRepository
 from src.infrastructure.relational_db.repositories.applications import ApplicationsRepository
 from src.infrastructure.relational_db.repositories.cases import CaseDocumentsRepository
 from src.infrastructure.tasks.connection import broker
@@ -38,6 +39,10 @@ async def generate_application_task(
         case_documents_repo=CaseDocumentsRepository(),
         applications_repo=ApplicationsRepository(),
         applications_storage=S3ApplicationsStorage(
+            context.state.file_storage_client, context.state.file_storage_presign_client
+        ),
+        application_templates_repo=ApplicationTemplatesRepository(),
+        application_templates_storage=S3ApplicationTemplatesStorage(
             context.state.file_storage_client, context.state.file_storage_presign_client
         ),
         application_writer=get_application_writer(),

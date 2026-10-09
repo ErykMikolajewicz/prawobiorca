@@ -39,6 +39,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/admin/application-templates',
+      name: 'ApplicationTemplatesPage',
+      component: () => import('@/pages/ApplicationTemplatesPage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/admin/application-templates/:id',
+      name: 'ApplicationTemplatePage',
+      component: () => import('@/pages/ApplicationTemplatePage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: { name: 'MainPage' },
     },
@@ -46,8 +58,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth && !useAuthStore().isUserLogged) {
+  const authStore = useAuthStore()
+  if (to.meta.requiresAuth && !authStore.isUserLogged) {
     return { name: 'LoginPage', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return { name: 'MainPage' }
   }
 })
 

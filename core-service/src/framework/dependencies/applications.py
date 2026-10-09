@@ -2,6 +2,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends
 
+from src.app.interfaces.application_templates import ApplicationTemplatesRepository
 from src.app.interfaces.applications import ApplicationsRepository, ApplicationsStorage
 from src.app.interfaces.relational import SessionMaker
 from src.app.ports.applications import ApplicationRenderer, ApplicationWriter
@@ -12,6 +13,7 @@ from src.app.use_cases.applications import (
     GetApplicationDownloadUrl,
     ListApplications,
 )
+from src.framework.dependencies.application_templates import get_application_templates_repo
 from src.framework.dependencies.cases import get_applications_repo, get_applications_storage
 from src.framework.dependencies.regulations import get_broker
 from src.framework.dependencies.relational import get_session_maker
@@ -56,11 +58,14 @@ def get_application_generation_scheduler(
 def get_add_application(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     applications_repo: Annotated[ApplicationsRepository, Depends(get_applications_repo)],
+    application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
     application_generation_scheduler: Annotated[
         ApplicationGenerationScheduler, Depends(get_application_generation_scheduler)
     ],
 ) -> AddApplication:
-    return AddApplication(session_maker, applications_repo, application_generation_scheduler)
+    return AddApplication(
+        session_maker, applications_repo, application_templates_repo, application_generation_scheduler
+    )
 
 
 def get_list_applications(
