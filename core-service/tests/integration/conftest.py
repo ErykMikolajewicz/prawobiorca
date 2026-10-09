@@ -18,7 +18,7 @@ from testcontainers.community.postgres import PostgresContainer
 from src.framework.dependencies.relational import get_session_maker
 from src.main import prawobiorca
 
-POSTGRES_IMAGE_VERSION = "pgvector/pgvector:0.8.4-pg18-trixie"
+POSTGRES_IMAGE_VERSION = "ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie"
 
 
 @pytest.fixture(scope="session", autouse=True)
