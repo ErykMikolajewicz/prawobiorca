@@ -118,12 +118,15 @@ html.dark .app-result-card {
 .result-blocks {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
 }
 
 .result-block {
   padding-left: 0.75rem;
-  border-left: 3px solid var(--app-border-color, #e4e7ed);
+  border-left: 3px solid transparent;
+}
+
+.result-block + .result-block {
+  padding-top: 0.35rem;
 }
 
 .result-line {
