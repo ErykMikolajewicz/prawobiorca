@@ -60,14 +60,10 @@ function handleAddToCase() {
 </template>
 
 <style scoped>
-.app-result-card {
-  --el-card-bg-color: #faf9fd;
-  --el-card-border-color: #ebe8f1;
-}
-
+.app-result-card,
 html.dark .app-result-card {
-  --el-card-bg-color: #18181a;
-  --el-card-border-color: #262628;
+  --el-card-bg-color: var(--app-card-bg);
+  --el-card-border-color: var(--app-card-border);
 }
 
 .result-footer {

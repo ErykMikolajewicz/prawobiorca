@@ -23,6 +23,8 @@
   --app-navbar-bg: var(--el-bg-color);
   --app-navbar-shadow: 0 1px 4px rgba(60, 40, 90, 0.05);
   --app-page-glow: none;
+  --app-card-bg: #faf9fd;
+  --app-card-border: #ebe8f1;
 }
 
 .el-empty {
@@ -38,7 +40,7 @@
 }
 
 html.dark .el-empty {
-  --el-empty-fill-color-1: #262727;
+  --el-empty-fill-color-1: #221f29;
   --el-empty-fill-color-2: #2b2a33;
   --el-empty-fill-color-3: #302e3a;
   --el-empty-fill-color-4: #363242;
@@ -58,9 +60,24 @@ html.dark {
   --el-color-primary-light-9: #231c2a;
   --el-color-primary-dark-2: #b980f1;
 
-  --el-bg-color: #1d1e1f;
-  --el-bg-color-page: #141414;
-  --el-bg-color-overlay: #262727;
+  --el-bg-color: #1b1920;
+  --el-bg-color-page: #141217;
+  --el-bg-color-overlay: #17151b;
+
+  --el-fill-color-darker: #403a48;
+  --el-fill-color-dark: #39333f;
+  --el-fill-color: #312c39;
+  --el-fill-color-light: #2a2631;
+  --el-fill-color-lighter: #231f29;
+  --el-fill-color-extra-light: #1e1b23;
+  --el-fill-color-blank: var(--el-bg-color);
+
+  --el-border-color-darker: #60576d;
+  --el-border-color-dark: #554d61;
+  --el-border-color: #4a4355;
+  --el-border-color-light: #3f3949;
+  --el-border-color-lighter: #363040;
+  --el-border-color-extra-light: #2c2734;
 
   --app-border-color: var(--el-border-color-light);
   --app-card-shadow: 0 4px 12px rgba(138, 43, 226, 0.35);
@@ -72,6 +89,8 @@ html.dark {
     rgba(168, 96, 238, 0.08),
     transparent
   );
+  --app-card-bg: var(--el-bg-color);
+  --app-card-border: var(--el-border-color-extra-light);
 }
 
 body {
@@ -123,9 +142,10 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
-.app-card {
-  --el-card-bg-color: #faf9fd;
-  --el-card-border-color: #ebe8f1;
+.app-card,
+html.dark .app-card {
+  --el-card-bg-color: var(--app-card-bg);
+  --el-card-border-color: var(--app-card-border);
   box-shadow: var(--app-card-shadow-rest);
   transition:
     transform 0.2s ease,
@@ -137,11 +157,6 @@ body {
   transform: translateY(-2px);
   box-shadow: var(--app-card-shadow);
   border-color: var(--el-color-primary-light-5);
-}
-
-html.dark .app-card {
-  --el-card-bg-color: #1b1920;
-  --el-card-border-color: #2c2734;
 }
 
 .pinned-document-drawer-header {
