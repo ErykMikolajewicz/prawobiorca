@@ -65,9 +65,13 @@ async function retryPreparation(regulationId: string) {
 </script>
 
 <template>
-  <el-card shadow="never" class="file-card app-card" :class="{ 'file-card--prepared': isPrepared }">
+  <el-card
+    shadow="never"
+    class="file-card app-card is-interactive"
+    :class="{ 'is-prepared': isPrepared }"
+  >
     <RegulationTypeBadge :regulation-type="regulation.regulationType" class="type-badge" />
-    <div class="card-content">
+    <div class="app-card-content">
       <div class="regulation-info">
         <component
           :is="isPrepared ? 'router-link' : 'span'"
@@ -84,7 +88,7 @@ async function retryPreparation(regulationId: string) {
         </component>
       </div>
 
-      <div class="actions">
+      <div class="app-card-actions">
         <span v-if="isPrepared">
           <IconMotion motion-type="search" class="search-action">
             <SearchRoundedIcon />
@@ -134,12 +138,8 @@ async function retryPreparation(regulationId: string) {
   height: 100%;
 }
 
-.card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-top: 18px;
+.app-card-content {
+  margin-top: var(--app-space-lg);
 }
 
 .regulation-info {
@@ -170,7 +170,7 @@ async function retryPreparation(regulationId: string) {
   inset: 0;
 }
 
-.file-card--prepared:has(.file-card-link:hover) .search-action {
+.file-card.is-prepared:has(.file-card-link:hover) .search-action {
   color: var(--el-color-primary);
 }
 
@@ -178,14 +178,7 @@ async function retryPreparation(regulationId: string) {
   color: var(--el-color-primary);
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  align-items: center;
-}
-
-.actions button {
+.app-card-actions button {
   position: relative;
   z-index: 1;
 }

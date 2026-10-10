@@ -41,7 +41,7 @@ async function handleCaseDeleted(caseId: string) {
 .sidebar-cases-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-sm);
   min-height: 0;
 }
 

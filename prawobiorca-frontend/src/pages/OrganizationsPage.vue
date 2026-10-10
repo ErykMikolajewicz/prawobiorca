@@ -122,7 +122,7 @@ async function handleDeleteSuborganization(suborganizationId: string) {
 <template>
   <AppLayout>
     <div class="page-header">
-      <h1>Organizacje</h1>
+      <h1 class="page-title">Organizacje</h1>
       <el-button type="primary" @click="openDialog({ kind: 'add-organization' })">
         Dodaj organizację
       </el-button>
@@ -148,13 +148,3 @@ async function handleDeleteSuborganization(suborganizationId: string) {
     />
   </AppLayout>
 </template>
-
-<style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-</style>

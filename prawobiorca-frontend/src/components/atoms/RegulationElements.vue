@@ -48,13 +48,13 @@ function isSubLine(line: string) {
       v-for="(block, blockIndex) in blocks"
       :key="blockIndex"
       class="result-block"
-      :class="{ 'result-block--highlighted': block.highlighted }"
+      :class="{ 'is-highlighted': block.highlighted }"
     >
       <p
         v-for="(line, lineIndex) in block.lines"
         :key="lineIndex"
         class="result-line"
-        :class="{ 'result-line--sub': isSubLine(line) }"
+        :class="{ 'is-sub': isSubLine(line) }"
       >
         {{ line }}
       </p>
@@ -70,27 +70,27 @@ function isSubLine(line: string) {
 }
 
 .result-block {
-  padding-left: 0.75rem;
+  padding-left: var(--app-space-md);
   border-left: 3px solid transparent;
 }
 
 .result-block + .result-block {
-  padding-top: 0.35rem;
+  padding-top: var(--app-space-xs);
 }
 
 .result-line {
-  margin: 0 0 0.35rem 0;
+  margin: 0 0 var(--app-space-xs) 0;
 }
 
 .result-line:last-child {
   margin-bottom: 0;
 }
 
-.result-line--sub {
-  margin-left: 1rem;
+.result-line.is-sub {
+  margin-left: var(--app-space-lg);
 }
 
-.result-block--highlighted {
+.result-block.is-highlighted {
   border-left-color: var(--el-color-primary);
 }
 </style>

@@ -64,18 +64,18 @@ async function createCase() {
   align-items: center;
   height: var(--el-menu-item-height);
   padding-left: var(--el-menu-base-level-padding);
-  border-radius: 4px;
+  border-radius: var(--el-border-radius-base);
   cursor: text;
+}
 
-  &:hover {
-    background-color: var(--el-menu-hover-bg-color);
-  }
+.case-form:hover {
+  background-color: var(--el-menu-hover-bg-color);
 }
 
 .add-btn {
   flex-shrink: 0;
   width: var(--el-menu-icon-width);
-  margin-right: 5px;
+  margin-right: var(--app-space-xs);
   padding: 0;
 }
 

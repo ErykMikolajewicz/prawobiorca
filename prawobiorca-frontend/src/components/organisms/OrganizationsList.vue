@@ -17,7 +17,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <el-collapse v-if="organizations.length" class="organizations-collapse">
+  <el-collapse v-if="organizations.length" class="app-collapse organizations-collapse">
     <el-collapse-item
       v-for="organization in organizations"
       :key="organization.id"
@@ -25,7 +25,7 @@ const emit = defineEmits<{
     >
       <template #title>
         <span class="organization-header">
-          <span class="item-name" :title="organization.name">
+          <span class="item-name app-text-truncate" :title="organization.name">
             {{ organization.name }}
             <span class="organization-short-name">({{ organization.shortName }})</span>
           </span>
@@ -57,7 +57,9 @@ const emit = defineEmits<{
           :key="suborganization.id"
           class="suborganization-item"
         >
-          <span class="item-name" :title="suborganization.name">{{ suborganization.name }}</span>
+          <span class="item-name app-text-truncate" :title="suborganization.name">{{
+            suborganization.name
+          }}</span>
           <span class="item-actions">
             <el-button size="small" @click="emit('edit-suborganization', suborganization)">
               Edytuj
@@ -83,20 +85,6 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.organizations-collapse {
-  --el-collapse-header-bg-color: transparent;
-  --el-collapse-content-bg-color: transparent;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.organizations-collapse :deep(.el-collapse-item__header),
-.organizations-collapse :deep(.el-collapse-item__content) {
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
 .organizations-collapse :deep(.el-collapse-item__header) {
   border-left: 4px solid var(--el-color-primary);
 }
@@ -109,16 +97,13 @@ const emit = defineEmits<{
 .organization-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-right: 12px;
+  gap: var(--app-space-md);
+  padding-right: var(--app-space-md);
 }
 
 .item-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-weight: 500;
 }
 
@@ -130,17 +115,17 @@ const emit = defineEmits<{
 .item-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
+}
 
-  .el-button + .el-button {
-    margin-left: 0;
-  }
+.item-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .suborganizations-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -149,25 +134,25 @@ const emit = defineEmits<{
 .suborganization-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px 8px 24px;
-  border-radius: 6px;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md) var(--app-space-sm) var(--app-space-xl);
+  border-radius: var(--app-radius-lg);
   border: 1px solid var(--el-border-color-lighter);
   border-left: 3px solid var(--el-color-primary-light-5);
   transition: border-color 0.2s ease;
+}
 
-  &:hover {
-    border-color: var(--el-color-primary-light-5);
-  }
+.suborganization-item:hover {
+  border-color: var(--el-color-primary-light-5);
+}
 
-  .item-name {
-    font-weight: normal;
-  }
+.suborganization-item .item-name {
+  font-weight: normal;
 }
 
 .suborganizations-empty {
   margin: 0;
-  padding-left: 24px;
+  padding-left: var(--app-space-xl);
   color: var(--el-text-color-secondary);
 }
 </style>

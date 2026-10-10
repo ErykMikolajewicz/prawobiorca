@@ -18,13 +18,7 @@ const label = computed(() => {
 </script>
 
 <template>
-  <el-tag v-if="label" size="small" type="info" effect="plain" class="regulation-type-badge">
+  <el-tag v-if="label" size="small" type="info" effect="plain" class="app-badge">
     {{ label }}
   </el-tag>
 </template>
-
-<style scoped>
-.regulation-type-badge {
-  font-weight: 500;
-}
-</style>

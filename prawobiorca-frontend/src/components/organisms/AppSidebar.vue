@@ -33,7 +33,7 @@ onMounted(async () => {
 <template>
   <el-aside
     :width="isCollapsed ? '64px' : '260px'"
-    :class="['app-sidebar', { collapsed: isCollapsed }]"
+    :class="['app-sidebar', { 'is-collapsed': isCollapsed }]"
   >
     <div class="sidebar-header">
       <div v-if="!isCollapsed" class="logo">PRAWOBIORCA</div>
@@ -104,8 +104,8 @@ onMounted(async () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px 8px;
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-sm);
   box-sizing: border-box;
   overflow: hidden;
   --el-menu-bg-color: transparent;
@@ -116,10 +116,10 @@ onMounted(async () => {
 }
 
 .app-sidebar :deep(.icon-btn svg) {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
-.app-sidebar.collapsed {
+.app-sidebar.is-collapsed {
   align-items: center;
   padding-inline: 0;
 }
@@ -128,26 +128,26 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 12px;
+  padding-left: var(--app-space-md);
 }
 
-.app-sidebar.collapsed .sidebar-header {
+.app-sidebar.is-collapsed .sidebar-header {
   padding-left: 0;
 }
 
 .logo {
   color: var(--el-color-primary);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: bold;
   letter-spacing: 1px;
 }
 
 .sidebar-menu {
   border-right: none;
+}
 
-  .el-icon {
-    font-size: 20px;
-  }
+.sidebar-menu .el-icon {
+  font-size: 1.25rem;
 }
 
 .sidebar-cases {
@@ -160,15 +160,15 @@ onMounted(async () => {
   font-size: 0.85rem;
   line-height: 1.5;
   color: var(--el-text-color-secondary);
-
-  & + .sidebar-footer {
-    margin-top: 0;
-  }
 }
 
 .sidebar-footer {
   margin-top: auto;
   display: flex;
   justify-content: center;
+}
+
+.sidebar-guest-info + .sidebar-footer {
+  margin-top: 0;
 }
 </style>

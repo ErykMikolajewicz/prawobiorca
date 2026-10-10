@@ -32,7 +32,7 @@ import AppFooter from '@/components/organisms/AppFooter.vue'
 
 .main-content {
   flex-grow: 1;
-  padding: 1rem;
+  padding: var(--app-space-lg);
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -40,9 +40,9 @@ import AppFooter from '@/components/organisms/AppFooter.vue'
   overflow-x: hidden;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .main-content {
-    padding: 0.5rem;
+    padding: var(--app-space-sm);
   }
 }
 </style>

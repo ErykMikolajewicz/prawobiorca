@@ -104,6 +104,6 @@ onBeforeMount(async () => {
 .page-actions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 1rem;
+  margin-bottom: var(--app-space-lg);
 }
 </style>

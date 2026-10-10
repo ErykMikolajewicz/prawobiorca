@@ -47,8 +47,8 @@ const suborganizationId = computed<string>({
       <button v-else type="button" class="context-trigger" :title="title">
         <SchoolRoundedIcon class="context-icon" />
         <span class="context-text">
-          <span class="context-label">{{ label }}</span>
-          <span v-if="selectedSuborganization" class="context-sublabel">
+          <span class="context-label app-text-truncate">{{ label }}</span>
+          <span v-if="selectedSuborganization" class="context-sublabel app-text-truncate">
             {{ selectedSuborganization.name }}
           </span>
         </span>
@@ -98,11 +98,11 @@ const suborganizationId = computed<string>({
 .context-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--app-space-sm) var(--app-space-md);
   border: 1px solid var(--app-border-color);
-  border-radius: 4px;
+  border-radius: var(--el-border-radius-base);
   background: none;
   color: var(--el-text-color-primary);
   cursor: pointer;
@@ -127,13 +127,6 @@ const suborganizationId = computed<string>({
   min-width: 0;
 }
 
-.context-label,
-.context-sublabel {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .context-sublabel {
   font-size: 0.85rem;
   color: var(--el-text-color-secondary);
@@ -142,7 +135,7 @@ const suborganizationId = computed<string>({
 .context-menu {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 
 .context-menu-title {
@@ -154,7 +147,7 @@ const suborganizationId = computed<string>({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 8px;
+  padding-top: var(--app-space-sm);
   border-top: 1px solid var(--app-border-color);
 }
 </style>

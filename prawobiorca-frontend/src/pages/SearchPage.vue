@@ -100,7 +100,9 @@ async function handleAddToCase(payload: {
 
 <template>
   <AppLayout>
-    <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
+    <div class="page-header">
+      <h1 class="page-title">Przeszukaj regulacje: {{ regulationName }}</h1>
+    </div>
 
     <div v-loading="isSearching">
       <SearchForm

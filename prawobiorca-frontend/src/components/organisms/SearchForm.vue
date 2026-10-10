@@ -114,7 +114,7 @@ function onSubmit() {
 .threshold-control {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: var(--app-space-lg);
   width: 100%;
 }
 

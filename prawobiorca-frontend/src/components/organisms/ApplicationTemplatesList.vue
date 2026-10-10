@@ -31,10 +31,12 @@ function showPreview(templateId: string) {
       <div
         v-for="template in templates"
         :key="template.id"
-        class="template-item app-card"
+        class="template-item app-card is-interactive"
         @click="emit('select', template.id)"
       >
-        <span class="template-name" :title="template.name">{{ template.name }}</span>
+        <span class="template-name app-text-truncate" :title="template.name">{{
+          template.name
+        }}</span>
         <ApplicationTemplateStatusBadge :status="template.status" />
         <el-button
           v-if="template.status !== 'NOT_UPLOADED'"
@@ -66,7 +68,7 @@ function showPreview(templateId: string) {
 .templates-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--app-space-md);
   min-height: 80px;
 }
 
@@ -74,11 +76,11 @@ function showPreview(templateId: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  background: var(--el-bg-color);
+  gap: var(--app-space-md);
+  padding: var(--app-space-lg);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-card-bg);
   color: var(--el-text-color-primary);
   font: inherit;
   text-align: left;
@@ -88,9 +90,6 @@ function showPreview(templateId: string) {
 .template-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-weight: 500;
 }
 </style>

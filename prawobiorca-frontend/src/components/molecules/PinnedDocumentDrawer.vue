@@ -67,7 +67,7 @@ function handleUnpin() {
 .drawer-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--app-space-xs);
 }
 
 .title {
@@ -75,7 +75,7 @@ function handleUnpin() {
 }
 
 .presentation-name {
-  font-size: 0.85em;
+  font-size: 0.85rem;
   color: var(--el-text-color-secondary);
 }
 

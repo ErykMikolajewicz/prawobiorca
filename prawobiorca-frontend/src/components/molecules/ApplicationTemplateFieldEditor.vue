@@ -107,6 +107,6 @@ function handleFieldTypeChange() {
 
 .field-flags {
   display: flex;
-  gap: 1.5rem;
+  gap: var(--app-space-xl);
 }
 </style>

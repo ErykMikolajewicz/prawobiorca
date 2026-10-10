@@ -56,7 +56,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
     <el-divider />
 
     <div v-if="results.length">
-      <h2>Wyniki:</h2>
+      <h2 class="section-title">Wyniki:</h2>
       <div v-for="(group, groupIndex) in groupedResults" :key="groupIndex" class="result-group">
         <h3 class="result-group-header">{{ group.header }}</h3>
         <SearchResultItem
@@ -80,13 +80,13 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
 
 <style scoped>
 .result-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--app-space-xl);
 }
 
 .result-group-header {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 var(--app-space-sm) 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--el-text-color-primary, #303133);
+  color: var(--el-text-color-primary);
 }
 </style>

@@ -63,7 +63,7 @@ const displayedRegulations = computed(() => {
 .regulations-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--app-space-xl);
 }
 
 .filter-row {

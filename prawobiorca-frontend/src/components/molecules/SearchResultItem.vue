@@ -32,11 +32,11 @@ function handleAddToCase() {
 </script>
 
 <template>
-  <el-card shadow="never" class="app-result-card">
+  <el-card shadow="never" class="app-card">
     <RegulationElements :elements="elements" :highlight="highlight" />
     <div class="result-footer">
       <span class="score">Podobieństwo: {{ score.toFixed(3) }}</span>
-      <div class="actions">
+      <div class="app-card-actions">
         <el-tooltip
           v-if="canAddToCase"
           :disabled="!!selectedCaseId"
@@ -60,27 +60,17 @@ function handleAddToCase() {
 </template>
 
 <style scoped>
-.app-result-card,
-html.dark .app-result-card {
-  --el-card-bg-color: var(--app-card-bg);
-  --el-card-border-color: var(--app-card-border);
-}
-
 .result-footer {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 16px;
-  margin-top: 0.75rem;
+  gap: var(--app-space-lg);
+  margin-top: var(--app-space-md);
 }
 
 .score {
-  font-size: 0.8em;
-  color: var(--el-text-color-secondary, #909399);
-}
-
-.actions {
-  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--el-text-color-secondary);
 }
 
 .tooltip-wrapper {

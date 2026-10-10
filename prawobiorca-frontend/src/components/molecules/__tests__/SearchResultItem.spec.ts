@@ -47,9 +47,9 @@ describe('SearchResultItem', () => {
     const wrapper = mountItem('irrelevant', elements)
 
     const lines = wrapper.findAll('.result-line')
-    expect(lines[0]!.classes()).not.toContain('result-line--sub')
-    expect(lines[1]!.classes()).toContain('result-line--sub')
-    expect(lines[2]!.classes()).toContain('result-line--sub')
+    expect(lines[0]!.classes()).not.toContain('is-sub')
+    expect(lines[1]!.classes()).toContain('is-sub')
+    expect(lines[2]!.classes()).toContain('is-sub')
   })
 
   it('emits add-to-case with the flat text, elements and highlight', async () => {
@@ -74,9 +74,9 @@ describe('SearchResultItem', () => {
     const wrapper = mountItem('irrelevant', elements, 'case-1', highlight)
 
     const blocks = wrapper.findAll('.result-block')
-    expect(blocks[0]!.classes()).toContain('result-block--highlighted')
-    expect(blocks[1]!.classes()).toContain('result-block--highlighted')
-    expect(blocks[2]!.classes()).not.toContain('result-block--highlighted')
+    expect(blocks[0]!.classes()).toContain('is-highlighted')
+    expect(blocks[1]!.classes()).toContain('is-highlighted')
+    expect(blocks[2]!.classes()).not.toContain('is-highlighted')
   })
 
   it('does not highlight anything without highlight', () => {
@@ -84,7 +84,7 @@ describe('SearchResultItem', () => {
 
     const wrapper = mountItem('irrelevant', elements)
 
-    expect(wrapper.find('.result-block--highlighted').exists()).toBe(false)
+    expect(wrapper.find('.result-block.is-highlighted').exists()).toBe(false)
     expect(wrapper.find('.result-line').text()).toBe('1. Ustęp pierwszy')
   })
 })
