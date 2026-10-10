@@ -40,7 +40,7 @@ const displayedRegulations = computed(() => {
       <RegulationTypeFilter v-model="typeFilter" />
     </div>
 
-    <div v-if="displayedRegulations.length" class="cards-grid">
+    <div v-if="displayedRegulations.length" class="regulations-list">
       <RegulationCard
         v-for="regulation in displayedRegulations"
         :key="regulation.id"
@@ -64,6 +64,16 @@ const displayedRegulations = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--app-space-xl);
+}
+
+.regulations-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-card-bg);
+  box-shadow: var(--app-card-shadow-rest);
+  overflow: hidden;
 }
 
 .filter-row {

@@ -43,12 +43,6 @@
   border-left: 4px solid var(--el-color-primary);
 }
 
-.cards-grid {
-  display: grid;
-  gap: var(--app-space-lg);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-}
-
 .app-card,
 html.dark .app-card {
   --el-card-bg-color: var(--app-card-bg);
