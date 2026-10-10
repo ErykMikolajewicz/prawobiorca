@@ -8,4 +8,6 @@ export interface ApplicationTemplateRepresentation {
   status: ApplicationTemplateStatus
   fields: ApplicationTemplateField[]
   instructions: string | null
+  organizationId: string | null
+  suborganizationId: string | null
 }

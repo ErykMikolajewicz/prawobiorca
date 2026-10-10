@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type { FormInstance, FormItemRule } from 'element-plus'
 
 import { DATE_VALUE_FORMAT } from '@/domain/applicationTemplates'
@@ -54,6 +54,16 @@ function handleTemplateChange() {
   )
   formRef.value?.clearValidate()
 }
+
+watch(
+  () => props.templates,
+  () => {
+    if (form.templateId && !selectedTemplate.value) {
+      form.templateId = ''
+      handleTemplateChange()
+    }
+  },
+)
 
 async function handleSubmit() {
   if (!(await formRef.value?.validate().catch(() => false))) {

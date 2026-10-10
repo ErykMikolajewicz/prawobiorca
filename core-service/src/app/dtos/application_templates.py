@@ -23,6 +23,8 @@ class ApplicationTemplateDetailsData(BaseModel):
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     instructions: str | None = None
     fields: list[ApplicationTemplateField]
+    organization_id: UUID | None = None
+    suborganization_id: UUID | None = None
 
 
 @dataclass(config=ConfigDict(alias_generator=to_camel))
@@ -40,6 +42,8 @@ class ApplicationTemplateRepresentation:
     status: ApplicationTemplateStatus
     fields: list[ApplicationTemplateField]
     instructions: str | None = None
+    organization_id: UUID | None = None
+    suborganization_id: UUID | None = None
 
 
 @dataclass(

@@ -45,6 +45,17 @@ application_templates_table = sqla.Table(
         default=ApplicationTemplateStatus.NOT_UPLOADED,
     ),
     sqla.Column("fields", ApplicationTemplateFieldsType, nullable=False, server_default=sqla.text("'[]'::jsonb")),
+    sqla.Column("organization_id", sqla.UUID, sqla.ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True),
+    sqla.Column(
+        "suborganization_id", sqla.UUID, sqla.ForeignKey("suborganizations.id", ondelete="SET NULL"), nullable=True
+    ),
+    sqla.ForeignKeyConstraint(
+        ["suborganization_id", "organization_id"],
+        ["suborganizations.id", "suborganizations.organization_id"],
+        ondelete="SET NULL (suborganization_id)",
+        name="fk_application_templates_suborganization_id_organization_id",
+    ),
+    sqla.Index("ix_application_templates_organization_id_suborganization_id", "organization_id", "suborganization_id"),
 )
 
 

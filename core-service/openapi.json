@@ -1664,16 +1664,52 @@
         ],
         "summary": "Get Published Application Templates",
         "operationId": "get_published_application_templates",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizationid"
+            }
+          },
+          {
+            "name": "suborganizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suborganizationid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/PublishedApplicationTemplate"
                   },
-                  "type": "array",
                   "title": "Response Get Published Application Templates"
                 }
               }
@@ -1681,6 +1717,9 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Suborganization given without organization!"
           }
         }
       }
@@ -1846,13 +1885,13 @@
             "description": "Service unavailable!"
           },
           "404": {
-            "description": "Application template not found!"
+            "description": "Application template or organization not found!"
           },
           "409": {
             "description": "Only draft application template can be updated!"
           },
           "422": {
-            "description": "Invalid fields configuration!"
+            "description": "Invalid fields configuration, or suborganization given without organization!"
           }
         }
       },
@@ -2579,6 +2618,30 @@
             },
             "type": "array",
             "title": "Fields"
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
@@ -2685,6 +2748,30 @@
               }
             ],
             "title": "Instructions"
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
@@ -2694,7 +2781,9 @@
           "name",
           "status",
           "fields",
-          "instructions"
+          "instructions",
+          "organizationId",
+          "suborganizationId"
         ],
         "title": "ApplicationTemplateRepresentation"
       },
