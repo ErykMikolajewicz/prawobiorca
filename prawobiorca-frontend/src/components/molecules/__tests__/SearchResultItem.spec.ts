@@ -52,13 +52,15 @@ describe('SearchResultItem', () => {
     expect(lines[2]!.classes()).toContain('result-line--sub')
   })
 
-  it('emits add-to-case with the flat text regardless of structured elements', async () => {
+  it('emits add-to-case with the flat text, elements and highlight', async () => {
     const elements: Array<SearchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
     const wrapper = mountItem('1. Ustęp pierwszy', elements)
 
     await wrapper.find('button').trigger('click')
 
-    expect(wrapper.emitted('add-to-case')?.[0]).toEqual([{ documentContent: '1. Ustęp pierwszy' }])
+    expect(wrapper.emitted('add-to-case')?.[0]).toEqual([
+      { documentContent: '1. Ustęp pierwszy', elements, highlight: null },
+    ])
   })
 
   it('highlights blocks containing the best chunk span', () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import RegulationElements from '@/components/atoms/RegulationElements.vue'
 import type { CaseDocument } from '@/api/generated/model'
 
 const props = defineProps<{ document: CaseDocument | null }>()
@@ -31,7 +32,13 @@ function handleUnpin() {
 </script>
 
 <template>
-  <el-drawer v-model="isOpen" direction="rtl" :modal="false" size="min(40rem, 100vw)">
+  <el-drawer
+    v-model="isOpen"
+    direction="rtl"
+    :modal="false"
+    size="min(40rem, 100vw)"
+    header-class="pinned-document-drawer-header"
+  >
     <template #header>
       <div v-if="shownDocument" class="drawer-header">
         <em v-if="shownDocument.header" class="presentation-name">
@@ -41,7 +48,14 @@ function handleUnpin() {
       </div>
     </template>
 
-    <p v-if="shownDocument" class="content">{{ shownDocument.content }}</p>
+    <template v-if="shownDocument">
+      <RegulationElements
+        v-if="shownDocument.elements.length"
+        :elements="shownDocument.elements"
+        :highlight="shownDocument.highlight"
+      />
+      <p v-else class="content">{{ shownDocument.content }}</p>
+    </template>
 
     <template #footer>
       <el-button type="danger" @click="handleUnpin">Odepnij</el-button>

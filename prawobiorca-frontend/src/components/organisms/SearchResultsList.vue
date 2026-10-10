@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import SearchResultItem from '@/components/molecules/SearchResultItem.vue'
-import type { SearchResult } from '@/api/generated/model'
+import type {
+  SearchResult,
+  SearchResultElement,
+  SearchResultHighlight,
+} from '@/api/generated/model'
 
 const props = defineProps<{
   results: Array<SearchResult>
@@ -10,11 +14,18 @@ const props = defineProps<{
   query: string
 }>()
 
+type AddToCasePayload = {
+  documentContent: string
+  header: string | null
+  elements: Array<SearchResultElement>
+  highlight: SearchResultHighlight | null
+}
+
 const emit = defineEmits<{
-  (e: 'add-to-case', payload: { documentContent: string; header: string | null }): void
+  (e: 'add-to-case', payload: AddToCasePayload): void
 }>()
 
-function onAddToCase(payload: { documentContent: string; header: string | null }) {
+function onAddToCase(payload: AddToCasePayload) {
   emit('add-to-case', payload)
 }
 

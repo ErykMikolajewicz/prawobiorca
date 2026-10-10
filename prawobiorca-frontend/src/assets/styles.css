@@ -143,3 +143,12 @@ html.dark .app-card {
   --el-card-bg-color: #1b1920;
   --el-card-border-color: #2c2734;
 }
+
+.pinned-document-drawer-header {
+  align-items: flex-start;
+}
+
+.pinned-document-drawer-header .el-drawer__close-btn {
+  margin: -14px -14px 0 0;
+  font-size: 25px;
+}
