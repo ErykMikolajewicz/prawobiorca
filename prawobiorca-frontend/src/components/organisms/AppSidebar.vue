@@ -87,9 +87,6 @@ onMounted(async () => {
       </button>
       <SidebarCasesList v-else class="sidebar-cases" />
     </template>
-    <p v-else-if="!isCollapsed" class="sidebar-guest-info">
-      Zaloguj się, aby zarządzać swoimi sprawami i generować dla nich wnioski.
-    </p>
 
     <div class="sidebar-footer">
       <SidebarContextMenu :collapsed="isCollapsed" />
@@ -154,21 +151,9 @@ onMounted(async () => {
   flex: 0 1 auto;
 }
 
-.sidebar-guest-info {
-  margin: auto 0 0;
-  padding-left: var(--el-menu-base-level-padding);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--el-text-color-secondary);
-}
-
 .sidebar-footer {
   margin-top: auto;
   display: flex;
   justify-content: center;
-}
-
-.sidebar-guest-info + .sidebar-footer {
-  margin-top: 0;
 }
 </style>

@@ -7,6 +7,7 @@ import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
 import HowItWorks from '@/components/molecules/HowItWorks.vue'
+import LoginCtaBanner from '@/components/molecules/LoginCtaBanner.vue'
 import { useRegulations } from '@/composables/useRegulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
@@ -63,7 +64,10 @@ onBeforeMount(async () => {
       <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj plik</el-button>
     </div>
 
-    <HowItWorks v-if="!isUserLogged" />
+    <template v-if="!isUserLogged">
+      <LoginCtaBanner />
+      <HowItWorks />
+    </template>
 
     <RegulationsList
       v-model:type-filter="publicRegulations.typeFilter"

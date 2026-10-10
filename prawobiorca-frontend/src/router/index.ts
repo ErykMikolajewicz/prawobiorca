@@ -12,6 +12,11 @@ const router = createRouter({
       component: () => import('@/pages/MainPage.vue'),
     },
     {
+      path: '/features',
+      name: 'FeaturesPage',
+      component: () => import('@/pages/FeaturesPage.vue'),
+    },
+    {
       path: '/regulations/:regulationId/documents',
       name: 'SearchPublicRegulation',
       component: SearchPage,
