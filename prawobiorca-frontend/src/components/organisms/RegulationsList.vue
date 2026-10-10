@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import RegulationCard from '@/components/molecules/RegulationCard.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
+import RegulationOrganizationFilter from '@/components/molecules/RegulationOrganizationFilter.vue'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 import type { RegulationScope } from '@/domain/regulations'
 
@@ -38,6 +39,7 @@ const displayedRegulations = computed(() => {
 
     <div class="filter-row">
       <RegulationTypeFilter v-model="typeFilter" />
+      <RegulationOrganizationFilter v-if="target === 'public'" />
     </div>
 
     <div v-if="displayedRegulations.length" class="regulations-list">
@@ -78,6 +80,8 @@ const displayedRegulations = computed(() => {
 
 .filter-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-md);
   justify-content: flex-start;
 }
 </style>

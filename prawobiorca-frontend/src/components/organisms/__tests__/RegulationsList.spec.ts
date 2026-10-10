@@ -51,6 +51,7 @@ describe('RegulationsList', () => {
             props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: true,
         },
       },
@@ -80,6 +81,7 @@ describe('RegulationsList', () => {
             props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: true,
         },
       },
@@ -114,6 +116,7 @@ describe('RegulationsList', () => {
         directives: { loading: {} },
         stubs: {
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: {
             template: '<div class="el-empty-stub">Brak regulacji</div>',
           },
@@ -139,6 +142,7 @@ describe('RegulationsList', () => {
         directives: { loading: {} },
         stubs: {
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: {
             template: '<div class="el-empty-stub">Brak regulacji</div>',
           },
@@ -169,6 +173,7 @@ describe('RegulationsList', () => {
             props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: true,
         },
       },
