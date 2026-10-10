@@ -9,7 +9,7 @@ regulations_table = sqla.Table(
     "regulations",
     metadata,
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
-    sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
+    sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=True),
     sqla.Column("presentation_name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
     sqla.Column("description", sqla.String(MAX_REGULATION_DESCRIPTION_LENGTH), nullable=True),

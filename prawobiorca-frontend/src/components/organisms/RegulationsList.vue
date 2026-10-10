@@ -35,7 +35,10 @@ const displayedRegulations = computed(() => {
 
 <template>
   <div v-loading="loading" class="regulations-container">
-    <h2 class="section-title">{{ title }}</h2>
+    <div class="list-header">
+      <h2 class="section-title">{{ title }}</h2>
+      <slot name="actions" />
+    </div>
 
     <div class="filter-row">
       <RegulationTypeFilter v-model="typeFilter" />
@@ -76,6 +79,13 @@ const displayedRegulations = computed(() => {
   background: var(--app-card-bg);
   box-shadow: var(--app-card-shadow-rest);
   overflow: hidden;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
 }
 
 .filter-row {

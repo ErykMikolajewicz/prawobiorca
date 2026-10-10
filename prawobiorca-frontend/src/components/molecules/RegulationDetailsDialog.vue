@@ -37,7 +37,12 @@ const isSaving = ref(false)
 const isDeleting = ref(false)
 const isLoadingPreview = ref(false)
 
-const createDate = computed(() => new Date(props.regulation.createDate).toLocaleString('pl-PL'))
+const createDate = computed(() =>
+  new Date(props.regulation.createDate).toLocaleString('pl-PL', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }),
+)
 const canPreview = computed(() => props.regulation.preparationStatus !== 'NOT_STARTED')
 
 const updateRegulation = props.target === 'public' ? updatePublicRegulation : updateUserRegulation
@@ -122,7 +127,7 @@ async function showPreview() {
           v-if="canManage"
           v-model="description"
           type="textarea"
-          :rows="4"
+          :rows="6"
           maxlength="1000"
           show-word-limit
           placeholder="Opis regulacji"
@@ -132,31 +137,29 @@ async function showPreview() {
         }}</span>
       </el-form-item>
 
-      <el-form-item label="Data dodania:">
+      <el-form-item label="Data dodania:" label-position="left">
         <span>{{ createDate }}</span>
       </el-form-item>
     </el-form>
 
-    <el-button v-if="canPreview" :loading="isLoadingPreview" @click="showPreview">
-      Pokaż podgląd
-    </el-button>
-
     <template #footer>
       <div class="dialog-footer">
-        <el-popconfirm
-          v-if="canManage"
-          title="Czy na pewno chcesz usunąć tę regulację?"
-          confirm-button-text="Tak"
-          cancel-button-text="Nie"
-          @confirm="handleDelete"
-        >
-          <template #reference>
-            <el-button type="danger" plain :loading="isDeleting">Usuń</el-button>
-          </template>
-        </el-popconfirm>
+        <el-button v-if="canPreview" :loading="isLoadingPreview" @click="showPreview">
+          Pokaż podgląd
+        </el-button>
 
         <div class="dialog-footer-actions">
-          <el-button @click="closeDialog">Zamknij</el-button>
+          <el-popconfirm
+            v-if="canManage"
+            title="Czy na pewno chcesz usunąć tę regulację?"
+            confirm-button-text="Tak"
+            cancel-button-text="Nie"
+            @confirm="handleDelete"
+          >
+            <template #reference>
+              <el-button type="danger" plain :loading="isDeleting">Usuń</el-button>
+            </template>
+          </el-popconfirm>
           <el-button v-if="canManage" type="primary" :loading="isSaving" @click="handleSave">
             Zapisz
           </el-button>

@@ -35,7 +35,7 @@ application_templates_table = sqla.Table(
     "application_templates",
     metadata,
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
-    sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
+    sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
     sqla.Column("instructions", sqla.Text, nullable=True),
     sqla.Column(
