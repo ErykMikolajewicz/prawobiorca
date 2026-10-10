@@ -9,7 +9,7 @@ regulations_table = sqla.Table(
     "regulations",
     metadata,
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
-    sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
+    sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=True),
     sqla.Column("presentation_name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
     sqla.Column("description", sqla.String(MAX_REGULATION_DESCRIPTION_LENGTH), nullable=True),
@@ -20,7 +20,23 @@ regulations_table = sqla.Table(
         nullable=False,
         default=RegulationPreparationStatus.NOT_STARTED,
     ),
+    sqla.Column("organization_id", sqla.UUID, sqla.ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True),
+    sqla.Column("suborganization_id", sqla.UUID, nullable=True),
     sqla.UniqueConstraint("id", "user_id", name="uq_regulations_id_user_id"),
+    sqla.ForeignKeyConstraint(
+        ["suborganization_id", "organization_id"],
+        ["suborganizations.id", "suborganizations.organization_id"],
+        ondelete="CASCADE",
+        name="fk_regulations_suborganization_id_organization_id",
+    ),
+    sqla.CheckConstraint(
+        "user_id IS NULL OR organization_id IS NULL", name="ck_regulations_private_without_organization"
+    ),
+    sqla.CheckConstraint(
+        "suborganization_id IS NULL OR organization_id IS NOT NULL",
+        name="ck_regulations_suborganization_with_organization",
+    ),
+    sqla.Index("ix_regulations_organization_id_suborganization_id", "organization_id", "suborganization_id"),
 )
 
 

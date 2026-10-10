@@ -58,7 +58,7 @@ async def get_user_regulations(
     user_id: Annotated[UUID, Depends(require_logged_user)],
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
 ) -> list[RegulationRepresentation]:
-    return await list_regulations.execute(user_id, regulation_type)
+    return await list_regulations.execute(user_id, regulation_type, None)
 
 
 @user_regulations_router.get(

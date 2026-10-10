@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from src.app.dtos.application_templates import (
     ApplicationTemplateData,
@@ -29,6 +29,8 @@ from src.domain.exceptions.application_templates import (
     InvalidApplicationFieldsConfig,
     InvalidApplicationTemplate,
 )
+from src.domain.exceptions.organizations import OrganizationNotFound
+from src.domain.value_objects.application_templates import ApplicationTemplateOrganizationFilter
 from src.framework.dependencies.application_templates import (
     get_add_application_template,
     get_application_template,
@@ -50,13 +52,29 @@ application_templates_router = APIRouter(tags=["application_templates"], prefix=
     "/application-templates",
     response_model=list[PublishedApplicationTemplate],
     dependencies=(Depends(require_logged_user),),
+    responses={
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
+    },
 )
 async def get_published_application_templates(
     list_published_templates: Annotated[
         ListPublishedApplicationTemplates, Depends(get_list_published_application_templates)
     ],
+    organization_id: UUID | None = Query(default=None, alias="organizationId"),
+    suborganization_id: UUID | None = Query(default=None, alias="suborganizationId"),
 ) -> list[PublishedApplicationTemplate]:
-    return await list_published_templates.execute()
+    if organization_id is None and suborganization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Suborganization given without organization!",
+        )
+    organization_filter = (
+        ApplicationTemplateOrganizationFilter(organization_id, suborganization_id)
+        if organization_id is not None
+        else None
+    )
+
+    return await list_published_templates.execute(organization_filter)
 
 
 @application_templates_router.get(
@@ -157,9 +175,11 @@ async def get_admin_application_template_download_url(
     response_model=ApplicationTemplateRepresentation,
     dependencies=(Depends(require_admin),),
     responses={
-        status.HTTP_404_NOT_FOUND: {"description": "Application template not found!"},
+        status.HTTP_404_NOT_FOUND: {"description": "Application template or organization not found!"},
         status.HTTP_409_CONFLICT: {"description": "Only draft application template can be updated!"},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Invalid fields configuration!"},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "Invalid fields configuration, or suborganization given without organization!"
+        },
     },
 )
 async def update_application_template(
@@ -167,10 +187,18 @@ async def update_application_template(
     template_id: Annotated[UUID, Path(alias="templateId")],
     details_data: ApplicationTemplateDetailsData,
 ) -> ApplicationTemplateRepresentation:
+    if details_data.organization_id is None and details_data.suborganization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Suborganization given without organization!",
+        )
+
     try:
         return await update_template.execute(template_id, details_data)
     except ApplicationTemplateNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application template not found!")
+    except OrganizationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found!")
     except ApplicationTemplateInInvalidState:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Only draft application template can be updated!"

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { MdEditor, type ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { showApiError } from '@/utils/error'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { downloadApplicationTemplate } from '@/api/applicationTemplates'
+import { useOrganizationsStore } from '@/stores/organizations'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
 import ApplicationTemplatePreviewDialog from '@/components/molecules/ApplicationTemplatePreviewDialog.vue'
@@ -33,8 +35,18 @@ const emit = defineEmits<{
 const form = reactive({
   name: '',
   instructions: '',
+  organizationId: '',
+  suborganizationId: '',
   fields: [] as Array<EditableTemplateField>,
 })
+
+const { organizations } = storeToRefs(useOrganizationsStore())
+
+const suborganizations = computed(
+  () =>
+    organizations.value.find((organization) => organization.id === form.organizationId)
+      ?.suborganizations ?? [],
+)
 
 const instructionsToolbars: Array<ToolbarNames> = [
   'bold',
@@ -68,6 +80,8 @@ watch(
   (template) => {
     form.name = template.name
     form.instructions = template.instructions ?? ''
+    form.organizationId = template.organizationId ?? ''
+    form.suborganizationId = template.suborganizationId ?? ''
     form.fields = template.fields.map(toEditableField)
   },
   { immediate: true },
@@ -77,6 +91,8 @@ function toDetailsData(): ApplicationTemplateDetailsData {
   return {
     name: form.name.trim(),
     instructions: form.instructions.trim() || null,
+    organizationId: form.organizationId || null,
+    suborganizationId: form.suborganizationId || null,
     fields: form.fields.map((field) => ({
       ...field,
       defaultValue: field.defaultValue || null,
@@ -198,6 +214,44 @@ async function handleDownload() {
       :disabled="!isDraft"
       @submit.prevent="handleSave"
     >
+      <el-row :gutter="24">
+        <el-col :span="12" :xs="24">
+          <el-form-item label="Organizacja (opcjonalnie):">
+            <el-select
+              v-model="form.organizationId"
+              clearable
+              placeholder="Ogólny"
+              @change="form.suborganizationId = ''"
+            >
+              <el-option
+                v-for="organization in organizations"
+                :key="organization.id"
+                :label="organization.name"
+                :value="organization.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-col>
+
+        <el-col :span="12" :xs="24">
+          <el-form-item label="Podorganizacja (opcjonalnie):">
+            <el-select
+              v-model="form.suborganizationId"
+              :disabled="!form.organizationId"
+              clearable
+              placeholder="Wszystkie podorganizacje"
+            >
+              <el-option
+                v-for="suborganization in suborganizations"
+                :key="suborganization.id"
+                :label="suborganization.name"
+                :value="suborganization.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
       <el-row :gutter="24">
         <el-col :span="12" :xs="24">
           <el-form-item label="Instrukcje dla AI:">

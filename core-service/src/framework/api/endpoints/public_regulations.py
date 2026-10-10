@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from src.app.dtos.regulations import (
-    RegulationData,
+    PublicRegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
     RegulationUploadTarget,
@@ -21,6 +21,7 @@ from src.app.use_cases.regulations import (
     SearchRegulation,
     UpdateRegulation,
 )
+from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
@@ -29,7 +30,7 @@ from src.domain.exceptions.regulations import (
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
 )
-from src.domain.value_objects.regulations import RegulationType
+from src.domain.value_objects.regulations import RegulationOrganizationFilter, RegulationType
 from src.framework.dependencies.authentication import require_admin
 from src.framework.dependencies.regulations import (
     get_add_regulation,
@@ -49,13 +50,28 @@ public_regulations_router = APIRouter(tags=["regulations"], prefix="/api")
 @public_regulations_router.get(
     "/regulations",
     response_model=list[RegulationRepresentation],
+    responses={
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
+    },
 )
 async def get_public_regulations(
     list_regulations: Annotated[ListRegulations, Depends(get_list_regulations)],
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
+    organization_id: UUID | None = Query(default=None, alias="organizationId"),
+    suborganization_id: UUID | None = Query(default=None, alias="suborganizationId"),
 ) -> list[RegulationRepresentation]:
     user_id = None
-    return await list_regulations.execute(user_id, regulation_type)
+
+    if organization_id is None and suborganization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Suborganization given without organization!",
+        )
+    organization_filter = (
+        RegulationOrganizationFilter(organization_id, suborganization_id) if organization_id is not None else None
+    )
+
+    return await list_regulations.execute(user_id, regulation_type, organization_filter)
 
 
 @public_regulations_router.get(
@@ -110,14 +126,20 @@ async def search_regulation_documents(
     "/regulations",
     dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Organization not found!"},
+    },
 )
 async def add_public_regulation(
     add_regulation_: Annotated[AddRegulation, Depends(get_add_regulation)],
-    regulation_data: RegulationData,
+    regulation_data: PublicRegulationData,
 ) -> RegulationUploadTarget:
     user_id = None
 
-    return await add_regulation_.execute(user_id, regulation_data)
+    try:
+        return await add_regulation_.execute(user_id, regulation_data)
+    except OrganizationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found!")
 
 
 @public_regulations_router.post(

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from src.app.dtos.regulations import (
+    PublicRegulationData,
     RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
@@ -16,6 +17,7 @@ from src.app.ports.tasks import RegulationPreparationScheduler
 from src.app.ports.texts import TextsEmbedder
 from src.app.services.regulations import RegulationPreparator
 from src.domain.exceptions.documents import RegulationDocumentsNotFound
+from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
@@ -26,6 +28,7 @@ from src.domain.exceptions.regulations import (
 )
 from src.domain.value_objects.regulations import (
     RegulationDetails,
+    RegulationOrganizationFilter,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -150,14 +153,24 @@ class AddRegulation:
     regulations_repository: RegulationsRepository
     regulations_storage: RegulationsStorage
 
-    async def execute(self, user_id: UUID | None, regulation_data: RegulationData) -> RegulationUploadTarget:
+    async def execute(
+        self, user_id: UUID | None, regulation_data: RegulationData | PublicRegulationData
+    ) -> RegulationUploadTarget:
         regulation_registration_data = RegulationRegistrationData(
             presentation_name=regulation_data.name, regulation_type=regulation_data.regulation_type
         )
+        if isinstance(regulation_data, PublicRegulationData):
+            regulation_registration_data.organization_id = regulation_data.organization_id
+            regulation_registration_data.suborganization_id = regulation_data.suborganization_id
+
         async with self.session_maker.begin() as session:
-            regulation_id = await self.regulations_repository.register_regulation(
-                session, user_id, regulation_registration_data
-            )
+            try:
+                regulation_id = await self.regulations_repository.register_regulation(
+                    session, user_id, regulation_registration_data
+                )
+            except OrganizationNotFound:
+                logger.warning("Organization for regulation not found!")
+                raise
 
         return await self.regulations_storage.get_upload_target(regulation_id)
 
@@ -248,10 +261,15 @@ class ListRegulations:
     regulations_repository: RegulationsRepository
 
     async def execute(
-        self, user_id: UUID | None, regulation_type: RegulationType | None
+        self,
+        user_id: UUID | None,
+        regulation_type: RegulationType | None,
+        organization_filter: RegulationOrganizationFilter | None,
     ) -> list[RegulationRepresentation]:
         async with self.session_maker() as session:
-            files = await self.regulations_repository.list_regulations(session, user_id, regulation_type)
+            files = await self.regulations_repository.list_regulations(
+                session, user_id, regulation_type, organization_filter
+            )
         return files
 
 

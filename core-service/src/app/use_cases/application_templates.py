@@ -22,8 +22,13 @@ from src.domain.exceptions.application_templates import (
     ApplicationTemplateNotFound,
     InvalidApplicationTemplate,
 )
+from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.services.application_fields import create_default_fields, validate_fields_config
-from src.domain.value_objects.application_templates import ApplicationTemplateDetails, ApplicationTemplateStatus
+from src.domain.value_objects.application_templates import (
+    ApplicationTemplateDetails,
+    ApplicationTemplateOrganizationFilter,
+    ApplicationTemplateStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +64,12 @@ class ListPublishedApplicationTemplates:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
 
-    async def execute(self) -> list[PublishedApplicationTemplate]:
+    async def execute(
+        self, organization_filter: ApplicationTemplateOrganizationFilter | None
+    ) -> list[PublishedApplicationTemplate]:
         async with self.session_maker() as session:
             templates = await self.application_templates_repo.list_templates(
-                session, ApplicationTemplateStatus.PUBLISHED
+                session, ApplicationTemplateStatus.PUBLISHED, organization_filter
             )
 
         return [
@@ -160,9 +167,17 @@ class UpdateApplicationTemplate:
             validate_fields_config({field.name for field in template.fields}, details_data.fields)
 
             details = ApplicationTemplateDetails(
-                name=details_data.name, instructions=details_data.instructions, fields=details_data.fields
+                name=details_data.name,
+                instructions=details_data.instructions,
+                fields=details_data.fields,
+                organization_id=details_data.organization_id,
+                suborganization_id=details_data.suborganization_id,
             )
-            return await self.application_templates_repo.update_details(session, template_id, details)
+            try:
+                return await self.application_templates_repo.update_details(session, template_id, details)
+            except OrganizationNotFound:
+                logger.warning("Organization for application template not found! template id: %s", template_id)
+                raise
 
 
 @dataclass

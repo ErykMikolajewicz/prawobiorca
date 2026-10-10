@@ -1,13 +1,16 @@
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import and_, delete, insert, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.dtos.application_templates import ApplicationTemplateRepresentation
 from src.domain.exceptions.application_templates import ApplicationTemplateNotFound
+from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.value_objects.application_templates import (
     ApplicationTemplateDetails,
     ApplicationTemplateField,
+    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
 from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
@@ -16,12 +19,30 @@ from src.infrastructure.relational_db.schemas.application_templates import appli
 class ApplicationTemplatesRepository:
     @staticmethod
     async def list_templates(
-        session: AsyncSession, status: ApplicationTemplateStatus | None = None
+        session: AsyncSession,
+        status: ApplicationTemplateStatus | None = None,
+        organization_filter: ApplicationTemplateOrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]:
         statement = select(ApplicationTemplateRepresentation).order_by(application_templates_table.c.create_date)
 
         if status is not None:
             statement = statement.where(application_templates_table.c.status == status)
+
+        if organization_filter is not None:
+            organization_condition = (
+                application_templates_table.c.organization_id == organization_filter.organization_id
+            )
+            if organization_filter.suborganization_id is not None:
+                organization_condition = and_(
+                    organization_condition,
+                    or_(
+                        application_templates_table.c.suborganization_id == organization_filter.suborganization_id,
+                        application_templates_table.c.suborganization_id.is_(None),
+                    ),
+                )
+            statement = statement.where(
+                or_(organization_condition, application_templates_table.c.organization_id.is_(None))
+            )
 
         result = await session.scalars(statement)
         templates = result.all()
@@ -58,9 +79,18 @@ class ApplicationTemplatesRepository:
     async def update_details(
         self, session: AsyncSession, id_: UUID, details: ApplicationTemplateDetails
     ) -> ApplicationTemplateRepresentation:
-        return await self._update(
-            session, id_, name=details.name, instructions=details.instructions, fields=details.fields
-        )
+        try:
+            return await self._update(
+                session,
+                id_,
+                name=details.name,
+                instructions=details.instructions,
+                fields=details.fields,
+                organization_id=details.organization_id,
+                suborganization_id=details.suborganization_id,
+            )
+        except IntegrityError:
+            raise OrganizationNotFound
 
     @staticmethod
     async def delete(session: AsyncSession, id_: UUID) -> None:

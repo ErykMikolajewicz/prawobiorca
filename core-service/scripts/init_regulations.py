@@ -19,9 +19,10 @@ from src.infrastructure.ai_services.text_embedder import TextsEmbedder
 from src.infrastructure.object_storage.repository import S3RegulationsStorage
 from src.infrastructure.relational_db.connection import async_session_maker
 from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
 
 # Unused import necessary for sqlalchemy
+from src.infrastructure.relational_db.schemas.organizations import organizations_table  # noqa: F401
+from src.infrastructure.relational_db.schemas.regulations import regulations_table
 from src.infrastructure.relational_db.schemas.users import users_table  # noqa: F401
 from src.infrastructure.tokenizers.mmlw import MmlwTokenizer
 from src.shared.settings.ai_services import (

@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import status
 from pydantic import TypeAdapter
@@ -57,7 +57,7 @@ async def insert_case(session_maker, name: str = "Case"):
 async def insert_application(
     session_maker,
     case_id,
-    create_date: datetime = datetime(2026, 1, 1, 10, 0, 0),
+    create_date: datetime = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
     generation_status: ApplicationGenerationStatus = ApplicationGenerationStatus.GENERATED,
 ):
     async with session_maker.begin() as session:
@@ -80,8 +80,8 @@ async def test_get_case_applications(
 ):
     case_id = await insert_case(session_maker)
     other_case_id = await insert_case(session_maker, "Other case")
-    first_application_id = await insert_application(session_maker, case_id, datetime(2026, 1, 1, 10, 0, 0))
-    second_application_id = await insert_application(session_maker, case_id, datetime(2026, 1, 2, 10, 0, 0))
+    first_application_id = await insert_application(session_maker, case_id, datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC))
+    second_application_id = await insert_application(session_maker, case_id, datetime(2026, 1, 2, 10, 0, 0, tzinfo=UTC))
     await insert_application(session_maker, other_case_id)
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -93,7 +93,7 @@ async def test_get_case_applications(
         {
             "id": str(second_application_id),
             "caseId": str(case_id),
-            "createDate": "2026-01-02T10:00:00",
+            "createDate": "2026-01-02T10:00:00Z",
             "templateName": "Wniosek o urlop",
             "generationStatus": "GENERATED",
             "name": None,
@@ -101,7 +101,7 @@ async def test_get_case_applications(
         {
             "id": str(first_application_id),
             "caseId": str(case_id),
-            "createDate": "2026-01-01T10:00:00",
+            "createDate": "2026-01-01T10:00:00Z",
             "templateName": "Wniosek o urlop",
             "generationStatus": "GENERATED",
             "name": None,

@@ -16,6 +16,11 @@ class RegulationData(BaseModel):
     regulation_type: RegulationType | None = None
 
 
+class PublicRegulationData(RegulationData):
+    organization_id: UUID | None = None
+    suborganization_id: UUID | None = None
+
+
 class RegulationDetailsData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel)
 
@@ -39,3 +44,5 @@ class RegulationRepresentation:
     description: str | None = None
     regulation_type: RegulationType | None = None
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED
+    organization_id: UUID | None = None
+    suborganization_id: UUID | None = None

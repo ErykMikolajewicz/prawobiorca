@@ -9,7 +9,7 @@ cases_table = sqla.Table(
     "cases",
     metadata,
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
-    sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
+    sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     sqla.Column("name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
 )
@@ -18,7 +18,7 @@ case_documents_table = sqla.Table(
     "case_documents",
     metadata,
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
-    sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
+    sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("case_id", sqla.UUID, sqla.ForeignKey("cases.id", ondelete="CASCADE"), nullable=False),
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     sqla.Column("presentation_name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),

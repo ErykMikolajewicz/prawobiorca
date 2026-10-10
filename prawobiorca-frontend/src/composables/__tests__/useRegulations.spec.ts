@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { nextTick } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
 import { useRegulations } from '@/composables/useRegulations'
+import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
@@ -25,12 +28,16 @@ function regulation(id: string): RegulationRepresentation {
     description: null,
     regulationType: 'ACT',
     preparationStatus: 'PREPARED',
+    organizationId: null,
+    suborganizationId: null,
   }
 }
 
 describe('useRegulations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    setActivePinia(createPinia())
   })
 
   it('ignores a response that arrives after a newer request', async () => {
@@ -90,5 +97,33 @@ describe('useRegulations', () => {
       { ...regulation('a'), presentationName: 'Nowa nazwa', description: 'Opis' },
       regulation('b'),
     ])
+  })
+
+  it('filters public regulations by the selected organization', async () => {
+    vi.mocked(getPublicRegulations).mockResolvedValue([])
+    useOrganizationsStore().select('pwr', 'w10')
+
+    const { fetch } = useRegulations('public')
+    await fetch()
+
+    expect(getPublicRegulations).toHaveBeenCalledWith({
+      documentType: undefined,
+      organizationId: 'pwr',
+      suborganizationId: 'w10',
+    })
+  })
+
+  it('reloads public regulations when the selected organization changes', async () => {
+    vi.mocked(getPublicRegulations).mockResolvedValue([])
+
+    useRegulations('public')
+    useOrganizationsStore().select('pwr', '')
+    await nextTick()
+
+    expect(getPublicRegulations).toHaveBeenCalledWith({
+      documentType: undefined,
+      organizationId: 'pwr',
+      suborganizationId: undefined,
+    })
   })
 })

@@ -9,7 +9,7 @@ regulations_sections_table = sqla.Table(
     "regulations_sections",
     metadata,
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
-    sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
+    sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("header", sqla.Text, nullable=True),
     sqla.Column("text", sqla.Text, nullable=False),
     sqla.Column("section_order", sqla.Integer, nullable=False),

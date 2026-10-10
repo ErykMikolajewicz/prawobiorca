@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import StrEnum
+from uuid import UUID
 
 CONTENT_TEMPLATE_VARIABLE = "paragraphs"
 
@@ -36,3 +37,11 @@ class ApplicationTemplateDetails:
     name: str
     instructions: str | None
     fields: list[ApplicationTemplateField]
+    organization_id: UUID | None = None
+    suborganization_id: UUID | None = None
+
+
+@dataclass
+class ApplicationTemplateOrganizationFilter:
+    organization_id: UUID
+    suborganization_id: UUID | None = None

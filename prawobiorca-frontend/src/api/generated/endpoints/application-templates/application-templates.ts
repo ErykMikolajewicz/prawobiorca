@@ -3,6 +3,7 @@ import type {
   ApplicationTemplateDetailsData,
   ApplicationTemplateRepresentation,
   ApplicationTemplateUploadTarget,
+  GetPublishedApplicationTemplatesParams,
   PublishedApplicationTemplate,
 } from '../../model'
 
@@ -14,10 +15,11 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1]
  * @summary Get Published Application Templates
  */
 export const getPublishedApplicationTemplates = (
+  params?: GetPublishedApplicationTemplatesParams,
   options?: SecondParameter<typeof prawobiorcaRequest<PublishedApplicationTemplate[]>>,
 ) => {
   return prawobiorcaRequest<PublishedApplicationTemplate[]>(
-    { url: `/api/application-templates`, method: 'GET' },
+    { url: `/api/application-templates`, method: 'GET', params },
     options,
   )
 }

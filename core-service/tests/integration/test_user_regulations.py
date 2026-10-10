@@ -82,6 +82,8 @@ async def test_get_user_regulation(
         "description": None,
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+        "organizationId": None,
+        "suborganizationId": None,
     }
 
 
@@ -119,6 +121,8 @@ async def test_update_user_regulation(
         "description": "Opis regulacji",
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+        "organizationId": None,
+        "suborganizationId": None,
     }
 
     async with session_maker() as session:
