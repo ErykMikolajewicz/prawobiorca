@@ -86,8 +86,8 @@ async def test_get_organizations(client, override_session_maker, session_maker):
             "name": "Politechnika Wrocławska",
             "shortName": "PWr",
             "suborganizations": [
-                {"id": str(mechanical_id), "name": "Wydział Mechaniczny"},
                 {"id": str(chemical_id), "name": "Wydział Chemiczny"},
+                {"id": str(mechanical_id), "name": "Wydział Mechaniczny"},
             ],
         },
         {
