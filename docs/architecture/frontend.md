@@ -29,11 +29,11 @@ Required toolchain versions are declared in `prawobiorca-frontend/package.json`:
 All application code lives in `prawobiorca-frontend/src`:
 
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. The only hand-written helpers fetch a presigned URL and trigger the browser download: `cases.ts` for a generated application, `applicationTemplates.ts` for an application template.
-* **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`).
+* **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`, `OrganizationsPage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (sidebar, footer, forms, lists) and `templates/` (`AppLayout`, the sidebar–content–footer page layout).
 * **`composables/`** — reusable stateful logic (dark mode, sidebar collapse state, regulation lists, regulation search, regulation upload flow, application template upload flow, preparation status polling).
 * **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope, application generation statuses, application template statuses and field types).
-* **`stores/`** — Pinia stores: `auth`, holding the session state, and `cases`, holding the user's cases shown in the sidebar.
+* **`stores/`** — Pinia stores: `auth`, holding the session state, `cases`, holding the user's cases shown in the sidebar, and `organizations`, holding the organization and suborganization selected in the sidebar (kept in `localStorage`; a logged user gets the first organization by default, a guest none).
 * **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in. Routes marked `requiresAdmin` redirect a non-administrator to the main page.
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite) and global styles.
 * **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover.
