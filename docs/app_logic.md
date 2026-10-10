@@ -22,6 +22,7 @@ For logged-in users, the application offers a "Cases" management function, which
 - Has all Logged User permissions.
 - Can add, edit and delete public documents.
 - Manages application templates used to generate DOCX applications.
+- Manages organizations and their suborganizations.
 ---
 
 ## 3. Views and Functionalities
@@ -51,7 +52,7 @@ This is the starting point of the application.
     - Ability to set a case as "active" (pin icon). The active case is used in the **Search View**.
     - Ability to delete a case (with confirmation). Deleting the currently opened case redirects to the Main Screen.
     - Clicking on a case redirects to the **Case View**.
-- **Application Templates** menu item, visible only for the Administrator, redirects to the **Application Templates View**.
+- **Administration** menu item, visible only for the Administrator, expands in place and contains **Application Templates** (redirects to the **Application Templates View**) and **Organizations** (redirects to the **Organizations View**).
 ---
 
 ### 3.2. Document Search View
@@ -127,3 +128,13 @@ View available exclusively for the **Administrator**, serving to manage template
 4. **Publishing**:
     - A draft with non-empty AI instructions can be published. Only published templates are available to users in the Case View.
     - Unpublishing returns the template to the "Draft" status.
+---
+
+### 3.5. Organizations View
+
+View available exclusively for the **Administrator**, serving to manage organizations (e.g. Politechnika Wrocławska) and their suborganizations (e.g. faculties).
+
+**Functionalities:**
+- List of organizations (name and short name). Each organization expands to show its suborganizations.
+- Adding, editing and deleting an organization. Deleting an organization (with confirmation) deletes its suborganizations as well.
+- Adding, editing and deleting a suborganization (with confirmation).

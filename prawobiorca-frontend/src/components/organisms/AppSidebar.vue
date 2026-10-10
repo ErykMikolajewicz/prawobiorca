@@ -7,19 +7,23 @@ import MenuRoundedIcon from '@iconify-vue/material-symbols/menu-rounded'
 import MenuOpenRoundedIcon from '@iconify-vue/material-symbols/menu-open-rounded'
 import FolderRoundedIcon from '@iconify-vue/material-symbols/folder-rounded'
 import DescriptionRoundedIcon from '@iconify-vue/material-symbols/description-rounded'
-import AuthControls from '@/components/molecules/AuthControls.vue'
-import DarkModeToggle from '@/components/molecules/DarkModeToggle.vue'
+import AdminPanelSettingsRoundedIcon from '@iconify-vue/material-symbols/admin-panel-settings-rounded'
+import CorporateFareRoundedIcon from '@iconify-vue/material-symbols/corporate-fare-rounded'
+import SidebarContextMenu from '@/components/molecules/SidebarContextMenu.vue'
 import SidebarCasesList from '@/components/organisms/SidebarCasesList.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { useCasesStore } from '@/stores/cases'
+import { useOrganizationsStore } from '@/stores/organizations'
 
 const route = useRoute()
 const { isCollapsed, toggleCollapsed } = useSidebar()
 const { isUserLogged, isAdmin } = storeToRefs(useAuthStore())
 const casesStore = useCasesStore()
+const organizationsStore = useOrganizationsStore()
 
 onMounted(async () => {
+  await organizationsStore.load()
   if (isUserLogged.value) {
     await casesStore.load()
   }
@@ -55,10 +59,20 @@ onMounted(async () => {
         <el-icon><HomeRoundedIcon /></el-icon>
         <template #title>Strona główna</template>
       </el-menu-item>
-      <el-menu-item v-if="isAdmin" index="/admin/application-templates">
-        <el-icon><DescriptionRoundedIcon /></el-icon>
-        <template #title>Szablony wniosków</template>
-      </el-menu-item>
+      <el-sub-menu v-if="isAdmin" index="admin">
+        <template #title>
+          <el-icon><AdminPanelSettingsRoundedIcon /></el-icon>
+          <span>Administracja</span>
+        </template>
+        <el-menu-item index="/admin/application-templates">
+          <el-icon><DescriptionRoundedIcon /></el-icon>
+          <template #title>Szablony wniosków</template>
+        </el-menu-item>
+        <el-menu-item index="/admin/organizations">
+          <el-icon><CorporateFareRoundedIcon /></el-icon>
+          <template #title>Organizacje</template>
+        </el-menu-item>
+      </el-sub-menu>
     </el-menu>
 
     <template v-if="isUserLogged">
@@ -78,8 +92,7 @@ onMounted(async () => {
     </p>
 
     <div class="sidebar-footer">
-      <DarkModeToggle />
-      <AuthControls :collapsed="isCollapsed" />
+      <SidebarContextMenu :collapsed="isCollapsed" />
     </div>
   </el-aside>
 </template>
@@ -97,6 +110,7 @@ onMounted(async () => {
   overflow: hidden;
   --el-menu-bg-color: transparent;
   --el-menu-item-height: 40px;
+  --el-menu-sub-item-height: 40px;
   background-color: transparent;
   border-right: 1px solid var(--app-border-color);
 }
@@ -155,12 +169,6 @@ onMounted(async () => {
 .sidebar-footer {
   margin-top: auto;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.app-sidebar.collapsed .sidebar-footer {
-  flex-direction: column;
+  justify-content: center;
 }
 </style>
