@@ -147,6 +147,40 @@
               ],
               "title": "Documenttype"
             }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizationid"
+            }
+          },
+          {
+            "name": "suborganizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suborganizationid"
+            }
           }
         ],
         "responses": {
@@ -168,14 +202,7 @@
             "description": "Service unavailable!"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Suborganization given without organization!"
           }
         }
       },
@@ -190,7 +217,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegulationData"
+                "$ref": "#/components/schemas/PublicRegulationData"
               }
             }
           }
@@ -208,6 +235,9 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Organization not found!"
           },
           "422": {
             "description": "Validation Error",
@@ -3051,6 +3081,55 @@
         ],
         "title": "OrganizationData"
       },
+      "PublicRegulationData": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "regulationType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegulationType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PublicRegulationData"
+      },
       "PublishedApplicationField": {
         "properties": {
           "name": {
@@ -3241,6 +3320,30 @@
           "preparationStatus": {
             "$ref": "#/components/schemas/RegulationPreparationStatus",
             "default": "NOT_STARTED"
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
@@ -3250,7 +3353,9 @@
           "presentationName",
           "description",
           "regulationType",
-          "preparationStatus"
+          "preparationStatus",
+          "organizationId",
+          "suborganizationId"
         ],
         "title": "RegulationRepresentation"
       },

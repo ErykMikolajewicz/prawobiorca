@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
+from uuid import UUID
 
 from src.domain.services.legal_structure_parser import (
     LETTER_PATTERN,
@@ -341,6 +342,14 @@ class RegulationPreparationStatus(StrEnum):
 class RegulationRegistrationData:
     presentation_name: str
     regulation_type: RegulationType | None = None
+    organization_id: UUID | None = None
+    suborganization_id: UUID | None = None
+
+
+@dataclass
+class RegulationOrganizationFilter:
+    organization_id: UUID
+    suborganization_id: UUID | None = None
 
 
 @dataclass

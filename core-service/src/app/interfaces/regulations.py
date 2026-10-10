@@ -5,6 +5,7 @@ from src.app.dtos.regulations import RegulationRepresentation, RegulationUploadT
 from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.regulations import (
     RegulationDetails,
+    RegulationOrganizationFilter,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -29,7 +30,11 @@ class RegulationsRepository(Protocol):
     def __init__(self): ...
 
     async def list_regulations(
-        self, session: AsyncSession, user_id: UUID | None, regulation_type: RegulationType | None
+        self,
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_type: RegulationType | None,
+        organization_filter: RegulationOrganizationFilter | None,
     ) -> list[RegulationRepresentation]: ...
 
     async def register_regulation(

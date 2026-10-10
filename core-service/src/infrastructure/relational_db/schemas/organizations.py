@@ -19,4 +19,5 @@ suborganizations_table = sqla.Table(
     sqla.Column("create_date", sqla.DateTime, server_default=sqla.text("now()"), nullable=False),
     sqla.Column("organization_id", sqla.UUID, sqla.ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False),
     sqla.Column("name", sqla.String(MAX_ORGANIZATION_NAME_LENGTH), nullable=False),
+    sqla.UniqueConstraint("id", "organization_id", name="uq_suborganizations_id_organization_id"),
 )

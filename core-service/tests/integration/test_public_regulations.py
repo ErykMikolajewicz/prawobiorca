@@ -1,6 +1,6 @@
 import math
 from unittest.mock import ANY
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
@@ -10,6 +10,7 @@ from src.app.dtos.regulations import RegulationUploadTarget
 from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
 from src.framework.dependencies.ai_services import get_texts_embedder
 from src.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
+from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
 from src.infrastructure.relational_db.schemas.regulations import regulations_table
 from src.infrastructure.relational_db.schemas.sections import (
     regulations_chunks_table,
@@ -66,6 +67,8 @@ async def test_get_public_regulations(client, override_session_maker, session_ma
                 "description": None,
                 "regulationType": RegulationType.ACT,
                 "preparationStatus": RegulationPreparationStatus.PREPARED,
+                "organizationId": None,
+                "suborganizationId": None,
             }
         ]
 
@@ -90,6 +93,8 @@ async def test_get_public_regulation(client, override_session_maker, session_mak
             "description": None,
             "regulationType": RegulationType.ACT,
             "preparationStatus": RegulationPreparationStatus.PREPARED,
+            "organizationId": None,
+            "suborganizationId": None,
         }
 
         response = await client.get(f"/api/regulations/{private_regulation_id}")
@@ -427,6 +432,8 @@ async def test_update_public_regulation_as_admin(
             "description": "Opis regulacji",
             "regulationType": RegulationType.ACT,
             "preparationStatus": RegulationPreparationStatus.PREPARED,
+            "organizationId": None,
+            "suborganizationId": None,
         }
     finally:
         async with session_maker.begin() as session:
@@ -451,3 +458,202 @@ async def test_update_public_regulation_as_normal_user(
     finally:
         async with session_maker.begin() as session:
             await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
+
+
+async def insert_organization(session, short_name):
+    return await session.scalar(
+        insert(organizations_table)
+        .values(name=f"Uczelnia {short_name}", short_name=short_name)
+        .returning(organizations_table.c.id)
+    )
+
+
+async def insert_suborganization(session, organization_id, name):
+    return await session.scalar(
+        insert(suborganizations_table)
+        .values(organization_id=organization_id, name=name)
+        .returning(suborganizations_table.c.id)
+    )
+
+
+async def insert_organization_regulation(session, presentation_name, organization_id, suborganization_id):
+    return await session.scalar(
+        insert(regulations_table)
+        .values(
+            {
+                "user_id": None,
+                "presentation_name": presentation_name,
+                "preparation_status": RegulationPreparationStatus.PREPARED,
+                "organization_id": organization_id,
+                "suborganization_id": suborganization_id,
+            }
+        )
+        .returning(regulations_table.c.id)
+    )
+
+
+async def test_get_public_regulations_filtered_by_organization(client, override_session_maker, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session, "UWr")
+        other_organization_id = await insert_organization(session, "UMed")
+        suborganization_id = await insert_suborganization(session, organization_id, "Wydział Prawa")
+        other_suborganization_id = await insert_suborganization(session, organization_id, "Wydział Chemii")
+
+        general_id = await insert_organization_regulation(session, "General act.pdf", None, None)
+        await insert_organization_regulation(session, "Statute.pdf", organization_id, None)
+        await insert_organization_regulation(session, "Law rules.pdf", organization_id, suborganization_id)
+        await insert_organization_regulation(session, "Chemistry rules.pdf", organization_id, other_suborganization_id)
+        await insert_organization_regulation(session, "Other statute.pdf", other_organization_id, None)
+
+    try:
+        response = await client.get("/api/regulations")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert {regulation["presentationName"] for regulation in response.json()} == {
+            "General act.pdf",
+            "Statute.pdf",
+            "Law rules.pdf",
+            "Chemistry rules.pdf",
+            "Other statute.pdf",
+        }
+
+        response = await client.get("/api/regulations", params={"organizationId": str(organization_id)})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert {regulation["presentationName"] for regulation in response.json()} == {
+            "General act.pdf",
+            "Statute.pdf",
+            "Law rules.pdf",
+            "Chemistry rules.pdf",
+        }
+
+        response = await client.get(
+            "/api/regulations",
+            params={"organizationId": str(organization_id), "suborganizationId": str(suborganization_id)},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert {
+            (regulation["presentationName"], regulation["organizationId"], regulation["suborganizationId"])
+            for regulation in response.json()
+        } == {
+            ("General act.pdf", None, None),
+            ("Statute.pdf", str(organization_id), None),
+            ("Law rules.pdf", str(organization_id), str(suborganization_id)),
+        }
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(
+                delete(organizations_table).where(
+                    organizations_table.c.id.in_([organization_id, other_organization_id])
+                )
+            )
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == general_id))
+
+
+async def test_get_public_regulations_suborganization_without_organization(client, override_session_maker):
+    response = await client.get("/api/regulations", params={"suborganizationId": str(uuid4())})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+async def test_add_public_regulation_with_organization(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+    override_get_regulations_storage,
+    mock_regulations_storage,
+):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session, "UWr")
+        suborganization_id = await insert_suborganization(session, organization_id, "Wydział Prawa")
+
+    mock_regulations_storage.get_upload_target.side_effect = lambda id_: RegulationUploadTarget(
+        id=id_, url="http://storage.local/bucket", fields={"key": str(id_)}
+    )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.post(
+            "/api/regulations",
+            json={
+                "name": "faculty-rules.pdf",
+                "organizationId": str(organization_id),
+                "suborganizationId": str(suborganization_id),
+            },
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        regulation_id = UUID(response.json()["id"])
+
+        async with session_maker() as session:
+            result = await session.execute(select(regulations_table).where(regulations_table.c.id == regulation_id))
+        regulation = result.one()
+
+        assert regulation.organization_id == organization_id
+        assert regulation.suborganization_id == suborganization_id
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(organizations_table).where(organizations_table.c.id == organization_id))
+
+
+async def test_add_public_regulation_with_suborganization_of_other_organization(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+    override_get_regulations_storage,
+):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session, "UWr")
+        other_organization_id = await insert_organization(session, "UMed")
+        other_suborganization_id = await insert_suborganization(session, other_organization_id, "Wydział Lekarski")
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.post(
+            "/api/regulations",
+            json={
+                "name": "faculty-rules.pdf",
+                "organizationId": str(organization_id),
+                "suborganizationId": str(other_suborganization_id),
+            },
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(
+                delete(organizations_table).where(
+                    organizations_table.c.id.in_([organization_id, other_organization_id])
+                )
+            )
+
+
+async def test_delete_suborganization_deletes_its_regulations(client, override_session_maker, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session, "UWr")
+        suborganization_id = await insert_suborganization(session, organization_id, "Wydział Prawa")
+        statute_id = await insert_organization_regulation(session, "Statute.pdf", organization_id, None)
+        faculty_rules_id = await insert_organization_regulation(
+            session, "Law rules.pdf", organization_id, suborganization_id
+        )
+
+    try:
+        async with session_maker.begin() as session:
+            await session.execute(
+                delete(suborganizations_table).where(suborganizations_table.c.id == suborganization_id)
+            )
+
+        async with session_maker() as session:
+            remaining_ids = await session.scalars(
+                select(regulations_table.c.id).where(regulations_table.c.id.in_([statute_id, faculty_rules_id]))
+            )
+
+        assert remaining_ids.all() == [statute_id]
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(organizations_table).where(organizations_table.c.id == organization_id))

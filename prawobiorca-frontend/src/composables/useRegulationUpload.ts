@@ -40,14 +40,23 @@ async function uploadRegulation(
   regulation: File,
   presentationName: string,
   regulationType?: RegulationType,
+  organizationId?: string,
+  suborganizationId?: string,
 ): Promise<RegulationUploadResult> {
-  const addRegulation = target === 'public' ? addPublicRegulation : addUserRegulation
   const confirm = target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
 
-  const uploadTarget = await addRegulation({
+  const regulationData = {
     name: presentationName,
     regulationType: regulationType || null,
-  })
+  }
+  const uploadTarget =
+    target === 'public'
+      ? await addPublicRegulation({
+          ...regulationData,
+          organizationId: organizationId || null,
+          suborganizationId: suborganizationId || null,
+        })
+      : await addUserRegulation(regulationData)
 
   await uploadFileToStorage(uploadTarget, regulation)
 
@@ -59,6 +68,8 @@ export function useRegulationUpload() {
   const presentationName = ref('')
   const selectedRegulationType = ref<RegulationType | ''>('')
   const target = ref<RegulationScope>('user')
+  const selectedOrganizationId = ref('')
+  const selectedSuborganizationId = ref('')
   const isSubmitting = ref(false)
 
   function resetForm() {
@@ -66,6 +77,8 @@ export function useRegulationUpload() {
     presentationName.value = ''
     selectedRegulationType.value = ''
     target.value = 'user'
+    selectedOrganizationId.value = ''
+    selectedSuborganizationId.value = ''
   }
 
   function setFile(file: File | null) {
@@ -97,6 +110,8 @@ export function useRegulationUpload() {
         selectedFile.value,
         presentationName.value.trim(),
         regulationTypeValue,
+        selectedOrganizationId.value,
+        selectedSuborganizationId.value,
       )
 
       if (uploadResult.preparationStatus === 'IN_PROGRESS') {
@@ -113,6 +128,9 @@ export function useRegulationUpload() {
           description: null,
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
+          organizationId: target.value === 'public' ? selectedOrganizationId.value || null : null,
+          suborganizationId:
+            target.value === 'public' ? selectedSuborganizationId.value || null : null,
         },
         target: target.value,
       }
@@ -129,6 +147,8 @@ export function useRegulationUpload() {
     presentationName,
     selectedRegulationType,
     target,
+    selectedOrganizationId,
+    selectedSuborganizationId,
     isSubmitting,
     resetForm,
     setFile,

@@ -17,6 +17,7 @@ import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
 import RegulationDetailsDialog from '@/components/molecules/RegulationDetailsDialog.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
+import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationRepresentation } from '@/api/generated/model'
 import type { RegulationScope } from '@/domain/regulations'
 
@@ -34,7 +35,23 @@ const emit = defineEmits<{
   (e: 'preparation-retried', regulationId: string): void
 }>()
 
+const organizationsStore = useOrganizationsStore()
+
 const isDetailsDialogVisible = ref(false)
+const organizationLabel = computed(() => {
+  const organization = organizationsStore.organizations.find(
+    (o) => o.id === props.regulation.organizationId,
+  )
+  if (!organization) {
+    return null
+  }
+  const suborganization = organization.suborganizations.find(
+    (s) => s.id === props.regulation.suborganizationId,
+  )
+  return suborganization
+    ? `${organization.shortName} · ${suborganization.name}`
+    : organization.shortName
+})
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
 const isNotStarted = computed(() => props.regulation.preparationStatus === 'NOT_STARTED')
 const canRetry = computed(
@@ -82,6 +99,14 @@ async function retryPreparation(regulationId: string) {
     </component>
 
     <div class="app-card-actions">
+      <span
+        v-if="organizationLabel"
+        class="regulation-organization app-text-truncate"
+        :title="organizationLabel"
+      >
+        {{ organizationLabel }}
+      </span>
+
       <RegulationTypeBadge :regulation-type="regulation.regulationType" />
 
       <template v-if="!isPrepared && canManage">
@@ -160,6 +185,12 @@ async function retryPreparation(regulationId: string) {
 
 .regulation-link {
   text-decoration: none;
+}
+
+.regulation-organization {
+  max-width: 16em;
+  font-size: var(--el-font-size-small);
+  color: var(--el-text-color-secondary);
 }
 
 .regulation-link::after {

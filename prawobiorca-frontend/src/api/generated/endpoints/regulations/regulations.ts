@@ -1,6 +1,6 @@
 import type {
   GetPublicRegulationsParams,
-  RegulationData,
+  PublicRegulationData,
   RegulationDetailsData,
   RegulationRepresentation,
   RegulationUploadTarget,
@@ -28,7 +28,7 @@ export const getPublicRegulations = (
  * @summary Add Public Regulation
  */
 export const addPublicRegulation = (
-  regulationData: RegulationData,
+  publicRegulationData: PublicRegulationData,
   options?: SecondParameter<typeof prawobiorcaRequest<RegulationUploadTarget>>,
 ) => {
   return prawobiorcaRequest<RegulationUploadTarget>(
@@ -36,7 +36,7 @@ export const addPublicRegulation = (
       url: `/api/regulations`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: regulationData,
+      data: publicRegulationData,
     },
     options,
   )

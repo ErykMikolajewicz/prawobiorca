@@ -20,7 +20,7 @@ For logged-in users, the application offers a "Cases" management function, which
 
 ### 2.3. Administrator
 - Has all Logged User permissions.
-- Can add, edit and delete public documents.
+- Can add, edit and delete public documents. When adding a public document, can assign it to an organization and optionally to one of its suborganizations. The assignment cannot be changed later. Private documents of users never belong to an organization.
 - Manages application templates used to generate DOCX applications.
 - Manages organizations and their suborganizations.
 ---
@@ -34,6 +34,11 @@ This is the starting point of the application.
 **For Guest:**
 - **List of Public Documents**: The user sees a list of predefined legal acts (read-only).
 - There is no possibility to add or remove documents from this list.
+- **Organization filter**: The list is filtered by the organization and suborganization selected in the sidebar. The filter is a convenience only, all public documents stay accessible:
+    - No organization selected: all public documents are shown.
+    - Organization selected: documents of the organization (including all its suborganizations) are shown.
+    - Suborganization selected: documents of the suborganization and documents assigned to the whole organization (e.g. the university statute) are shown.
+    - General documents, not assigned to any organization (e.g. the Civil Code), are shown with every filter.
 - Clicking on a document redirects to the **Search View**.
 
 **For Logged User:**
@@ -136,5 +141,5 @@ View available exclusively for the **Administrator**, serving to manage organiza
 
 **Functionalities:**
 - List of organizations (name and short name). Each organization expands to show its suborganizations.
-- Adding, editing and deleting an organization. Deleting an organization (with confirmation) deletes its suborganizations as well.
-- Adding, editing and deleting a suborganization (with confirmation).
+- Adding, editing and deleting an organization. Deleting an organization (with confirmation) deletes its suborganizations and public documents as well.
+- Adding, editing and deleting a suborganization (with confirmation). Deleting a suborganization deletes its public documents as well.
