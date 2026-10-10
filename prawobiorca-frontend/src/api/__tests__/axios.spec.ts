@@ -121,14 +121,21 @@ describe('prawobiorcaClient refresh interceptor', () => {
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 
-  it('nie odświeża tokenów po 401 z /auth/me', async () => {
-    const adapter = useAdapter({ '/api/auth/me': [401] })
+  it('odświeża tokeny po 401 z /auth/me i ponawia żądanie', async () => {
+    const adapter = useAdapter({ '/api/auth/me': [401, 200] })
 
-    await expect(prawobiorcaClient.get('/api/auth/me')).rejects.toMatchObject({
-      response: { status: 401 },
-    })
-    expect(calledPaths(adapter)).toEqual(['/api/auth/me'])
+    const result = await prawobiorcaClient.get('/api/auth/me')
+
+    expect(result.status).toBe(200)
+    expect(calledPaths(adapter)).toEqual(['/api/auth/me', '/api/auth/refresh', '/api/auth/me'])
     expect(notifySessionExpired).not.toHaveBeenCalled()
+  })
+
+  it('kończy na jednym refreshu, gdy /auth/me i refresh zwrócą 401', async () => {
+    const adapter = useAdapter({ '/api/auth/me': [401], '/api/auth/refresh': [401] })
+
+    await expect(prawobiorcaClient.get('/api/auth/me')).rejects.toBeInstanceOf(SessionExpiredError)
+    expect(calledPaths(adapter)).toEqual(['/api/auth/me', '/api/auth/refresh'])
   })
 
   it('nie ponawia żądania po raz drugi, gdy po odświeżeniu nadal jest 401', async () => {

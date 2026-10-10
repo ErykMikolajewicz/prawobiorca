@@ -16,10 +16,9 @@ export async function prawobiorcaRequest<T>(
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
 
 /**
- * Ścieżki, dla których 401 nie oznacza wygasłego access tokena:
- * `/auth/me` to sonda stanu sesji (401 = niezalogowany), a pozostałe same obsługują tokeny.
+ * Ścieżki, dla których 401 nie oznacza wygasłego access tokena, bo same obsługują tokeny.
  */
-const NOT_REFRESHABLE_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/me']
+const NOT_REFRESHABLE_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout']
 
 function isRefreshable(url: string | undefined): boolean {
   if (!url) return false
