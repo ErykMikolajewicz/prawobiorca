@@ -17,10 +17,6 @@ withDefaults(defineProps<Props>(), {
 </template>
 
 <style scoped>
-.icon-btn {
-  transition: color 0.2s ease;
-}
-
 .search-icon :deep(svg),
 .arrow-icon :deep(svg) {
   width: 1.5em;

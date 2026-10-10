@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { createPinia, setActivePinia } from 'pinia'
 import { checkIsUserLogged, logoutUser, logUser } from '@/api/generated/endpoints/auth/auth'
+import { SessionExpiredError } from '@/api/sessionExpiry'
 import { useAuthStore } from '@/stores/auth'
 
 vi.mock('@/api/generated/endpoints/auth/auth', () => ({
@@ -28,6 +29,16 @@ describe('auth store', () => {
 
   it('checkIsLogged marks the user as logged out on 401', async () => {
     vi.mocked(checkIsUserLogged).mockRejectedValueOnce(httpError(401))
+    const store = useAuthStore()
+
+    await store.checkIsLogged()
+
+    expect(store.isUserLogged).toBe(false)
+    expect(store.isAdmin).toBe(false)
+  })
+
+  it('checkIsLogged marks the user as logged out when the session expired', async () => {
+    vi.mocked(checkIsUserLogged).mockRejectedValueOnce(new SessionExpiredError('Session expired'))
     const store = useAuthStore()
 
     await store.checkIsLogged()

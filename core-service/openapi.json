@@ -147,6 +147,40 @@
               ],
               "title": "Documenttype"
             }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizationid"
+            }
+          },
+          {
+            "name": "suborganizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suborganizationid"
+            }
           }
         ],
         "responses": {
@@ -168,14 +202,7 @@
             "description": "Service unavailable!"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Suborganization given without organization!"
           }
         }
       },
@@ -190,7 +217,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegulationData"
+                "$ref": "#/components/schemas/PublicRegulationData"
               }
             }
           }
@@ -208,6 +235,9 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Organization not found!"
           },
           "422": {
             "description": "Validation Error",
@@ -1634,16 +1664,52 @@
         ],
         "summary": "Get Published Application Templates",
         "operationId": "get_published_application_templates",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizationid"
+            }
+          },
+          {
+            "name": "suborganizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suborganizationid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/PublishedApplicationTemplate"
                   },
-                  "type": "array",
                   "title": "Response Get Published Application Templates"
                 }
               }
@@ -1651,6 +1717,9 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Suborganization given without organization!"
           }
         }
       }
@@ -1816,13 +1885,13 @@
             "description": "Service unavailable!"
           },
           "404": {
-            "description": "Application template not found!"
+            "description": "Application template or organization not found!"
           },
           "409": {
             "description": "Only draft application template can be updated!"
           },
           "422": {
-            "description": "Invalid fields configuration!"
+            "description": "Invalid fields configuration, or suborganization given without organization!"
           }
         }
       },
@@ -2069,6 +2138,325 @@
         }
       }
     },
+    "/api/organizations": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Get Organizations",
+        "operationId": "get_organizations",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationData"
+                  },
+                  "type": "array",
+                  "title": "Response Get Organizations"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          }
+        }
+      }
+    },
+    "/api/admin/organizations": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Add Organization",
+        "operationId": "add_organization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewOrganization"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "title": "Response Add Organization"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/organizations/{organizationId}": {
+      "put": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Update Organization",
+        "operationId": "update_organization",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organizationid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewOrganization"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Organization not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Delete Organization",
+        "operationId": "delete_organization",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organizationid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Organization not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/organizations/{organizationId}/suborganizations": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Add Suborganization",
+        "operationId": "add_suborganization",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organizationid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSuborganization"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "title": "Response Add Suborganization"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Organization not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/suborganizations/{suborganizationId}": {
+      "put": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Update Suborganization",
+        "operationId": "update_suborganization",
+        "parameters": [
+          {
+            "name": "suborganizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Suborganizationid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSuborganization"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Suborganization not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Delete Suborganization",
+        "operationId": "delete_suborganization",
+        "parameters": [
+          {
+            "name": "suborganizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Suborganizationid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "Suborganization not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/liveness": {
       "get": {
         "tags": [
@@ -2230,6 +2618,30 @@
             },
             "type": "array",
             "title": "Fields"
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
@@ -2336,6 +2748,30 @@
               }
             ],
             "title": "Instructions"
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
@@ -2345,7 +2781,9 @@
           "name",
           "status",
           "fields",
-          "instructions"
+          "instructions",
+          "organizationId",
+          "suborganizationId"
         ],
         "title": "ApplicationTemplateRepresentation"
       },
@@ -2509,6 +2947,23 @@
               }
             ],
             "title": "Header"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultElement"
+            },
+            "type": "array",
+            "title": "Elements"
+          },
+          "highlight": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchResultHighlight"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2516,7 +2971,10 @@
           "id",
           "caseId",
           "presentationName",
-          "content"
+          "content",
+          "header",
+          "elements",
+          "highlight"
         ],
         "title": "CaseDocument"
       },
@@ -2617,6 +3075,23 @@
               }
             ],
             "title": "Header"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultElement"
+            },
+            "type": "array",
+            "title": "Elements"
+          },
+          "highlight": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchResultHighlight"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2625,6 +3100,124 @@
           "content"
         ],
         "title": "NewCaseDocument"
+      },
+      "NewOrganization": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "shortName": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Shortname"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "shortName"
+        ],
+        "title": "NewOrganization"
+      },
+      "NewSuborganization": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NewSuborganization"
+      },
+      "OrganizationData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "shortName": {
+            "type": "string",
+            "title": "Shortname"
+          },
+          "suborganizations": {
+            "items": {
+              "$ref": "#/components/schemas/SuborganizationData"
+            },
+            "type": "array",
+            "title": "Suborganizations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "shortName",
+          "suborganizations"
+        ],
+        "title": "OrganizationData"
+      },
+      "PublicRegulationData": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "regulationType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegulationType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PublicRegulationData"
       },
       "PublishedApplicationField": {
         "properties": {
@@ -2816,6 +3409,30 @@
           "preparationStatus": {
             "$ref": "#/components/schemas/RegulationPreparationStatus",
             "default": "NOT_STARTED"
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
@@ -2825,7 +3442,9 @@
           "presentationName",
           "description",
           "regulationType",
-          "preparationStatus"
+          "preparationStatus",
+          "organizationId",
+          "suborganizationId"
         ],
         "title": "RegulationRepresentation"
       },
@@ -2972,6 +3591,25 @@
           "end_element"
         ],
         "title": "SearchResultHighlight"
+      },
+      "SuborganizationData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SuborganizationData"
       },
       "ValidationError": {
         "properties": {

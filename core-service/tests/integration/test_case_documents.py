@@ -23,7 +23,13 @@ async def test_add_case_document(
 
     response = await client.post(
         f"/api/user/cases/{case_id}/documents",
-        json={"presentationName": "document.pdf", "content": "Document content", "header": "Art. 1"},
+        json={
+            "presentationName": "document.pdf",
+            "content": "Document content",
+            "header": "Art. 1",
+            "elements": [{"text": "Document content", "subsection": "1."}],
+            "highlight": {"start_element": 0, "end_element": 0},
+        },
     )
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -39,6 +45,8 @@ async def test_add_case_document(
     assert case_document.presentation_name == "document.pdf"
     assert case_document.content == "Document content"
     assert case_document.header == "Art. 1"
+    assert case_document.elements == [{"text": "Document content", "subsection": "1."}]
+    assert case_document.highlight == {"start_element": 0, "end_element": 0}
 
 
 async def test_delete_case_document(
@@ -155,6 +163,8 @@ async def test_get_case_documents(
             "presentationName": "first-document.pdf",
             "content": "First document content",
             "header": "Art. 1",
+            "elements": [],
+            "highlight": None,
         },
         {
             "id": str(second_document_id),
@@ -162,5 +172,7 @@ async def test_get_case_documents(
             "presentationName": "second-document.pdf",
             "content": "Second document content",
             "header": None,
+            "elements": [],
+            "highlight": None,
         },
     ]

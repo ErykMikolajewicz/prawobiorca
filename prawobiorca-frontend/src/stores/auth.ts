@@ -4,11 +4,15 @@ import { ref } from 'vue'
 
 import { checkIsUserLogged, logoutUser, logUser } from '@/api/generated/endpoints/auth/auth'
 import type { CurrentUser } from '@/api/generated/model'
+import { SessionExpiredError } from '@/api/sessionExpiry'
 
 async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
     return await checkIsUserLogged()
   } catch (error: unknown) {
+    if (error instanceof SessionExpiredError) {
+      return null
+    }
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         return null

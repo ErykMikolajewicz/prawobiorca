@@ -16,6 +16,8 @@ const mockRegulations: RegulationRepresentation[] = [
     presentationName: 'Prepared Doc',
     preparationStatus: 'PREPARED',
     regulationType: 'ACT',
+    organizationId: null,
+    suborganizationId: null,
   },
   {
     id: '2',
@@ -24,6 +26,8 @@ const mockRegulations: RegulationRepresentation[] = [
     presentationName: 'Unprepared Doc',
     preparationStatus: 'IN_PROGRESS',
     regulationType: 'STATUTE',
+    organizationId: null,
+    suborganizationId: null,
   },
 ]
 
@@ -47,6 +51,7 @@ describe('RegulationsList', () => {
             props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: true,
         },
       },
@@ -76,6 +81,7 @@ describe('RegulationsList', () => {
             props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: true,
         },
       },
@@ -96,6 +102,8 @@ describe('RegulationsList', () => {
             presentationName: 'Unprepared Doc',
             preparationStatus: 'IN_PROGRESS',
             regulationType: 'STATUTE',
+            organizationId: null,
+            suborganizationId: null,
           },
         ],
         title: 'Publiczne regulacje',
@@ -108,6 +116,7 @@ describe('RegulationsList', () => {
         directives: { loading: {} },
         stubs: {
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: {
             template: '<div class="el-empty-stub">Brak regulacji</div>',
           },
@@ -133,6 +142,7 @@ describe('RegulationsList', () => {
         directives: { loading: {} },
         stubs: {
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: {
             template: '<div class="el-empty-stub">Brak regulacji</div>',
           },
@@ -163,6 +173,7 @@ describe('RegulationsList', () => {
             props: ['regulation', 'target', 'canManage'],
           },
           RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
           ElEmpty: true,
         },
       },

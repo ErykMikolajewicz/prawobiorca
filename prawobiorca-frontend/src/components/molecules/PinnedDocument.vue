@@ -21,15 +21,15 @@ function handleUnpin() {
 
 <template>
   <el-card
-    shadow="hover"
-    class="pinned-document"
+    shadow="never"
+    class="pinned-document app-card is-interactive"
     tabindex="0"
     @click="handleSelect"
     @keydown.enter="handleSelect"
   >
-    <div class="card-content">
+    <div class="app-card-content">
       <div class="document-info">
-        <em class="presentation-name">{{ document.presentationName }}</em>
+        <em class="presentation-name app-text-truncate">{{ document.presentationName }}</em>
         <strong v-if="document.header" class="header">{{ document.header }}</strong>
       </div>
       <el-button
@@ -51,11 +51,9 @@ function handleUnpin() {
   cursor: pointer;
 }
 
-.card-content {
-  display: flex;
-  justify-content: space-between;
+.app-card-content {
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 
 .document-info {
@@ -63,7 +61,7 @@ function handleUnpin() {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--app-space-xs);
 }
 
 .header {
@@ -74,10 +72,7 @@ function handleUnpin() {
 }
 
 .presentation-name {
-  font-size: 0.85em;
+  font-size: 0.85rem;
   color: var(--el-text-color-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 </style>

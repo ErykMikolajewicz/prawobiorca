@@ -16,7 +16,7 @@ test('user searches regulation and adds result to case', async ({ page }) => {
   await page.locator('#username').fill(username)
   await page.locator('#password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Zaloguj', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Wyloguj się' })).toBeVisible()
+  await expect(page.getByPlaceholder('Nowa sprawa...')).toBeVisible()
 
   await page.getByPlaceholder('Nowa sprawa...').fill(caseName)
   await page.getByPlaceholder('Nowa sprawa...').press('Enter')

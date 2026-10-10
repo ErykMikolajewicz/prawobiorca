@@ -13,13 +13,7 @@ const statusOption = computed(() => templateStatusOptions[props.status])
 </script>
 
 <template>
-  <el-tag size="small" effect="plain" :type="statusOption.tagType" class="template-status-badge">
+  <el-tag size="small" effect="plain" :type="statusOption.tagType" class="app-badge">
     {{ statusOption.label }}
   </el-tag>
 </template>
-
-<style scoped>
-.template-status-badge {
-  font-weight: 500;
-}
-</style>

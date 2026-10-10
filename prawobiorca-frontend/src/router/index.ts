@@ -12,6 +12,11 @@ const router = createRouter({
       component: () => import('@/pages/MainPage.vue'),
     },
     {
+      path: '/features',
+      name: 'FeaturesPage',
+      component: () => import('@/pages/FeaturesPage.vue'),
+    },
+    {
       path: '/regulations/:regulationId/documents',
       name: 'SearchPublicRegulation',
       component: SearchPage,
@@ -48,6 +53,12 @@ const router = createRouter({
       path: '/admin/application-templates/:id',
       name: 'ApplicationTemplatePage',
       component: () => import('@/pages/ApplicationTemplatePage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/admin/organizations',
+      name: 'OrganizationsPage',
+      component: () => import('@/pages/OrganizationsPage.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {

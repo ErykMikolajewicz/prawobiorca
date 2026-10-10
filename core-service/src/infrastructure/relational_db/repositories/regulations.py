@@ -1,15 +1,17 @@
 from dataclasses import asdict
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import and_, delete, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.dtos.regulations import RegulationRepresentation
+from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import RegulationNotFound
 from src.domain.exceptions.users import UserNotFound
 from src.domain.value_objects.regulations import (
     RegulationDetails,
+    RegulationOrganizationFilter,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -20,12 +22,27 @@ from src.infrastructure.relational_db.schemas.regulations import regulations_tab
 class RegulationsManagerRepository:
     @staticmethod
     async def list_regulations(
-        session: AsyncSession, user_id: UUID | None, regulation_type: RegulationType | None
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_type: RegulationType | None,
+        organization_filter: RegulationOrganizationFilter | None,
     ) -> list[RegulationRepresentation]:
         statement = select(RegulationRepresentation).where(regulations_table.c.user_id == user_id)
 
         if regulation_type is not None:
             statement = statement.where(regulations_table.c.regulation_type == regulation_type)
+
+        if organization_filter is not None:
+            organization_condition = regulations_table.c.organization_id == organization_filter.organization_id
+            if organization_filter.suborganization_id is not None:
+                organization_condition = and_(
+                    organization_condition,
+                    or_(
+                        regulations_table.c.suborganization_id == organization_filter.suborganization_id,
+                        regulations_table.c.suborganization_id.is_(None),
+                    ),
+                )
+            statement = statement.where(or_(organization_condition, regulations_table.c.organization_id.is_(None)))
 
         result = await session.scalars(statement)
         regulations_representation = result.all()
@@ -45,6 +62,8 @@ class RegulationsManagerRepository:
         try:
             result = await session.execute(statement)
         except IntegrityError:
+            if user_id is None:
+                raise OrganizationNotFound
             raise UserNotFound
 
         regulation_id = result.scalar_one()

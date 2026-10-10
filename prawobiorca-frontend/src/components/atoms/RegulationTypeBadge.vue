@@ -9,22 +9,36 @@ type Props = {
 
 const props = defineProps<Props>()
 
-const label = computed(() => {
-  if (!props.regulationType) {
-    return undefined
-  }
-  return regulationTypeOptions.find((option) => option.value === props.regulationType)?.label
-})
+const hasLabel = computed(() =>
+  regulationTypeOptions.some((option) => option.value === props.regulationType),
+)
 </script>
 
 <template>
-  <el-tag v-if="label" size="small" type="info" effect="plain" class="regulation-type-badge">
-    {{ label }}
+  <el-tag v-if="hasLabel" size="small" type="info" effect="plain" class="app-badge">
+    <span class="labels">
+      <span
+        v-for="option in regulationTypeOptions"
+        :key="option.value"
+        :class="['label', { 'is-hidden': option.value !== regulationType }]"
+      >
+        {{ option.label }}
+      </span>
+    </span>
   </el-tag>
 </template>
 
 <style scoped>
-.regulation-type-badge {
-  font-weight: 500;
+.labels {
+  display: grid;
+  justify-items: center;
+}
+
+.label {
+  grid-area: 1 / 1;
+}
+
+.label.is-hidden {
+  visibility: hidden;
 }
 </style>

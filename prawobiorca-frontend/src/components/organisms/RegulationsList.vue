@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import RegulationCard from '@/components/molecules/RegulationCard.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
+import RegulationOrganizationFilter from '@/components/molecules/RegulationOrganizationFilter.vue'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 import type { RegulationScope } from '@/domain/regulations'
 
@@ -34,13 +35,17 @@ const displayedRegulations = computed(() => {
 
 <template>
   <div v-loading="loading" class="regulations-container">
-    <h2 class="section-title">{{ title }}</h2>
+    <div class="list-header">
+      <h2 class="section-title">{{ title }}</h2>
+      <slot name="actions" />
+    </div>
 
     <div class="filter-row">
       <RegulationTypeFilter v-model="typeFilter" />
+      <RegulationOrganizationFilter v-if="target === 'public'" />
     </div>
 
-    <div v-if="displayedRegulations.length" class="cards-grid">
+    <div v-if="displayedRegulations.length" class="regulations-list">
       <RegulationCard
         v-for="regulation in displayedRegulations"
         :key="regulation.id"
@@ -63,11 +68,30 @@ const displayedRegulations = computed(() => {
 .regulations-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--app-space-xl);
+}
+
+.regulations-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-card-bg);
+  box-shadow: var(--app-card-shadow-rest);
+  overflow: hidden;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
 }
 
 .filter-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-md);
   justify-content: flex-start;
 }
 </style>

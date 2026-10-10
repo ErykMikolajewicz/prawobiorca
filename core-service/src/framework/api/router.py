@@ -5,6 +5,7 @@ from src.framework.api.endpoints.application_templates import application_templa
 from src.framework.api.endpoints.auth import auth_router
 from src.framework.api.endpoints.cases import cases_router
 from src.framework.api.endpoints.health import health_router
+from src.framework.api.endpoints.organizations import organizations_router
 from src.framework.api.endpoints.public_regulations import public_regulations_router
 from src.framework.api.endpoints.user_regulations import user_regulations_router
 
@@ -16,4 +17,5 @@ def include_all_routers(app: FastAPI):
     app.include_router(cases_router)
     app.include_router(user_regulations_router)
     app.include_router(application_templates_router)
+    app.include_router(organizations_router)
     app.include_router(health_router)

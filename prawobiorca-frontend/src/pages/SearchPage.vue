@@ -13,7 +13,12 @@ import { useRegulationSearch } from '@/composables/useRegulationSearch'
 import { useAuthStore } from '@/stores/auth'
 import { useCasesStore } from '@/stores/cases'
 import { addCaseDocument } from '@/api/generated/endpoints/cases/cases'
-import type { SearchOrder, SearchRegulationDocumentsParams } from '@/api/generated/model'
+import type {
+  SearchOrder,
+  SearchRegulationDocumentsParams,
+  SearchResultElement,
+  SearchResultHighlight,
+} from '@/api/generated/model'
 import { getPublicRegulation } from '@/api/generated/endpoints/regulations/regulations'
 import { getUserRegulation } from '@/api/generated/endpoints/user-regulations/user-regulations'
 
@@ -67,7 +72,12 @@ async function handleSearch(newSearchParams: SearchRegulationDocumentsParams) {
   await performSearch(newSearchParams)
 }
 
-async function handleAddToCase(payload: { documentContent: string; header: string | null }) {
+async function handleAddToCase(payload: {
+  documentContent: string
+  header: string | null
+  elements: Array<SearchResultElement>
+  highlight: SearchResultHighlight | null
+}) {
   if (!activeCase.value) {
     ElMessage.warning('Wybierz aktywną sprawę w panelu bocznym.')
     return
@@ -78,6 +88,8 @@ async function handleAddToCase(payload: { documentContent: string; header: strin
       presentationName: regulationName.value,
       content: payload.documentContent,
       header: payload.header,
+      elements: payload.elements,
+      highlight: payload.highlight,
     })
     ElMessage.success(`Dodano do sprawy: ${activeCase.value.name}`)
   } catch (error) {
@@ -88,7 +100,9 @@ async function handleAddToCase(payload: { documentContent: string; header: strin
 
 <template>
   <AppLayout>
-    <h1>Przeszukaj regulacje: {{ regulationName }}</h1>
+    <div class="page-header">
+      <h1 class="page-title">Przeszukaj regulacje: {{ regulationName }}</h1>
+    </div>
 
     <div v-loading="isSearching">
       <SearchForm

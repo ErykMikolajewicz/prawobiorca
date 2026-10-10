@@ -6,13 +6,17 @@ from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.application_templates import (
     ApplicationTemplateDetails,
     ApplicationTemplateField,
+    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
 
 
 class ApplicationTemplatesRepository(Protocol):
     async def list_templates(
-        self, session: AsyncSession, status: ApplicationTemplateStatus | None = None
+        self,
+        session: AsyncSession,
+        status: ApplicationTemplateStatus | None = None,
+        organization_filter: ApplicationTemplateOrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]: ...
 
     async def get(self, session: AsyncSession, id_: UUID) -> ApplicationTemplateRepresentation | None: ...

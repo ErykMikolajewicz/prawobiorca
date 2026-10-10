@@ -63,6 +63,8 @@ describe('useRegulationUpload', () => {
       description: null,
       regulationType: 'STATUTE',
       preparationStatus: 'IN_PROGRESS',
+      organizationId: null,
+      suborganizationId: null,
     })
   })
 
@@ -74,10 +76,37 @@ describe('useRegulationUpload', () => {
     upload.selectedRegulationType.value = 'ACT'
     const result = await upload.submit()
 
-    expect(addPublicRegulation).toHaveBeenCalledWith({ name: 'Public Doc', regulationType: 'ACT' })
+    expect(addPublicRegulation).toHaveBeenCalledWith({
+      name: 'Public Doc',
+      regulationType: 'ACT',
+      organizationId: null,
+      suborganizationId: null,
+    })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
     expect(confirmPublicRegulationUpload).toHaveBeenCalledWith('uuid-pub-1')
     expect(result?.regulation.preparationStatus).toBe('IN_PROGRESS')
+  })
+
+  it('submit sends the selected organization for a public regulation', async () => {
+    vi.mocked(addPublicRegulation).mockResolvedValueOnce({
+      id: 'uuid-pub-2',
+      url: 'https://s3.local/upload',
+      fields: {},
+    })
+
+    const upload = prepareUpload('public', 'Faculty Doc')
+    upload.selectedOrganizationId.value = 'pwr'
+    upload.selectedSuborganizationId.value = 'w10'
+    const result = await upload.submit()
+
+    expect(addPublicRegulation).toHaveBeenCalledWith({
+      name: 'Faculty Doc',
+      regulationType: null,
+      organizationId: 'pwr',
+      suborganizationId: 'w10',
+    })
+    expect(result?.regulation.organizationId).toBe('pwr')
+    expect(result?.regulation.suborganizationId).toBe('w10')
   })
 
   it('submit keeps the uploaded regulation when confirm-upload fails', async () => {
@@ -100,6 +129,8 @@ describe('useRegulationUpload', () => {
       description: null,
       regulationType: null,
       preparationStatus: 'NOT_STARTED',
+      organizationId: null,
+      suborganizationId: null,
     })
   })
 })

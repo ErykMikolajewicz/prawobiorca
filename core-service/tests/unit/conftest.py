@@ -5,6 +5,7 @@ import pytest
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsRepository
 from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
+from src.app.interfaces.organizations import OrganizationsRepository, SuborganizationsRepository
 from src.app.interfaces.regulations import RegulationsRepository
 from src.app.interfaces.relational import AsyncSession, SessionMaker
 from src.app.interfaces.sections import SectionsRepository
@@ -74,6 +75,18 @@ def mock_cases_repo():
 @pytest.fixture
 def mock_case_documents_repo():
     repo = create_autospec(CaseDocumentsRepository)
+    return repo
+
+
+@pytest.fixture
+def mock_organizations_repo():
+    repo = create_autospec(OrganizationsRepository)
+    return repo
+
+
+@pytest.fixture
+def mock_suborganizations_repo():
+    repo = create_autospec(SuborganizationsRepository)
     return repo
 
 

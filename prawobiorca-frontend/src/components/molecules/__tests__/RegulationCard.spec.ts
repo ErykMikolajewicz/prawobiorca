@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import RegulationCard from '../RegulationCard.vue'
 import {
   confirmPublicRegulationUpload,
   retryPublicRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
+import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
@@ -20,7 +22,11 @@ vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
 const RETRY_BUTTON = 'button[aria-label="Ponów przetwarzanie"]'
 const OPTIONS_BUTTON = 'button[aria-label="Opcje regulacji"]'
 
-function mountCard(preparationStatus: RegulationPreparationStatus, canManage: boolean) {
+function mountCard(
+  preparationStatus: RegulationPreparationStatus,
+  canManage: boolean,
+  overrides: Partial<RegulationRepresentation> = {},
+) {
   const regulation: RegulationRepresentation = {
     id: 'uuid-1',
     createDate: '2026-09-29T10:00:00',
@@ -28,6 +34,9 @@ function mountCard(preparationStatus: RegulationPreparationStatus, canManage: bo
     description: null,
     regulationType: 'ACT',
     preparationStatus,
+    organizationId: null,
+    suborganizationId: null,
+    ...overrides,
   }
 
   return mount(RegulationCard, {
@@ -62,6 +71,32 @@ function mountCard(preparationStatus: RegulationPreparationStatus, canManage: bo
 describe('RegulationCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('renders organization and suborganization of the regulation', () => {
+    useOrganizationsStore().organizations = [
+      {
+        id: 'pwr',
+        name: 'Politechnika Wrocławska',
+        shortName: 'PWr',
+        suborganizations: [{ id: 'w10', name: 'Wydział Mechaniczny' }],
+      },
+    ]
+
+    const wrapper = mountCard('PREPARED', false, {
+      organizationId: 'pwr',
+      suborganizationId: 'w10',
+    })
+
+    expect(wrapper.find('.regulation-organization').text()).toBe('PWr · Wydział Mechaniczny')
+  })
+
+  it('does not render organization for a general regulation', () => {
+    const wrapper = mountCard('PREPARED', false)
+
+    expect(wrapper.find('.regulation-organization').exists()).toBe(false)
   })
 
   it('renders search action and router-link when regulation is prepared', () => {

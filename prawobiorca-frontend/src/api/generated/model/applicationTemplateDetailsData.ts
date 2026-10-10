@@ -8,4 +8,6 @@ export interface ApplicationTemplateDetailsData {
   name: string
   instructions?: string | null
   fields: ApplicationTemplateField[]
+  organizationId?: string | null
+  suborganizationId?: string | null
 }

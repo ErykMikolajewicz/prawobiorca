@@ -38,6 +38,8 @@ function createRegulation(
     description: 'Opis ustawy',
     regulationType: 'ACT',
     preparationStatus,
+    organizationId: null,
+    suborganizationId: null,
   }
 }
 

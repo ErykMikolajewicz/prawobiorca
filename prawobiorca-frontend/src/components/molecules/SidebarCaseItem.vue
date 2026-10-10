@@ -40,7 +40,7 @@ async function handleDelete() {
   <div class="sidebar-case-item">
     <router-link
       :to="{ name: 'CasePage', params: { id: userCase.id } }"
-      class="case-name"
+      class="case-name app-text-truncate"
       active-class="is-active"
       :title="userCase.name"
     >
@@ -80,15 +80,15 @@ async function handleDelete() {
 .sidebar-case-item {
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: var(--el-border-radius-base);
+}
 
-  &:hover {
-    background-color: var(--el-menu-hover-bg-color);
-  }
+.sidebar-case-item:hover {
+  background-color: var(--el-menu-hover-bg-color);
+}
 
-  &:not(:hover) .icon-btn:not(.is-active) {
-    visibility: hidden;
-  }
+.sidebar-case-item:not(:hover) .icon-btn:not(.is-active) {
+  visibility: hidden;
 }
 
 .icon-btn-pin.is-active {
@@ -102,15 +102,12 @@ async function handleDelete() {
   line-height: var(--el-menu-item-height);
   padding-left: var(--el-menu-base-level-padding);
   font-size: var(--el-menu-item-font-size);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--el-text-color-primary);
   text-decoration: none;
+}
 
-  &.is-active {
-    color: var(--el-menu-active-color);
-  }
+.case-name.is-active {
+  color: var(--el-menu-active-color);
 }
 
 .icon-btn-danger:hover {

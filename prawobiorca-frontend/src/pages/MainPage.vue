@@ -6,6 +6,8 @@ import { storeToRefs } from 'pinia'
 import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
+import HowItWorks from '@/components/molecules/HowItWorks.vue'
+import LoginCtaBanner from '@/components/molecules/LoginCtaBanner.vue'
 import { useRegulations } from '@/composables/useRegulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
@@ -58,9 +60,10 @@ onBeforeMount(async () => {
 
 <template>
   <AppLayout>
-    <div v-if="isUserLogged" class="page-actions">
-      <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj plik</el-button>
-    </div>
+    <template v-if="!isUserLogged">
+      <LoginCtaBanner />
+      <HowItWorks />
+    </template>
 
     <RegulationsList
       v-model:type-filter="publicRegulations.typeFilter"
@@ -73,7 +76,11 @@ onBeforeMount(async () => {
       @regulation-updated="publicRegulations.update"
       @regulation-deleted="publicRegulations.remove"
       @regulation-preparation-retried="publicRegulations.markAsInProgress"
-    />
+    >
+      <template v-if="isUserLogged" #actions>
+        <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj regulacje</el-button>
+      </template>
+    </RegulationsList>
 
     <el-divider />
 
@@ -99,11 +106,3 @@ onBeforeMount(async () => {
     />
   </AppLayout>
 </template>
-
-<style scoped>
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-}
-</style>

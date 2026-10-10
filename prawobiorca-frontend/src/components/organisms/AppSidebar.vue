@@ -7,19 +7,23 @@ import MenuRoundedIcon from '@iconify-vue/material-symbols/menu-rounded'
 import MenuOpenRoundedIcon from '@iconify-vue/material-symbols/menu-open-rounded'
 import FolderRoundedIcon from '@iconify-vue/material-symbols/folder-rounded'
 import DescriptionRoundedIcon from '@iconify-vue/material-symbols/description-rounded'
-import AuthControls from '@/components/molecules/AuthControls.vue'
-import DarkModeToggle from '@/components/molecules/DarkModeToggle.vue'
+import AdminPanelSettingsRoundedIcon from '@iconify-vue/material-symbols/admin-panel-settings-rounded'
+import CorporateFareRoundedIcon from '@iconify-vue/material-symbols/corporate-fare-rounded'
+import SidebarContextMenu from '@/components/molecules/SidebarContextMenu.vue'
 import SidebarCasesList from '@/components/organisms/SidebarCasesList.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { useCasesStore } from '@/stores/cases'
+import { useOrganizationsStore } from '@/stores/organizations'
 
 const route = useRoute()
 const { isCollapsed, toggleCollapsed } = useSidebar()
 const { isUserLogged, isAdmin } = storeToRefs(useAuthStore())
 const casesStore = useCasesStore()
+const organizationsStore = useOrganizationsStore()
 
 onMounted(async () => {
+  await organizationsStore.load()
   if (isUserLogged.value) {
     await casesStore.load()
   }
@@ -29,7 +33,7 @@ onMounted(async () => {
 <template>
   <el-aside
     :width="isCollapsed ? '64px' : '260px'"
-    :class="['app-sidebar', { collapsed: isCollapsed }]"
+    :class="['app-sidebar', { 'is-collapsed': isCollapsed }]"
   >
     <div class="sidebar-header">
       <div v-if="!isCollapsed" class="logo">PRAWOBIORCA</div>
@@ -55,10 +59,20 @@ onMounted(async () => {
         <el-icon><HomeRoundedIcon /></el-icon>
         <template #title>Strona główna</template>
       </el-menu-item>
-      <el-menu-item v-if="isAdmin" index="/admin/application-templates">
-        <el-icon><DescriptionRoundedIcon /></el-icon>
-        <template #title>Szablony wniosków</template>
-      </el-menu-item>
+      <el-sub-menu v-if="isAdmin" index="admin">
+        <template #title>
+          <el-icon><AdminPanelSettingsRoundedIcon /></el-icon>
+          <span>Administracja</span>
+        </template>
+        <el-menu-item index="/admin/application-templates">
+          <el-icon><DescriptionRoundedIcon /></el-icon>
+          <template #title>Szablony wniosków</template>
+        </el-menu-item>
+        <el-menu-item index="/admin/organizations">
+          <el-icon><CorporateFareRoundedIcon /></el-icon>
+          <template #title>Organizacje</template>
+        </el-menu-item>
+      </el-sub-menu>
     </el-menu>
 
     <template v-if="isUserLogged">
@@ -73,13 +87,9 @@ onMounted(async () => {
       </button>
       <SidebarCasesList v-else class="sidebar-cases" />
     </template>
-    <p v-else-if="!isCollapsed" class="sidebar-guest-info">
-      Zaloguj się, aby zarządzać swoimi sprawami i generować dla nich wnioski.
-    </p>
 
     <div class="sidebar-footer">
-      <DarkModeToggle />
-      <AuthControls :collapsed="isCollapsed" />
+      <SidebarContextMenu :collapsed="isCollapsed" />
     </div>
   </el-aside>
 </template>
@@ -91,21 +101,22 @@ onMounted(async () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px 8px;
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-sm);
   box-sizing: border-box;
   overflow: hidden;
   --el-menu-bg-color: transparent;
   --el-menu-item-height: 40px;
+  --el-menu-sub-item-height: 40px;
   background-color: transparent;
   border-right: 1px solid var(--app-border-color);
 }
 
 .app-sidebar :deep(.icon-btn svg) {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
-.app-sidebar.collapsed {
+.app-sidebar.is-collapsed {
   align-items: center;
   padding-inline: 0;
 }
@@ -114,53 +125,35 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 12px;
+  padding-left: var(--app-space-md);
 }
 
-.app-sidebar.collapsed .sidebar-header {
+.app-sidebar.is-collapsed .sidebar-header {
   padding-left: 0;
 }
 
 .logo {
   color: var(--el-color-primary);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: bold;
   letter-spacing: 1px;
 }
 
 .sidebar-menu {
   border-right: none;
+}
 
-  .el-icon {
-    font-size: 20px;
-  }
+.sidebar-menu .el-icon {
+  font-size: 1.25rem;
 }
 
 .sidebar-cases {
   flex: 0 1 auto;
 }
 
-.sidebar-guest-info {
-  margin: auto 0 0;
-  padding-left: var(--el-menu-base-level-padding);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--el-text-color-secondary);
-
-  & + .sidebar-footer {
-    margin-top: 0;
-  }
-}
-
 .sidebar-footer {
   margin-top: auto;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.app-sidebar.collapsed .sidebar-footer {
-  flex-direction: column;
+  justify-content: center;
 }
 </style>

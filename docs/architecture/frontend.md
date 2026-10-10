@@ -18,7 +18,7 @@ It talks to `core-service` exclusively over the HTTP REST API — it has no dire
 * **Element Plus** as the component library, including its dark theme variables.
 * **axios** as the HTTP client, with the API client generated from the OpenAPI contract by **Orval**.
 * **md-editor-v3** for editing the AI instructions and **docx-preview** for previewing DOCX files of application templates.
-* **Vitest** for unit tests, **oxlint** + **ESLint** for linting and **oxfmt** for formatting.
+* **Vitest** for unit tests, **oxlint** + **ESLint** for linting, **stylelint** for CSS and **oxfmt** for formatting.
 
 Required toolchain versions are declared in `prawobiorca-frontend/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
 
@@ -29,11 +29,11 @@ Required toolchain versions are declared in `prawobiorca-frontend/package.json`:
 All application code lives in `prawobiorca-frontend/src`:
 
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. The only hand-written helpers fetch a presigned URL and trigger the browser download: `cases.ts` for a generated application, `applicationTemplates.ts` for an application template.
-* **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`).
+* **`pages/`** — route-level views (`MainPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`, `OrganizationsPage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons), `molecules/` (cards, dialogs, selectors), `organisms/` (sidebar, footer, forms, lists) and `templates/` (`AppLayout`, the sidebar–content–footer page layout).
 * **`composables/`** — reusable stateful logic (dark mode, sidebar collapse state, regulation lists, regulation search, regulation upload flow, application template upload flow, preparation status polling).
 * **`domain/`** — framework-free domain constants and helpers shared across components (regulation types, preparation statuses, public/user scope, application generation statuses, application template statuses and field types).
-* **`stores/`** — Pinia stores: `auth`, holding the session state, and `cases`, holding the user's cases shown in the sidebar.
+* **`stores/`** — Pinia stores: `auth`, holding the session state, `cases`, holding the user's cases shown in the sidebar, and `organizations`, holding the organization and suborganization selected in the sidebar (kept in `localStorage`; a logged user gets the first organization by default, a guest none).
 * **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in. Routes marked `requiresAdmin` redirect a non-administrator to the main page.
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite) and global styles.
 * **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover.
@@ -78,9 +78,29 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm type-check` | Type-check with `vue-tsc`. |
 | `pnpm test:unit` | Run unit tests with Vitest. |
 | `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [Tests](../tests/tests.md#e2e-tests)). |
-| `pnpm lint` | Run oxlint and ESLint with autofix. |
+| `pnpm lint` | Run oxlint, ESLint and stylelint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
-| `pnpm check` | Run oxlint, ESLint and oxfmt without fixing; used by the pre-commit hook. |
+| `pnpm check` | Run oxlint, ESLint, stylelint and oxfmt without fixing; used by the pre-commit hook. |
 | `pnpm generate:api-client` | Generate `src/api/generated/` from `core-service/openapi.json` with Orval. |
 
 A JetBrains IDE (PyCharm Professional, free for students under a non-commercial licence) with the Vue plugin is recommended, so that the whole repository — Python services and frontend — is handled by a single IDE. In VS Code, the [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) extension is required to make the TypeScript language service aware of `.vue` types.
+
+---
+
+## 7. Styling
+
+Element Plus provides the base look; the application customises it through CSS variables. Global styles live in `src/assets/styles/`, imported once through `index.css` in `src/main.ts`:
+
+* **`tokens.css`** — the light (`:root`) and dark (`html.dark`) themes: overridden Element Plus variables (`--el-*`) and the application's own (`--app-*`), including the spacing scale `--app-space-xs|sm|md|lg|xl` (0.25, 0.5, 0.75, 1 and 1.5 rem) and `--app-radius-lg`.
+* **`overrides.css`** — global overrides of Element Plus components, and styles of elements teleported outside a component (e.g. the drawer header).
+* **`base.css`** — `body` and `#app`.
+* **`components.css`** — shared classes: `.page-header`, `.page-title`, `.section-title`, `.cards-grid`, `.icon-btn`, `.app-card` (with `.is-interactive` for clickable cards), `.app-card-content`, `.app-card-actions`, `.app-collapse`, `.app-badge` and `.app-text-truncate`.
+
+Component styles are written in `<style scoped>` and follow these conventions; stylelint (`stylelint.config.mjs`) enforces the color, font-size, class name and nesting rules:
+
+* Colors only through variables — hex and color functions are allowed only in `tokens.css` and `overrides.css`.
+* Spacing (`gap`, `padding`, `margin`) through `--app-space-*`; font sizes in `rem`; border radius through `--el-border-radius-base` or `--app-radius-lg`. Pixels remain for borders, shadows and fixed dimensions.
+* Class names in kebab-case; states and variants as `is-*` classes (`.is-active`, `.is-collapsed`); new shared classes get the `app-` prefix.
+* No nesting — Element Plus internals are styled with `:deep()` or its component variables.
+* No inline styles.
+* A single responsive breakpoint: `768px`, matching the Element Plus `xs` breakpoint.

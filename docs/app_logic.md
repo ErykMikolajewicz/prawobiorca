@@ -20,8 +20,9 @@ For logged-in users, the application offers a "Cases" management function, which
 
 ### 2.3. Administrator
 - Has all Logged User permissions.
-- Can add, edit and delete public documents.
-- Manages application templates used to generate DOCX applications.
+- Can add, edit and delete public documents. When adding a public document, can assign it to an organization and optionally to one of its suborganizations. The assignment cannot be changed later. Private documents of users never belong to an organization.
+- Manages application templates used to generate DOCX applications. A template can be assigned to an organization and optionally to one of its suborganizations.
+- Manages organizations and their suborganizations.
 ---
 
 ## 3. Views and Functionalities
@@ -33,6 +34,11 @@ This is the starting point of the application.
 **For Guest:**
 - **List of Public Documents**: The user sees a list of predefined legal acts (read-only).
 - There is no possibility to add or remove documents from this list.
+- **Organization filter**: The list is filtered by the organization and suborganization selected in the sidebar. The filter is a convenience only, all public documents stay accessible:
+    - No organization selected: all public documents are shown.
+    - Organization selected: documents of the organization (including all its suborganizations) are shown.
+    - Suborganization selected: documents of the suborganization and documents assigned to the whole organization (e.g. the university statute) are shown.
+    - General documents, not assigned to any organization (e.g. the Civil Code), are shown with every filter.
 - Clicking on a document redirects to the **Search View**.
 
 **For Logged User:**
@@ -51,7 +57,7 @@ This is the starting point of the application.
     - Ability to set a case as "active" (pin icon). The active case is used in the **Search View**.
     - Ability to delete a case (with confirmation). Deleting the currently opened case redirects to the Main Screen.
     - Clicking on a case redirects to the **Case View**.
-- **Application Templates** menu item, visible only for the Administrator, redirects to the **Application Templates View**.
+- **Administration** menu item, visible only for the Administrator, expands in place and contains **Application Templates** (redirects to the **Application Templates View**) and **Organizations** (redirects to the **Organizations View**).
 ---
 
 ### 3.2. Document Search View
@@ -81,7 +87,7 @@ View available exclusively for **Logged Users**, serving to finalize work on a l
     - Ability to unpin (remove) an article from the case.
 
 2. **Context / Application Description**:
-    - Selection of the application type, from the templates published by the Administrator.
+    - Selection of the application type, from the templates published by the Administrator. The list is filtered by the organization and suborganization selected in the sidebar, by the same rules as the list of public documents on the Main Screen: general templates are always shown, a selected organization shows its templates (including all its suborganizations), a selected suborganization shows its templates and templates assigned to the whole organization.
     - Fields defined by the selected template (text, number, select list or date), prefilled with their default values. Required fields must be filled.
     - Text field (Input/Textarea) where the user describes their situation or the purpose of the letter (e.g., *"I request financial aid due to the difficult situation I found myself in after the death of a parent..."*).
 
@@ -119,6 +125,7 @@ View available exclusively for the **Administrator**, serving to manage template
 
 3. **Template Editor**:
     - Editing the template name.
+    - Assigning the template to an organization and optionally to one of its suborganizations. A template without an organization is general.
     - Editing the AI instructions in a Markdown editor.
     - Configuration of each field: label, type (text, number, select list, date), optional validation regex (text only), list options (select list only), optional default value, "Required" and "Pass to AI" flags.
     - Download of the DOCX file and its preview.
@@ -127,3 +134,13 @@ View available exclusively for the **Administrator**, serving to manage template
 4. **Publishing**:
     - A draft with non-empty AI instructions can be published. Only published templates are available to users in the Case View.
     - Unpublishing returns the template to the "Draft" status.
+---
+
+### 3.5. Organizations View
+
+View available exclusively for the **Administrator**, serving to manage organizations (e.g. Politechnika Wrocławska) and their suborganizations (e.g. faculties).
+
+**Functionalities:**
+- List of organizations (name and short name). Each organization expands to show its suborganizations.
+- Adding, editing and deleting an organization. Deleting an organization (with confirmation) deletes its suborganizations and public documents as well. Its application templates are kept and become general.
+- Adding, editing and deleting a suborganization (with confirmation). Deleting a suborganization deletes its public documents as well. Its application templates are kept and stay assigned to the whole organization.

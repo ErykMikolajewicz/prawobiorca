@@ -26,10 +26,12 @@ from src.domain.exceptions.application_templates import (
     InvalidApplicationFieldsConfig,
     InvalidApplicationTemplate,
 )
+from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDetails,
     ApplicationTemplateField,
+    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
 
@@ -65,10 +67,10 @@ async def test_list_published_application_templates_hides_ai_settings(
 
     use_case = ListPublishedApplicationTemplates(mock_session_maker, mock_application_templates_repo)
 
-    templates = await use_case.execute()
+    templates = await use_case.execute(None)
 
     mock_application_templates_repo.list_templates.assert_awaited_once_with(
-        mock_opened_session, ApplicationTemplateStatus.PUBLISHED
+        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, None
     )
     assert templates == [
         PublishedApplicationTemplate(
@@ -85,6 +87,22 @@ async def test_list_published_application_templates_hides_ai_settings(
             ],
         )
     ]
+
+
+async def test_list_published_application_templates_with_organization_filter(
+    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
+):
+    organization_filter = ApplicationTemplateOrganizationFilter(next(uuid_generator), next(uuid_generator))
+    mock_application_templates_repo.list_templates.return_value = []
+
+    use_case = ListPublishedApplicationTemplates(mock_session_maker, mock_application_templates_repo)
+
+    templates = await use_case.execute(organization_filter)
+
+    mock_application_templates_repo.list_templates.assert_awaited_once_with(
+        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter
+    )
+    assert templates == []
 
 
 async def test_get_application_template(
@@ -297,6 +315,51 @@ async def test_update_application_template_with_invalid_fields(
         )
 
     mock_application_templates_repo.update_details.assert_not_awaited()
+
+
+async def test_update_application_template_with_organization(
+    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
+):
+    template_id = next(uuid_generator)
+    organization_id = next(uuid_generator)
+    suborganization_id = next(uuid_generator)
+    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+
+    await use_case.execute(
+        template_id,
+        ApplicationTemplateDetailsData(
+            name="Wniosek", fields=[], organizationId=organization_id, suborganizationId=suborganization_id
+        ),
+    )
+
+    mock_application_templates_repo.update_details.assert_awaited_once_with(
+        mock_opened_session,
+        template_id,
+        ApplicationTemplateDetails(
+            name="Wniosek",
+            instructions=None,
+            fields=[],
+            organization_id=organization_id,
+            suborganization_id=suborganization_id,
+        ),
+    )
+
+
+async def test_update_application_template_organization_not_found(
+    mock_session_maker, mock_application_templates_repo, uuid_generator
+):
+    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
+    mock_application_templates_repo.update_details.side_effect = OrganizationNotFound
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+
+    with pytest.raises(OrganizationNotFound):
+        await use_case.execute(
+            next(uuid_generator),
+            ApplicationTemplateDetailsData(name="Wniosek", fields=[], organizationId=next(uuid_generator)),
+        )
 
 
 @pytest.mark.parametrize("status", [ApplicationTemplateStatus.NOT_UPLOADED, ApplicationTemplateStatus.PUBLISHED])

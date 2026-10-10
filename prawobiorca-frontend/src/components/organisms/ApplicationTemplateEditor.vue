@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { MdEditor, type ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { showApiError } from '@/utils/error'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { downloadApplicationTemplate } from '@/api/applicationTemplates'
+import { useOrganizationsStore } from '@/stores/organizations'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
 import ApplicationTemplatePreviewDialog from '@/components/molecules/ApplicationTemplatePreviewDialog.vue'
@@ -33,8 +35,18 @@ const emit = defineEmits<{
 const form = reactive({
   name: '',
   instructions: '',
+  organizationId: '',
+  suborganizationId: '',
   fields: [] as Array<EditableTemplateField>,
 })
+
+const { organizations } = storeToRefs(useOrganizationsStore())
+
+const suborganizations = computed(
+  () =>
+    organizations.value.find((organization) => organization.id === form.organizationId)
+      ?.suborganizations ?? [],
+)
 
 const instructionsToolbars: Array<ToolbarNames> = [
   'bold',
@@ -68,6 +80,8 @@ watch(
   (template) => {
     form.name = template.name
     form.instructions = template.instructions ?? ''
+    form.organizationId = template.organizationId ?? ''
+    form.suborganizationId = template.suborganizationId ?? ''
     form.fields = template.fields.map(toEditableField)
   },
   { immediate: true },
@@ -77,6 +91,8 @@ function toDetailsData(): ApplicationTemplateDetailsData {
   return {
     name: form.name.trim(),
     instructions: form.instructions.trim() || null,
+    organizationId: form.organizationId || null,
+    suborganizationId: form.suborganizationId || null,
     fields: form.fields.map((field) => ({
       ...field,
       defaultValue: field.defaultValue || null,
@@ -200,6 +216,44 @@ async function handleDownload() {
     >
       <el-row :gutter="24">
         <el-col :span="12" :xs="24">
+          <el-form-item label="Organizacja (opcjonalnie):">
+            <el-select
+              v-model="form.organizationId"
+              clearable
+              placeholder="Ogólny"
+              @change="form.suborganizationId = ''"
+            >
+              <el-option
+                v-for="organization in organizations"
+                :key="organization.id"
+                :label="organization.name"
+                :value="organization.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-col>
+
+        <el-col :span="12" :xs="24">
+          <el-form-item label="Podorganizacja (opcjonalnie):">
+            <el-select
+              v-model="form.suborganizationId"
+              :disabled="!form.organizationId"
+              clearable
+              placeholder="Wszystkie podorganizacje"
+            >
+              <el-option
+                v-for="suborganization in suborganizations"
+                :key="suborganization.id"
+                :label="suborganization.name"
+                :value="suborganization.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="24">
+        <el-col :span="12" :xs="24">
           <el-form-item label="Instrukcje dla AI:">
             <MdEditor
               v-model="form.instructions"
@@ -215,7 +269,7 @@ async function handleDownload() {
 
         <el-col :span="12" :xs="24">
           <h3 class="fields-title">Pola formularza</h3>
-          <el-collapse v-if="form.fields.length" class="fields-collapse">
+          <el-collapse v-if="form.fields.length" class="app-collapse">
             <ApplicationTemplateFieldEditor
               v-for="(field, index) in form.fields"
               :key="field.name"
@@ -235,13 +289,13 @@ async function handleDownload() {
 .template-editor {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--app-space-lg);
 }
 
 .editor-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-space-md);
 }
 
 .name-title {
@@ -255,7 +309,7 @@ async function handleDownload() {
 }
 
 .name-input :deep(.el-input__wrapper) {
-  padding-left: 4px;
+  padding-left: var(--app-space-xs);
   background-color: transparent;
   box-shadow: none;
 }
@@ -280,22 +334,8 @@ async function handleDownload() {
   margin-top: 0;
 }
 
-.fields-collapse {
-  --el-collapse-header-bg-color: transparent;
-  --el-collapse-content-bg-color: transparent;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.fields-collapse :deep(.el-collapse-item__header),
-.fields-collapse :deep(.el-collapse-item__content) {
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
 .editor-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 </style>

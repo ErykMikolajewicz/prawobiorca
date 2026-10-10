@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { showApiError } from '@/utils/error'
 import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
 import { getUserRegulations } from '@/api/generated/endpoints/user-regulations/user-regulations'
+import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationScope } from '@/domain/regulations'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 
@@ -22,12 +23,23 @@ export function useRegulations(scope: RegulationScope) {
     regulations.value.filter(isPending).map((regulation) => regulation.id),
   )
 
-  const getRegulations = scope === 'public' ? getPublicRegulations : getUserRegulations
+  const organizationsStore = useOrganizationsStore()
   let lastRequestId = 0
+
+  function getRegulations() {
+    if (scope === 'user') {
+      return getUserRegulations({ documentType: typeFilter.value })
+    }
+    return getPublicRegulations({
+      documentType: typeFilter.value,
+      organizationId: organizationsStore.selectedOrganizationId || undefined,
+      suborganizationId: organizationsStore.selectedSuborganizationId || undefined,
+    })
+  }
 
   async function fetch() {
     const requestId = ++lastRequestId
-    const fetchedRegulations = await getRegulations({ documentType: typeFilter.value })
+    const fetchedRegulations = await getRegulations()
     if (requestId === lastRequestId) {
       regulations.value = fetchedRegulations
     }
@@ -66,6 +78,15 @@ export function useRegulations(scope: RegulationScope) {
   }
 
   watch(typeFilter, load)
+  if (scope === 'public') {
+    watch(
+      () => [
+        organizationsStore.selectedOrganizationId,
+        organizationsStore.selectedSuborganizationId,
+      ],
+      load,
+    )
+  }
 
   return {
     regulations,

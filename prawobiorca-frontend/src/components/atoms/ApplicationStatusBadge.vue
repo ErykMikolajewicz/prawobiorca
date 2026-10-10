@@ -18,19 +18,7 @@ const status = computed(() => {
 </script>
 
 <template>
-  <el-tag
-    v-if="status"
-    size="small"
-    effect="plain"
-    :type="status.tagType"
-    class="application-status-badge"
-  >
+  <el-tag v-if="status" size="small" effect="plain" :type="status.tagType" class="app-badge">
     {{ status.label }}
   </el-tag>
 </template>
-
-<style scoped>
-.application-status-badge {
-  font-weight: 500;
-}
-</style>

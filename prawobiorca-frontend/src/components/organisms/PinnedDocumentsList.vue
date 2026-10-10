@@ -50,6 +50,6 @@ function handleUnpin(id: string) {
 .pinned-documents {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--app-space-md);
 }
 </style>

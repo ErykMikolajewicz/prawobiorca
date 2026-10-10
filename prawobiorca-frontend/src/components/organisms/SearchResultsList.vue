@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import SearchResultItem from '@/components/molecules/SearchResultItem.vue'
-import type { SearchResult } from '@/api/generated/model'
+import type {
+  SearchResult,
+  SearchResultElement,
+  SearchResultHighlight,
+} from '@/api/generated/model'
 
 const props = defineProps<{
   results: Array<SearchResult>
@@ -10,11 +14,18 @@ const props = defineProps<{
   query: string
 }>()
 
+type AddToCasePayload = {
+  documentContent: string
+  header: string | null
+  elements: Array<SearchResultElement>
+  highlight: SearchResultHighlight | null
+}
+
 const emit = defineEmits<{
-  (e: 'add-to-case', payload: { documentContent: string; header: string | null }): void
+  (e: 'add-to-case', payload: AddToCasePayload): void
 }>()
 
-function onAddToCase(payload: { documentContent: string; header: string | null }) {
+function onAddToCase(payload: AddToCasePayload) {
   emit('add-to-case', payload)
 }
 
@@ -45,7 +56,7 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
     <el-divider />
 
     <div v-if="results.length">
-      <h2>Wyniki:</h2>
+      <h2 class="section-title">Wyniki:</h2>
       <div v-for="(group, groupIndex) in groupedResults" :key="groupIndex" class="result-group">
         <h3 class="result-group-header">{{ group.header }}</h3>
         <SearchResultItem
@@ -69,13 +80,13 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
 
 <style scoped>
 .result-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--app-space-xl);
 }
 
 .result-group-header {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 var(--app-space-sm) 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--el-text-color-primary, #303133);
+  color: var(--el-text-color-primary);
 }
 </style>
