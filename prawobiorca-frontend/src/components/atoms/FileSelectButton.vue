@@ -43,7 +43,7 @@ function handleFileChange(event: Event) {
 }
 
 .selected-file-name {
-  margin-left: 12px;
+  margin-left: var(--app-space-md);
   color: var(--el-text-color-secondary);
 }
 </style>

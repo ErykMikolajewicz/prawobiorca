@@ -1,6 +1,6 @@
-from dataclasses import asdict
 from uuid import UUID
 
+from pydantic import TypeAdapter
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +53,7 @@ class CaseDocumentsRepository:
     async def add(session: AsyncSession, user_id: UUID, case_id: UUID, new_document: NewCaseDocument) -> UUID:
         statement = (
             insert(case_documents_table)
-            .values(case_id=case_id, user_id=user_id, **asdict(new_document))
+            .values(case_id=case_id, user_id=user_id, **TypeAdapter(NewCaseDocument).dump_python(new_document))
             .returning(case_documents_table.c.id)
         )
         try:

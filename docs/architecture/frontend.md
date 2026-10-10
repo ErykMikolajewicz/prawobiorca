@@ -18,7 +18,7 @@ It talks to `core-service` exclusively over the HTTP REST API — it has no dire
 * **Element Plus** as the component library, including its dark theme variables.
 * **axios** as the HTTP client, with the API client generated from the OpenAPI contract by **Orval**.
 * **md-editor-v3** for editing the AI instructions and **docx-preview** for previewing DOCX files of application templates.
-* **Vitest** for unit tests, **oxlint** + **ESLint** for linting and **oxfmt** for formatting.
+* **Vitest** for unit tests, **oxlint** + **ESLint** for linting, **stylelint** for CSS and **oxfmt** for formatting.
 
 Required toolchain versions are declared in `prawobiorca-frontend/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
 
@@ -78,9 +78,29 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm type-check` | Type-check with `vue-tsc`. |
 | `pnpm test:unit` | Run unit tests with Vitest. |
 | `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [Tests](../tests/tests.md#e2e-tests)). |
-| `pnpm lint` | Run oxlint and ESLint with autofix. |
+| `pnpm lint` | Run oxlint, ESLint and stylelint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
-| `pnpm check` | Run oxlint, ESLint and oxfmt without fixing; used by the pre-commit hook. |
+| `pnpm check` | Run oxlint, ESLint, stylelint and oxfmt without fixing; used by the pre-commit hook. |
 | `pnpm generate:api-client` | Generate `src/api/generated/` from `core-service/openapi.json` with Orval. |
 
 A JetBrains IDE (PyCharm Professional, free for students under a non-commercial licence) with the Vue plugin is recommended, so that the whole repository — Python services and frontend — is handled by a single IDE. In VS Code, the [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) extension is required to make the TypeScript language service aware of `.vue` types.
+
+---
+
+## 7. Styling
+
+Element Plus provides the base look; the application customises it through CSS variables. Global styles live in `src/assets/styles/`, imported once through `index.css` in `src/main.ts`:
+
+* **`tokens.css`** — the light (`:root`) and dark (`html.dark`) themes: overridden Element Plus variables (`--el-*`) and the application's own (`--app-*`), including the spacing scale `--app-space-xs|sm|md|lg|xl` (0.25, 0.5, 0.75, 1 and 1.5 rem) and `--app-radius-lg`.
+* **`overrides.css`** — global overrides of Element Plus components, and styles of elements teleported outside a component (e.g. the drawer header).
+* **`base.css`** — `body` and `#app`.
+* **`components.css`** — shared classes: `.page-header`, `.page-title`, `.section-title`, `.cards-grid`, `.icon-btn`, `.app-card` (with `.is-interactive` for clickable cards), `.app-card-content`, `.app-card-actions`, `.app-collapse`, `.app-badge` and `.app-text-truncate`.
+
+Component styles are written in `<style scoped>` and follow these conventions; stylelint (`stylelint.config.mjs`) enforces the color, font-size, class name and nesting rules:
+
+* Colors only through variables — hex and color functions are allowed only in `tokens.css` and `overrides.css`.
+* Spacing (`gap`, `padding`, `margin`) through `--app-space-*`; font sizes in `rem`; border radius through `--el-border-radius-base` or `--app-radius-lg`. Pixels remain for borders, shadows and fixed dimensions.
+* Class names in kebab-case; states and variants as `is-*` classes (`.is-active`, `.is-collapsed`); new shared classes get the `app-` prefix.
+* No nesting — Element Plus internals are styled with `:deep()` or its component variables.
+* No inline styles.
+* A single responsive breakpoint: `768px`, matching the Element Plus `xs` breakpoint.

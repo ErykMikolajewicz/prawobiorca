@@ -6,10 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchResultElement(BaseModel):
-    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
-
     text: str
-    subsection: str | None = None
+    subsection: str | None
 
 
 class SearchResultHighlight(BaseModel):

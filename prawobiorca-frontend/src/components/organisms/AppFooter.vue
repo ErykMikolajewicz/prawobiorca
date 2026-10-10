@@ -13,12 +13,12 @@
 
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 var(--app-space-lg);
 }
 
 .footer-text {
   color: var(--el-text-color-regular);
-  font-size: 14px;
+  font-size: 0.875rem;
   margin: 0;
   text-align: left;
 }

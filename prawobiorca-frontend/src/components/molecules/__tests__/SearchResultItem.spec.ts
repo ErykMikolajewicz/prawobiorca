@@ -47,18 +47,20 @@ describe('SearchResultItem', () => {
     const wrapper = mountItem('irrelevant', elements)
 
     const lines = wrapper.findAll('.result-line')
-    expect(lines[0]!.classes()).not.toContain('result-line--sub')
-    expect(lines[1]!.classes()).toContain('result-line--sub')
-    expect(lines[2]!.classes()).toContain('result-line--sub')
+    expect(lines[0]!.classes()).not.toContain('is-sub')
+    expect(lines[1]!.classes()).toContain('is-sub')
+    expect(lines[2]!.classes()).toContain('is-sub')
   })
 
-  it('emits add-to-case with the flat text regardless of structured elements', async () => {
+  it('emits add-to-case with the flat text, elements and highlight', async () => {
     const elements: Array<SearchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
     const wrapper = mountItem('1. Ustęp pierwszy', elements)
 
     await wrapper.find('button').trigger('click')
 
-    expect(wrapper.emitted('add-to-case')?.[0]).toEqual([{ documentContent: '1. Ustęp pierwszy' }])
+    expect(wrapper.emitted('add-to-case')?.[0]).toEqual([
+      { documentContent: '1. Ustęp pierwszy', elements, highlight: null },
+    ])
   })
 
   it('highlights blocks containing the best chunk span', () => {
@@ -72,9 +74,9 @@ describe('SearchResultItem', () => {
     const wrapper = mountItem('irrelevant', elements, 'case-1', highlight)
 
     const blocks = wrapper.findAll('.result-block')
-    expect(blocks[0]!.classes()).toContain('result-block--highlighted')
-    expect(blocks[1]!.classes()).toContain('result-block--highlighted')
-    expect(blocks[2]!.classes()).not.toContain('result-block--highlighted')
+    expect(blocks[0]!.classes()).toContain('is-highlighted')
+    expect(blocks[1]!.classes()).toContain('is-highlighted')
+    expect(blocks[2]!.classes()).not.toContain('is-highlighted')
   })
 
   it('does not highlight anything without highlight', () => {
@@ -82,7 +84,7 @@ describe('SearchResultItem', () => {
 
     const wrapper = mountItem('irrelevant', elements)
 
-    expect(wrapper.find('.result-block--highlighted').exists()).toBe(false)
+    expect(wrapper.find('.result-block.is-highlighted').exists()).toBe(false)
     expect(wrapper.find('.result-line').text()).toBe('1. Ustęp pierwszy')
   })
 })

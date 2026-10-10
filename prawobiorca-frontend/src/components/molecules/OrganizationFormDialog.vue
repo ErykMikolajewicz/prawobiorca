@@ -42,7 +42,11 @@ function handleSubmit() {
   <el-dialog v-model="visible" :title="title" width="min(480px, 92vw)">
     <el-form label-position="top" @submit.prevent="handleSubmit">
       <el-form-item label="Nazwa:">
-        <el-input v-model="form.name" :maxlength="255" placeholder="np. Politechnika Wrocławska" />
+        <el-input
+          v-model="form.name"
+          :maxlength="255"
+          :placeholder="withShortName ? 'np. Politechnika Wrocławska' : 'np. Wydział Chemiczny'"
+        />
       </el-form-item>
 
       <el-form-item v-if="withShortName" label="Skrót:">

@@ -34,7 +34,7 @@ function handleChange(value: RegulationType | '' | undefined) {
 .regulation-type-filter-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 
 .filter-label {

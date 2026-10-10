@@ -30,10 +30,10 @@ function handleDelete() {
 </script>
 
 <template>
-  <el-card shadow="hover" class="generated-application">
-    <div class="card-content">
+  <el-card shadow="never" class="generated-application app-card">
+    <div class="app-card-content">
       <strong class="name">{{ name }}</strong>
-      <div class="actions">
+      <div class="app-card-actions">
         <el-button v-if="isGenerated" type="primary" @click="handleDownload">Pobierz</el-button>
         <ApplicationStatusBadge v-else :generation-status="application.generationStatus" />
         <el-popconfirm
@@ -54,34 +54,20 @@ function handleDelete() {
 
 <style scoped>
 .generated-application :deep(.el-card__body) {
-  padding-bottom: 6px;
-}
-
-.card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  padding-bottom: var(--app-space-sm);
 }
 
 .name {
   flex: 1;
   min-width: 0;
-  font-size: 1.15em;
+  font-size: 1.15rem;
   overflow-wrap: anywhere;
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  align-items: center;
-}
-
 .meta {
-  margin-top: 14px;
+  margin-top: var(--app-space-lg);
   text-align: right;
-  font-size: 0.75em;
+  font-size: 0.75rem;
   color: var(--el-text-color-secondary);
 }
 </style>

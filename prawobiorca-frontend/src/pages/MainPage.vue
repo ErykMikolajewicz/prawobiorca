@@ -6,6 +6,8 @@ import { storeToRefs } from 'pinia'
 import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
+import HowItWorks from '@/components/molecules/HowItWorks.vue'
+import LoginCtaBanner from '@/components/molecules/LoginCtaBanner.vue'
 import { useRegulations } from '@/composables/useRegulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
@@ -62,6 +64,11 @@ onBeforeMount(async () => {
       <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj plik</el-button>
     </div>
 
+    <template v-if="!isUserLogged">
+      <LoginCtaBanner />
+      <HowItWorks />
+    </template>
+
     <RegulationsList
       v-model:type-filter="publicRegulations.typeFilter"
       title="Publiczne regulacje"
@@ -104,6 +111,6 @@ onBeforeMount(async () => {
 .page-actions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 1rem;
+  margin-bottom: var(--app-space-lg);
 }
 </style>

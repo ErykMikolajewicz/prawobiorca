@@ -126,22 +126,24 @@ async function handleDeleteApplication(applicationId: string) {
 
 <template>
   <AppLayout>
-    <h1>Szczegóły Sprawy</h1>
+    <div class="page-header">
+      <h1 class="page-title">Szczegóły Sprawy</h1>
+    </div>
 
     <el-row :gutter="20">
       <el-col :span="12" :xs="24">
-        <section>
-          <h2>Kontekst / Opis Wniosku</h2>
+        <section class="case-section">
+          <h2 class="section-title">Kontekst / Opis Wniosku</h2>
           <GeneratePdfForm :templates="templates" @generate-pdf="handleGeneratePdf" />
         </section>
       </el-col>
       <el-col :span="12" :xs="24">
-        <section>
-          <h2>Przypięte Artykuły</h2>
+        <section class="case-section">
+          <h2 class="section-title">Przypięte Artykuły</h2>
           <PinnedDocumentsList :documents="documents" @unpin="handleUnpin" />
         </section>
-        <section>
-          <h2>Wygenerowane Wnioski</h2>
+        <section class="case-section">
+          <h2 class="section-title">Wygenerowane Wnioski</h2>
           <GeneratedApplicationsList
             :applications="applications"
             @download="handleDownloadApplication"
@@ -152,3 +154,12 @@ async function handleDeleteApplication(applicationId: string) {
     </el-row>
   </AppLayout>
 </template>
+
+<style scoped>
+.case-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  margin-bottom: var(--app-space-xl);
+}
+</style>

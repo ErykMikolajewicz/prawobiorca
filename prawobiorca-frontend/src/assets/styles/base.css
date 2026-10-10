@@ -1,0 +1,13 @@
+body {
+  background-color: var(--el-bg-color-page);
+  background-image: var(--app-page-glow);
+  background-repeat: no-repeat;
+  color: var(--el-text-color-primary);
+  margin: 0;
+  font-family: var(--el-font-family);
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}

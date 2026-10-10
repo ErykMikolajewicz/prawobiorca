@@ -174,12 +174,12 @@ async function showPreview() {
 .dialog-footer {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 
 .dialog-footer-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--app-space-sm);
   margin-left: auto;
 }
 </style>

@@ -8,6 +8,7 @@ import {
   confirmUserRegulationUpload,
   retryUserRegulationPreparation,
 } from '@/api/generated/endpoints/user-regulations/user-regulations'
+import DescriptionOutlineRoundedIcon from '@iconify-vue/material-symbols/description-outline-rounded'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
 import MoreVertIcon from '@iconify-vue/material-symbols/more-vert'
 import RefreshRoundedIcon from '@iconify-vue/material-symbols/refresh-rounded'
@@ -65,56 +66,53 @@ async function retryPreparation(regulationId: string) {
 </script>
 
 <template>
-  <el-card shadow="never" class="file-card app-card" :class="{ 'file-card--prepared': isPrepared }">
-    <RegulationTypeBadge :regulation-type="regulation.regulationType" class="type-badge" />
-    <div class="card-content">
-      <div class="regulation-info">
-        <component
-          :is="isPrepared ? 'router-link' : 'span'"
-          :to="
-            isPrepared
-              ? { name: searchRouteName, params: { regulationId: regulation.id } }
-              : undefined
-          "
-          class="regulation-name"
-          :class="{ 'file-card-link': isPrepared }"
-          :title="regulation.presentationName"
-        >
-          {{ regulation.presentationName }}
-        </component>
-      </div>
+  <div class="regulation-item" :class="{ 'is-prepared': isPrepared }">
+    <DescriptionOutlineRoundedIcon class="regulation-icon" />
 
-      <div class="actions">
-        <span v-if="isPrepared">
-          <IconMotion motion-type="search" class="search-action">
-            <SearchRoundedIcon />
-          </IconMotion>
-        </span>
+    <component
+      :is="isPrepared ? 'router-link' : 'span'"
+      :to="
+        isPrepared ? { name: searchRouteName, params: { regulationId: regulation.id } } : undefined
+      "
+      class="regulation-name app-text-truncate"
+      :class="{ 'regulation-link': isPrepared }"
+      :title="regulation.presentationName"
+    >
+      {{ regulation.presentationName }}
+    </component>
 
-        <template v-else-if="canManage">
-          <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
+    <div class="app-card-actions">
+      <RegulationTypeBadge :regulation-type="regulation.regulationType" />
 
-          <button
-            v-if="canRetry"
-            class="icon-btn"
-            type="button"
-            aria-label="Ponów przetwarzanie"
-            :disabled="isRetrying"
-            @click="retryPreparation(regulation.id)"
-          >
-            <RefreshRoundedIcon />
-          </button>
-        </template>
+      <template v-if="!isPrepared && canManage">
+        <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
 
         <button
+          v-if="canRetry"
+          class="icon-btn"
           type="button"
-          class="icon-btn options-btn"
-          aria-label="Opcje regulacji"
-          @click="isDetailsDialogVisible = true"
+          aria-label="Ponów przetwarzanie"
+          :disabled="isRetrying"
+          @click="retryPreparation(regulation.id)"
         >
-          <MoreVertIcon />
+          <RefreshRoundedIcon />
         </button>
-      </div>
+      </template>
+
+      <span v-if="isPrepared">
+        <IconMotion motion-type="search" class="search-action">
+          <SearchRoundedIcon />
+        </IconMotion>
+      </span>
+
+      <button
+        type="button"
+        class="icon-btn options-btn"
+        aria-label="Opcje regulacji"
+        @click="isDetailsDialogVisible = true"
+      >
+        <MoreVertIcon />
+      </button>
     </div>
 
     <RegulationDetailsDialog
@@ -125,52 +123,53 @@ async function retryPreparation(regulationId: string) {
       @updated="(updatedRegulation) => emit('updated', updatedRegulation)"
       @deleted="(regulationId) => emit('deleted', regulationId)"
     />
-  </el-card>
+  </div>
 </template>
 
 <style scoped>
-.file-card {
+.regulation-item {
   position: relative;
-  height: 100%;
-}
-
-.card-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-top: 18px;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-lg);
+  transition: background-color 0.2s ease;
 }
 
-.regulation-info {
-  flex: 1;
-  min-width: 0;
+.regulation-item + .regulation-item {
+  border-top: 1px solid var(--app-card-border);
+}
+
+.regulation-item.is-prepared:hover {
+  background-color: var(--el-color-primary-light-9);
+}
+
+.regulation-icon {
+  flex-shrink: 0;
+  width: 1.5em;
+  height: 1.5em;
+  color: var(--el-color-primary);
 }
 
 .regulation-name {
-  display: block;
+  flex: 1;
+  min-width: 0;
   font-weight: 500;
   color: var(--el-text-color-primary);
 }
 
-.type-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
-}
-
-.file-card-link {
+.regulation-link {
   text-decoration: none;
 }
 
-.file-card-link::after {
+.regulation-link::after {
   content: '';
   position: absolute;
   inset: 0;
 }
 
-.file-card--prepared:has(.file-card-link:hover) .search-action {
+.regulation-item.is-prepared:hover .regulation-name,
+.regulation-item.is-prepared:hover .search-action {
   color: var(--el-color-primary);
 }
 
@@ -178,14 +177,7 @@ async function retryPreparation(regulationId: string) {
   color: var(--el-color-primary);
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  align-items: center;
-}
-
-.actions button {
+.app-card-actions button {
   position: relative;
   z-index: 1;
 }

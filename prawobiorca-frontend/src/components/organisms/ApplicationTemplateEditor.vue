@@ -215,7 +215,7 @@ async function handleDownload() {
 
         <el-col :span="12" :xs="24">
           <h3 class="fields-title">Pola formularza</h3>
-          <el-collapse v-if="form.fields.length" class="fields-collapse">
+          <el-collapse v-if="form.fields.length" class="app-collapse">
             <ApplicationTemplateFieldEditor
               v-for="(field, index) in form.fields"
               :key="field.name"
@@ -235,13 +235,13 @@ async function handleDownload() {
 .template-editor {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--app-space-lg);
 }
 
 .editor-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-space-md);
 }
 
 .name-title {
@@ -255,7 +255,7 @@ async function handleDownload() {
 }
 
 .name-input :deep(.el-input__wrapper) {
-  padding-left: 4px;
+  padding-left: var(--app-space-xs);
   background-color: transparent;
   box-shadow: none;
 }
@@ -280,22 +280,8 @@ async function handleDownload() {
   margin-top: 0;
 }
 
-.fields-collapse {
-  --el-collapse-header-bg-color: transparent;
-  --el-collapse-content-bg-color: transparent;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.fields-collapse :deep(.el-collapse-item__header),
-.fields-collapse :deep(.el-collapse-item__content) {
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
 .editor-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 </style>

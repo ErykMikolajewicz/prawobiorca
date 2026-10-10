@@ -105,17 +105,17 @@ async function onSubmit() {
 .auth-container {
   width: 100%;
   max-width: 400px;
-  padding: 20px;
+  padding: var(--app-space-lg);
   box-sizing: border-box;
 }
 
 .title {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--app-space-xl);
 }
 
 .auth-link {
   text-align: center;
-  margin-top: 16px;
+  margin-top: var(--app-space-lg);
 }
 </style>

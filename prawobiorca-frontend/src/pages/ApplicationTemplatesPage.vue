@@ -52,7 +52,7 @@ onBeforeMount(loadTemplates)
 <template>
   <AppLayout>
     <div class="page-header">
-      <h1>Szablony wniosków</h1>
+      <h1 class="page-title">Szablony wniosków</h1>
       <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj szablon</el-button>
     </div>
 
@@ -66,13 +66,3 @@ onBeforeMount(loadTemplates)
     <ApplicationTemplateUploadDialog v-model="isUploadDialogVisible" @submitted="openTemplate" />
   </AppLayout>
 </template>
-
-<style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-</style>
