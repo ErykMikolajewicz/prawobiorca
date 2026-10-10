@@ -97,6 +97,10 @@ const emit = defineEmits<{
   padding-right: 16px;
 }
 
+.organizations-collapse :deep(.el-collapse-item__header) {
+  border-left: 4px solid var(--el-color-primary);
+}
+
 .organizations-collapse :deep(.el-collapse-item__title) {
   flex: 1;
   min-width: 0;
@@ -148,7 +152,13 @@ const emit = defineEmits<{
   gap: 12px;
   padding: 8px 12px 8px 24px;
   border-radius: 6px;
-  background-color: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-left: 3px solid var(--el-color-primary-light-5);
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: var(--el-color-primary-light-5);
+  }
 
   .item-name {
     font-weight: normal;

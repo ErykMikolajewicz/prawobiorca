@@ -20,7 +20,7 @@ class OrganizationsRepository:
 
         suborganizations_statement = select(
             suborganizations_table.c.id, suborganizations_table.c.organization_id, suborganizations_table.c.name
-        ).order_by(suborganizations_table.c.create_date)
+        ).order_by(suborganizations_table.c.name)
         suborganizations_result = await session.execute(suborganizations_statement)
 
         suborganizations_by_organization = defaultdict(list)
