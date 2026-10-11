@@ -1,8 +1,13 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
-const MOBILE_MAX_WIDTH = 768
+const { isMobile } = useBreakpoint()
 
-const isCollapsed = ref(window.innerWidth <= MOBILE_MAX_WIDTH)
+const isCollapsed = ref(isMobile.value)
+
+watch(isMobile, (mobile) => {
+  isCollapsed.value = mobile
+})
 
 function toggleCollapsed() {
   isCollapsed.value = !isCollapsed.value

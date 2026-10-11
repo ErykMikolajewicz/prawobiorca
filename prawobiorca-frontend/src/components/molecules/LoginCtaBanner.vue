@@ -25,7 +25,7 @@ function dismiss() {
       </router-link>
     </p>
 
-    <div class="login-cta-actions">
+    <div class="app-actions">
       <el-button type="primary" @click="router.push({ name: 'LoginPage' })">Zaloguj się</el-button>
       <el-button @click="router.push({ name: 'RegisterPage' })">Załóż konto</el-button>
       <button type="button" class="icon-btn" title="Zamknij" @click="dismiss">
@@ -56,15 +56,5 @@ function dismiss() {
 
 .login-cta-link {
   color: var(--el-color-primary);
-}
-
-.login-cta-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-}
-
-.login-cta-actions .el-button + .el-button {
-  margin-left: 0;
 }
 </style>

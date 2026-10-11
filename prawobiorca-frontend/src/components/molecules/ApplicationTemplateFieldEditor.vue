@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import {
-  DATE_VALUE_FORMAT,
-  fieldTypeOptions,
-  type EditableTemplateField,
-} from '@/domain/applicationTemplates'
+import TemplateFieldDefaultValueInput from '@/components/atoms/TemplateFieldDefaultValueInput.vue'
+import TemplateFieldTypeSettings from '@/components/atoms/TemplateFieldTypeSettings.vue'
+import { fieldTypeOptions, type EditableTemplateField } from '@/domain/applicationTemplates'
 
 const field = defineModel<EditableTemplateField>({ required: true })
 
@@ -44,50 +42,19 @@ function handleFieldTypeChange() {
         </el-form-item>
       </el-col>
 
-      <el-col v-if="field.fieldType === 'TEXT'" :span="12" :xs="24">
-        <el-form-item label="Regex walidacji (opcjonalnie):">
-          <el-input v-model="field.pattern" clearable placeholder="np. \d{6}" />
-        </el-form-item>
-      </el-col>
-
-      <el-col v-if="field.fieldType === 'SELECT'" :span="12" :xs="24">
-        <el-form-item label="Opcje listy:">
-          <el-select
-            v-model="field.options"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            :reserve-keyword="false"
-            placeholder="Wpisz opcję i naciśnij Enter"
-          />
-        </el-form-item>
-      </el-col>
+      <TemplateFieldTypeSettings
+        v-model:pattern="field.pattern"
+        v-model:options="field.options"
+        :field-type="field.fieldType"
+      />
 
       <el-col :span="12" :xs="24">
         <el-form-item label="Wartość domyślna (opcjonalnie):">
-          <el-select
-            v-if="field.fieldType === 'SELECT'"
+          <TemplateFieldDefaultValueInput
             v-model="field.defaultValue"
-            clearable
-            placeholder="Brak"
-          >
-            <el-option
-              v-for="option in field.options"
-              :key="option"
-              :label="option"
-              :value="option"
-            />
-          </el-select>
-          <el-date-picker
-            v-else-if="field.fieldType === 'DATE'"
-            v-model="field.defaultValue"
-            type="date"
-            :format="DATE_VALUE_FORMAT"
-            :value-format="DATE_VALUE_FORMAT"
-            placeholder="Brak"
+            :field-type="field.fieldType"
+            :options="field.options"
           />
-          <el-input v-else v-model="field.defaultValue" clearable placeholder="Brak" />
         </el-form-item>
       </el-col>
     </el-row>

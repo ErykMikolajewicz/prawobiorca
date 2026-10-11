@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import RegulationElements from '@/components/atoms/RegulationElements.vue'
+import RegulationElements from '@/components/molecules/RegulationElements.vue'
 import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
 
 const props = defineProps<{

@@ -1,5 +1,6 @@
 import type {
   ApplicationFieldType,
+  ApplicationTemplateDetailsData,
   ApplicationTemplateField,
   ApplicationTemplateStatus,
 } from '@/api/generated/model'
@@ -10,6 +11,14 @@ export type TemplateStatusOption = {
 }
 
 export type EditableTemplateField = Required<ApplicationTemplateField>
+
+export type ApplicationTemplateForm = {
+  name: string
+  instructions: string
+  organizationId: string
+  suborganizationId: string
+  fields: Array<EditableTemplateField>
+}
 
 export const DATE_VALUE_FORMAT = 'DD.MM.YYYY'
 
@@ -36,5 +45,19 @@ export function toEditableField(field: ApplicationTemplateField): EditableTempla
     defaultValue: field.defaultValue ?? null,
     pattern: field.pattern ?? null,
     options: [...(field.options ?? [])],
+  }
+}
+
+export function toDetailsData(form: ApplicationTemplateForm): ApplicationTemplateDetailsData {
+  return {
+    name: form.name.trim(),
+    instructions: form.instructions.trim() || null,
+    organizationId: form.organizationId || null,
+    suborganizationId: form.suborganizationId || null,
+    fields: form.fields.map((field) => ({
+      ...field,
+      defaultValue: field.defaultValue || null,
+      pattern: field.pattern || null,
+    })),
   }
 }

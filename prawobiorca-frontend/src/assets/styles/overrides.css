@@ -30,3 +30,15 @@ html.dark .el-empty {
   margin: -14px -14px 0 0;
   font-size: 1.5rem;
 }
+
+.app-sidebar-drawer-body {
+  padding: 0;
+}
+
+@media (width <= 768px) {
+  .el-input,
+  .el-textarea,
+  .el-select__wrapper {
+    font-size: 1rem;
+  }
+}

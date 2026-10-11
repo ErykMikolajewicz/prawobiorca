@@ -1,18 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import {
-  deletePublicRegulation,
-  getPublicRegulationDownloadUrl,
-  updatePublicRegulation,
-} from '@/api/generated/endpoints/regulations/regulations'
-import {
-  deleteUserRegulation,
-  getUserRegulationDownloadUrl,
-  updateUserRegulation,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
-import { showApiError } from '@/utils/error'
-import { toBrowserStorageUrl } from '@/utils/storage'
+import { computed, watch } from 'vue'
+import { useRegulationDetails } from '@/composables/useRegulationDetails'
 import type { RegulationRepresentation } from '@/api/generated/model'
 import type { RegulationScope } from '@/domain/regulations'
 
@@ -31,11 +19,17 @@ const emit = defineEmits<{
   (e: 'deleted', regulationId: string): void
 }>()
 
-const name = ref('')
-const description = ref('')
-const isSaving = ref(false)
-const isDeleting = ref(false)
-const isLoadingPreview = ref(false)
+const {
+  name,
+  description,
+  isSaving,
+  isDeleting,
+  isLoadingPreview,
+  resetForm,
+  save,
+  remove,
+  showPreview,
+} = useRegulationDetails(props.target)
 
 const createDate = computed(() =>
   new Date(props.regulation.createDate).toLocaleString('pl-PL', {
@@ -45,72 +39,41 @@ const createDate = computed(() =>
 )
 const canPreview = computed(() => props.regulation.preparationStatus !== 'NOT_STARTED')
 
-const updateRegulation = props.target === 'public' ? updatePublicRegulation : updateUserRegulation
-const deleteRegulation = props.target === 'public' ? deletePublicRegulation : deleteUserRegulation
-const getRegulationDownloadUrl =
-  props.target === 'public' ? getPublicRegulationDownloadUrl : getUserRegulationDownloadUrl
-
-watch(visible, (isVisible) => {
-  if (isVisible) {
-    name.value = props.regulation.presentationName
-    description.value = props.regulation.description ?? ''
-  }
-})
+watch(
+  visible,
+  (isVisible) => {
+    if (isVisible) {
+      resetForm(props.regulation)
+    }
+  },
+  { immediate: true },
+)
 
 function closeDialog() {
   visible.value = false
 }
 
 async function handleSave() {
-  if (!name.value.trim()) {
-    ElMessage.warning('Podaj nazwę regulacji.')
+  const regulation = await save(props.regulation.id)
+  if (!regulation) {
     return
   }
 
-  try {
-    isSaving.value = true
-    const regulation = await updateRegulation(props.regulation.id, {
-      name: name.value.trim(),
-      description: description.value.trim() || null,
-    })
-    ElMessage.success('Regulacja została zaktualizowana')
-    emit('updated', regulation)
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się zaktualizować regulacji' })
-  } finally {
-    isSaving.value = false
-  }
+  emit('updated', regulation)
 }
 
 async function handleDelete() {
-  try {
-    isDeleting.value = true
-    await deleteRegulation(props.regulation.id)
-    ElMessage.success('Regulacja została usunięta')
-    emit('deleted', props.regulation.id)
-    closeDialog()
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się usunąć regulacji' })
-  } finally {
-    isDeleting.value = false
+  const isDeleted = await remove(props.regulation.id)
+  if (!isDeleted) {
+    return
   }
+
+  emit('deleted', props.regulation.id)
+  closeDialog()
 }
 
-async function showPreview() {
-  const previewWindow = window.open('', '_blank')
-  try {
-    isLoadingPreview.value = true
-    const previewUrl = toBrowserStorageUrl(await getRegulationDownloadUrl(props.regulation.id))
-    if (previewWindow) {
-      previewWindow.opener = null
-      previewWindow.location.href = previewUrl
-    }
-  } catch (error) {
-    previewWindow?.close()
-    showApiError(error, { defaultMessage: 'Nie udało się pobrać podglądu pliku' })
-  } finally {
-    isLoadingPreview.value = false
-  }
+function handlePreview() {
+  showPreview(props.regulation.id)
 }
 </script>
 
@@ -144,7 +107,7 @@ async function showPreview() {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button v-if="canPreview" :loading="isLoadingPreview" @click="showPreview">
+        <el-button v-if="canPreview" :loading="isLoadingPreview" @click="handlePreview">
           Pokaż podgląd
         </el-button>
 

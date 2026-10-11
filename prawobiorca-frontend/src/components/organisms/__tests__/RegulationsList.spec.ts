@@ -46,7 +46,7 @@ describe('RegulationsList', () => {
         directives: { loading: {} },
         stubs: {
           RouterLink: true,
-          RegulationCard: {
+          RegulationItem: {
             template: '<div class="stub-card">{{ regulation.presentationName }}</div>',
             props: ['regulation', 'target', 'canManage'],
           },
@@ -76,7 +76,7 @@ describe('RegulationsList', () => {
         directives: { loading: {} },
         stubs: {
           RouterLink: true,
-          RegulationCard: {
+          RegulationItem: {
             template: '<div class="stub-card">{{ regulation.presentationName }}</div>',
             props: ['regulation', 'target', 'canManage'],
           },
@@ -153,34 +153,64 @@ describe('RegulationsList', () => {
     expect(wrapper.find('.el-empty-stub').exists()).toBe(false)
   })
 
-  it('forwards regulation update from card', async () => {
-    const updatedRegulation = { ...mockRegulations[0]!, presentationName: 'Renamed Doc' }
-    const wrapper = mount(RegulationsList, {
-      props: {
-        regulations: mockRegulations,
-        title: 'Publiczne regulacje',
-        emptyDescription: 'Brak regulacji publicznych.',
-        typeFilter: undefined,
-        target: 'public',
-        canManage: true,
-      },
-      global: {
-        directives: { loading: {} },
-        stubs: {
-          RegulationCard: {
-            template:
-              '<button class="stub-card" @click="$emit(\'updated\', { ...regulation, presentationName: \'Renamed Doc\' })" />',
-            props: ['regulation', 'target', 'canManage'],
-          },
-          RegulationTypeFilter: true,
-          RegulationOrganizationFilter: true,
-          ElEmpty: true,
-        },
-      },
-    })
+  it('does not render details dialog until a regulation is selected', () => {
+    const wrapper = mountWithDetailsDialog()
 
-    await wrapper.findAll('.stub-card')[0]?.trigger('click')
+    expect(wrapper.find('.details-dialog-stub').exists()).toBe(false)
+  })
 
-    expect(wrapper.emitted('regulation-updated')?.[0]).toEqual([updatedRegulation])
+  it('opens details dialog for the selected regulation', async () => {
+    const wrapper = mountWithDetailsDialog()
+
+    await wrapper.findAll('.stub-item')[1]?.trigger('click')
+
+    expect(wrapper.find('.details-dialog-stub').text()).toBe('Unprepared Doc')
+  })
+
+  it('forwards regulation update and delete from details dialog', async () => {
+    const wrapper = mountWithDetailsDialog()
+
+    await wrapper.findAll('.stub-item')[0]?.trigger('click')
+    await wrapper.find('.stub-update').trigger('click')
+    await wrapper.find('.stub-delete').trigger('click')
+
+    expect(wrapper.emitted('regulation-updated')?.[0]).toEqual([
+      { ...mockRegulations[0]!, presentationName: 'Renamed Doc' },
+    ])
+    expect(wrapper.emitted('regulation-deleted')?.[0]).toEqual(['1'])
   })
 })
+
+function mountWithDetailsDialog() {
+  return mount(RegulationsList, {
+    props: {
+      regulations: mockRegulations,
+      title: 'Publiczne regulacje',
+      emptyDescription: 'Brak regulacji publicznych.',
+      typeFilter: undefined,
+      target: 'public',
+      canManage: true,
+    },
+    global: {
+      directives: { loading: {} },
+      stubs: {
+        RegulationItem: {
+          template: '<button class="stub-item" @click="$emit(\'open-details\', regulation.id)" />',
+          props: ['regulation', 'target', 'canManage'],
+        },
+        RegulationDetailsDialog: {
+          template:
+            '<div v-if="modelValue" class="details-dialog-stub">' +
+            '{{ regulation.presentationName }}' +
+            '<button class="stub-update" @click="$emit(\'updated\', { ...regulation, presentationName: \'Renamed Doc\' })" />' +
+            '<button class="stub-delete" @click="$emit(\'deleted\', regulation.id)" />' +
+            '</div>',
+          props: ['modelValue', 'regulation', 'target', 'canManage'],
+        },
+        RegulationTypeFilter: true,
+        RegulationOrganizationFilter: true,
+        ElEmpty: true,
+      },
+    },
+  })
+}

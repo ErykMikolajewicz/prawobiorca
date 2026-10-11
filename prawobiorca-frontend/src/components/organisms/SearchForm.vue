@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import type { SearchRegulationDocumentsParams } from '@/api/generated/model'
 
 const props = defineProps<{
@@ -11,6 +12,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'search', searchConfig: SearchRegulationDocumentsParams): void
 }>()
+
+const { isMobile } = useBreakpoint()
 
 const searchParams = reactive<SearchRegulationDocumentsParams>({ ...props.searchParams })
 
@@ -51,7 +54,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <el-form @submit.prevent="onSubmit">
+  <el-form :label-position="isMobile ? 'top' : 'right'" @submit.prevent="onSubmit">
     <el-form-item label="Twoje zapytanie:">
       <el-input v-model="searchParams.query" placeholder="Wpisz treść..." clearable required />
     </el-form-item>

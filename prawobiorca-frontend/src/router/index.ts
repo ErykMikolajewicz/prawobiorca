@@ -1,5 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { setPageMeta } from '@/utils/pageMeta'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string
+    description?: string
+  }
+}
 
 const SearchPage = () => import('@/pages/SearchPage.vue')
 
@@ -10,11 +18,21 @@ const router = createRouter({
       path: '/',
       name: 'MainPage',
       component: () => import('@/pages/MainPage.vue'),
+      meta: {
+        title: 'Prawobiorca – wyszukiwarka aktów prawnych i generator wniosków',
+        description:
+          'Przeszukuj regulaminy i akty prawne uczelni z pomocą AI, a na ich podstawie generuj wnioski. Prawobiorca pomoże Ci załatwić sprawy na uczelni.',
+      },
     },
     {
       path: '/features',
       name: 'FeaturesPage',
       component: () => import('@/pages/FeaturesPage.vue'),
+      meta: {
+        title: 'Funkcje dla zalogowanych – Prawobiorca',
+        description:
+          'Załóż konto w Prawobiorcy, aby tworzyć sprawy, przypinać do nich przepisy, generować wnioski z szablonów i przeszukiwać własne regulacje.',
+      },
     },
     {
       path: '/regulations/:regulationId/documents',
@@ -76,6 +94,10 @@ router.beforeEach((to) => {
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return { name: 'MainPage' }
   }
+})
+
+router.afterEach((to) => {
+  setPageMeta(to.meta.title, to.meta.description)
 })
 
 export default router

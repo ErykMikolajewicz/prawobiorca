@@ -92,4 +92,15 @@ function showPreview(templateId: string) {
   min-width: 0;
   font-weight: 500;
 }
+
+@media (width <= 768px) {
+  .template-item {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .template-name {
+    flex-basis: 100%;
+  }
+}
 </style>
