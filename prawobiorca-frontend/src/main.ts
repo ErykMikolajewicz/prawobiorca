@@ -8,12 +8,14 @@ import './assets/styles/index.css'
 import { useAuthStore } from './stores/auth'
 import { setSessionExpiredHandler } from './api/sessionExpiry'
 import { initDarkMode } from './composables/useDarkMode'
+import { initBreakpoint } from './composables/useBreakpoint'
 import { getApiErrorMessage } from './utils/error'
 
 import App from './App.vue'
 import router from './router'
 
 initDarkMode()
+initBreakpoint()
 
 const app = createApp(App)
 const pinia = createPinia()

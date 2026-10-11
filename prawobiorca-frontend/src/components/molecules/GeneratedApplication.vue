@@ -70,4 +70,14 @@ function handleDelete() {
   font-size: 0.75rem;
   color: var(--el-text-color-secondary);
 }
+
+@media (width <= 768px) {
+  .app-card-content {
+    flex-wrap: wrap;
+  }
+
+  .name {
+    flex-basis: 100%;
+  }
+}
 </style>

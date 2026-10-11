@@ -116,4 +116,10 @@ function openDetails(regulationId: string) {
   gap: var(--app-space-md);
   justify-content: flex-start;
 }
+
+@media (width <= 768px) {
+  .list-header {
+    flex-wrap: wrap;
+  }
+}
 </style>

@@ -198,4 +198,14 @@ watch(() => props.template, resetForm, { immediate: true })
   display: flex;
   gap: var(--app-space-sm);
 }
+
+@media (width <= 768px) {
+  .editor-actions {
+    flex-wrap: wrap;
+  }
+
+  .editor-actions .el-button + .el-button {
+    margin-left: 0;
+  }
+}
 </style>

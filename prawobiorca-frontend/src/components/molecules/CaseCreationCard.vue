@@ -81,4 +81,10 @@ async function createCase() {
   background: transparent;
   box-shadow: none;
 }
+
+@media (width <= 768px) {
+  .case-name-input {
+    font-size: 1rem;
+  }
+}
 </style>

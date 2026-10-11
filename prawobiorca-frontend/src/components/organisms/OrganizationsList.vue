@@ -142,4 +142,24 @@ const emit = defineEmits<{
   padding-left: var(--app-space-xl);
   color: var(--el-text-color-secondary);
 }
+
+@media (width <= 768px) {
+  .organizations-collapse :deep(.el-collapse-item__header) {
+    line-height: normal;
+  }
+
+  .organization-header {
+    flex-wrap: wrap;
+    padding-block: var(--app-space-sm);
+  }
+
+  .organization-header .item-name,
+  .suborganization-item .item-name {
+    flex-basis: 100%;
+  }
+
+  .suborganization-item {
+    flex-wrap: wrap;
+  }
+}
 </style>

@@ -77,8 +77,10 @@ async function handleDelete() {
 </template>
 
 <style scoped>
-.sidebar-case-item:not(:hover) .icon-btn:not(.is-active) {
-  visibility: hidden;
+@media (hover: hover) {
+  .sidebar-case-item:not(:hover) .icon-btn:not(.is-active) {
+    visibility: hidden;
+  }
 }
 
 .case-name {

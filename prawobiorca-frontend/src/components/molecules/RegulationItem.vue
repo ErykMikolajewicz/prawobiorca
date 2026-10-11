@@ -174,4 +174,31 @@ async function retryPreparation() {
   position: relative;
   z-index: 1;
 }
+
+@media (width <= 768px) {
+  .regulation-item {
+    flex-wrap: wrap;
+  }
+
+  .regulation-name {
+    white-space: normal;
+  }
+
+  .app-card-actions {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+    padding-left: calc(1.5em + var(--app-space-md));
+    box-sizing: border-box;
+  }
+
+  .app-card-actions > * {
+    flex-shrink: 0;
+  }
+
+  .app-card-actions > .regulation-organization {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+}
 </style>

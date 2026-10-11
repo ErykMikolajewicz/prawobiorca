@@ -116,4 +116,6 @@ Component styles are written in `<style scoped>` and follow these conventions; s
 * Class names in kebab-case; states and variants as `is-*` classes (`.is-active`, `.is-collapsed`); new shared classes get the `app-` prefix.
 * No nesting — Element Plus internals are styled with `:deep()` or its component variables.
 * No inline styles.
-* A single responsive breakpoint: `768px`, matching the Element Plus `xs` breakpoint.
+* A single responsive breakpoint: `768px`, matching the Element Plus `xs` breakpoint. Mobile-only rules go into `@media (width <= 768px)`, so the desktop layout stays untouched; in scripts the same breakpoint is read from `isMobile` of the `useBreakpoint` composable.
+* Hover-only effects (hiding actions until hover, lifting cards) go into `@media (hover: hover)`, so they do not hide anything on touch screens.
+* On mobile the sidebar is rendered as a drawer opened from `AppTopBar`, instead of a column next to the content.
