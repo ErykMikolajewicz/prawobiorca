@@ -63,43 +63,50 @@ async function retryPreparation() {
   <div class="regulation-item" :class="{ 'is-prepared': isPrepared }">
     <DescriptionOutlineRoundedIcon class="regulation-icon" />
 
-    <component
-      :is="isPrepared ? 'router-link' : 'span'"
-      :to="
-        isPrepared ? { name: searchRouteName, params: { regulationId: regulation.id } } : undefined
-      "
-      class="regulation-name app-text-truncate"
-      :class="{ 'regulation-link': isPrepared }"
-      :title="regulation.presentationName"
-    >
-      {{ regulation.presentationName }}
-    </component>
+    <div class="regulation-content">
+      <component
+        :is="isPrepared ? 'router-link' : 'span'"
+        :to="
+          isPrepared
+            ? { name: searchRouteName, params: { regulationId: regulation.id } }
+            : undefined
+        "
+        class="regulation-name app-text-truncate"
+        :class="{ 'regulation-link': isPrepared }"
+        :title="regulation.presentationName"
+      >
+        {{ regulation.presentationName }}
+      </component>
+
+      <div class="regulation-meta">
+        <span
+          v-if="organizationLabel"
+          class="regulation-organization app-text-secondary app-text-truncate"
+          :title="organizationLabel"
+        >
+          {{ organizationLabel }}
+        </span>
+
+        <RegulationTypeBadge :regulation-type="regulation.regulationType" />
+
+        <RegulationStatusBadge
+          v-if="!isPrepared && canManage"
+          :preparation-status="regulation.preparationStatus"
+        />
+      </div>
+    </div>
 
     <div class="app-card-actions">
-      <span
-        v-if="organizationLabel"
-        class="regulation-organization app-text-secondary app-text-truncate"
-        :title="organizationLabel"
+      <button
+        v-if="canManage && canRetry"
+        class="icon-btn"
+        type="button"
+        aria-label="Ponów przetwarzanie"
+        :disabled="isRetrying"
+        @click="retryPreparation"
       >
-        {{ organizationLabel }}
-      </span>
-
-      <RegulationTypeBadge :regulation-type="regulation.regulationType" />
-
-      <template v-if="!isPrepared && canManage">
-        <RegulationStatusBadge :preparation-status="regulation.preparationStatus" />
-
-        <button
-          v-if="canRetry"
-          class="icon-btn"
-          type="button"
-          aria-label="Ponów przetwarzanie"
-          :disabled="isRetrying"
-          @click="retryPreparation"
-        >
-          <RefreshRoundedIcon />
-        </button>
-      </template>
+        <RefreshRoundedIcon />
+      </button>
 
       <span v-if="isPrepared">
         <IconMotion motion-type="search" class="search-action">
@@ -144,6 +151,14 @@ async function retryPreparation() {
   color: var(--el-color-primary);
 }
 
+.regulation-content {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--app-space-md);
+  min-width: 0;
+}
+
 .regulation-name {
   flex: 1;
   min-width: 0;
@@ -153,6 +168,13 @@ async function retryPreparation() {
 
 .regulation-link {
   text-decoration: none;
+}
+
+.regulation-meta {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--app-space-sm);
 }
 
 .regulation-organization {
@@ -177,28 +199,33 @@ async function retryPreparation() {
 
 @media (width <= 768px) {
   .regulation-item {
-    flex-wrap: wrap;
+    gap: var(--app-space-sm);
+    padding: var(--app-space-sm) var(--app-space-xs) var(--app-space-sm) var(--app-space-md);
+  }
+
+  .regulation-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--app-space-xs);
   }
 
   .regulation-name {
+    flex: none;
+    max-width: 100%;
     white-space: normal;
   }
 
-  .app-card-actions {
-    flex-basis: 100%;
+  .regulation-meta {
     flex-wrap: wrap;
-    min-width: 0;
-    padding-left: calc(1.5em + var(--app-space-md));
-    box-sizing: border-box;
+    max-width: 100%;
   }
 
-  .app-card-actions > * {
-    flex-shrink: 0;
+  .regulation-organization {
+    min-width: 0;
   }
 
-  .app-card-actions > .regulation-organization {
-    flex-shrink: 1;
-    min-width: 0;
+  .app-card-actions {
+    gap: 0;
   }
 }
 </style>
