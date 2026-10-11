@@ -19,6 +19,15 @@
   cursor: not-allowed;
 }
 
+.icon-btn.is-active,
+.icon-btn.is-primary:hover {
+  color: var(--el-color-primary);
+}
+
+.icon-btn.is-danger:hover {
+  color: var(--el-color-danger);
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -74,6 +83,16 @@ html.dark .app-card {
   align-items: center;
 }
 
+.app-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+
+.app-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .app-collapse {
   --el-collapse-header-bg-color: transparent;
   --el-collapse-content-bg-color: transparent;
@@ -96,4 +115,25 @@ html.dark .app-card {
 
 .app-badge {
   font-weight: 500;
+}
+
+.app-text-secondary {
+  font-size: 0.85rem;
+  color: var(--el-text-color-secondary);
+}
+
+.app-list-reset {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-sidebar-item {
+  display: flex;
+  align-items: center;
+  border-radius: var(--el-border-radius-base);
+}
+
+.app-sidebar-item:hover {
+  background-color: var(--el-menu-hover-bg-color);
 }

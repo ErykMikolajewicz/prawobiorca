@@ -4,6 +4,8 @@ import ChatOutlineRoundedIcon from '@iconify-vue/material-symbols/chat-outline-r
 import GavelRoundedIcon from '@iconify-vue/material-symbols/gavel-rounded'
 import ChevronRightRoundedIcon from '@iconify-vue/material-symbols/chevron-right-rounded'
 
+import FeatureItem from '@/components/molecules/FeatureItem.vue'
+
 const steps = [
   {
     icon: DescriptionOutlineRoundedIcon,
@@ -27,16 +29,14 @@ const steps = [
   <section class="how-it-works">
     <h2 class="how-it-works-title">Jak to działa?</h2>
 
-    <ol class="steps">
+    <ol class="steps app-list-reset">
       <template v-for="(step, index) in steps" :key="step.title">
         <li class="step">
-          <span class="step-icon">
-            <component :is="step.icon" />
-          </span>
-          <div>
-            <p class="step-title">{{ index + 1 }}. {{ step.title }}</p>
-            <p class="step-description">{{ step.description }}</p>
-          </div>
+          <FeatureItem
+            :icon="step.icon"
+            :title="`${index + 1}. ${step.title}`"
+            :description="step.description"
+          />
         </li>
         <ChevronRightRoundedIcon v-if="index < steps.length - 1" class="step-separator" />
       </template>
@@ -64,41 +64,10 @@ const steps = [
   display: flex;
   align-items: center;
   gap: var(--app-space-lg);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .step {
-  display: flex;
   flex: 1;
-  align-items: center;
-  gap: var(--app-space-md);
-}
-
-.step-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-8);
-}
-
-.step-title {
-  margin: 0;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.step-description {
-  margin: var(--app-space-xs) 0 0;
-  font-size: 0.875rem;
-  color: var(--el-text-color-secondary);
 }
 
 .step-separator {

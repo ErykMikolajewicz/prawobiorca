@@ -48,7 +48,7 @@ const suborganizationId = computed<string>({
         <SchoolRoundedIcon class="context-icon" />
         <span class="context-text">
           <span class="context-label app-text-truncate">{{ label }}</span>
-          <span v-if="selectedSuborganization" class="context-sublabel app-text-truncate">
+          <span v-if="selectedSuborganization" class="app-text-secondary app-text-truncate">
             {{ selectedSuborganization.name }}
           </span>
         </span>
@@ -57,7 +57,7 @@ const suborganizationId = computed<string>({
     </template>
 
     <div class="context-menu">
-      <span class="context-menu-title">Organizacja</span>
+      <span class="app-text-secondary">Organizacja</span>
       <el-select
         v-model="organizationId"
         :teleported="false"
@@ -71,7 +71,7 @@ const suborganizationId = computed<string>({
           :label="organization.name"
         />
       </el-select>
-      <span class="context-menu-title">Podorganizacja</span>
+      <span class="app-text-secondary">Podorganizacja</span>
       <el-select
         v-model="suborganizationId"
         :teleported="false"
@@ -127,20 +127,10 @@ const suborganizationId = computed<string>({
   min-width: 0;
 }
 
-.context-sublabel {
-  font-size: 0.85rem;
-  color: var(--el-text-color-secondary);
-}
-
 .context-menu {
   display: flex;
   flex-direction: column;
   gap: var(--app-space-sm);
-}
-
-.context-menu-title {
-  font-size: 0.85rem;
-  color: var(--el-text-color-secondary);
 }
 
 .context-menu-actions {

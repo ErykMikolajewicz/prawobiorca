@@ -37,7 +37,7 @@ async function createCase() {
 </script>
 
 <template>
-  <form class="case-form" @click="inputRef?.focus()" @submit.prevent="createCase">
+  <form class="case-form app-sidebar-item" @click="inputRef?.focus()" @submit.prevent="createCase">
     <button
       type="submit"
       class="icon-btn add-btn"
@@ -60,16 +60,9 @@ async function createCase() {
 
 <style scoped>
 .case-form {
-  display: flex;
-  align-items: center;
   height: var(--el-menu-item-height);
   padding-left: var(--el-menu-base-level-padding);
-  border-radius: var(--el-border-radius-base);
   cursor: text;
-}
-
-.case-form:hover {
-  background-color: var(--el-menu-hover-bg-color);
 }
 
 .add-btn {

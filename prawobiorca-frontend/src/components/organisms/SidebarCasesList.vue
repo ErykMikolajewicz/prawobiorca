@@ -22,7 +22,7 @@ async function handleCaseDeleted(caseId: string) {
   <div class="sidebar-cases-list">
     <CaseCreationCard @case-created="casesStore.add" />
 
-    <h2 class="cases-title">Moje sprawy</h2>
+    <h2 class="cases-title app-text-secondary">Moje sprawy</h2>
 
     <div class="cases-items">
       <SidebarCaseItem
@@ -48,10 +48,8 @@ async function handleCaseDeleted(caseId: string) {
 .cases-title {
   margin: 0;
   padding-left: var(--el-menu-base-level-padding);
-  font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--el-text-color-secondary);
 }
 
 .cases-items {

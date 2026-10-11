@@ -29,7 +29,7 @@ function handleUnpin() {
   >
     <div class="app-card-content">
       <div class="document-info">
-        <em class="presentation-name app-text-truncate">{{ document.presentationName }}</em>
+        <em class="app-text-secondary app-text-truncate">{{ document.presentationName }}</em>
         <strong v-if="document.header" class="header">{{ document.header }}</strong>
       </div>
       <el-button
@@ -69,10 +69,5 @@ function handleUnpin() {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.presentation-name {
-  font-size: 0.85rem;
-  color: var(--el-text-color-secondary);
 }
 </style>

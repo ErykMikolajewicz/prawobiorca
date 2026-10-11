@@ -29,7 +29,7 @@ const emit = defineEmits<{
             {{ organization.name }}
             <span class="organization-short-name">({{ organization.shortName }})</span>
           </span>
-          <span class="item-actions" @click.stop @keydown.stop>
+          <span class="app-actions" @click.stop @keydown.stop>
             <el-button size="small" @click="emit('add-suborganization', organization.id)">
               Dodaj podorganizację
             </el-button>
@@ -51,7 +51,7 @@ const emit = defineEmits<{
         </span>
       </template>
 
-      <ul v-if="organization.suborganizations.length" class="suborganizations-list">
+      <ul v-if="organization.suborganizations.length" class="suborganizations-list app-list-reset">
         <li
           v-for="suborganization in organization.suborganizations"
           :key="suborganization.id"
@@ -60,7 +60,7 @@ const emit = defineEmits<{
           <span class="item-name app-text-truncate" :title="suborganization.name">{{
             suborganization.name
           }}</span>
-          <span class="item-actions">
+          <span class="app-actions">
             <el-button size="small" @click="emit('edit-suborganization', suborganization)">
               Edytuj
             </el-button>
@@ -112,23 +112,10 @@ const emit = defineEmits<{
   font-weight: normal;
 }
 
-.item-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-}
-
-.item-actions .el-button + .el-button {
-  margin-left: 0;
-}
-
 .suborganizations-list {
   display: flex;
   flex-direction: column;
   gap: var(--app-space-sm);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .suborganization-item {

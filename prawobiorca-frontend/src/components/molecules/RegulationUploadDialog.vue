@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { storeToRefs } from 'pinia'
+import { watch } from 'vue'
 import FileSelectButton from '@/components/atoms/FileSelectButton.vue'
+import OrganizationScopeSelect from '@/components/molecules/OrganizationScopeSelect.vue'
 import { useRegulationUpload } from '@/composables/useRegulationUpload'
-import { useOrganizationsStore } from '@/stores/organizations'
 import { regulationTypeOptions, type RegulationScope } from '@/domain/regulations'
 import type { RegulationRepresentation } from '@/api/generated/model'
 
@@ -31,18 +30,6 @@ const {
   setFile,
   submit,
 } = useRegulationUpload()
-
-const { organizations } = storeToRefs(useOrganizationsStore())
-
-const suborganizations = computed(
-  () =>
-    organizations.value.find((organization) => organization.id === selectedOrganizationId.value)
-      ?.suborganizations ?? [],
-)
-
-watch(selectedOrganizationId, () => {
-  selectedSuborganizationId.value = ''
-})
 
 watch(visible, (isVisible) => {
   if (isVisible) {
@@ -94,34 +81,11 @@ async function handleSubmit() {
         </el-radio-group>
       </el-form-item>
 
-      <template v-if="isAdmin && target === 'public'">
-        <el-form-item label="Organizacja (opcjonalnie):">
-          <el-select v-model="selectedOrganizationId" clearable placeholder="Ogólny">
-            <el-option
-              v-for="organization in organizations"
-              :key="organization.id"
-              :label="organization.name"
-              :value="organization.id"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="Podorganizacja (opcjonalnie):">
-          <el-select
-            v-model="selectedSuborganizationId"
-            :disabled="!selectedOrganizationId"
-            clearable
-            placeholder="Wszystkie podorganizacje"
-          >
-            <el-option
-              v-for="suborganization in suborganizations"
-              :key="suborganization.id"
-              :label="suborganization.name"
-              :value="suborganization.id"
-            />
-          </el-select>
-        </el-form-item>
-      </template>
+      <OrganizationScopeSelect
+        v-if="isAdmin && target === 'public'"
+        v-model:organization-id="selectedOrganizationId"
+        v-model:suborganization-id="selectedSuborganizationId"
+      />
     </el-form>
 
     <template #footer>

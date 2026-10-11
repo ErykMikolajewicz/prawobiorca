@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import RegulationCard from '../RegulationCard.vue'
+import RegulationItem from '../RegulationItem.vue'
 import {
   confirmPublicRegulationUpload,
   retryPublicRegulationPreparation,
@@ -22,7 +22,7 @@ vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
 const RETRY_BUTTON = 'button[aria-label="Ponów przetwarzanie"]'
 const OPTIONS_BUTTON = 'button[aria-label="Opcje regulacji"]'
 
-function mountCard(
+function mountItem(
   preparationStatus: RegulationPreparationStatus,
   canManage: boolean,
   overrides: Partial<RegulationRepresentation> = {},
@@ -39,15 +39,12 @@ function mountCard(
     ...overrides,
   }
 
-  return mount(RegulationCard, {
+  return mount(RegulationItem, {
     props: { regulation, target: 'public', canManage },
     global: {
       stubs: {
         RouterLink: {
           template: '<a class="router-link-stub"><slot /></a>',
-        },
-        ElCard: {
-          template: '<div class="el-card"><slot /></div>',
         },
         RegulationTypeBadge: true,
         RegulationStatusBadge: {
@@ -55,20 +52,12 @@ function mountCard(
           props: ['preparationStatus'],
         },
         IconMotion: true,
-        RegulationDetailsDialog: {
-          template:
-            '<div v-if="modelValue" class="details-dialog-stub">' +
-            '<button class="stub-update" @click="$emit(\'updated\', { ...regulation, presentationName: \'Nowa nazwa\' })" />' +
-            '<button class="stub-delete" @click="$emit(\'deleted\', regulation.id)" />' +
-            '</div>',
-          props: ['modelValue', 'regulation', 'target', 'canManage'],
-        },
       },
     },
   })
 }
 
-describe('RegulationCard', () => {
+describe('RegulationItem', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
@@ -85,7 +74,7 @@ describe('RegulationCard', () => {
       },
     ]
 
-    const wrapper = mountCard('PREPARED', false, {
+    const wrapper = mountItem('PREPARED', false, {
       organizationId: 'pwr',
       suborganizationId: 'w10',
     })
@@ -94,13 +83,13 @@ describe('RegulationCard', () => {
   })
 
   it('does not render organization for a general regulation', () => {
-    const wrapper = mountCard('PREPARED', false)
+    const wrapper = mountItem('PREPARED', false)
 
     expect(wrapper.find('.regulation-organization').exists()).toBe(false)
   })
 
   it('renders search action and router-link when regulation is prepared', () => {
-    const wrapper = mountCard('PREPARED', false)
+    const wrapper = mountItem('PREPARED', false)
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(true)
     expect(wrapper.find('.status-badge-stub').exists()).toBe(false)
@@ -108,7 +97,7 @@ describe('RegulationCard', () => {
   })
 
   it('renders status badge without retry action while preparation is in progress', () => {
-    const wrapper = mountCard('IN_PROGRESS', true)
+    const wrapper = mountItem('IN_PROGRESS', true)
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)
     expect(wrapper.find('.status-badge-stub').text()).toBe('IN_PROGRESS')
@@ -116,7 +105,7 @@ describe('RegulationCard', () => {
   })
 
   it('retries preparation when regulation failed and user can manage it', async () => {
-    const wrapper = mountCard('FAILED', true)
+    const wrapper = mountItem('FAILED', true)
 
     expect(wrapper.find('.status-badge-stub').text()).toBe('FAILED')
     const button = wrapper.find(RETRY_BUTTON)
@@ -130,7 +119,7 @@ describe('RegulationCard', () => {
   })
 
   it('confirms the upload again when regulation was not started', async () => {
-    const wrapper = mountCard('NOT_STARTED', true)
+    const wrapper = mountItem('NOT_STARTED', true)
 
     vi.mocked(confirmPublicRegulationUpload).mockResolvedValueOnce(undefined)
     await wrapper.find(RETRY_BUTTON).trigger('click')
@@ -141,7 +130,7 @@ describe('RegulationCard', () => {
   })
 
   it('does not emit retry when the retry request fails', async () => {
-    const wrapper = mountCard('FAILED', true)
+    const wrapper = mountItem('FAILED', true)
 
     vi.mocked(retryPublicRegulationPreparation).mockRejectedValueOnce(new Error('boom'))
     await wrapper.find(RETRY_BUTTON).trigger('click')
@@ -150,7 +139,7 @@ describe('RegulationCard', () => {
   })
 
   it('does not render status, retry or search action when user cannot manage and not prepared', () => {
-    const wrapper = mountCard('FAILED', false)
+    const wrapper = mountItem('FAILED', false)
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)
     expect(wrapper.find('.status-badge-stub').exists()).toBe(false)
@@ -158,29 +147,13 @@ describe('RegulationCard', () => {
   })
 
   it.each([true, false])(
-    'opens details dialog from options button when canManage is %s',
+    'emits open-details from options button when canManage is %s',
     async (canManage) => {
-      const wrapper = mountCard('PREPARED', canManage)
-
-      expect(wrapper.find('.details-dialog-stub').exists()).toBe(false)
+      const wrapper = mountItem('PREPARED', canManage)
 
       await wrapper.find(OPTIONS_BUTTON).trigger('click')
 
-      expect(wrapper.find('.details-dialog-stub').exists()).toBe(true)
+      expect(wrapper.emitted('open-details')?.[0]).toEqual(['uuid-1'])
     },
   )
-
-  it('forwards update and delete events from details dialog', async () => {
-    const wrapper = mountCard('PREPARED', true)
-
-    await wrapper.find(OPTIONS_BUTTON).trigger('click')
-    await wrapper.find('.stub-update').trigger('click')
-    await wrapper.find('.stub-delete').trigger('click')
-
-    expect(wrapper.emitted('updated')?.[0]?.[0]).toMatchObject({
-      id: 'uuid-1',
-      presentationName: 'Nowa nazwa',
-    })
-    expect(wrapper.emitted('deleted')?.[0]).toEqual(['uuid-1'])
-  })
 })

@@ -94,7 +94,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 
 ### 2.5. `prawobiorca-frontend`
 * **Responsibilities**:
-  * Single-page application (Vue 3 + TypeScript) delivering the whole user interface: search, authentication, case and document management.
+  * Single-page application (Vue 3 + TypeScript) delivering the whole user interface: search, authentication, case and document management, and for the administrator application templates and organizations.
 * **Characteristics**:
   * Built with Vite into static assets and served by **nginx** from its own container; no server-side rendering and no application server.
   * Communicates only with `core-service` over the HTTP REST API, under the `/api` prefix of the shared ingress — it never reaches the database or the compute services directly.

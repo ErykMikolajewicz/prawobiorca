@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import {
-  confirmPublicRegulationUpload,
-  retryPublicRegulationPreparation,
-} from '@/api/generated/endpoints/regulations/regulations'
-import {
-  confirmUserRegulationUpload,
-  retryUserRegulationPreparation,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
+import { computed } from 'vue'
 import DescriptionOutlineRoundedIcon from '@iconify-vue/material-symbols/description-outline-rounded'
 import SearchRoundedIcon from '@iconify-vue/material-symbols/search-rounded'
 import MoreVertIcon from '@iconify-vue/material-symbols/more-vert'
@@ -15,7 +7,6 @@ import RefreshRoundedIcon from '@iconify-vue/material-symbols/refresh-rounded'
 import IconMotion from '@/components/atoms/IconMotion.vue'
 import RegulationTypeBadge from '@/components/atoms/RegulationTypeBadge.vue'
 import RegulationStatusBadge from '@/components/atoms/RegulationStatusBadge.vue'
-import RegulationDetailsDialog from '@/components/molecules/RegulationDetailsDialog.vue'
 import { useRegulationPreparation } from '@/composables/useRegulationPreparation'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationRepresentation } from '@/api/generated/model'
@@ -30,14 +21,13 @@ type Props = {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'updated', regulation: RegulationRepresentation): void
-  (e: 'deleted', regulationId: string): void
+  (e: 'open-details', regulationId: string): void
   (e: 'preparation-retried', regulationId: string): void
 }>()
 
 const organizationsStore = useOrganizationsStore()
+const { isRetrying, retry } = useRegulationPreparation(props.target)
 
-const isDetailsDialogVisible = ref(false)
 const organizationLabel = computed(() => {
   const organization = organizationsStore.organizations.find(
     (o) => o.id === props.regulation.organizationId,
@@ -53,31 +43,18 @@ const organizationLabel = computed(() => {
     : organization.shortName
 })
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
-const isNotStarted = computed(() => props.regulation.preparationStatus === 'NOT_STARTED')
 const canRetry = computed(
-  () => isNotStarted.value || props.regulation.preparationStatus === 'FAILED',
+  () =>
+    props.regulation.preparationStatus === 'NOT_STARTED' ||
+    props.regulation.preparationStatus === 'FAILED',
 )
 
-const retryRegulationPreparation =
-  props.target === 'public' ? retryPublicRegulationPreparation : retryUserRegulationPreparation
-const confirmRegulationUpload =
-  props.target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
 const searchRouteName =
   props.target === 'public' ? 'SearchPublicRegulation' : 'SearchUserRegulation'
 
-const preparationRetry = useRegulationPreparation(retryRegulationPreparation)
-const uploadConfirmation = useRegulationPreparation(
-  confirmRegulationUpload,
-  'Pliku nie ma w magazynie. Usuń regulację i dodaj ją ponownie.',
-)
-const isRetrying = computed(
-  () => preparationRetry.isRetrying.value || uploadConfirmation.isRetrying.value,
-)
-
-async function retryPreparation(regulationId: string) {
-  const { retry } = isNotStarted.value ? uploadConfirmation : preparationRetry
-  if (await retry(regulationId)) {
-    emit('preparation-retried', regulationId)
+async function retryPreparation() {
+  if (await retry(props.regulation)) {
+    emit('preparation-retried', props.regulation.id)
   }
 }
 </script>
@@ -101,7 +78,7 @@ async function retryPreparation(regulationId: string) {
     <div class="app-card-actions">
       <span
         v-if="organizationLabel"
-        class="regulation-organization app-text-truncate"
+        class="regulation-organization app-text-secondary app-text-truncate"
         :title="organizationLabel"
       >
         {{ organizationLabel }}
@@ -118,7 +95,7 @@ async function retryPreparation(regulationId: string) {
           type="button"
           aria-label="Ponów przetwarzanie"
           :disabled="isRetrying"
-          @click="retryPreparation(regulation.id)"
+          @click="retryPreparation"
         >
           <RefreshRoundedIcon />
         </button>
@@ -132,22 +109,13 @@ async function retryPreparation(regulationId: string) {
 
       <button
         type="button"
-        class="icon-btn options-btn"
+        class="icon-btn is-primary"
         aria-label="Opcje regulacji"
-        @click="isDetailsDialogVisible = true"
+        @click="emit('open-details', regulation.id)"
       >
         <MoreVertIcon />
       </button>
     </div>
-
-    <RegulationDetailsDialog
-      v-model="isDetailsDialogVisible"
-      :regulation="regulation"
-      :target="target"
-      :can-manage="canManage"
-      @updated="(updatedRegulation) => emit('updated', updatedRegulation)"
-      @deleted="(regulationId) => emit('deleted', regulationId)"
-    />
   </div>
 </template>
 
@@ -189,8 +157,6 @@ async function retryPreparation(regulationId: string) {
 
 .regulation-organization {
   max-width: 16em;
-  font-size: var(--el-font-size-small);
-  color: var(--el-text-color-secondary);
 }
 
 .regulation-link::after {
@@ -201,10 +167,6 @@ async function retryPreparation(regulationId: string) {
 
 .regulation-item.is-prepared:hover .regulation-name,
 .regulation-item.is-prepared:hover .search-action {
-  color: var(--el-color-primary);
-}
-
-.options-btn:hover {
   color: var(--el-color-primary);
 }
 
