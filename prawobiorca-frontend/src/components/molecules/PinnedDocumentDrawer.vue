@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import RegulationElements from '@/components/atoms/RegulationElements.vue'
+import RegulationElements from '@/components/molecules/RegulationElements.vue'
 import type { CaseDocument } from '@/api/generated/model'
 
 const props = defineProps<{ document: CaseDocument | null }>()
@@ -41,7 +41,7 @@ function handleUnpin() {
   >
     <template #header>
       <div v-if="shownDocument" class="drawer-header">
-        <em v-if="shownDocument.header" class="presentation-name">
+        <em v-if="shownDocument.header" class="app-text-secondary">
           {{ shownDocument.presentationName }}
         </em>
         <h3 class="title">{{ shownDocument.header ?? shownDocument.presentationName }}</h3>
@@ -72,11 +72,6 @@ function handleUnpin() {
 
 .title {
   margin: 0;
-}
-
-.presentation-name {
-  font-size: 0.85rem;
-  color: var(--el-text-color-secondary);
 }
 
 .content {

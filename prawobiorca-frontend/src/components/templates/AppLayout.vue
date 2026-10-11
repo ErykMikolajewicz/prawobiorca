@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import AppSidebar from '@/components/organisms/AppSidebar.vue'
 import AppFooter from '@/components/organisms/AppFooter.vue'
+import AppTopBar from '@/components/organisms/AppTopBar.vue'
+import { useBreakpoint } from '@/composables/useBreakpoint'
+
+const { isMobile } = useBreakpoint()
 </script>
 
 <template>
@@ -8,6 +12,8 @@ import AppFooter from '@/components/organisms/AppFooter.vue'
     <AppSidebar />
 
     <div class="content-column">
+      <AppTopBar v-if="isMobile" />
+
       <main class="main-content">
         <slot />
       </main>

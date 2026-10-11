@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import RegulationCard from '@/components/molecules/RegulationCard.vue'
+import { computed, ref } from 'vue'
+import RegulationItem from '@/components/molecules/RegulationItem.vue'
+import RegulationDetailsDialog from '@/components/molecules/RegulationDetailsDialog.vue'
 import RegulationTypeFilter from '@/components/molecules/RegulationTypeFilter.vue'
 import RegulationOrganizationFilter from '@/components/molecules/RegulationOrganizationFilter.vue'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
@@ -25,12 +26,24 @@ const emit = defineEmits<{
   (e: 'regulation-preparation-retried', regulationId: string): void
 }>()
 
+const isDetailsDialogVisible = ref(false)
+const selectedRegulationId = ref<string>()
+
+const selectedRegulation = computed(() =>
+  props.regulations.find((regulation) => regulation.id === selectedRegulationId.value),
+)
+
 const displayedRegulations = computed(() => {
   if (props.canManage) {
     return props.regulations
   }
   return props.regulations.filter((regulation) => regulation.preparationStatus === 'PREPARED')
 })
+
+function openDetails(regulationId: string) {
+  selectedRegulationId.value = regulationId
+  isDetailsDialogVisible.value = true
+}
 </script>
 
 <template>
@@ -46,14 +59,13 @@ const displayedRegulations = computed(() => {
     </div>
 
     <div v-if="displayedRegulations.length" class="regulations-list">
-      <RegulationCard
+      <RegulationItem
         v-for="regulation in displayedRegulations"
         :key="regulation.id"
         :regulation="regulation"
         :target="target"
         :can-manage="canManage"
-        @updated="(updatedRegulation) => emit('regulation-updated', updatedRegulation)"
-        @deleted="(regulationId) => emit('regulation-deleted', regulationId)"
+        @open-details="openDetails"
         @preparation-retried="
           (regulationId) => emit('regulation-preparation-retried', regulationId)
         "
@@ -61,6 +73,16 @@ const displayedRegulations = computed(() => {
     </div>
 
     <el-empty v-else-if="!loading" :description="emptyDescription" />
+
+    <RegulationDetailsDialog
+      v-if="selectedRegulation"
+      v-model="isDetailsDialogVisible"
+      :regulation="selectedRegulation"
+      :target="target"
+      :can-manage="canManage"
+      @updated="(updatedRegulation) => emit('regulation-updated', updatedRegulation)"
+      @deleted="(regulationId) => emit('regulation-deleted', regulationId)"
+    />
   </div>
 </template>
 
@@ -93,5 +115,11 @@ const displayedRegulations = computed(() => {
   flex-wrap: wrap;
   gap: var(--app-space-md);
   justify-content: flex-start;
+}
+
+@media (width <= 768px) {
+  .list-header {
+    flex-wrap: wrap;
+  }
 }
 </style>

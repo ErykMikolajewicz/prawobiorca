@@ -1,26 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import { ElMessage } from 'element-plus'
+import { computed, ref, watch } from 'vue'
 import { MdEditor, type ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import { showApiError } from '@/utils/error'
 import { useDarkMode } from '@/composables/useDarkMode'
-import { downloadApplicationTemplate } from '@/api/applicationTemplates'
-import { useOrganizationsStore } from '@/stores/organizations'
+import { useApplicationTemplateEditor } from '@/composables/useApplicationTemplateEditor'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
+import OrganizationScopeSelect from '@/components/molecules/OrganizationScopeSelect.vue'
 import ApplicationTemplatePreviewDialog from '@/components/molecules/ApplicationTemplatePreviewDialog.vue'
-import {
-  publishApplicationTemplate,
-  unpublishApplicationTemplate,
-  updateApplicationTemplate,
-} from '@/api/generated/endpoints/application-templates/application-templates'
-import { toEditableField, type EditableTemplateField } from '@/domain/applicationTemplates'
-import type {
-  ApplicationTemplateDetailsData,
-  ApplicationTemplateRepresentation,
-} from '@/api/generated/model'
+import type { ApplicationTemplateRepresentation } from '@/api/generated/model'
 
 type Props = {
   template: ApplicationTemplateRepresentation
@@ -31,22 +19,6 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'updated', template: ApplicationTemplateRepresentation): void
 }>()
-
-const form = reactive({
-  name: '',
-  instructions: '',
-  organizationId: '',
-  suborganizationId: '',
-  fields: [] as Array<EditableTemplateField>,
-})
-
-const { organizations } = storeToRefs(useOrganizationsStore())
-
-const suborganizations = computed(
-  () =>
-    organizations.value.find((organization) => organization.id === form.organizationId)
-      ?.suborganizations ?? [],
-)
 
 const instructionsToolbars: Array<ToolbarNames> = [
   'bold',
@@ -66,105 +38,25 @@ const instructionsToolbars: Array<ToolbarNames> = [
 
 const { isDark } = useDarkMode()
 
-const isSaving = ref(false)
-const isPublishing = ref(false)
-const isDownloading = ref(false)
+const {
+  form,
+  isSaving,
+  isPublishing,
+  isDownloading,
+  resetForm,
+  save,
+  publish,
+  unpublish,
+  download,
+} = useApplicationTemplateEditor((template) => emit('updated', template))
+
 const isPreviewVisible = ref(false)
 
 const isDraft = computed(() => props.template.status === 'DRAFT')
 const isPublished = computed(() => props.template.status === 'PUBLISHED')
 const isNotUploaded = computed(() => props.template.status === 'NOT_UPLOADED')
 
-watch(
-  () => props.template,
-  (template) => {
-    form.name = template.name
-    form.instructions = template.instructions ?? ''
-    form.organizationId = template.organizationId ?? ''
-    form.suborganizationId = template.suborganizationId ?? ''
-    form.fields = template.fields.map(toEditableField)
-  },
-  { immediate: true },
-)
-
-function toDetailsData(): ApplicationTemplateDetailsData {
-  return {
-    name: form.name.trim(),
-    instructions: form.instructions.trim() || null,
-    organizationId: form.organizationId || null,
-    suborganizationId: form.suborganizationId || null,
-    fields: form.fields.map((field) => ({
-      ...field,
-      defaultValue: field.defaultValue || null,
-      pattern: field.pattern || null,
-    })),
-  }
-}
-
-async function save(): Promise<boolean> {
-  try {
-    emit('updated', await updateApplicationTemplate(props.template.id, toDetailsData()))
-    return true
-  } catch (error) {
-    showApiError(error, {
-      defaultMessage:
-        'Nie udało się zapisać szablonu. Sprawdź nazwę, regexy, opcje list i wartości domyślne.',
-    })
-    return false
-  }
-}
-
-async function handleSave() {
-  isSaving.value = true
-  try {
-    if (await save()) {
-      ElMessage.success('Szablon został zapisany.')
-    }
-  } finally {
-    isSaving.value = false
-  }
-}
-
-async function handlePublish() {
-  isPublishing.value = true
-  try {
-    if (!(await save())) {
-      return
-    }
-    emit('updated', await publishApplicationTemplate(props.template.id))
-    ElMessage.success('Szablon został opublikowany.')
-  } catch (error) {
-    showApiError(error, {
-      conflictMessage: 'Uzupełnij instrukcje dla AI przed publikacją.',
-      defaultMessage: 'Nie udało się opublikować szablonu.',
-    })
-  } finally {
-    isPublishing.value = false
-  }
-}
-
-async function handleUnpublish() {
-  isPublishing.value = true
-  try {
-    emit('updated', await unpublishApplicationTemplate(props.template.id))
-    ElMessage.success('Publikacja szablonu została wycofana.')
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się wycofać publikacji szablonu.' })
-  } finally {
-    isPublishing.value = false
-  }
-}
-
-async function handleDownload() {
-  isDownloading.value = true
-  try {
-    await downloadApplicationTemplate(props.template.id)
-  } catch (error) {
-    showApiError(error, { defaultMessage: 'Nie udało się pobrać szablonu.' })
-  } finally {
-    isDownloading.value = false
-  }
-}
+watch(() => props.template, resetForm, { immediate: true })
 </script>
 
 <template>
@@ -178,17 +70,17 @@ async function handleDownload() {
     </div>
 
     <div class="editor-actions">
-      <el-button v-if="!isNotUploaded" :loading="isDownloading" @click="handleDownload">
+      <el-button v-if="!isNotUploaded" :loading="isDownloading" @click="download(template.id)">
         Pobierz szablon
       </el-button>
       <el-button v-if="!isNotUploaded" @click="isPreviewVisible = true">Pokaż podgląd</el-button>
       <template v-if="isDraft">
-        <el-button :loading="isSaving" @click="handleSave">Zapisz</el-button>
-        <el-button type="primary" :loading="isPublishing" @click="handlePublish">
+        <el-button :loading="isSaving" @click="save(template.id)">Zapisz</el-button>
+        <el-button type="primary" :loading="isPublishing" @click="publish(template.id)">
           Zapisz i opublikuj
         </el-button>
       </template>
-      <el-button v-else-if="isPublished" :loading="isPublishing" @click="handleUnpublish">
+      <el-button v-else-if="isPublished" :loading="isPublishing" @click="unpublish(template.id)">
         Wycofaj publikację
       </el-button>
     </div>
@@ -212,45 +104,13 @@ async function handleDownload() {
       v-if="!isNotUploaded"
       label-position="top"
       :disabled="!isDraft"
-      @submit.prevent="handleSave"
+      @submit.prevent="save(template.id)"
     >
-      <el-row :gutter="24">
-        <el-col :span="12" :xs="24">
-          <el-form-item label="Organizacja (opcjonalnie):">
-            <el-select
-              v-model="form.organizationId"
-              clearable
-              placeholder="Ogólny"
-              @change="form.suborganizationId = ''"
-            >
-              <el-option
-                v-for="organization in organizations"
-                :key="organization.id"
-                :label="organization.name"
-                :value="organization.id"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
-
-        <el-col :span="12" :xs="24">
-          <el-form-item label="Podorganizacja (opcjonalnie):">
-            <el-select
-              v-model="form.suborganizationId"
-              :disabled="!form.organizationId"
-              clearable
-              placeholder="Wszystkie podorganizacje"
-            >
-              <el-option
-                v-for="suborganization in suborganizations"
-                :key="suborganization.id"
-                :label="suborganization.name"
-                :value="suborganization.id"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
-      </el-row>
+      <OrganizationScopeSelect
+        v-model:organization-id="form.organizationId"
+        v-model:suborganization-id="form.suborganizationId"
+        inline
+      />
 
       <el-row :gutter="24">
         <el-col :span="12" :xs="24">
@@ -337,5 +197,15 @@ async function handleDownload() {
 .editor-actions {
   display: flex;
   gap: var(--app-space-sm);
+}
+
+@media (width <= 768px) {
+  .editor-actions {
+    flex-wrap: wrap;
+  }
+
+  .editor-actions .el-button + .el-button {
+    margin-left: 0;
+  }
 }
 </style>

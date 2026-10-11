@@ -37,7 +37,7 @@ async function handleDelete() {
 </script>
 
 <template>
-  <div class="sidebar-case-item">
+  <div class="sidebar-case-item app-sidebar-item">
     <router-link
       :to="{ name: 'CasePage', params: { id: userCase.id } }"
       class="case-name app-text-truncate"
@@ -48,7 +48,7 @@ async function handleDelete() {
     </router-link>
     <button
       type="button"
-      :class="['icon-btn', 'icon-btn-pin', { 'is-active': isActive }]"
+      :class="['icon-btn', { 'is-active': isActive }]"
       aria-label="Ustaw jako aktywną sprawę"
       title="Ustaw jako aktywną sprawę"
       @click="emit('activate', userCase.id)"
@@ -65,7 +65,7 @@ async function handleDelete() {
       <template #reference>
         <button
           type="button"
-          class="icon-btn icon-btn-danger"
+          class="icon-btn is-danger"
           aria-label="Usuń sprawę"
           :disabled="isDeleting"
         >
@@ -77,22 +77,10 @@ async function handleDelete() {
 </template>
 
 <style scoped>
-.sidebar-case-item {
-  display: flex;
-  align-items: center;
-  border-radius: var(--el-border-radius-base);
-}
-
-.sidebar-case-item:hover {
-  background-color: var(--el-menu-hover-bg-color);
-}
-
-.sidebar-case-item:not(:hover) .icon-btn:not(.is-active) {
-  visibility: hidden;
-}
-
-.icon-btn-pin.is-active {
-  color: var(--el-color-primary);
+@media (hover: hover) {
+  .sidebar-case-item:not(:hover) .icon-btn:not(.is-active) {
+    visibility: hidden;
+  }
 }
 
 .case-name {
@@ -108,9 +96,5 @@ async function handleDelete() {
 
 .case-name.is-active {
   color: var(--el-menu-active-color);
-}
-
-.icon-btn-danger:hover {
-  color: var(--el-color-danger);
 }
 </style>
