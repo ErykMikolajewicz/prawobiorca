@@ -46,4 +46,17 @@ function handleChange(value: RegulationType | '' | undefined) {
 .regulation-type-filter {
   width: 220px;
 }
+
+@media (width <= 768px) {
+  .regulation-type-filter-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--app-space-xs);
+    width: 100%;
+  }
+
+  .regulation-type-filter {
+    width: 100%;
+  }
+}
 </style>
