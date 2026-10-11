@@ -72,4 +72,17 @@ const suborganizationId = computed<string>({
 .regulation-organization-filter {
   width: 220px;
 }
+
+@media (width <= 768px) {
+  .regulation-organization-filter-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--app-space-xs);
+    width: 100%;
+  }
+
+  .regulation-organization-filter {
+    width: 100%;
+  }
+}
 </style>
