@@ -3,10 +3,16 @@
 Prawobiorca is an application developed within the WMS_DEV science club at the Wrocław University of Science and Technology.
 Its goal is to help students defend and assert their rights.
 
+The application is available at **[prawobiorca.pl](https://www.prawobiorca.pl)**.
+
 The core part of the application is a regulations search engine. It allows collecting information in a simple and accessible way by entering queries, which are then processed based on their meaning rather than exact text matching.
 
+Logged-in users can also:
+- **Manage cases** - create cases and pin the regulations relevant to them.
+- **Generate applications** - draft DOCX applications with AI, based on application templates and the data from a case.
+- **Search own regulations** - upload own files and search them the same way as public regulations.
+
 Plans include:
-- **Application Generator** - create elegant DOCX documents by simply describing what you want to achieve.
 - **Court Judgments Search Engine** - check if other students have defended their cases in court and what the outcomes were.
 - **Court Judgments Summarizer** - easily extract important facts from a sea of legal jargon!
 - **Dean's Office Simulator** - practice in front of a computer to avoid stress at the counter.
