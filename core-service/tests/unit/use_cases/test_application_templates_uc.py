@@ -19,6 +19,7 @@ from src.app.use_cases.application_templates import (
     UnpublishApplicationTemplate,
     UpdateApplicationTemplate,
 )
+from src.domain.exceptions.access import AccessForbidden
 from src.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
     ApplicationTemplateInInvalidState,
@@ -31,9 +32,14 @@ from src.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDetails,
     ApplicationTemplateField,
-    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
+from src.domain.value_objects.users import Caller
+from tests.consts import ADMIN_ID, USER_ID
+
+ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
+USER = Caller(user_id=USER_ID)
 
 
 def create_template(
@@ -67,7 +73,7 @@ async def test_list_published_application_templates_hides_ai_settings(
 
     use_case = ListPublishedApplicationTemplates(mock_session_maker, mock_application_templates_repo)
 
-    templates = await use_case.execute(None)
+    templates = await use_case.execute(USER, None)
 
     mock_application_templates_repo.list_templates.assert_awaited_once_with(
         mock_opened_session, ApplicationTemplateStatus.PUBLISHED, None
@@ -92,12 +98,12 @@ async def test_list_published_application_templates_hides_ai_settings(
 async def test_list_published_application_templates_with_organization_filter(
     mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
 ):
-    organization_filter = ApplicationTemplateOrganizationFilter(next(uuid_generator), next(uuid_generator))
+    organization_filter = OrganizationFilter(next(uuid_generator), next(uuid_generator))
     mock_application_templates_repo.list_templates.return_value = []
 
     use_case = ListPublishedApplicationTemplates(mock_session_maker, mock_application_templates_repo)
 
-    templates = await use_case.execute(organization_filter)
+    templates = await use_case.execute(USER, organization_filter)
 
     mock_application_templates_repo.list_templates.assert_awaited_once_with(
         mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter
@@ -112,10 +118,21 @@ async def test_get_application_template(
 
     use_case = GetApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
-    result = await use_case.execute(template_id)
+    result = await use_case.execute(ADMIN, template_id)
 
     mock_application_templates_repo.get.assert_awaited_once_with(mock_opened_session, template_id)
     assert result == mock_application_templates_repo.get.return_value
+
+
+async def test_get_application_template_as_normal_user(
+    mock_session_maker, mock_application_templates_repo, uuid_generator
+):
+    use_case = GetApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+
+    with pytest.raises(AccessForbidden):
+        await use_case.execute(USER, next(uuid_generator))
+
+    mock_application_templates_repo.get.assert_not_awaited()
 
 
 async def test_get_application_template_not_found(mock_session_maker, mock_application_templates_repo, uuid_generator):
@@ -124,7 +141,7 @@ async def test_get_application_template_not_found(mock_session_maker, mock_appli
     use_case = GetApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
     with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
 
 async def test_add_application_template(
@@ -146,7 +163,7 @@ async def test_add_application_template(
         mock_application_template_instructions_provider,
     )
 
-    upload_target = await use_case.execute(ApplicationTemplateData(name="Wniosek"))
+    upload_target = await use_case.execute(ADMIN, ApplicationTemplateData(name="Wniosek"))
 
     mock_application_templates_repo.add.assert_awaited_once_with(mock_opened_session, "Wniosek", "Instrukcje")
     mock_application_templates_storage.get_upload_target.assert_awaited_once_with(template_id)
@@ -173,16 +190,35 @@ async def test_confirm_application_template_upload(
         mock_application_template_inspector,
     )
 
-    result = await use_case.execute(template_id)
+    result = await use_case.execute(ADMIN, template_id)
 
     mock_application_template_inspector.get_variables.assert_awaited_once_with(b"docx")
-    mock_application_templates_repo.set_fields.assert_awaited_once_with(
+    mock_application_templates_repo.confirm_upload.assert_awaited_once_with(
         mock_opened_session, template_id, [ApplicationTemplateField(name="student_id", label="student_id")]
     )
-    mock_application_templates_repo.set_status.assert_awaited_once_with(
-        mock_opened_session, template_id, ApplicationTemplateStatus.DRAFT
+    assert result == mock_application_templates_repo.confirm_upload.return_value
+
+
+async def test_confirm_application_template_upload_changed_during_confirmation(
+    mock_session_maker,
+    mock_application_templates_repo,
+    mock_application_templates_storage,
+    mock_application_template_inspector,
+    uuid_generator,
+):
+    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
+    mock_application_template_inspector.get_variables.return_value = {"paragraphs"}
+    mock_application_templates_repo.confirm_upload.return_value = None
+
+    use_case = ConfirmApplicationTemplateUpload(
+        mock_session_maker,
+        mock_application_templates_repo,
+        mock_application_templates_storage,
+        mock_application_template_inspector,
     )
-    assert result == mock_application_templates_repo.set_status.return_value
+
+    with pytest.raises(ApplicationTemplateInInvalidState):
+        await use_case.execute(ADMIN, next(uuid_generator))
 
 
 async def test_confirm_application_template_upload_not_found(
@@ -202,7 +238,7 @@ async def test_confirm_application_template_upload_not_found(
     )
 
     with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
 
 async def test_confirm_application_template_upload_already_confirmed(
@@ -222,7 +258,7 @@ async def test_confirm_application_template_upload_already_confirmed(
     )
 
     with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
     mock_application_templates_storage.get_template.assert_not_awaited()
 
@@ -245,9 +281,9 @@ async def test_confirm_application_template_upload_content_not_found(
     )
 
     with pytest.raises(ApplicationTemplateContentNotFound):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
-    mock_application_templates_repo.set_status.assert_not_awaited()
+    mock_application_templates_repo.confirm_upload.assert_not_awaited()
 
 
 async def test_confirm_application_template_upload_without_content_variable(
@@ -268,10 +304,9 @@ async def test_confirm_application_template_upload_without_content_variable(
     )
 
     with pytest.raises(InvalidApplicationTemplate):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
-    mock_application_templates_repo.set_fields.assert_not_awaited()
-    mock_application_templates_repo.set_status.assert_not_awaited()
+    mock_application_templates_repo.confirm_upload.assert_not_awaited()
 
 
 async def test_update_application_template(
@@ -286,7 +321,7 @@ async def test_update_application_template(
     use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
     result = await use_case.execute(
-        template_id, ApplicationTemplateDetailsData(name="Wniosek", instructions="Instrukcje", fields=fields)
+        ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", instructions="Instrukcje", fields=fields)
     )
 
     mock_application_templates_repo.update_details.assert_awaited_once_with(
@@ -308,6 +343,7 @@ async def test_update_application_template_with_invalid_fields(
 
     with pytest.raises(InvalidApplicationFieldsConfig):
         await use_case.execute(
+            ADMIN,
             next(uuid_generator),
             ApplicationTemplateDetailsData(
                 name="Wniosek", fields=[ApplicationTemplateField(name="other", label="Inne")]
@@ -328,6 +364,7 @@ async def test_update_application_template_with_organization(
     use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
     await use_case.execute(
+        ADMIN,
         template_id,
         ApplicationTemplateDetailsData(
             name="Wniosek", fields=[], organizationId=organization_id, suborganizationId=suborganization_id
@@ -357,6 +394,7 @@ async def test_update_application_template_organization_not_found(
 
     with pytest.raises(OrganizationNotFound):
         await use_case.execute(
+            ADMIN,
             next(uuid_generator),
             ApplicationTemplateDetailsData(name="Wniosek", fields=[], organizationId=next(uuid_generator)),
         )
@@ -371,7 +409,7 @@ async def test_update_application_template_not_draft(
     use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
     with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[]))
+        await use_case.execute(ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[]))
 
 
 async def test_publish_application_template(
@@ -384,7 +422,7 @@ async def test_publish_application_template(
 
     use_case = PublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
-    await use_case.execute(template_id)
+    await use_case.execute(ADMIN, template_id)
 
     mock_application_templates_repo.set_status.assert_awaited_once_with(
         mock_opened_session, template_id, ApplicationTemplateStatus.PUBLISHED
@@ -408,7 +446,7 @@ async def test_publish_application_template_not_ready(
     use_case = PublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
     with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
     mock_application_templates_repo.set_status.assert_not_awaited()
 
@@ -421,7 +459,7 @@ async def test_unpublish_application_template(
 
     use_case = UnpublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
-    await use_case.execute(template_id)
+    await use_case.execute(ADMIN, template_id)
 
     mock_application_templates_repo.set_status.assert_awaited_once_with(
         mock_opened_session, template_id, ApplicationTemplateStatus.DRAFT
@@ -436,7 +474,7 @@ async def test_unpublish_application_template_not_published(
     use_case = UnpublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
 
     with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
 
 async def test_delete_application_template(
@@ -452,7 +490,7 @@ async def test_delete_application_template(
         mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
     )
 
-    await use_case.execute(template_id)
+    await use_case.execute(ADMIN, template_id)
 
     mock_application_templates_repo.delete.assert_awaited_once_with(mock_opened_session, template_id)
     mock_application_templates_storage.delete_template.assert_awaited_once_with(template_id)
@@ -468,7 +506,7 @@ async def test_delete_application_template_not_found(
     )
 
     with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
     mock_application_templates_storage.delete_template.assert_not_awaited()
 
@@ -488,7 +526,7 @@ async def test_get_application_template_download_url(
         mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
     )
 
-    result = await use_case.execute(template_id)
+    result = await use_case.execute(ADMIN, template_id)
 
     assert result == "http://storage.local/bucket/template"
     mock_application_templates_repo.get.assert_awaited_once_with(mock_opened_session, template_id)
@@ -505,7 +543,7 @@ async def test_get_application_template_download_url_not_found(
     )
 
     with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
     mock_application_templates_storage.get_download_url.assert_not_awaited()
 
@@ -520,6 +558,6 @@ async def test_get_application_template_download_url_not_uploaded(
     )
 
     with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(ADMIN, next(uuid_generator))
 
     mock_application_templates_storage.get_download_url.assert_not_awaited()

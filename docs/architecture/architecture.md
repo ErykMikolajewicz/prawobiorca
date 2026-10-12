@@ -128,6 +128,8 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 * **Prefix = module**: the first segment after `/api` names the resource (module) it belongs to, e.g. `/api/regulations`, `/api/cases`, `/api/organizations`, `/api/application-templates`. Nested resources stay under their parent (`/api/cases/{caseId}/applications`), so a module can later be routed to a separate service by a single ingress prefix.
 * **No role or owner in the path**: there are no `/api/admin/...` or `/api/user/...` trees. Visibility is a property of the resource (e.g. regulation `scope`: `PUBLIC` or `PRIVATE`), passed as a query parameter or in the request body.
 * **Authorization per resource**: the caller (`Caller`: user id and privileges) is passed to the use case, which loads the resource owner and checks the access policy from `domain/services` (e.g. `regulation_access.py`). `LoginRequired` and `AccessForbidden` from `domain/exceptions/access.py` are mapped globally to `401` and `403`. A private resource of another user is reported as `404`, so its existence is not disclosed.
+* **Organization filter**: lists filtered by organization take the `organizationId` and `suborganizationId` query parameters, parsed into `OrganizationFilter` by the shared `get_organization_filter` dependency (`framework/dependencies/organizations.py`).
+* **Exception – published application templates**: `GET /api/application-templates/published` stays a separate path, because it returns a reduced shape (`PublishedApplicationTemplate`, without AI instructions) to every logged user, while the rest of the module is available only to the administrator.
 
 ---
 

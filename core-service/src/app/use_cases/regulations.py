@@ -31,9 +31,9 @@ from src.domain.services.regulation_access import (
     check_can_read_regulation,
     resolve_scope_owner,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
     RegulationDetails,
-    RegulationOrganizationFilter,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationScope,
@@ -287,7 +287,7 @@ class ListRegulations:
         caller: Caller,
         scope: RegulationScope,
         regulation_type: RegulationType | None,
-        organization_filter: RegulationOrganizationFilter | None,
+        organization_filter: OrganizationFilter | None,
     ) -> list[RegulationRepresentation]:
         user_id = resolve_scope_owner(caller, scope)
         async with self.session_maker() as session:
