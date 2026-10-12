@@ -19,13 +19,13 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const { isUserLogged, isAdmin } = storeToRefs(authStore)
 
-const publicRegulations = reactive(useRegulations('public'))
-const userRegulations = reactive(useRegulations('user'))
+const publicRegulations = reactive(useRegulations('PUBLIC'))
+const userRegulations = reactive(useRegulations('PRIVATE'))
 
 const isUploadDialogVisible = ref(false)
 
 function handleRegulationCreated(regulation: RegulationRepresentation, target: RegulationScope) {
-  if (target === 'public') {
+  if (target === 'PUBLIC') {
     publicRegulations.add(regulation)
   } else {
     userRegulations.add(regulation)
@@ -71,7 +71,7 @@ onBeforeMount(async () => {
       empty-description="Brak regulacji publicznych."
       :regulations="publicRegulations.regulations"
       :loading="publicRegulations.isLoading"
-      target="public"
+      target="PUBLIC"
       :can-manage="isAdmin"
       @regulation-updated="publicRegulations.update"
       @regulation-deleted="publicRegulations.remove"
@@ -91,7 +91,7 @@ onBeforeMount(async () => {
         empty-description="Brak regulacji użytkownika."
         :regulations="userRegulations.regulations"
         :loading="userRegulations.isLoading"
-        target="user"
+        target="PRIVATE"
         can-manage
         @regulation-updated="userRegulations.update"
         @regulation-deleted="userRegulations.remove"

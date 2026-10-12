@@ -2,22 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import RegulationDetailsDialog from '../RegulationDetailsDialog.vue'
 import {
-  deletePublicRegulation,
-  getPublicRegulationDownloadUrl,
-  updatePublicRegulation,
+  deleteRegulation,
+  getRegulationDownloadUrlById,
+  updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
-  deletePublicRegulation: vi.fn(),
-  getPublicRegulationDownloadUrl: vi.fn(),
-  updatePublicRegulation: vi.fn(),
-}))
-
-vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
-  deleteUserRegulation: vi.fn(),
-  getUserRegulationDownloadUrl: vi.fn(),
-  updateUserRegulation: vi.fn(),
+  deleteRegulation: vi.fn(),
+  getRegulationDownloadUrlById: vi.fn(),
+  updateRegulation: vi.fn(),
 }))
 
 vi.mock('element-plus', () => ({
@@ -52,7 +46,6 @@ async function mountDialog(
       modelValue: false,
       'onUpdate:modelValue': (value: boolean) => wrapper.setProps({ modelValue: value }),
       regulation: createRegulation(preparationStatus),
-      target: 'public' as const,
       canManage,
     },
     global: {
@@ -100,14 +93,14 @@ describe('RegulationDetailsDialog', () => {
       presentationName: 'Nowa nazwa',
       description: 'Nowy opis',
     }
-    vi.mocked(updatePublicRegulation).mockResolvedValueOnce(updatedRegulation)
+    vi.mocked(updateRegulation).mockResolvedValueOnce(updatedRegulation)
 
     await wrapper.find('.name-input').setValue('Nowa nazwa')
     await wrapper.find('.description-input').setValue('Nowy opis')
     await findButton(wrapper, 'Zapisz')?.trigger('click')
     await flushPromises()
 
-    expect(updatePublicRegulation).toHaveBeenCalledWith('uuid-1', {
+    expect(updateRegulation).toHaveBeenCalledWith('uuid-1', {
       name: 'Nowa nazwa',
       description: 'Nowy opis',
     })
@@ -116,12 +109,12 @@ describe('RegulationDetailsDialog', () => {
 
   it('deletes regulation and closes dialog', async () => {
     const wrapper = await mountDialog(true)
-    vi.mocked(deletePublicRegulation).mockResolvedValueOnce(undefined)
+    vi.mocked(deleteRegulation).mockResolvedValueOnce(undefined)
 
     await wrapper.find('.confirm-delete').trigger('click')
     await flushPromises()
 
-    expect(deletePublicRegulation).toHaveBeenCalledWith('uuid-1')
+    expect(deleteRegulation).toHaveBeenCalledWith('uuid-1')
     expect(wrapper.emitted('deleted')?.[0]).toEqual(['uuid-1'])
     expect(wrapper.find('.dialog-stub').exists()).toBe(false)
   })
@@ -140,7 +133,7 @@ describe('RegulationDetailsDialog', () => {
     const wrapper = await mountDialog(false)
     const previewWindow = { opener: window, location: { href: '' }, close: vi.fn() }
     const openSpy = vi.spyOn(window, 'open').mockReturnValueOnce(previewWindow as unknown as Window)
-    vi.mocked(getPublicRegulationDownloadUrl).mockResolvedValueOnce(
+    vi.mocked(getRegulationDownloadUrlById).mockResolvedValueOnce(
       'https://storage.example.com/uuid-1',
     )
 
@@ -148,7 +141,7 @@ describe('RegulationDetailsDialog', () => {
     await flushPromises()
 
     expect(openSpy).toHaveBeenCalledWith('', '_blank')
-    expect(getPublicRegulationDownloadUrl).toHaveBeenCalledWith('uuid-1')
+    expect(getRegulationDownloadUrlById).toHaveBeenCalledWith('uuid-1')
     expect(previewWindow.opener).toBeNull()
     expect(previewWindow.location.href).toBe('https://storage.example.com/uuid-1')
     openSpy.mockRestore()

@@ -1,6 +1,6 @@
 import type {
-  GetPublicRegulationsParams,
-  PublicRegulationData,
+  GetRegulationsParams,
+  RegulationData,
   RegulationDetailsData,
   RegulationRepresentation,
   RegulationUploadTarget,
@@ -13,10 +13,10 @@ import { prawobiorcaRequest } from '../../../axios'
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1]
 
 /**
- * @summary Get Public Regulations
+ * @summary Get Regulations
  */
-export const getPublicRegulations = (
-  params?: GetPublicRegulationsParams,
+export const getRegulations = (
+  params?: GetRegulationsParams,
   options?: SecondParameter<typeof prawobiorcaRequest<RegulationRepresentation[]>>,
 ) => {
   return prawobiorcaRequest<RegulationRepresentation[]>(
@@ -25,10 +25,10 @@ export const getPublicRegulations = (
   )
 }
 /**
- * @summary Add Public Regulation
+ * @summary Add Regulation
  */
-export const addPublicRegulation = (
-  publicRegulationData: PublicRegulationData,
+export const addRegulation = (
+  regulationData: RegulationData,
   options?: SecondParameter<typeof prawobiorcaRequest<RegulationUploadTarget>>,
 ) => {
   return prawobiorcaRequest<RegulationUploadTarget>(
@@ -36,15 +36,15 @@ export const addPublicRegulation = (
       url: `/api/regulations`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: publicRegulationData,
+      data: regulationData,
     },
     options,
   )
 }
 /**
- * @summary Get Public Regulation
+ * @summary Get Regulation By Id
  */
-export const getPublicRegulation = (
+export const getRegulationById = (
   regulationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<RegulationRepresentation>>,
 ) => {
@@ -54,9 +54,9 @@ export const getPublicRegulation = (
   )
 }
 /**
- * @summary Update Public Regulation
+ * @summary Update Regulation
  */
-export const updatePublicRegulation = (
+export const updateRegulation = (
   regulationId: string,
   regulationDetailsData: RegulationDetailsData,
   options?: SecondParameter<typeof prawobiorcaRequest<RegulationRepresentation>>,
@@ -72,9 +72,9 @@ export const updatePublicRegulation = (
   )
 }
 /**
- * @summary Delete Public Regulation
+ * @summary Delete Regulation
  */
-export const deletePublicRegulation = (
+export const deleteRegulation = (
   regulationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
@@ -97,9 +97,9 @@ export const searchRegulationDocuments = (
   )
 }
 /**
- * @summary Confirm Public Regulation Upload
+ * @summary Confirm Regulation Upload
  */
-export const confirmPublicRegulationUpload = (
+export const confirmRegulationUpload = (
   regulationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
 ) => {
@@ -109,9 +109,9 @@ export const confirmPublicRegulationUpload = (
   )
 }
 /**
- * @summary Get Public Regulation Download Url
+ * @summary Get Regulation Download Url By Id
  */
-export const getPublicRegulationDownloadUrl = (
+export const getRegulationDownloadUrlById = (
   regulationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<string>>,
 ) => {
@@ -121,9 +121,9 @@ export const getPublicRegulationDownloadUrl = (
   )
 }
 /**
- * @summary Retry Public Regulation Preparation
+ * @summary Retry Regulation Preparation
  */
-export const retryPublicRegulationPreparation = (
+export const retryRegulationPreparation = (
   regulationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
 ) => {
@@ -132,26 +132,20 @@ export const retryPublicRegulationPreparation = (
     options,
   )
 }
-export type GetPublicRegulationsResult = NonNullable<
-  Awaited<ReturnType<typeof getPublicRegulations>>
->
-export type AddPublicRegulationResult = NonNullable<Awaited<ReturnType<typeof addPublicRegulation>>>
-export type GetPublicRegulationResult = NonNullable<Awaited<ReturnType<typeof getPublicRegulation>>>
-export type UpdatePublicRegulationResult = NonNullable<
-  Awaited<ReturnType<typeof updatePublicRegulation>>
->
-export type DeletePublicRegulationResult = NonNullable<
-  Awaited<ReturnType<typeof deletePublicRegulation>>
->
+export type GetRegulationsResult = NonNullable<Awaited<ReturnType<typeof getRegulations>>>
+export type AddRegulationResult = NonNullable<Awaited<ReturnType<typeof addRegulation>>>
+export type GetRegulationByIdResult = NonNullable<Awaited<ReturnType<typeof getRegulationById>>>
+export type UpdateRegulationResult = NonNullable<Awaited<ReturnType<typeof updateRegulation>>>
+export type DeleteRegulationResult = NonNullable<Awaited<ReturnType<typeof deleteRegulation>>>
 export type SearchRegulationDocumentsResult = NonNullable<
   Awaited<ReturnType<typeof searchRegulationDocuments>>
 >
-export type ConfirmPublicRegulationUploadResult = NonNullable<
-  Awaited<ReturnType<typeof confirmPublicRegulationUpload>>
+export type ConfirmRegulationUploadResult = NonNullable<
+  Awaited<ReturnType<typeof confirmRegulationUpload>>
 >
-export type GetPublicRegulationDownloadUrlResult = NonNullable<
-  Awaited<ReturnType<typeof getPublicRegulationDownloadUrl>>
+export type GetRegulationDownloadUrlByIdResult = NonNullable<
+  Awaited<ReturnType<typeof getRegulationDownloadUrlById>>
 >
-export type RetryPublicRegulationPreparationResult = NonNullable<
-  Awaited<ReturnType<typeof retryPublicRegulationPreparation>>
+export type RetryRegulationPreparationResult = NonNullable<
+  Awaited<ReturnType<typeof retryRegulationPreparation>>
 >

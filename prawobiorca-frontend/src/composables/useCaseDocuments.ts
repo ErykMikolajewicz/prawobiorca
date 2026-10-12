@@ -17,7 +17,7 @@ export function useCaseDocuments(caseId: string) {
 
   async function unpin(documentId: string) {
     try {
-      await deleteCaseDocument(documentId)
+      await deleteCaseDocument(caseId, documentId)
       documents.value = documents.value.filter((document) => document.id !== documentId)
     } catch (error) {
       showApiError(error, { defaultMessage: 'Nie udało się odpiąć dokumentu.' })

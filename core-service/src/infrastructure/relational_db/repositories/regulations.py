@@ -12,6 +12,7 @@ from src.domain.exceptions.users import UserNotFound
 from src.domain.value_objects.regulations import (
     RegulationDetails,
     RegulationOrganizationFilter,
+    RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -126,3 +127,14 @@ class RegulationsManagerRepository:
         regulation_representation = result.one_or_none()
 
         return regulation_representation
+
+    @staticmethod
+    async def get_regulation_owner(session: AsyncSession, id_: UUID) -> RegulationOwner:
+        statement = select(regulations_table.c.user_id).where(regulations_table.c.id == id_)
+        result = await session.execute(statement)
+
+        row = result.one_or_none()
+        if row is None:
+            raise RegulationNotFound
+
+        return RegulationOwner(user_id=row.user_id)

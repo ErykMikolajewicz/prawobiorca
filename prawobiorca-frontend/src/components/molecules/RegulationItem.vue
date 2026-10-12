@@ -26,7 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const organizationsStore = useOrganizationsStore()
-const { isRetrying, retry } = useRegulationPreparation(props.target)
+const { isRetrying, retry } = useRegulationPreparation()
 
 const organizationLabel = computed(() => {
   const organization = organizationsStore.organizations.find(
@@ -50,7 +50,7 @@ const canRetry = computed(
 )
 
 const searchRouteName =
-  props.target === 'public' ? 'SearchPublicRegulation' : 'SearchUserRegulation'
+  props.target === 'PUBLIC' ? 'SearchPublicRegulation' : 'SearchUserRegulation'
 
 async function retryPreparation() {
   if (await retry(props.regulation)) {

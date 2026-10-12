@@ -40,7 +40,7 @@ async def test_get_cases_list(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get("/api/user/cases")
+    response = await client.get("/api/cases")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [
@@ -54,7 +54,7 @@ async def test_add_case(
 ):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post("/api/user/cases", data={"caseName": "New case"})
+    response = await client.post("/api/cases", data={"caseName": "New case"})
 
     assert response.status_code == status.HTTP_200_OK
 
@@ -92,7 +92,7 @@ async def test_delete_case(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/user/cases/{case_id}")
+    response = await client.delete(f"/api/cases/{case_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
 

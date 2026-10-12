@@ -24,7 +24,7 @@ type DialogTarget =
   | { kind: 'add-organization' }
   | { kind: 'edit-organization'; organization: OrganizationData }
   | { kind: 'add-suborganization'; organizationId: string }
-  | { kind: 'edit-suborganization'; suborganization: SuborganizationData }
+  | { kind: 'edit-suborganization'; organizationId: string; suborganization: SuborganizationData }
 
 const organizationsStore = useOrganizationsStore()
 const { organizations } = storeToRefs(organizationsStore)
@@ -79,7 +79,7 @@ async function saveDialog(target: DialogTarget, name: string, shortName: string)
       await addSuborganization(target.organizationId, { name })
       return
     case 'edit-suborganization':
-      await updateSuborganization(target.suborganization.id, { name })
+      await updateSuborganization(target.organizationId, target.suborganization.id, { name })
       return
   }
 }
@@ -108,9 +108,9 @@ async function handleDeleteOrganization(organizationId: string) {
   }
 }
 
-async function handleDeleteSuborganization(suborganizationId: string) {
+async function handleDeleteSuborganization(organizationId: string, suborganizationId: string) {
   try {
-    await deleteSuborganization(suborganizationId)
+    await deleteSuborganization(organizationId, suborganizationId)
     ElMessage.success('Podorganizacja została usunięta.')
     await organizationsStore.load()
   } catch (error) {
@@ -133,7 +133,10 @@ async function handleDeleteSuborganization(suborganizationId: string) {
       @edit-organization="openDialog({ kind: 'edit-organization', organization: $event })"
       @delete-organization="handleDeleteOrganization"
       @add-suborganization="openDialog({ kind: 'add-suborganization', organizationId: $event })"
-      @edit-suborganization="openDialog({ kind: 'edit-suborganization', suborganization: $event })"
+      @edit-suborganization="
+        (organizationId, suborganization) =>
+          openDialog({ kind: 'edit-suborganization', organizationId, suborganization })
+      "
       @delete-suborganization="handleDeleteSuborganization"
     />
 

@@ -39,7 +39,7 @@ describe('RegulationsList', () => {
         title: 'Publiczne regulacje',
         emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        target: 'public',
+        target: 'PUBLIC',
         canManage: false,
       },
       global: {
@@ -69,7 +69,7 @@ describe('RegulationsList', () => {
         title: 'Publiczne regulacje',
         emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        target: 'public',
+        target: 'PUBLIC',
         canManage: true,
       },
       global: {
@@ -109,7 +109,7 @@ describe('RegulationsList', () => {
         title: 'Publiczne regulacje',
         emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        target: 'public',
+        target: 'PUBLIC',
         canManage: false,
       },
       global: {
@@ -134,7 +134,7 @@ describe('RegulationsList', () => {
         title: 'Publiczne regulacje',
         emptyDescription: 'Brak regulacji publicznych.',
         typeFilter: undefined,
-        target: 'public',
+        target: 'PUBLIC',
         canManage: false,
         loading: true,
       },
@@ -188,7 +188,7 @@ function mountWithDetailsDialog() {
       title: 'Publiczne regulacje',
       emptyDescription: 'Brak regulacji publicznych.',
       typeFilter: undefined,
-      target: 'public',
+      target: 'PUBLIC',
       canManage: true,
     },
     global: {

@@ -21,7 +21,11 @@ class SuborganizationsRepository(Protocol):
     ) -> UUID: ...
 
     async def update(
-        self, session: AsyncSession, suborganization_id: UUID, new_suborganization: NewSuborganization
+        self,
+        session: AsyncSession,
+        organization_id: UUID,
+        suborganization_id: UUID,
+        new_suborganization: NewSuborganization,
     ) -> None: ...
 
-    async def delete(self, session: AsyncSession, suborganization_id: UUID) -> None: ...
+    async def delete(self, session: AsyncSession, organization_id: UUID, suborganization_id: UUID) -> None: ...

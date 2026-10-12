@@ -86,7 +86,7 @@ async def test_get_case_applications(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get(f"/api/user/cases/{case_id}/applications")
+    response = await client.get(f"/api/cases/{case_id}/applications")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [
@@ -121,14 +121,14 @@ async def test_get_application_download_url(
 ):
     case_id = await insert_case(session_maker)
     application_id = await insert_application(session_maker, case_id)
-    mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/application"
+    mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/applications"
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get(f"/api/user/cases/applications/{application_id}/download-url")
+    response = await client.get(f"/api/cases/{case_id}/applications/{application_id}/download-url")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == "http://storage.local/bucket/application"
+    assert response.json() == "http://storage.local/bucket/applications"
     mock_applications_storage.get_download_url.assert_awaited_once_with(application_id)
 
 
@@ -143,9 +143,11 @@ async def test_get_application_download_url_not_found(
     clean_user,
     uuid_generator,
 ):
+    case_id = await insert_case(session_maker)
+
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get(f"/api/user/cases/applications/{next(uuid_generator)}/download-url")
+    response = await client.get(f"/api/cases/{case_id}/applications/{next(uuid_generator)}/download-url")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     mock_applications_storage.get_download_url.assert_not_awaited()
@@ -166,7 +168,7 @@ async def test_delete_application(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/user/cases/applications/{application_id}")
+    response = await client.delete(f"/api/cases/{case_id}/applications/{application_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
@@ -189,9 +191,55 @@ async def test_delete_application_not_found(
     clean_user,
     uuid_generator,
 ):
+    case_id = await insert_case(session_maker)
+
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/user/cases/applications/{next(uuid_generator)}")
+    response = await client.delete(f"/api/cases/{case_id}/applications/{next(uuid_generator)}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    mock_applications_storage.delete_application.assert_not_awaited()
+
+
+async def test_get_application_download_url_of_other_case(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_applications_storage,
+    mock_applications_storage,
+    set_user,
+    clean_user,
+):
+    case_id = await insert_case(session_maker)
+    other_case_id = await insert_case(session_maker)
+    application_id = await insert_application(session_maker, case_id)
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.get(f"/api/cases/{other_case_id}/applications/{application_id}/download-url")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    mock_applications_storage.get_download_url.assert_not_awaited()
+
+
+async def test_delete_application_of_other_case(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_applications_storage,
+    mock_applications_storage,
+    set_user,
+    clean_user,
+):
+    case_id = await insert_case(session_maker)
+    other_case_id = await insert_case(session_maker)
+    application_id = await insert_application(session_maker, case_id)
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.delete(f"/api/cases/{other_case_id}/applications/{application_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     mock_applications_storage.delete_application.assert_not_awaited()
@@ -212,7 +260,7 @@ async def test_delete_case_removes_application_files(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/user/cases/{case_id}")
+    response = await client.delete(f"/api/cases/{case_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
@@ -241,7 +289,7 @@ async def test_generate_application_schedules_task(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     response = await client.post(
-        f"/api/user/cases/{case_id}/application",
+        f"/api/cases/{case_id}/applications",
         json=create_new_application(template_id, {"student_id": " 123456 "}),
     )
     await delete_template(session_maker, template_id)
@@ -285,7 +333,7 @@ async def test_generate_application_case_not_found(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     response = await client.post(
-        f"/api/user/cases/{next(uuid_generator)}/application", json=create_new_application(template_id)
+        f"/api/cases/{next(uuid_generator)}/applications", json=create_new_application(template_id)
     )
     await delete_template(session_maker, template_id)
 
@@ -308,7 +356,7 @@ async def test_generate_application_template_not_published(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/cases/{case_id}/application", json=create_new_application(template_id))
+    response = await client.post(f"/api/cases/{case_id}/applications", json=create_new_application(template_id))
     await delete_template(session_maker, template_id)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -331,7 +379,7 @@ async def test_generate_application_invalid_field_values(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     response = await client.post(
-        f"/api/user/cases/{case_id}/application", json=create_new_application(template_id, {"student_id": "abc"})
+        f"/api/cases/{case_id}/applications", json=create_new_application(template_id, {"student_id": "abc"})
     )
     await delete_template(session_maker, template_id)
 
@@ -357,7 +405,7 @@ async def test_get_application_download_url_not_generated(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get(f"/api/user/cases/applications/{application_id}/download-url")
+    response = await client.get(f"/api/cases/{case_id}/applications/{application_id}/download-url")
 
     assert response.status_code == status.HTTP_409_CONFLICT
     mock_applications_storage.get_download_url.assert_not_awaited()

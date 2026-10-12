@@ -24,7 +24,7 @@ export const addOrganization = (
 ) => {
   return prawobiorcaRequest<string>(
     {
-      url: `/api/admin/organizations`,
+      url: `/api/organizations`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       data: newOrganization,
@@ -42,7 +42,7 @@ export const updateOrganization = (
 ) => {
   return prawobiorcaRequest<void>(
     {
-      url: `/api/admin/organizations/${organizationId}`,
+      url: `/api/organizations/${organizationId}`,
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       data: newOrganization,
@@ -58,7 +58,7 @@ export const deleteOrganization = (
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
   return prawobiorcaRequest<void>(
-    { url: `/api/admin/organizations/${organizationId}`, method: 'DELETE' },
+    { url: `/api/organizations/${organizationId}`, method: 'DELETE' },
     options,
   )
 }
@@ -72,7 +72,7 @@ export const addSuborganization = (
 ) => {
   return prawobiorcaRequest<string>(
     {
-      url: `/api/admin/organizations/${organizationId}/suborganizations`,
+      url: `/api/organizations/${organizationId}/suborganizations`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       data: newSuborganization,
@@ -84,13 +84,14 @@ export const addSuborganization = (
  * @summary Update Suborganization
  */
 export const updateSuborganization = (
+  organizationId: string,
   suborganizationId: string,
   newSuborganization: NewSuborganization,
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
   return prawobiorcaRequest<void>(
     {
-      url: `/api/admin/suborganizations/${suborganizationId}`,
+      url: `/api/organizations/${organizationId}/suborganizations/${suborganizationId}`,
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       data: newSuborganization,
@@ -102,11 +103,15 @@ export const updateSuborganization = (
  * @summary Delete Suborganization
  */
 export const deleteSuborganization = (
+  organizationId: string,
   suborganizationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
   return prawobiorcaRequest<void>(
-    { url: `/api/admin/suborganizations/${suborganizationId}`, method: 'DELETE' },
+    {
+      url: `/api/organizations/${organizationId}/suborganizations/${suborganizationId}`,
+      method: 'DELETE',
+    },
     options,
   )
 }

@@ -163,11 +163,11 @@ class GetApplicationDownloadUrl:
     applications_repo: ApplicationsRepository
     applications_storage: ApplicationsStorage
 
-    async def execute(self, user_id: UUID, application_id: UUID) -> str:
+    async def execute(self, user_id: UUID, case_id: UUID, application_id: UUID) -> str:
         async with self.session_maker() as session:
             application = await self.applications_repo.get(session, user_id, application_id)
 
-        if application is None:
+        if application is None or application.case_id != case_id:
             logger.warning("Application to download not found! application id: %s", application_id)
             raise ApplicationNotFound
 
@@ -184,10 +184,10 @@ class DeleteApplication:
     applications_repo: ApplicationsRepository
     applications_storage: ApplicationsStorage
 
-    async def execute(self, user_id: UUID, application_id: UUID) -> None:
+    async def execute(self, user_id: UUID, case_id: UUID, application_id: UUID) -> None:
         async with self.session_maker.begin() as session:
             try:
-                await self.applications_repo.delete(session, user_id, application_id)
+                await self.applications_repo.delete(session, user_id, case_id, application_id)
             except ApplicationNotFound:
                 logger.warning("Application not found! application id: %s", application_id)
                 raise
