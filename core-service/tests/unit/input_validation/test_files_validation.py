@@ -23,29 +23,33 @@ async def test_logged_used_add_public_regulation_validation(
     file_type,
     error_status,
 ):
-    regulation_data = {"name": file_name, "regulationType": file_type}
+    regulation_data = {"scope": "PRIVATE", "name": file_name, "regulationType": file_type}
 
     cookies = {ACCESS_COOKIE_NAME: ACCESS_TOKEN}
     client.cookies = cookies
 
-    response = await client.post("api/user/regulations", json=regulation_data)
+    response = await client.post("api/regulations", json=regulation_data)
 
     assert response.status_code == error_status
 
 
-async def test_unauthorized_user_add_public_regulation(client, override_authorize_admin_user):
-    regulation_data = {"name": "test.txt", "regulationType": RegulationType.DECREE}
+async def test_unauthorized_user_add_public_regulation(
+    client, override_get_regulations_storage, override_authorize_admin_user
+):
+    regulation_data = {"scope": "PRIVATE", "name": "test.txt", "regulationType": RegulationType.DECREE}
 
     cookies = {ACCESS_COOKIE_NAME: UNKNOWN_ACCESS_TOKEN}
     client.cookies = cookies
 
-    response = await client.post("api/user/regulations", json=regulation_data)
+    response = await client.post("api/regulations", json=regulation_data)
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-async def test_non_admin_user_add_public_regulation(client, override_authorize_normal_user):
-    regulation_data = {"name": "test.txt", "regulationType": RegulationType.DECREE}
+async def test_non_admin_user_add_public_regulation(
+    client, override_get_regulations_storage, override_authorize_normal_user
+):
+    regulation_data = {"scope": "PUBLIC", "name": "test.txt", "regulationType": RegulationType.DECREE}
 
     cookies = {ACCESS_COOKIE_NAME: ACCESS_TOKEN}
     client.cookies = cookies

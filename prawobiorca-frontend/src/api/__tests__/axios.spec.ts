@@ -61,30 +61,26 @@ describe('prawobiorcaClient refresh interceptor', () => {
   })
 
   it('odświeża tokeny po 401 i ponawia oryginalne żądanie', async () => {
-    const adapter = useAdapter({ '/api/user/cases': [401, 200] })
+    const adapter = useAdapter({ '/api/cases': [401, 200] })
 
-    const result = await prawobiorcaClient.get('/api/user/cases')
+    const result = await prawobiorcaClient.get('/api/cases')
 
     expect(result.status).toBe(200)
-    expect(calledPaths(adapter)).toEqual([
-      '/api/user/cases',
-      '/api/auth/refresh',
-      '/api/user/cases',
-    ])
+    expect(calledPaths(adapter)).toEqual(['/api/cases', '/api/auth/refresh', '/api/cases'])
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 
   it('odświeża tokeny raz dla równoległych 401', async () => {
     const adapter = useAdapter({
-      '/api/user/cases': [401, 200],
-      '/api/user/regulations': [401, 200],
-      '/api/user/cases/abc/documents': [401, 200],
+      '/api/cases': [401, 200],
+      '/api/regulations': [401, 200],
+      '/api/cases/abc/documents': [401, 200],
     })
 
     const results = await Promise.all([
-      prawobiorcaClient.get('/api/user/cases'),
-      prawobiorcaClient.get('/api/user/regulations'),
-      prawobiorcaClient.get('/api/user/cases/abc/documents'),
+      prawobiorcaClient.get('/api/cases'),
+      prawobiorcaClient.get('/api/regulations'),
+      prawobiorcaClient.get('/api/cases/abc/documents'),
     ])
 
     expect(results.map((r) => r.status)).toEqual([200, 200, 200])
@@ -92,23 +88,21 @@ describe('prawobiorcaClient refresh interceptor', () => {
   })
 
   it('zgłasza wygaśnięcie sesji i odrzuca SessionExpiredError, gdy refresh też zwróci 401', async () => {
-    const adapter = useAdapter({ '/api/user/cases': [401], '/api/auth/refresh': [401] })
+    const adapter = useAdapter({ '/api/cases': [401], '/api/auth/refresh': [401] })
 
-    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toBeInstanceOf(
-      SessionExpiredError,
-    )
+    await expect(prawobiorcaClient.get('/api/cases')).rejects.toBeInstanceOf(SessionExpiredError)
     expect(notifySessionExpired).toHaveBeenCalledOnce()
-    expect(calledPaths(adapter)).toEqual(['/api/user/cases', '/api/auth/refresh'])
+    expect(calledPaths(adapter)).toEqual(['/api/cases', '/api/auth/refresh'])
   })
 
   it('nie zgłasza wygaśnięcia sesji i propaguje błąd refreshu, gdy refresh zwróci 503', async () => {
-    const adapter = useAdapter({ '/api/user/cases': [401], '/api/auth/refresh': [503] })
+    const adapter = useAdapter({ '/api/cases': [401], '/api/auth/refresh': [503] })
 
-    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toMatchObject({
+    await expect(prawobiorcaClient.get('/api/cases')).rejects.toMatchObject({
       response: { status: 503 },
     })
     expect(notifySessionExpired).not.toHaveBeenCalled()
-    expect(calledPaths(adapter)).toEqual(['/api/user/cases', '/api/auth/refresh'])
+    expect(calledPaths(adapter)).toEqual(['/api/cases', '/api/auth/refresh'])
   })
 
   it('nie odświeża tokenów po 401 z logowania', async () => {
@@ -139,16 +133,12 @@ describe('prawobiorcaClient refresh interceptor', () => {
   })
 
   it('nie ponawia żądania po raz drugi, gdy po odświeżeniu nadal jest 401', async () => {
-    const adapter = useAdapter({ '/api/user/cases': [401, 401] })
+    const adapter = useAdapter({ '/api/cases': [401, 401] })
 
-    await expect(prawobiorcaClient.get('/api/user/cases')).rejects.toMatchObject({
+    await expect(prawobiorcaClient.get('/api/cases')).rejects.toMatchObject({
       response: { status: 401 },
     })
-    expect(calledPaths(adapter)).toEqual([
-      '/api/user/cases',
-      '/api/auth/refresh',
-      '/api/user/cases',
-    ])
+    expect(calledPaths(adapter)).toEqual(['/api/cases', '/api/auth/refresh', '/api/cases'])
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 })

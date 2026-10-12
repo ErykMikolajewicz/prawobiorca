@@ -331,6 +331,11 @@ class RegulationType(StrEnum):
     STATUTE = "STATUTE"
 
 
+class RegulationScope(StrEnum):
+    PUBLIC = "PUBLIC"
+    PRIVATE = "PRIVATE"
+
+
 class RegulationPreparationStatus(StrEnum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
@@ -356,3 +361,8 @@ class RegulationOrganizationFilter:
 class RegulationDetails:
     presentation_name: str
     description: str | None = None
+
+
+@dataclass
+class RegulationOwner:
+    user_id: UUID | None

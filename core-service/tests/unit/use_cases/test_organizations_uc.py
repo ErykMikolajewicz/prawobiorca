@@ -112,13 +112,14 @@ async def test_add_suborganization_organization_not_found(
 async def test_update_suborganization_success(
     mock_session_maker, mock_opened_session, mock_suborganizations_repo, uuid_generator
 ):
+    organization_id = next(uuid_generator)
     suborganization_id = next(uuid_generator)
 
     use_case = UpdateSuborganization(session_maker=mock_session_maker, suborganizations_repo=mock_suborganizations_repo)
-    await use_case.execute(suborganization_id, NEW_SUBORGANIZATION)
+    await use_case.execute(organization_id, suborganization_id, NEW_SUBORGANIZATION)
 
     mock_suborganizations_repo.update.assert_awaited_once_with(
-        mock_opened_session, suborganization_id, NEW_SUBORGANIZATION
+        mock_opened_session, organization_id, suborganization_id, NEW_SUBORGANIZATION
     )
 
 
@@ -128,18 +129,19 @@ async def test_update_suborganization_not_found(mock_session_maker, mock_suborga
     use_case = UpdateSuborganization(session_maker=mock_session_maker, suborganizations_repo=mock_suborganizations_repo)
 
     with pytest.raises(SuborganizationNotFound):
-        await use_case.execute(next(uuid_generator), NEW_SUBORGANIZATION)
+        await use_case.execute(next(uuid_generator), next(uuid_generator), NEW_SUBORGANIZATION)
 
 
 async def test_delete_suborganization_success(
     mock_session_maker, mock_opened_session, mock_suborganizations_repo, uuid_generator
 ):
+    organization_id = next(uuid_generator)
     suborganization_id = next(uuid_generator)
 
     use_case = DeleteSuborganization(session_maker=mock_session_maker, suborganizations_repo=mock_suborganizations_repo)
-    await use_case.execute(suborganization_id)
+    await use_case.execute(organization_id, suborganization_id)
 
-    mock_suborganizations_repo.delete.assert_awaited_once_with(mock_opened_session, suborganization_id)
+    mock_suborganizations_repo.delete.assert_awaited_once_with(mock_opened_session, organization_id, suborganization_id)
 
 
 async def test_delete_suborganization_not_found(mock_session_maker, mock_suborganizations_repo, uuid_generator):
@@ -148,4 +150,4 @@ async def test_delete_suborganization_not_found(mock_session_maker, mock_suborga
     use_case = DeleteSuborganization(session_maker=mock_session_maker, suborganizations_repo=mock_suborganizations_repo)
 
     with pytest.raises(SuborganizationNotFound):
-        await use_case.execute(next(uuid_generator))
+        await use_case.execute(next(uuid_generator), next(uuid_generator))

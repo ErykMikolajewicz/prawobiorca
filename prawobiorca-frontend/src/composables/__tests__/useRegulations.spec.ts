@@ -1,17 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
+import { getRegulations } from '@/api/generated/endpoints/regulations/regulations'
 import { useRegulations } from '@/composables/useRegulations'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
-  getPublicRegulations: vi.fn(),
-}))
-
-vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
-  getUserRegulations: vi.fn(),
+  getRegulations: vi.fn(),
 }))
 
 vi.mock('element-plus', () => ({
@@ -42,11 +38,11 @@ describe('useRegulations', () => {
 
   it('ignores a response that arrives after a newer request', async () => {
     let resolveStale: ((value: Array<RegulationRepresentation>) => void) | undefined
-    vi.mocked(getPublicRegulations)
+    vi.mocked(getRegulations)
       .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)))
       .mockResolvedValueOnce([regulation('fresh')])
 
-    const { regulations, fetch } = useRegulations('public')
+    const { regulations, fetch } = useRegulations('PUBLIC')
 
     const staleRequest = fetch()
     await fetch()
@@ -58,11 +54,11 @@ describe('useRegulations', () => {
 
   it('reports loading while regulations are being loaded', async () => {
     let resolveRequest: ((value: Array<RegulationRepresentation>) => void) | undefined
-    vi.mocked(getPublicRegulations).mockImplementationOnce(
+    vi.mocked(getRegulations).mockImplementationOnce(
       () => new Promise((resolve) => (resolveRequest = resolve)),
     )
 
-    const { isLoading, load } = useRegulations('public')
+    const { isLoading, load } = useRegulations('PUBLIC')
 
     const loading = load()
     expect(isLoading.value).toBe(true)
@@ -73,9 +69,9 @@ describe('useRegulations', () => {
   })
 
   it('removes a regulation and marks another as in progress', async () => {
-    vi.mocked(getPublicRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
+    vi.mocked(getRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
 
-    const { regulations, pendingIds, fetch, remove, markAsInProgress } = useRegulations('public')
+    const { regulations, pendingIds, fetch, remove, markAsInProgress } = useRegulations('PUBLIC')
     await fetch()
 
     remove('a')
@@ -86,9 +82,9 @@ describe('useRegulations', () => {
   })
 
   it('replaces an updated regulation', async () => {
-    vi.mocked(getPublicRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
+    vi.mocked(getRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
 
-    const { regulations, fetch, update } = useRegulations('public')
+    const { regulations, fetch, update } = useRegulations('PUBLIC')
     await fetch()
 
     update({ ...regulation('a'), presentationName: 'Nowa nazwa', description: 'Opis' })
@@ -100,13 +96,14 @@ describe('useRegulations', () => {
   })
 
   it('filters public regulations by the selected organization', async () => {
-    vi.mocked(getPublicRegulations).mockResolvedValue([])
+    vi.mocked(getRegulations).mockResolvedValue([])
     useOrganizationsStore().select('pwr', 'w10')
 
-    const { fetch } = useRegulations('public')
+    const { fetch } = useRegulations('PUBLIC')
     await fetch()
 
-    expect(getPublicRegulations).toHaveBeenCalledWith({
+    expect(getRegulations).toHaveBeenCalledWith({
+      scope: 'PUBLIC',
       documentType: undefined,
       organizationId: 'pwr',
       suborganizationId: 'w10',
@@ -114,13 +111,14 @@ describe('useRegulations', () => {
   })
 
   it('reloads public regulations when the selected organization changes', async () => {
-    vi.mocked(getPublicRegulations).mockResolvedValue([])
+    vi.mocked(getRegulations).mockResolvedValue([])
 
-    useRegulations('public')
+    useRegulations('PUBLIC')
     useOrganizationsStore().select('pwr', '')
     await nextTick()
 
-    expect(getPublicRegulations).toHaveBeenCalledWith({
+    expect(getRegulations).toHaveBeenCalledWith({
+      scope: 'PUBLIC',
       documentType: undefined,
       organizationId: 'pwr',
       suborganizationId: undefined,

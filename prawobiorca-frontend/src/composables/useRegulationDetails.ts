@@ -1,31 +1,20 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  deletePublicRegulation,
-  getPublicRegulationDownloadUrl,
-  updatePublicRegulation,
+  deleteRegulation,
+  getRegulationDownloadUrlById,
+  updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
-import {
-  deleteUserRegulation,
-  getUserRegulationDownloadUrl,
-  updateUserRegulation,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { showApiError } from '@/utils/error'
 import { toBrowserStorageUrl } from '@/utils/storage'
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { RegulationScope } from '@/domain/regulations'
 
-export function useRegulationDetails(target: RegulationScope) {
+export function useRegulationDetails() {
   const name = ref('')
   const description = ref('')
   const isSaving = ref(false)
   const isDeleting = ref(false)
   const isLoadingPreview = ref(false)
-
-  const updateRegulation = target === 'public' ? updatePublicRegulation : updateUserRegulation
-  const deleteRegulation = target === 'public' ? deletePublicRegulation : deleteUserRegulation
-  const getRegulationDownloadUrl =
-    target === 'public' ? getPublicRegulationDownloadUrl : getUserRegulationDownloadUrl
 
   function resetForm(regulation: RegulationRepresentation) {
     name.value = regulation.presentationName
@@ -72,7 +61,7 @@ export function useRegulationDetails(target: RegulationScope) {
     const previewWindow = window.open('', '_blank')
     try {
       isLoadingPreview.value = true
-      const previewUrl = toBrowserStorageUrl(await getRegulationDownloadUrl(regulationId))
+      const previewUrl = toBrowserStorageUrl(await getRegulationDownloadUrlById(regulationId))
       if (previewWindow) {
         previewWindow.opener = null
         previewWindow.location.href = previewUrl

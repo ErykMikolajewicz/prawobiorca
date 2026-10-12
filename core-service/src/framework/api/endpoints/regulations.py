@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from src.app.dtos.regulations import (
-    PublicRegulationData,
+    RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
     RegulationUploadTarget,
@@ -30,8 +30,10 @@ from src.domain.exceptions.regulations import (
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
 )
-from src.domain.value_objects.regulations import RegulationOrganizationFilter, RegulationType
-from src.framework.dependencies.authentication import require_admin
+from src.domain.exceptions.users import UserNotFound
+from src.domain.value_objects.regulations import RegulationOrganizationFilter, RegulationScope, RegulationType
+from src.domain.value_objects.users import Caller
+from src.framework.dependencies.authentication import get_caller
 from src.framework.dependencies.regulations import (
     get_add_regulation,
     get_confirm_regulation_upload,
@@ -44,24 +46,31 @@ from src.framework.dependencies.regulations import (
     get_update_regulation,
 )
 
-public_regulations_router = APIRouter(tags=["regulations"], prefix="/api")
+regulations_router = APIRouter(
+    tags=["regulations"],
+    prefix="/api",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Login required!"},
+        status.HTTP_403_FORBIDDEN: {"description": "Permission required!"},
+    },
+)
 
 
-@public_regulations_router.get(
+@regulations_router.get(
     "/regulations",
     response_model=list[RegulationRepresentation],
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
     },
 )
-async def get_public_regulations(
+async def get_regulations(
     list_regulations: Annotated[ListRegulations, Depends(get_list_regulations)],
+    caller: Annotated[Caller, Depends(get_caller)],
+    scope: RegulationScope = Query(default=RegulationScope.PUBLIC),
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
     organization_id: UUID | None = Query(default=None, alias="organizationId"),
     suborganization_id: UUID | None = Query(default=None, alias="suborganizationId"),
 ) -> list[RegulationRepresentation]:
-    user_id = None
-
     if organization_id is None and suborganization_id is not None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -71,28 +80,28 @@ async def get_public_regulations(
         RegulationOrganizationFilter(organization_id, suborganization_id) if organization_id is not None else None
     )
 
-    return await list_regulations.execute(user_id, regulation_type, organization_filter)
+    return await list_regulations.execute(caller, scope, regulation_type, organization_filter)
 
 
-@public_regulations_router.get(
+@regulations_router.get(
     "/regulations/{regulationId}",
     response_model=RegulationRepresentation,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
     },
 )
-async def get_public_regulation(
+async def get_regulation_by_id(
     get_regulation_: Annotated[GetRegulation, Depends(get_regulation)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
 ) -> RegulationRepresentation:
-    user_id = None
     try:
-        return await get_regulation_.execute(user_id, regulation_id)
+        return await get_regulation_.execute(caller, regulation_id)
     except RegulationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
 
 
-@public_regulations_router.get(
+@regulations_router.get(
     "/regulations/{regulationId}/documents",
     response_model=list[SearchResult],
     responses={
@@ -102,12 +111,12 @@ async def get_public_regulation(
 )
 async def search_regulation_documents(
     search_regulation: Annotated[SearchRegulation, Depends(get_search_regulation)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
     search_params: Annotated[SearchParams, Query()],
 ) -> list[SearchResult]:
-    user_id = None
     try:
-        results = await search_regulation.execute(user_id, regulation_id, search_params)
+        results = await search_regulation.execute(caller, regulation_id, search_params)
     except RegulationNotFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation with id {regulation_id} not found."
@@ -122,29 +131,42 @@ async def search_regulation_documents(
     return results
 
 
-@public_regulations_router.post(
+@regulations_router.post(
     "/regulations",
-    dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
     responses={
-        status.HTTP_404_NOT_FOUND: {"description": "Organization not found!"},
+        status.HTTP_404_NOT_FOUND: {"description": "Organization or user not found!"},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "description": "Organization given for private regulation, or suborganization given without organization!"
+        },
     },
 )
-async def add_public_regulation(
+async def add_regulation(
     add_regulation_: Annotated[AddRegulation, Depends(get_add_regulation)],
-    regulation_data: PublicRegulationData,
+    caller: Annotated[Caller, Depends(get_caller)],
+    regulation_data: RegulationData,
 ) -> RegulationUploadTarget:
-    user_id = None
+    if regulation_data.scope == RegulationScope.PRIVATE and regulation_data.organization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Private regulation can't belong to organization!",
+        )
+    if regulation_data.organization_id is None and regulation_data.suborganization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Suborganization given without organization!",
+        )
 
     try:
-        return await add_regulation_.execute(user_id, regulation_data)
+        return await add_regulation_.execute(caller, regulation_data)
     except OrganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found!")
+    except UserNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found!")
 
 
-@public_regulations_router.post(
+@regulations_router.post(
     "/regulations/{regulationId}/confirm-upload",
-    dependencies=(Depends(require_admin),),
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
@@ -153,13 +175,13 @@ async def add_public_regulation(
         },
     },
 )
-async def confirm_public_regulation_upload(
+async def confirm_regulation_upload(
     confirm_upload: Annotated[ConfirmRegulationUpload, Depends(get_confirm_regulation_upload)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
 ):
-    user_id = None
     try:
-        await confirm_upload.execute(user_id, regulation_id)
+        await confirm_upload.execute(caller, regulation_id)
     except RegulationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
     except RegulationContentNotFound:
@@ -184,65 +206,62 @@ async def confirm_public_regulation_upload(
         )
 
 
-@public_regulations_router.get(
+@regulations_router.get(
     "/regulations/{regulationId}/download-url",
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
     },
 )
-async def get_public_regulation_download_url(
+async def get_regulation_download_url_by_id(
     get_download_url: Annotated[GetRegulationDownloadUrl, Depends(get_regulation_download_url)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
 ) -> str:
-    user_id = None
     try:
-        return await get_download_url.execute(user_id, regulation_id)
+        return await get_download_url.execute(caller, regulation_id)
     except RegulationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
 
 
-@public_regulations_router.patch(
+@regulations_router.patch(
     "/regulations/{regulationId}",
     response_model=RegulationRepresentation,
-    dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
     },
 )
-async def update_public_regulation(
+async def update_regulation(
     update_regulation_: Annotated[UpdateRegulation, Depends(get_update_regulation)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
     regulation_details_data: RegulationDetailsData,
 ) -> RegulationRepresentation:
-    user_id = None
     try:
-        return await update_regulation_.execute(user_id, regulation_id, regulation_details_data)
+        return await update_regulation_.execute(caller, regulation_id, regulation_details_data)
     except RegulationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
 
 
-@public_regulations_router.delete(
+@regulations_router.delete(
     "/regulations/{regulationId}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
     },
 )
-async def delete_public_regulation(
+async def delete_regulation(
     delete_regulation_: Annotated[DeleteRegulation, Depends(get_delete_regulation)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: UUID = Path(alias="regulationId"),
 ):
-    user_id = None
     try:
-        await delete_regulation_.execute(user_id, regulation_id)
+        await delete_regulation_.execute(caller, regulation_id)
     except RegulationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
 
 
-@public_regulations_router.post(
+@regulations_router.post(
     "/regulations/{regulationId}/preparation-retry",
-    dependencies=(Depends(require_admin),),
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Regulation to prepare not found!"},
@@ -251,13 +270,13 @@ async def delete_public_regulation(
         },
     },
 )
-async def retry_public_regulation_preparation(
-    retry_regulation_preparation: Annotated[RetryRegulationPreparation, Depends(get_retry_regulation_preparation)],
+async def retry_regulation_preparation(
+    retry_regulation_preparation_: Annotated[RetryRegulationPreparation, Depends(get_retry_regulation_preparation)],
+    caller: Annotated[Caller, Depends(get_caller)],
     regulation_id: Annotated[UUID, Path(alias="regulationId")],
 ):
-    user_id = None
     try:
-        await retry_regulation_preparation.execute(user_id, regulation_id)
+        await retry_regulation_preparation_.execute(caller, regulation_id)
     except RegulationNotFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

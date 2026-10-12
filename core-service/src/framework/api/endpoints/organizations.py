@@ -39,7 +39,7 @@ async def get_organizations(
 
 
 @organizations_router.post(
-    "/admin/organizations",
+    "/organizations",
     dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
 )
@@ -51,7 +51,7 @@ async def add_organization(
 
 
 @organizations_router.put(
-    "/admin/organizations/{organizationId}",
+    "/organizations/{organizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=(Depends(require_admin),),
     responses={
@@ -70,7 +70,7 @@ async def update_organization(
 
 
 @organizations_router.delete(
-    "/admin/organizations/{organizationId}",
+    "/organizations/{organizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=(Depends(require_admin),),
     responses={
@@ -88,7 +88,7 @@ async def delete_organization(
 
 
 @organizations_router.post(
-    "/admin/organizations/{organizationId}/suborganizations",
+    "/organizations/{organizationId}/suborganizations",
     dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -107,7 +107,7 @@ async def add_suborganization(
 
 
 @organizations_router.put(
-    "/admin/suborganizations/{suborganizationId}",
+    "/organizations/{organizationId}/suborganizations/{suborganizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=(Depends(require_admin),),
     responses={
@@ -116,17 +116,18 @@ async def add_suborganization(
 )
 async def update_suborganization(
     update_suborganization_: Annotated[UpdateSuborganization, Depends(get_update_suborganization)],
+    organization_id: Annotated[UUID, Path(alias="organizationId")],
     suborganization_id: Annotated[UUID, Path(alias="suborganizationId")],
     new_suborganization: NewSuborganization,
 ):
     try:
-        await update_suborganization_.execute(suborganization_id, new_suborganization)
+        await update_suborganization_.execute(organization_id, suborganization_id, new_suborganization)
     except SuborganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suborganization not found!")
 
 
 @organizations_router.delete(
-    "/admin/suborganizations/{suborganizationId}",
+    "/organizations/{organizationId}/suborganizations/{suborganizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=(Depends(require_admin),),
     responses={
@@ -135,9 +136,10 @@ async def update_suborganization(
 )
 async def delete_suborganization(
     delete_suborganization_: Annotated[DeleteSuborganization, Depends(get_delete_suborganization)],
+    organization_id: Annotated[UUID, Path(alias="organizationId")],
     suborganization_id: Annotated[UUID, Path(alias="suborganizationId")],
 ):
     try:
-        await delete_suborganization_.execute(suborganization_id)
+        await delete_suborganization_.execute(organization_id, suborganization_id)
     except SuborganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suborganization not found!")

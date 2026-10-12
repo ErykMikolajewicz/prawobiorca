@@ -3,20 +3,15 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import RegulationItem from '../RegulationItem.vue'
 import {
-  confirmPublicRegulationUpload,
-  retryPublicRegulationPreparation,
+  confirmRegulationUpload,
+  retryRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
-  confirmPublicRegulationUpload: vi.fn(),
-  retryPublicRegulationPreparation: vi.fn(),
-}))
-
-vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
-  confirmUserRegulationUpload: vi.fn(),
-  retryUserRegulationPreparation: vi.fn(),
+  confirmRegulationUpload: vi.fn(),
+  retryRegulationPreparation: vi.fn(),
 }))
 
 const RETRY_BUTTON = 'button[aria-label="Ponów przetwarzanie"]'
@@ -40,7 +35,7 @@ function mountItem(
   }
 
   return mount(RegulationItem, {
-    props: { regulation, target: 'public', canManage },
+    props: { regulation, target: 'PUBLIC', canManage },
     global: {
       stubs: {
         RouterLink: {
@@ -111,28 +106,28 @@ describe('RegulationItem', () => {
     const button = wrapper.find(RETRY_BUTTON)
     expect(button.exists()).toBe(true)
 
-    vi.mocked(retryPublicRegulationPreparation).mockResolvedValueOnce(undefined)
+    vi.mocked(retryRegulationPreparation).mockResolvedValueOnce(undefined)
     await button.trigger('click')
 
-    expect(retryPublicRegulationPreparation).toHaveBeenCalledWith('uuid-1')
+    expect(retryRegulationPreparation).toHaveBeenCalledWith('uuid-1')
     expect(wrapper.emitted('preparation-retried')?.[0]).toEqual(['uuid-1'])
   })
 
   it('confirms the upload again when regulation was not started', async () => {
     const wrapper = mountItem('NOT_STARTED', true)
 
-    vi.mocked(confirmPublicRegulationUpload).mockResolvedValueOnce(undefined)
+    vi.mocked(confirmRegulationUpload).mockResolvedValueOnce(undefined)
     await wrapper.find(RETRY_BUTTON).trigger('click')
 
-    expect(confirmPublicRegulationUpload).toHaveBeenCalledWith('uuid-1')
-    expect(retryPublicRegulationPreparation).not.toHaveBeenCalled()
+    expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-1')
+    expect(retryRegulationPreparation).not.toHaveBeenCalled()
     expect(wrapper.emitted('preparation-retried')?.[0]).toEqual(['uuid-1'])
   })
 
   it('does not emit retry when the retry request fails', async () => {
     const wrapper = mountItem('FAILED', true)
 
-    vi.mocked(retryPublicRegulationPreparation).mockRejectedValueOnce(new Error('boom'))
+    vi.mocked(retryRegulationPreparation).mockRejectedValueOnce(new Error('boom'))
     await wrapper.find(RETRY_BUTTON).trigger('click')
 
     expect(wrapper.emitted('preparation-retried')).toBeUndefined()

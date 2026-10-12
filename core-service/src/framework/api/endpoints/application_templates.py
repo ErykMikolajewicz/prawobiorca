@@ -49,7 +49,7 @@ application_templates_router = APIRouter(tags=["application_templates"], prefix=
 
 
 @application_templates_router.get(
-    "/application-templates",
+    "/application-templates/published",
     response_model=list[PublishedApplicationTemplate],
     dependencies=(Depends(require_logged_user),),
     responses={
@@ -78,7 +78,7 @@ async def get_published_application_templates(
 
 
 @application_templates_router.get(
-    "/admin/application-templates",
+    "/application-templates",
     response_model=list[ApplicationTemplateRepresentation],
     dependencies=(Depends(require_admin),),
 )
@@ -89,7 +89,7 @@ async def get_application_templates(
 
 
 @application_templates_router.get(
-    "/admin/application-templates/{templateId}",
+    "/application-templates/{templateId}",
     response_model=ApplicationTemplateRepresentation,
     dependencies=(Depends(require_admin),),
     responses={
@@ -107,7 +107,7 @@ async def get_admin_application_template(
 
 
 @application_templates_router.post(
-    "/admin/application-templates",
+    "/application-templates",
     dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
 )
@@ -119,7 +119,7 @@ async def add_application_template(
 
 
 @application_templates_router.post(
-    "/admin/application-templates/{templateId}/confirm-upload",
+    "/application-templates/{templateId}/confirm-upload",
     response_model=ApplicationTemplateRepresentation,
     dependencies=(Depends(require_admin),),
     responses={
@@ -151,7 +151,7 @@ async def confirm_application_template_upload(
 
 
 @application_templates_router.get(
-    "/admin/application-templates/{templateId}/download-url",
+    "/application-templates/{templateId}/download-url",
     dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Application template not found!"},
@@ -171,7 +171,7 @@ async def get_admin_application_template_download_url(
 
 
 @application_templates_router.put(
-    "/admin/application-templates/{templateId}",
+    "/application-templates/{templateId}",
     response_model=ApplicationTemplateRepresentation,
     dependencies=(Depends(require_admin),),
     responses={
@@ -208,7 +208,7 @@ async def update_application_template(
 
 
 @application_templates_router.post(
-    "/admin/application-templates/{templateId}/publish",
+    "/application-templates/{templateId}/publish",
     response_model=ApplicationTemplateRepresentation,
     dependencies=(Depends(require_admin),),
     responses={
@@ -234,7 +234,7 @@ async def publish_application_template(
 
 
 @application_templates_router.post(
-    "/admin/application-templates/{templateId}/unpublish",
+    "/application-templates/{templateId}/unpublish",
     response_model=ApplicationTemplateRepresentation,
     dependencies=(Depends(require_admin),),
     responses={
@@ -255,7 +255,7 @@ async def unpublish_application_template(
 
 
 @application_templates_router.delete(
-    "/admin/application-templates/{templateId}",
+    "/application-templates/{templateId}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=(Depends(require_admin),),
     responses={

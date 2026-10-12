@@ -11,8 +11,8 @@ const emit = defineEmits<{
   (e: 'edit-organization', organization: OrganizationData): void
   (e: 'delete-organization', organizationId: string): void
   (e: 'add-suborganization', organizationId: string): void
-  (e: 'edit-suborganization', suborganization: SuborganizationData): void
-  (e: 'delete-suborganization', suborganizationId: string): void
+  (e: 'edit-suborganization', organizationId: string, suborganization: SuborganizationData): void
+  (e: 'delete-suborganization', organizationId: string, suborganizationId: string): void
 }>()
 </script>
 
@@ -61,14 +61,17 @@ const emit = defineEmits<{
             suborganization.name
           }}</span>
           <span class="app-actions">
-            <el-button size="small" @click="emit('edit-suborganization', suborganization)">
+            <el-button
+              size="small"
+              @click="emit('edit-suborganization', organization.id, suborganization)"
+            >
               Edytuj
             </el-button>
             <el-popconfirm
               title="Czy na pewno chcesz usunąć tę podorganizację?"
               confirm-button-text="Tak"
               cancel-button-text="Nie"
-              @confirm="emit('delete-suborganization', suborganization.id)"
+              @confirm="emit('delete-suborganization', organization.id, suborganization.id)"
             >
               <template #reference>
                 <el-button type="danger" plain size="small">Usuń</el-button>

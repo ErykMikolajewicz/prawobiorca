@@ -64,10 +64,14 @@ class CaseDocumentsRepository:
         return case_article_id
 
     @staticmethod
-    async def delete(session: AsyncSession, user_id: UUID, article_id: UUID) -> None:
+    async def delete(session: AsyncSession, user_id: UUID, case_id: UUID, article_id: UUID) -> None:
         statement = (
             delete(case_documents_table)
-            .where(case_documents_table.c.id == article_id, case_documents_table.c.user_id == user_id)
+            .where(
+                case_documents_table.c.id == article_id,
+                case_documents_table.c.case_id == case_id,
+                case_documents_table.c.user_id == user_id,
+            )
             .returning(case_documents_table.c.id)
         )
         result = await session.execute(statement)

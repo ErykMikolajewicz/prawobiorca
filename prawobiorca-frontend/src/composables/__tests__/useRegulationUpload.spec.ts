@@ -1,23 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
-  addPublicRegulation,
-  confirmPublicRegulationUpload,
+  addRegulation,
+  confirmRegulationUpload,
 } from '@/api/generated/endpoints/regulations/regulations'
-import {
-  addUserRegulation,
-  confirmUserRegulationUpload,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { uploadFileToStorage } from '@/utils/storage'
 import { useRegulationUpload } from '@/composables/useRegulationUpload'
+import type { RegulationScope } from '@/domain/regulations'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
-  addPublicRegulation: vi.fn(),
-  confirmPublicRegulationUpload: vi.fn(),
-}))
-
-vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
-  addUserRegulation: vi.fn(),
-  confirmUserRegulationUpload: vi.fn(),
+  addRegulation: vi.fn(),
+  confirmRegulationUpload: vi.fn(),
 }))
 
 vi.mock('@/utils/storage', () => ({
@@ -32,7 +24,7 @@ vi.mock('element-plus', () => ({
   },
 }))
 
-function prepareUpload(target: 'user' | 'public', presentationName: string) {
+function prepareUpload(target: RegulationScope, presentationName: string) {
   const upload = useRegulationUpload()
   upload.setFile(new File(['dummy'], 'doc.pdf', { type: 'application/pdf' }))
   upload.presentationName.value = presentationName
@@ -47,15 +39,21 @@ describe('useRegulationUpload', () => {
 
   it('submit orchestrates user flow: create -> upload -> confirm', async () => {
     const uploadTarget = { id: 'uuid-user-1', url: 'https://s3.local/upload', fields: {} }
-    vi.mocked(addUserRegulation).mockResolvedValueOnce(uploadTarget)
+    vi.mocked(addRegulation).mockResolvedValueOnce(uploadTarget)
 
-    const upload = prepareUpload('user', 'User Doc')
+    const upload = prepareUpload('PRIVATE', 'User Doc')
     upload.selectedRegulationType.value = 'STATUTE'
     const result = await upload.submit()
 
-    expect(addUserRegulation).toHaveBeenCalledWith({ name: 'User Doc', regulationType: 'STATUTE' })
+    expect(addRegulation).toHaveBeenCalledWith({
+      scope: 'PRIVATE',
+      name: 'User Doc',
+      regulationType: 'STATUTE',
+      organizationId: null,
+      suborganizationId: null,
+    })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
-    expect(confirmUserRegulationUpload).toHaveBeenCalledWith('uuid-user-1')
+    expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-user-1')
     expect(result?.regulation).toEqual({
       id: 'uuid-user-1',
       createDate: expect.any(String),
@@ -70,36 +68,38 @@ describe('useRegulationUpload', () => {
 
   it('submit orchestrates public flow: create -> upload -> confirm', async () => {
     const uploadTarget = { id: 'uuid-pub-1', url: 'https://s3.local/upload', fields: {} }
-    vi.mocked(addPublicRegulation).mockResolvedValueOnce(uploadTarget)
+    vi.mocked(addRegulation).mockResolvedValueOnce(uploadTarget)
 
-    const upload = prepareUpload('public', 'Public Doc')
+    const upload = prepareUpload('PUBLIC', 'Public Doc')
     upload.selectedRegulationType.value = 'ACT'
     const result = await upload.submit()
 
-    expect(addPublicRegulation).toHaveBeenCalledWith({
+    expect(addRegulation).toHaveBeenCalledWith({
+      scope: 'PUBLIC',
       name: 'Public Doc',
       regulationType: 'ACT',
       organizationId: null,
       suborganizationId: null,
     })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
-    expect(confirmPublicRegulationUpload).toHaveBeenCalledWith('uuid-pub-1')
+    expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-pub-1')
     expect(result?.regulation.preparationStatus).toBe('IN_PROGRESS')
   })
 
   it('submit sends the selected organization for a public regulation', async () => {
-    vi.mocked(addPublicRegulation).mockResolvedValueOnce({
+    vi.mocked(addRegulation).mockResolvedValueOnce({
       id: 'uuid-pub-2',
       url: 'https://s3.local/upload',
       fields: {},
     })
 
-    const upload = prepareUpload('public', 'Faculty Doc')
+    const upload = prepareUpload('PUBLIC', 'Faculty Doc')
     upload.selectedOrganizationId.value = 'pwr'
     upload.selectedSuborganizationId.value = 'w10'
     const result = await upload.submit()
 
-    expect(addPublicRegulation).toHaveBeenCalledWith({
+    expect(addRegulation).toHaveBeenCalledWith({
+      scope: 'PUBLIC',
       name: 'Faculty Doc',
       regulationType: null,
       organizationId: 'pwr',
@@ -110,16 +110,16 @@ describe('useRegulationUpload', () => {
   })
 
   it('submit keeps the uploaded regulation when confirm-upload fails', async () => {
-    vi.mocked(addUserRegulation).mockResolvedValueOnce({
+    vi.mocked(addRegulation).mockResolvedValueOnce({
       id: 'uuid-user-2',
       url: 'https://s3.local/upload',
       fields: {},
     })
-    vi.mocked(confirmUserRegulationUpload).mockRejectedValueOnce(
+    vi.mocked(confirmRegulationUpload).mockRejectedValueOnce(
       new Error('Preparation service not working!'),
     )
 
-    const upload = prepareUpload('user', 'User Doc')
+    const upload = prepareUpload('PRIVATE', 'User Doc')
     const result = await upload.submit()
 
     expect(result?.regulation).toEqual({

@@ -1,6 +1,6 @@
 import type { RegulationPreparationStatus, RegulationType } from '@/api/generated/model'
 
-export type RegulationScope = 'user' | 'public'
+export type { RegulationScope } from '@/api/generated/model'
 
 export type PreparationStatusOption = {
   label: string

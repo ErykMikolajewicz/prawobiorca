@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from src.app.dtos.regulations import (
-    PublicRegulationData,
     RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
@@ -26,13 +25,21 @@ from src.domain.exceptions.regulations import (
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
 )
+from src.domain.services.regulation_access import (
+    check_can_add_regulation,
+    check_can_manage_regulation,
+    check_can_read_regulation,
+    resolve_scope_owner,
+)
 from src.domain.value_objects.regulations import (
     RegulationDetails,
     RegulationOrganizationFilter,
     RegulationPreparationStatus,
     RegulationRegistrationData,
+    RegulationScope,
     RegulationType,
 )
+from src.domain.value_objects.users import Caller
 from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 
@@ -121,8 +128,12 @@ class RetryRegulationPreparation:
     regulations_repository: RegulationsRepository
     regulation_preparation_scheduler: RegulationPreparationScheduler
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> None:
+    async def execute(self, caller: Caller, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_manage_regulation(caller, owner)
+            user_id = owner.user_id
+
             regulation_representation = await self.regulations_repository.get_regulation_representation(
                 session, user_id, regulation_id
             )
@@ -153,15 +164,16 @@ class AddRegulation:
     regulations_repository: RegulationsRepository
     regulations_storage: RegulationsStorage
 
-    async def execute(
-        self, user_id: UUID | None, regulation_data: RegulationData | PublicRegulationData
-    ) -> RegulationUploadTarget:
+    async def execute(self, caller: Caller, regulation_data: RegulationData) -> RegulationUploadTarget:
+        check_can_add_regulation(caller, regulation_data.scope)
+        user_id = resolve_scope_owner(caller, regulation_data.scope)
+
         regulation_registration_data = RegulationRegistrationData(
-            presentation_name=regulation_data.name, regulation_type=regulation_data.regulation_type
+            presentation_name=regulation_data.name,
+            regulation_type=regulation_data.regulation_type,
+            organization_id=regulation_data.organization_id,
+            suborganization_id=regulation_data.suborganization_id,
         )
-        if isinstance(regulation_data, PublicRegulationData):
-            regulation_registration_data.organization_id = regulation_data.organization_id
-            regulation_registration_data.suborganization_id = regulation_data.suborganization_id
 
         async with self.session_maker.begin() as session:
             try:
@@ -182,8 +194,12 @@ class ConfirmRegulationUpload:
     regulations_storage: RegulationsStorage
     regulation_preparation_scheduler: RegulationPreparationScheduler
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> None:
+    async def execute(self, caller: Caller, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_manage_regulation(caller, owner)
+            user_id = owner.user_id
+
             regulation_representation = await self.regulations_repository.get_regulation_representation(
                 session, user_id, regulation_id
             )
@@ -224,10 +240,13 @@ class GetRegulationDownloadUrl:
     regulations_repository: RegulationsRepository
     regulations_storage: RegulationsStorage
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> str:
+    async def execute(self, caller: Caller, regulation_id: UUID) -> str:
         async with self.session_maker() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_read_regulation(caller, owner)
+
             regulation_representation = await self.regulations_repository.get_regulation_representation(
-                session, user_id, regulation_id
+                session, owner.user_id, regulation_id
             )
 
         if regulation_representation is None:
@@ -242,10 +261,13 @@ class GetRegulation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> RegulationRepresentation:
+    async def execute(self, caller: Caller, regulation_id: UUID) -> RegulationRepresentation:
         async with self.session_maker() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_read_regulation(caller, owner)
+
             regulation_representation = await self.regulations_repository.get_regulation_representation(
-                session, user_id, regulation_id
+                session, owner.user_id, regulation_id
             )
 
         if regulation_representation is None:
@@ -262,10 +284,12 @@ class ListRegulations:
 
     async def execute(
         self,
-        user_id: UUID | None,
+        caller: Caller,
+        scope: RegulationScope,
         regulation_type: RegulationType | None,
         organization_filter: RegulationOrganizationFilter | None,
     ) -> list[RegulationRepresentation]:
+        user_id = resolve_scope_owner(caller, scope)
         async with self.session_maker() as session:
             files = await self.regulations_repository.list_regulations(
                 session, user_id, regulation_type, organization_filter
@@ -279,14 +303,17 @@ class UpdateRegulation:
     regulations_repository: RegulationsRepository
 
     async def execute(
-        self, user_id: UUID | None, regulation_id: UUID, regulation_details_data: RegulationDetailsData
+        self, caller: Caller, regulation_id: UUID, regulation_details_data: RegulationDetailsData
     ) -> RegulationRepresentation:
         regulation_details = RegulationDetails(
             presentation_name=regulation_details_data.name, description=regulation_details_data.description
         )
         async with self.session_maker.begin() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_manage_regulation(caller, owner)
+
             return await self.regulations_repository.update_regulation_details(
-                session, user_id, regulation_id, regulation_details
+                session, owner.user_id, regulation_id, regulation_details
             )
 
 
@@ -297,8 +324,12 @@ class DeleteRegulation:
     sections_repository: SectionsRepository
     regulations_storage: RegulationsStorage
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID):
+    async def execute(self, caller: Caller, regulation_id: UUID):
         async with self.session_maker.begin() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_manage_regulation(caller, owner)
+            user_id = owner.user_id
+
             regulation_representation = await self.regulations_repository.get_regulation_representation(
                 session, user_id, regulation_id
             )
@@ -324,7 +355,11 @@ class SearchRegulation:
     sections_repository: SectionsRepository
     regulations_repository: RegulationsRepository
 
-    async def execute(self, user_id: UUID | None, regulation_id, search_params: SearchParams) -> list[SearchResult]:
+    async def execute(self, caller: Caller, regulation_id: UUID, search_params: SearchParams) -> list[SearchResult]:
+        async with self.session_maker() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+        check_can_read_regulation(caller, owner)
+        user_id = owner.user_id
 
         embeddings = await self.embedding_port.embed_queries([search_params.query])
         query_vector = embeddings[0]

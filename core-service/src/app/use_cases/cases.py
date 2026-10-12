@@ -75,9 +75,9 @@ class DeleteCaseDocument:
     session_maker: SessionMaker
     case_documents_repo: CaseDocumentsRepository
 
-    async def execute(self, user_id: UUID, document_id: UUID) -> None:
+    async def execute(self, user_id: UUID, case_id: UUID, document_id: UUID) -> None:
         async with self.session_maker.begin() as session:
-            await self.case_documents_repo.delete(session, user_id, document_id)
+            await self.case_documents_repo.delete(session, user_id, case_id, document_id)
 
 
 @dataclass

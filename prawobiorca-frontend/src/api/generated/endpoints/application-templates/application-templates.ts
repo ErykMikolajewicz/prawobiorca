@@ -19,7 +19,7 @@ export const getPublishedApplicationTemplates = (
   options?: SecondParameter<typeof prawobiorcaRequest<PublishedApplicationTemplate[]>>,
 ) => {
   return prawobiorcaRequest<PublishedApplicationTemplate[]>(
-    { url: `/api/application-templates`, method: 'GET', params },
+    { url: `/api/application-templates/published`, method: 'GET', params },
     options,
   )
 }
@@ -30,7 +30,7 @@ export const getApplicationTemplates = (
   options?: SecondParameter<typeof prawobiorcaRequest<ApplicationTemplateRepresentation[]>>,
 ) => {
   return prawobiorcaRequest<ApplicationTemplateRepresentation[]>(
-    { url: `/api/admin/application-templates`, method: 'GET' },
+    { url: `/api/application-templates`, method: 'GET' },
     options,
   )
 }
@@ -43,7 +43,7 @@ export const addApplicationTemplate = (
 ) => {
   return prawobiorcaRequest<ApplicationTemplateUploadTarget>(
     {
-      url: `/api/admin/application-templates`,
+      url: `/api/application-templates`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       data: applicationTemplateData,
@@ -59,7 +59,7 @@ export const getAdminApplicationTemplate = (
   options?: SecondParameter<typeof prawobiorcaRequest<ApplicationTemplateRepresentation>>,
 ) => {
   return prawobiorcaRequest<ApplicationTemplateRepresentation>(
-    { url: `/api/admin/application-templates/${templateId}`, method: 'GET' },
+    { url: `/api/application-templates/${templateId}`, method: 'GET' },
     options,
   )
 }
@@ -73,7 +73,7 @@ export const updateApplicationTemplate = (
 ) => {
   return prawobiorcaRequest<ApplicationTemplateRepresentation>(
     {
-      url: `/api/admin/application-templates/${templateId}`,
+      url: `/api/application-templates/${templateId}`,
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       data: applicationTemplateDetailsData,
@@ -89,7 +89,7 @@ export const deleteApplicationTemplate = (
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
   return prawobiorcaRequest<void>(
-    { url: `/api/admin/application-templates/${templateId}`, method: 'DELETE' },
+    { url: `/api/application-templates/${templateId}`, method: 'DELETE' },
     options,
   )
 }
@@ -101,7 +101,7 @@ export const confirmApplicationTemplateUpload = (
   options?: SecondParameter<typeof prawobiorcaRequest<ApplicationTemplateRepresentation>>,
 ) => {
   return prawobiorcaRequest<ApplicationTemplateRepresentation>(
-    { url: `/api/admin/application-templates/${templateId}/confirm-upload`, method: 'POST' },
+    { url: `/api/application-templates/${templateId}/confirm-upload`, method: 'POST' },
     options,
   )
 }
@@ -113,7 +113,7 @@ export const getAdminApplicationTemplateDownloadUrl = (
   options?: SecondParameter<typeof prawobiorcaRequest<string>>,
 ) => {
   return prawobiorcaRequest<string>(
-    { url: `/api/admin/application-templates/${templateId}/download-url`, method: 'GET' },
+    { url: `/api/application-templates/${templateId}/download-url`, method: 'GET' },
     options,
   )
 }
@@ -125,7 +125,7 @@ export const publishApplicationTemplate = (
   options?: SecondParameter<typeof prawobiorcaRequest<ApplicationTemplateRepresentation>>,
 ) => {
   return prawobiorcaRequest<ApplicationTemplateRepresentation>(
-    { url: `/api/admin/application-templates/${templateId}/publish`, method: 'POST' },
+    { url: `/api/application-templates/${templateId}/publish`, method: 'POST' },
     options,
   )
 }
@@ -137,7 +137,7 @@ export const unpublishApplicationTemplate = (
   options?: SecondParameter<typeof prawobiorcaRequest<ApplicationTemplateRepresentation>>,
 ) => {
   return prawobiorcaRequest<ApplicationTemplateRepresentation>(
-    { url: `/api/admin/application-templates/${templateId}/unpublish`, method: 'POST' },
+    { url: `/api/application-templates/${templateId}/unpublish`, method: 'POST' },
     options,
   )
 }

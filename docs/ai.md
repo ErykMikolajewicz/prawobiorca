@@ -5,10 +5,10 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 ## 1. Architektura i integracja
 
 - **Endpointy** (`src/framework/api/endpoints/cases.py`):
-  - `POST /api/user/cases/{caseId}/application` przyjmuje `NewApplication` (`src/app/dtos/applications.py`), zapisuje wniosek ze statusem `IN_PROGRESS`, zleca generowanie w tle i zwraca `202` z identyfikatorem wniosku. Dla nieistniejącego lub nieopublikowanego szablonu zwraca `404`, dla błędnych wartości pól `422` z listą nazw pól.
-  - `GET /api/user/cases/{caseId}/applications` zwraca listę wniosków sprawy (`ApplicationRepresentation`) ze statusem generowania.
-  - `GET /api/user/cases/applications/{applicationId}/download-url` zwraca presigned URL do pliku DOCX. Dla wniosku, który nie ma statusu `GENERATED`, zwraca `409`.
-  - `DELETE /api/user/cases/applications/{applicationId}` usuwa wniosek i jego plik.
+  - `POST /api/cases/{caseId}/applications` przyjmuje `NewApplication` (`src/app/dtos/applications.py`), zapisuje wniosek ze statusem `IN_PROGRESS`, zleca generowanie w tle i zwraca `202` z identyfikatorem wniosku. Dla nieistniejącego lub nieopublikowanego szablonu zwraca `404`, dla błędnych wartości pól `422` z listą nazw pól.
+  - `GET /api/cases/{caseId}/applications` zwraca listę wniosków sprawy (`ApplicationRepresentation`) ze statusem generowania.
+  - `GET /api/cases/{caseId}/applications/{applicationId}/download-url` zwraca presigned URL do pliku DOCX. Dla wniosku, który nie ma statusu `GENERATED`, zwraca `409`.
+  - `DELETE /api/cases/{caseId}/applications/{applicationId}` usuwa wniosek i jego plik.
 - **Szablon wniosku:** `NewApplication` zawiera `templateId` opublikowanego szablonu (zarządzanego przez administratora), opis sytuacji (`description`) i wartości pól szablonu (`fieldValues`), walidowane przez `validate_field_values` (`src/domain/services/application_fields.py`). Szablon dostarcza instrukcje dla AI (`instructions`), definicje pól i plik DOCX w object storage. Wniosek przechowuje `template_id` (po usunięciu szablonu `NULL`) i kopię nazwy szablonu (`template_name`).
 - **Nazwa wniosku:** pole `name` w `ApplicationRepresentation`, nadawane przez LLM na podstawie opisu sytuacji (prompt `prompts/application_name.md`) i zapisywane razem ze statusem `GENERATED`. Do tego czasu ma wartość `null`, a frontend pokazuje w jej miejscu nazwę szablonu.
 - **Status generowania:** `ApplicationGenerationStatus` (`src/domain/value_objects/applications.py`): `IN_PROGRESS`, `GENERATED`, `FAILED`.
@@ -28,15 +28,15 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 Szablonami zarządza administrator (`require_admin`), a zalogowany użytkownik widzi tylko szablony opublikowane.
 
 - **Endpointy** (`src/framework/api/endpoints/application_templates.py`):
-  - `GET /api/application-templates` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
-  - `GET /api/admin/application-templates` i `GET /api/admin/application-templates/{templateId}` zwracają szablony (`ApplicationTemplateRepresentation`) niezależnie od statusu.
-  - `POST /api/admin/application-templates` przyjmuje nazwę szablonu, zapisuje go z domyślnymi instrukcjami i zwraca presigned POST do wgrania pliku DOCX.
-  - `POST /api/admin/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Zwraca `409`, jeśli wgranie było już potwierdzone albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
-  - `PUT /api/admin/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól zwraca `422`.
-  - `POST /api/admin/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (inaczej `409`).
-  - `POST /api/admin/application-templates/{templateId}/unpublish` przywraca opublikowanemu szablonowi status `DRAFT` (inaczej `409`).
-  - `GET /api/admin/application-templates/{templateId}/download-url` zwraca presigned URL do pliku DOCX (`409`, jeśli plik nie został wgrany). Frontend używa go do pobrania i podglądu szablonu.
-  - `DELETE /api/admin/application-templates/{templateId}` usuwa szablon i jego plik. Wygenerowane wnioski zostają, z `template_id` ustawionym na `NULL`.
+  - `GET /api/application-templates/published` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
+  - `GET /api/application-templates` i `GET /api/application-templates/{templateId}` zwracają szablony (`ApplicationTemplateRepresentation`) niezależnie od statusu.
+  - `POST /api/application-templates` przyjmuje nazwę szablonu, zapisuje go z domyślnymi instrukcjami i zwraca presigned POST do wgrania pliku DOCX.
+  - `POST /api/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Zwraca `409`, jeśli wgranie było już potwierdzone albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
+  - `PUT /api/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól zwraca `422`.
+  - `POST /api/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (inaczej `409`).
+  - `POST /api/application-templates/{templateId}/unpublish` przywraca opublikowanemu szablonowi status `DRAFT` (inaczej `409`).
+  - `GET /api/application-templates/{templateId}/download-url` zwraca presigned URL do pliku DOCX (`409`, jeśli plik nie został wgrany). Frontend używa go do pobrania i podglądu szablonu.
+  - `DELETE /api/application-templates/{templateId}` usuwa szablon i jego plik. Wygenerowane wnioski zostają, z `template_id` ustawionym na `NULL`.
 - **Status:** `ApplicationTemplateStatus` (`src/domain/value_objects/application_templates.py`): `NOT_UPLOADED` → `DRAFT` ⇄ `PUBLISHED`.
 - **Plik DOCX:** szablon Jinja2 dla docxtpl. Musi zawierać zmienną `paragraphs` (treść wygenerowana przez LLM), `current_date` jest wypełniana automatycznie. Pozostałe zmienne stają się polami szablonu (`create_default_fields`, `src/domain/services/application_fields.py`).
 - **Pola** (`ApplicationTemplateField`): nazwa zmiennej, etykieta, typ (`TEXT`, `NUMBER`, `SELECT`, `DATE`), `required`, `passToAi`, opcjonalnie wartość domyślna, `pattern` i `options`. Reguły konfiguracji (`validate_fields_config`):

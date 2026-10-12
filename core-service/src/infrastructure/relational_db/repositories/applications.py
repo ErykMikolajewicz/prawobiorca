@@ -84,10 +84,14 @@ class ApplicationsRepository:
             raise ApplicationNotFound
 
     @staticmethod
-    async def delete(session: AsyncSession, user_id: UUID, application_id: UUID) -> None:
+    async def delete(session: AsyncSession, user_id: UUID, case_id: UUID, application_id: UUID) -> None:
         statement = (
             delete(applications_table)
-            .where(applications_table.c.id == application_id, applications_table.c.user_id == user_id)
+            .where(
+                applications_table.c.id == application_id,
+                applications_table.c.case_id == case_id,
+                applications_table.c.user_id == user_id,
+            )
             .returning(applications_table.c.id)
         )
         result = await session.execute(statement)

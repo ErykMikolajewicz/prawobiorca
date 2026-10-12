@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.app.dtos.regulations import (
-    PublicRegulationData,
     RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
@@ -23,6 +22,7 @@ from src.app.use_cases.regulations import (
     SearchRegulation,
     UpdateRegulation,
 )
+from src.domain.exceptions.access import AccessForbidden, LoginRequired
 from src.domain.exceptions.documents import RegulationDocumentsNotFound
 from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import (
@@ -36,10 +36,13 @@ from src.domain.exceptions.regulations import (
 from src.domain.value_objects.regulations import (
     RegulationDetails,
     RegulationOrganizationFilter,
+    RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
+    RegulationScope,
     RegulationType,
 )
+from src.domain.value_objects.users import Caller
 from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 
@@ -294,6 +297,7 @@ async def test_retry_regulation_preparation_success(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.FAILED
@@ -307,7 +311,7 @@ async def test_retry_regulation_preparation_success(
         regulation_preparation_scheduler=mock_scheduler,
     )
 
-    await use_case.execute(user_id, regulation_id)
+    await use_case.execute(Caller(user_id), regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [RegulationPreparationStatus.IN_PROGRESS]
     mock_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
@@ -322,6 +326,7 @@ async def test_retry_regulation_preparation_not_found(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.get_regulation_representation.return_value = None
 
@@ -334,7 +339,7 @@ async def test_retry_regulation_preparation_not_found(
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     mock_scheduler.schedule_regulation_preparation.assert_not_awaited()
 
@@ -346,6 +351,7 @@ async def test_retry_regulation_preparation_content_not_uploaded(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
@@ -360,7 +366,7 @@ async def test_retry_regulation_preparation_content_not_uploaded(
     )
 
     with pytest.raises(RegulationInInvalidState):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     mock_scheduler.schedule_regulation_preparation.assert_not_awaited()
 
@@ -372,6 +378,7 @@ async def test_retry_regulation_preparation_already_prepared(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.PREPARED
@@ -386,7 +393,7 @@ async def test_retry_regulation_preparation_already_prepared(
     )
 
     with pytest.raises(RegulationAlreadyInitialized):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     mock_scheduler.schedule_regulation_preparation.assert_not_awaited()
 
@@ -398,6 +405,7 @@ async def test_retry_regulation_preparation_already_in_progress(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.IN_PROGRESS
@@ -412,7 +420,7 @@ async def test_retry_regulation_preparation_already_in_progress(
     )
 
     with pytest.raises(RegulationPreparationInProgress):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     mock_scheduler.schedule_regulation_preparation.assert_not_awaited()
 
@@ -424,6 +432,7 @@ async def test_retry_regulation_preparation_scheduler_unavailable(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.FAILED
@@ -439,7 +448,7 @@ async def test_retry_regulation_preparation_scheduler_unavailable(
     )
 
     with pytest.raises(ServiceUnavailable):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [RegulationPreparationStatus.IN_PROGRESS]
 
@@ -454,7 +463,9 @@ async def test_add_public_regulation_success(
     )
     mock_regulations_storage.get_upload_target.return_value = upload_target
 
-    regulation_data = RegulationData(name="regulation.pdf", regulationType=RegulationType.ACT)
+    regulation_data = RegulationData(
+        scope=RegulationScope.PUBLIC, name="regulation.pdf", regulationType=RegulationType.ACT
+    )
 
     add_regulation = AddRegulation(
         regulations_repository=mock_regulations_repository,
@@ -462,7 +473,7 @@ async def test_add_public_regulation_success(
         session_maker=mock_session_maker,
     )
 
-    result = await add_regulation.execute(user_id=None, regulation_data=regulation_data)
+    result = await add_regulation.execute(Caller(next(uuid_generator), is_admin=True), regulation_data)
 
     assert result == upload_target
     mock_regulations_repository.register_regulation.assert_awaited_once()
@@ -480,7 +491,9 @@ async def test_add_user_regulation_success(
     )
     mock_regulations_storage.get_upload_target.return_value = upload_target
 
-    regulation_data = RegulationData(name="user-regulation.pdf", regulationType=RegulationType.ACT)
+    regulation_data = RegulationData(
+        scope=RegulationScope.PRIVATE, name="user-regulation.pdf", regulationType=RegulationType.ACT
+    )
 
     add_regulation = AddRegulation(
         regulations_repository=mock_regulations_repository,
@@ -488,10 +501,10 @@ async def test_add_user_regulation_success(
         session_maker=mock_session_maker,
     )
 
-    result = await add_regulation.execute(user_id=user_id, regulation_data=regulation_data)
+    result = await add_regulation.execute(Caller(user_id), regulation_data)
 
     assert result == upload_target
-    mock_regulations_repository.register_regulation.assert_awaited_once()
+    assert mock_regulations_repository.register_regulation.await_args.args[1] == user_id
     mock_regulations_storage.get_upload_target.assert_awaited_once_with(regulation_id)
 
 
@@ -503,7 +516,8 @@ async def test_add_public_regulation_with_organization(
     suborganization_id = next(uuid_generator)
     mock_regulations_repository.register_regulation.return_value = regulation_id
 
-    regulation_data = PublicRegulationData(
+    regulation_data = RegulationData(
+        scope=RegulationScope.PUBLIC,
         name="regulation.pdf",
         regulationType=RegulationType.STATUTE,
         organizationId=organization_id,
@@ -516,7 +530,7 @@ async def test_add_public_regulation_with_organization(
         session_maker=mock_session_maker,
     )
 
-    await add_regulation.execute(user_id=None, regulation_data=regulation_data)
+    await add_regulation.execute(Caller(next(uuid_generator), is_admin=True), regulation_data)
 
     mock_regulations_repository.register_regulation.assert_awaited_once_with(
         mock_opened_session,
@@ -535,7 +549,9 @@ async def test_add_public_regulation_organization_not_found(
 ):
     mock_regulations_repository.register_regulation.side_effect = OrganizationNotFound
 
-    regulation_data = PublicRegulationData(name="regulation.pdf", organizationId=next(uuid_generator))
+    regulation_data = RegulationData(
+        scope=RegulationScope.PUBLIC, name="regulation.pdf", organizationId=next(uuid_generator)
+    )
 
     add_regulation = AddRegulation(
         regulations_repository=mock_regulations_repository,
@@ -544,7 +560,7 @@ async def test_add_public_regulation_organization_not_found(
     )
 
     with pytest.raises(OrganizationNotFound):
-        await add_regulation.execute(user_id=None, regulation_data=regulation_data)
+        await add_regulation.execute(Caller(next(uuid_generator), is_admin=True), regulation_data)
 
     mock_regulations_storage.get_upload_target.assert_not_awaited()
 
@@ -554,6 +570,7 @@ async def test_confirm_regulation_upload_success(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
@@ -569,7 +586,7 @@ async def test_confirm_regulation_upload_success(
         regulation_preparation_scheduler=mock_scheduler,
     )
 
-    await use_case.execute(user_id, regulation_id)
+    await use_case.execute(Caller(user_id), regulation_id)
 
     mock_regulations_storage.check_regulation_exists.assert_called_once_with(regulation_id)
     mock_regulations_repository.set_preparation_status.assert_called_once_with(
@@ -588,6 +605,7 @@ async def test_confirm_regulation_upload_not_found(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.get_regulation_representation.return_value = None
 
@@ -601,7 +619,7 @@ async def test_confirm_regulation_upload_not_found(
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
 
 @pytest.mark.asyncio
@@ -610,6 +628,7 @@ async def test_confirm_regulation_upload_already_prepared(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.PREPARED
@@ -625,7 +644,7 @@ async def test_confirm_regulation_upload_already_prepared(
     )
 
     with pytest.raises(RegulationAlreadyInitialized):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
 
 async def test_confirm_regulation_upload_content_not_found(
@@ -633,6 +652,7 @@ async def test_confirm_regulation_upload_content_not_found(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
@@ -649,7 +669,7 @@ async def test_confirm_regulation_upload_content_not_found(
     )
 
     with pytest.raises(RegulationContentNotFound):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
 
 async def test_confirm_regulation_upload_already_in_progress(
@@ -657,6 +677,7 @@ async def test_confirm_regulation_upload_already_in_progress(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.IN_PROGRESS
@@ -672,7 +693,7 @@ async def test_confirm_regulation_upload_already_in_progress(
     )
 
     with pytest.raises(RegulationPreparationInProgress):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     mock_scheduler.schedule_regulation_preparation.assert_not_awaited()
 
@@ -682,6 +703,7 @@ async def test_confirm_regulation_upload_already_failed(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.FAILED
@@ -697,7 +719,7 @@ async def test_confirm_regulation_upload_already_failed(
     )
 
     with pytest.raises(RegulationInInvalidState):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     mock_scheduler.schedule_regulation_preparation.assert_not_awaited()
 
@@ -707,6 +729,7 @@ async def test_confirm_regulation_upload_scheduler_unavailable(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
@@ -724,7 +747,7 @@ async def test_confirm_regulation_upload_scheduler_unavailable(
     )
 
     with pytest.raises(ServiceUnavailable):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
     assert get_set_statuses(mock_regulations_repository) == [RegulationPreparationStatus.IN_PROGRESS]
 
@@ -734,6 +757,7 @@ async def test_get_regulation_download_url_success(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.get_regulation_representation.return_value = MagicMock()
     mock_regulations_storage.get_download_url.return_value = "http://object-storage/regulation"
@@ -744,7 +768,7 @@ async def test_get_regulation_download_url_success(
         regulations_storage=mock_regulations_storage,
     )
 
-    result = await use_case.execute(user_id, regulation_id)
+    result = await use_case.execute(Caller(user_id), regulation_id)
 
     assert result == "http://object-storage/regulation"
     mock_regulations_storage.get_download_url.assert_awaited_once_with(regulation_id)
@@ -755,6 +779,7 @@ async def test_get_regulation_download_url_not_found(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.get_regulation_representation.return_value = None
 
@@ -765,12 +790,13 @@ async def test_get_regulation_download_url_not_found(
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
 
 async def test_get_regulation_success(uuid_generator, mock_regulations_repository, mock_session_maker):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_result = MagicMock(spec=RegulationRepresentation)
     mock_regulations_repository.get_regulation_representation.return_value = mock_result
@@ -780,7 +806,7 @@ async def test_get_regulation_success(uuid_generator, mock_regulations_repositor
         regulations_repository=mock_regulations_repository,
     )
 
-    result = await use_case.execute(user_id, regulation_id)
+    result = await use_case.execute(Caller(user_id), regulation_id)
 
     assert result == mock_result
     mock_regulations_repository.get_regulation_representation.assert_awaited_once()
@@ -789,6 +815,7 @@ async def test_get_regulation_success(uuid_generator, mock_regulations_repositor
 async def test_get_regulation_not_found(uuid_generator, mock_regulations_repository, mock_session_maker):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.get_regulation_representation.return_value = None
 
@@ -798,7 +825,7 @@ async def test_get_regulation_not_found(uuid_generator, mock_regulations_reposit
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
 
 async def test_list_regulations_success(uuid_generator, mock_regulations_repository, mock_session_maker):
@@ -814,7 +841,7 @@ async def test_list_regulations_success(uuid_generator, mock_regulations_reposit
         regulations_repository=mock_regulations_repository,
     )
 
-    result = await use_case.execute(user_id=user_id, regulation_type=RegulationType.ACT, organization_filter=None)
+    result = await use_case.execute(Caller(user_id), RegulationScope.PRIVATE, RegulationType.ACT, None)
 
     assert result == mock_results
     assert result[0].regulation_type == RegulationType.ACT
@@ -834,7 +861,7 @@ async def test_list_regulations_with_organization_filter(
         regulations_repository=mock_regulations_repository,
     )
 
-    await use_case.execute(user_id=None, regulation_type=None, organization_filter=organization_filter)
+    await use_case.execute(Caller(None), RegulationScope.PUBLIC, None, organization_filter)
 
     mock_regulations_repository.list_regulations.assert_awaited_once_with(
         mock_opened_session, None, None, organization_filter
@@ -844,6 +871,7 @@ async def test_list_regulations_with_organization_filter(
 async def test_update_regulation_success(uuid_generator, mock_regulations_repository, mock_session_maker):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_result = MagicMock(spec=RegulationRepresentation)
     mock_regulations_repository.update_regulation_details.return_value = mock_result
@@ -854,7 +882,7 @@ async def test_update_regulation_success(uuid_generator, mock_regulations_reposi
     )
 
     result = await use_case.execute(
-        user_id, regulation_id, RegulationDetailsData(name="New name", description="New description")
+        Caller(user_id), regulation_id, RegulationDetailsData(name="New name", description="New description")
     )
 
     assert result == mock_result
@@ -869,6 +897,7 @@ async def test_update_regulation_success(uuid_generator, mock_regulations_reposi
 async def test_update_regulation_not_found(uuid_generator, mock_regulations_repository, mock_session_maker):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.update_regulation_details.side_effect = RegulationNotFound
 
@@ -878,7 +907,7 @@ async def test_update_regulation_not_found(uuid_generator, mock_regulations_repo
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id, RegulationDetailsData(name="New name"))
+        await use_case.execute(Caller(user_id), regulation_id, RegulationDetailsData(name="New name"))
 
 
 async def test_delete_regulation_prepared_success(
@@ -890,6 +919,7 @@ async def test_delete_regulation_prepared_success(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.PREPARED
@@ -902,7 +932,7 @@ async def test_delete_regulation_prepared_success(
         regulations_storage=mock_regulations_storage,
     )
 
-    await use_case.execute(user_id, regulation_id)
+    await use_case.execute(Caller(user_id), regulation_id)
 
     mock_sections_repo.remove_sections.assert_awaited_once()
     mock_regulations_repository.unregister_regulation.assert_awaited_once()
@@ -918,6 +948,7 @@ async def test_delete_regulation_not_prepared_success(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
@@ -930,7 +961,7 @@ async def test_delete_regulation_not_prepared_success(
         regulations_storage=mock_regulations_storage,
     )
 
-    await use_case.execute(user_id, regulation_id)
+    await use_case.execute(Caller(user_id), regulation_id)
 
     mock_sections_repo.remove_sections.assert_not_awaited()
     mock_regulations_repository.unregister_regulation.assert_awaited_once()
@@ -946,6 +977,7 @@ async def test_delete_regulation_not_found(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_regulations_repository.get_regulation_representation.return_value = None
 
@@ -957,7 +989,7 @@ async def test_delete_regulation_not_found(
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id)
+        await use_case.execute(Caller(user_id), regulation_id)
 
 
 async def test_delete_regulation_storage_error(
@@ -969,6 +1001,7 @@ async def test_delete_regulation_storage_error(
 ):
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     regulation_rep = MagicMock()
     regulation_rep.preparation_status = RegulationPreparationStatus.PREPARED
@@ -984,7 +1017,7 @@ async def test_delete_regulation_storage_error(
     )
 
     # Should not raise exception
-    await use_case.execute(user_id, regulation_id)
+    await use_case.execute(Caller(user_id), regulation_id)
 
     mock_sections_repo.remove_sections.assert_awaited_once()
     mock_regulations_repository.unregister_regulation.assert_awaited_once()
@@ -1007,6 +1040,7 @@ async def test_search_file_success(
 
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_embedding_port.embed_queries.return_value = [embedding_vector]
     mock_sections_repo.search.return_value = search_results
@@ -1020,7 +1054,7 @@ async def test_search_file_success(
         regulations_repository=mock_regulations_repository,
     )
 
-    result = await use_case.execute(user_id, regulation_id, search_params)
+    result = await use_case.execute(Caller(user_id), regulation_id, search_params)
 
     assert result == search_results
     mock_embedding_port.embed_queries.assert_awaited_once_with([query])
@@ -1043,6 +1077,7 @@ async def test_search_file_no_results(
 
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_embedding_port.embed_queries.return_value = [embedding_vector]
     mock_sections_repo.search.return_value = search_results
@@ -1056,7 +1091,7 @@ async def test_search_file_no_results(
         regulations_repository=mock_regulations_repository,
     )
 
-    result = await use_case.execute(user_id, regulation_id, search_params)
+    result = await use_case.execute(Caller(user_id), regulation_id, search_params)
 
     assert result == []
     mock_embedding_port.embed_queries.assert_awaited_once_with([query])
@@ -1073,6 +1108,7 @@ async def test_search_file_embedding_error(
 
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     search_params = SearchParams(threshold=0, limit=None, query=query)
 
@@ -1084,7 +1120,7 @@ async def test_search_file_embedding_error(
     )
 
     with pytest.raises(Exception, match="Embedding service down"):
-        await use_case.execute(user_id, regulation_id, search_params)
+        await use_case.execute(Caller(user_id), regulation_id, search_params)
 
     mock_embedding_port.embed_queries.assert_awaited_once_with([query])
     mock_sections_repo.search.assert_not_awaited()
@@ -1103,6 +1139,7 @@ async def test_search_file_repository_error(
 
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     search_params = SearchParams(threshold=0, limit=None, query=query)
 
@@ -1117,7 +1154,7 @@ async def test_search_file_repository_error(
     )
 
     with pytest.raises(Exception, match="Database error"):
-        await use_case.execute(user_id, regulation_id, search_params=search_params)
+        await use_case.execute(Caller(user_id), regulation_id, search_params=search_params)
 
 
 async def test_search_file_documents_not_found_but_regulation_not_found(
@@ -1131,6 +1168,7 @@ async def test_search_file_documents_not_found_but_regulation_not_found(
     embedding_vector = [0.1, 0.2, 0.3]
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_embedding_port.embed_queries.return_value = [embedding_vector]
     mock_sections_repo.search.side_effect = RegulationDocumentsNotFound
@@ -1146,7 +1184,7 @@ async def test_search_file_documents_not_found_but_regulation_not_found(
     )
 
     with pytest.raises(RegulationNotFound):
-        await use_case.execute(user_id, regulation_id, search_params)
+        await use_case.execute(Caller(user_id), regulation_id, search_params)
 
 
 async def test_search_file_documents_not_found_not_prepared(
@@ -1160,6 +1198,7 @@ async def test_search_file_documents_not_found_not_prepared(
     embedding_vector = [0.1, 0.2, 0.3]
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_embedding_port.embed_queries.return_value = [embedding_vector]
     mock_sections_repo.search.side_effect = RegulationDocumentsNotFound
@@ -1179,7 +1218,7 @@ async def test_search_file_documents_not_found_not_prepared(
     )
 
     with pytest.raises(RegulationsNotPreparedToSearch):
-        await use_case.execute(user_id, regulation_id, search_params)
+        await use_case.execute(Caller(user_id), regulation_id, search_params)
 
 
 async def test_search_file_documents_not_found_invalid_state(
@@ -1193,6 +1232,7 @@ async def test_search_file_documents_not_found_invalid_state(
     embedding_vector = [0.1, 0.2, 0.3]
     user_id = next(uuid_generator)
     regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
 
     mock_embedding_port.embed_queries.return_value = [embedding_vector]
     mock_sections_repo.search.side_effect = RegulationDocumentsNotFound
@@ -1211,4 +1251,68 @@ async def test_search_file_documents_not_found_invalid_state(
     )
 
     with pytest.raises(RegulationInInvalidState):
-        await use_case.execute(user_id, regulation_id, search_params)
+        await use_case.execute(Caller(user_id), regulation_id, search_params)
+
+
+async def test_add_public_regulation_as_normal_user(
+    uuid_generator, mock_regulations_repository, mock_regulations_storage, mock_session_maker
+):
+    regulation_data = RegulationData(scope=RegulationScope.PUBLIC, name="regulation.pdf")
+
+    add_regulation = AddRegulation(
+        regulations_repository=mock_regulations_repository,
+        regulations_storage=mock_regulations_storage,
+        session_maker=mock_session_maker,
+    )
+
+    with pytest.raises(AccessForbidden):
+        await add_regulation.execute(Caller(next(uuid_generator)), regulation_data)
+
+    mock_regulations_repository.register_regulation.assert_not_awaited()
+
+
+async def test_list_private_regulations_unlogged(mock_regulations_repository, mock_session_maker):
+    use_case = ListRegulations(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    with pytest.raises(LoginRequired):
+        await use_case.execute(Caller(None), RegulationScope.PRIVATE, None, None)
+
+    mock_regulations_repository.list_regulations.assert_not_awaited()
+
+
+async def test_get_other_user_private_regulation(uuid_generator, mock_regulations_repository, mock_session_maker):
+    regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(next(uuid_generator))
+
+    use_case = GetRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    with pytest.raises(RegulationNotFound):
+        await use_case.execute(Caller(next(uuid_generator), is_admin=True), regulation_id)
+
+    mock_regulations_repository.get_regulation_representation.assert_not_awaited()
+
+
+async def test_delete_public_regulation_as_normal_user(
+    uuid_generator, mock_regulations_repository, mock_regulations_storage, mock_session_maker
+):
+    regulation_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(None)
+
+    use_case = DeleteRegulation(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+        sections_repository=AsyncMock(),
+        regulations_storage=mock_regulations_storage,
+    )
+
+    with pytest.raises(AccessForbidden):
+        await use_case.execute(Caller(next(uuid_generator)), regulation_id)
+
+    mock_regulations_repository.unregister_regulation.assert_not_awaited()
+    mock_regulations_storage.delete_regulation.assert_not_awaited()

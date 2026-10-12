@@ -2,11 +2,9 @@
 import { computed, watch } from 'vue'
 import { useRegulationDetails } from '@/composables/useRegulationDetails'
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { RegulationScope } from '@/domain/regulations'
 
 type Props = {
   regulation: RegulationRepresentation
-  target: RegulationScope
   canManage: boolean
 }
 
@@ -29,7 +27,7 @@ const {
   save,
   remove,
   showPreview,
-} = useRegulationDetails(props.target)
+} = useRegulationDetails()
 
 const createDate = computed(() =>
   new Date(props.regulation.createDate).toLocaleString('pl-PL', {

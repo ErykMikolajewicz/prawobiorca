@@ -410,9 +410,10 @@ async def test_get_application_download_url_success(
     mock_session_maker, mock_opened_session, mock_applications_repo, mock_applications_storage, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     application_id = next(uuid_generator)
     mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.GENERATED
+        application_id, case_id, ApplicationGenerationStatus.GENERATED
     )
     mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/application"
 
@@ -421,7 +422,7 @@ async def test_get_application_download_url_success(
         applications_repo=mock_applications_repo,
         applications_storage=mock_applications_storage,
     )
-    result = await use_case.execute(user_id, application_id)
+    result = await use_case.execute(user_id, case_id, application_id)
 
     assert result == "http://storage.local/bucket/application"
     mock_applications_repo.get.assert_awaited_once_with(mock_opened_session, user_id, application_id)
@@ -432,6 +433,7 @@ async def test_get_application_download_url_not_found(
     mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     application_id = next(uuid_generator)
     mock_applications_repo.get.return_value = None
 
@@ -442,7 +444,7 @@ async def test_get_application_download_url_not_found(
     )
 
     with pytest.raises(ApplicationNotFound):
-        await use_case.execute(user_id, application_id)
+        await use_case.execute(user_id, case_id, application_id)
 
     mock_applications_storage.get_download_url.assert_not_awaited()
 
@@ -451,9 +453,10 @@ async def test_get_application_download_url_not_generated(
     mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     application_id = next(uuid_generator)
     mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.IN_PROGRESS
+        application_id, case_id, ApplicationGenerationStatus.IN_PROGRESS
     )
 
     use_case = GetApplicationDownloadUrl(
@@ -463,7 +466,7 @@ async def test_get_application_download_url_not_generated(
     )
 
     with pytest.raises(ApplicationNotGenerated):
-        await use_case.execute(user_id, application_id)
+        await use_case.execute(user_id, case_id, application_id)
 
     mock_applications_storage.get_download_url.assert_not_awaited()
 
@@ -472,6 +475,7 @@ async def test_delete_application_success(
     mock_session_maker, mock_opened_session, mock_applications_repo, mock_applications_storage, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     application_id = next(uuid_generator)
 
     use_case = DeleteApplication(
@@ -479,9 +483,9 @@ async def test_delete_application_success(
         applications_repo=mock_applications_repo,
         applications_storage=mock_applications_storage,
     )
-    await use_case.execute(user_id, application_id)
+    await use_case.execute(user_id, case_id, application_id)
 
-    mock_applications_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, application_id)
+    mock_applications_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id, application_id)
     mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
 
 
@@ -489,6 +493,7 @@ async def test_delete_application_storage_failure_ignored(
     mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     application_id = next(uuid_generator)
     mock_applications_storage.delete_application.side_effect = Exception()
 
@@ -497,7 +502,7 @@ async def test_delete_application_storage_failure_ignored(
         applications_repo=mock_applications_repo,
         applications_storage=mock_applications_storage,
     )
-    await use_case.execute(user_id, application_id)
+    await use_case.execute(user_id, case_id, application_id)
 
     mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
 
@@ -506,6 +511,7 @@ async def test_delete_application_not_found(
     mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     application_id = next(uuid_generator)
     mock_applications_repo.delete.side_effect = ApplicationNotFound()
 
@@ -516,6 +522,6 @@ async def test_delete_application_not_found(
     )
 
     with pytest.raises(ApplicationNotFound):
-        await use_case.execute(user_id, application_id)
+        await use_case.execute(user_id, case_id, application_id)
 
     mock_applications_storage.delete_application.assert_not_awaited()

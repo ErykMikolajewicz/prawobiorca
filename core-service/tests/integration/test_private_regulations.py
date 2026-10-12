@@ -2,13 +2,13 @@ from unittest.mock import ANY
 from uuid import UUID, uuid4
 
 from fastapi import status
-from sqlalchemy import insert, select
+from sqlalchemy import delete, insert, select
 
 from src.app.dtos.regulations import RegulationUploadTarget
 from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
 from src.infrastructure.relational_db.schemas.regulations import regulations_table
 from src.shared.consts import ACCESS_COOKIE_NAME
-from tests.consts import ACCESS_TOKEN, USER_ID
+from tests.consts import ACCESS_TOKEN, ADMIN_ID, USER_ID
 
 
 async def test_add_user_regulation(
@@ -21,7 +21,7 @@ async def test_add_user_regulation(
     set_user,
     clean_user,
 ):
-    regulation_data = {"name": "user-regulation.pdf", "regulationType": RegulationType.ACT}
+    regulation_data = {"scope": "PRIVATE", "name": "user-regulation.pdf", "regulationType": RegulationType.ACT}
 
     mock_regulations_storage.get_upload_target.side_effect = lambda id_: RegulationUploadTarget(
         id=id_, url="http://storage.local/bucket", fields={"key": str(id_)}
@@ -29,7 +29,7 @@ async def test_add_user_regulation(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post("/api/user/regulations", json=regulation_data)
+    response = await client.post("/api/regulations", json=regulation_data)
 
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -72,7 +72,7 @@ async def test_get_user_regulation(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get(f"/api/user/regulations/{regulation_id}")
+    response = await client.get(f"/api/regulations/{regulation_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
@@ -109,7 +109,7 @@ async def test_update_user_regulation(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     response = await client.patch(
-        f"/api/user/regulations/{regulation_id}",
+        f"/api/regulations/{regulation_id}",
         json={"name": "renamed-regulation.pdf", "description": "Opis regulacji"},
     )
 
@@ -143,7 +143,7 @@ async def test_update_user_regulation_not_found(
 ):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.patch(f"/api/user/regulations/{uuid4()}", json={"name": "renamed-regulation.pdf"})
+    response = await client.patch(f"/api/regulations/{uuid4()}", json={"name": "renamed-regulation.pdf"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -171,7 +171,7 @@ async def test_delete_user_regulation(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/user/regulations/{regulation_id}")
+    response = await client.delete(f"/api/regulations/{regulation_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     mock_regulations_storage.delete_regulation.assert_awaited_once_with(regulation_id)
@@ -211,7 +211,7 @@ async def test_confirm_user_regulation_upload(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/regulations/{regulation_id}/confirm-upload")
+    response = await client.post(f"/api/regulations/{regulation_id}/confirm-upload")
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     mock_regulations_storage.check_regulation_exists.assert_awaited_once_with(regulation_id)
@@ -252,7 +252,7 @@ async def test_confirm_user_regulation_upload_already_prepared(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/regulations/{regulation_id}/confirm-upload")
+    response = await client.post(f"/api/regulations/{regulation_id}/confirm-upload")
 
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json()["detail"] == "Regulation is already prepared!"
@@ -292,7 +292,7 @@ async def test_confirm_user_regulation_upload_storage_missing(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/regulations/{regulation_id}/confirm-upload")
+    response = await client.post(f"/api/regulations/{regulation_id}/confirm-upload")
 
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json()["detail"] == "Regulation content not found in storage!"
@@ -331,7 +331,7 @@ async def test_retry_user_regulation_preparation(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/regulations/{regulation_id}/preparation-retry")
+    response = await client.post(f"/api/regulations/{regulation_id}/preparation-retry")
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_awaited_once_with(
@@ -371,7 +371,123 @@ async def test_retry_user_regulation_preparation_already_prepared(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/user/regulations/{regulation_id}/preparation-retry")
+    response = await client.post(f"/api/regulations/{regulation_id}/preparation-retry")
 
     assert response.status_code == status.HTTP_409_CONFLICT
     mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_not_awaited()
+
+
+async def test_get_private_regulations(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(user_id=USER_ID, presentation_name="user-regulation.pdf")
+            .returning(regulations_table.c.id)
+        )
+        await session.execute(insert(regulations_table).values(user_id=None, presentation_name="public.pdf"))
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.get("/api/regulations", params={"scope": "PRIVATE"})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [regulation["id"] for regulation in response.json()] == [str(regulation_id)]
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(
+                delete(regulations_table).where(regulations_table.c.presentation_name == "public.pdf")
+            )
+
+
+async def test_get_private_regulations_unlogged(client, override_session_maker):
+    response = await client.get("/api/regulations", params={"scope": "PRIVATE"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+async def test_get_other_user_private_regulation(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    set_admin_user,
+    clean_admin_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(user_id=ADMIN_ID, presentation_name="admin-private.pdf")
+            .returning(regulations_table.c.id)
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.get(f"/api/regulations/{regulation_id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_other_user_private_regulation_as_admin(
+    client,
+    override_session_maker,
+    session_maker,
+    override_get_regulations_storage,
+    mock_regulations_storage,
+    override_authorize_admin_user,
+    set_admin_user,
+    clean_admin_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(user_id=ADMIN_ID, presentation_name="other-user-private.pdf")
+            .returning(regulations_table.c.id)
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.delete(f"/api/regulations/{regulation_id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    mock_regulations_storage.delete_regulation.assert_not_awaited()
+
+
+async def test_add_private_regulation_with_organization(
+    client,
+    override_session_maker,
+    override_get_regulations_storage,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.post(
+        "/api/regulations",
+        json={"scope": "PRIVATE", "name": "user-regulation.pdf", "organizationId": str(uuid4())},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+async def test_add_public_regulation_as_normal_user(
+    client,
+    override_session_maker,
+    override_get_regulations_storage,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.post("/api/regulations", json={"scope": "PUBLIC", "name": "public.pdf"})
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

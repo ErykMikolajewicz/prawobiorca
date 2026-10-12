@@ -1,15 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { searchRegulationDocuments } from '@/api/generated/endpoints/regulations/regulations'
-import { searchUserRegulationDocuments } from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { useRegulationSearch } from '@/composables/useRegulationSearch'
 import type { SearchRegulationDocumentsParams, SearchResult } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   searchRegulationDocuments: vi.fn(),
-}))
-
-vi.mock('@/api/generated/endpoints/user-regulations/user-regulations', () => ({
-  searchUserRegulationDocuments: vi.fn(),
 }))
 
 vi.mock('element-plus', () => ({
@@ -40,14 +35,13 @@ describe('useRegulationSearch', () => {
     vi.clearAllMocks()
   })
 
-  it('searches the user regulation for user scope', async () => {
-    vi.mocked(searchUserRegulationDocuments).mockResolvedValueOnce([result('a')])
+  it('searches the regulation documents', async () => {
+    vi.mocked(searchRegulationDocuments).mockResolvedValueOnce([result('a')])
 
-    const { results, search } = useRegulationSearch('user', 'uuid-1')
+    const { results, search } = useRegulationSearch('uuid-1')
     await search(params)
 
-    expect(searchUserRegulationDocuments).toHaveBeenCalledWith('uuid-1', params)
-    expect(searchRegulationDocuments).not.toHaveBeenCalled()
+    expect(searchRegulationDocuments).toHaveBeenCalledWith('uuid-1', params)
     expect(results.value).toEqual([result('a')])
   })
 
@@ -57,7 +51,7 @@ describe('useRegulationSearch', () => {
       .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)))
       .mockResolvedValueOnce([result('fresh')])
 
-    const { results, isSearching, search } = useRegulationSearch('public', 'uuid-1')
+    const { results, isSearching, search } = useRegulationSearch('uuid-1')
 
     const staleSearch = search(params)
     await search({ ...params, order_by: 'score' })
