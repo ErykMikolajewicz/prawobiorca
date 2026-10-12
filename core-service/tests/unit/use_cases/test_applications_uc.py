@@ -69,13 +69,16 @@ def generate_application(
     )
 
 
-def create_template(status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED):
+def create_template(
+    status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED,
+    fields: list[ApplicationTemplateField] | None = None,
+):
     return ApplicationTemplateRepresentation(
         id=TEMPLATE_ID,
         createDate=datetime(2026, 1, 1, 10, 0, 0),
         name="Wniosek o urlop",
         status=status,
-        fields=[ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")],
+        fields=fields or [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")],
         instructions="Instrukcje",
     )
 
@@ -256,7 +259,15 @@ async def test_generate_application_already_generated(
     mock_applications_repo.set_generation_status.assert_not_awaited()
 
 
-async def test_generate_application_template_removed(
+@pytest.mark.parametrize(
+    "template",
+    [
+        None,
+        create_template(ApplicationTemplateStatus.DRAFT),
+        create_template(fields=[ApplicationTemplateField(name="faculty", label="Wydział")]),
+    ],
+)
+async def test_generate_application_template_changed(
     generate_application,
     mock_opened_session,
     mock_applications_repo,
@@ -264,13 +275,14 @@ async def test_generate_application_template_removed(
     mock_application_writer,
     new_application,
     uuid_generator,
+    template,
 ):
     user_id = next(uuid_generator)
     application_id = next(uuid_generator)
     mock_applications_repo.get.return_value = create_application(
         application_id, next(uuid_generator), ApplicationGenerationStatus.IN_PROGRESS
     )
-    mock_application_templates_repo.get.return_value = None
+    mock_application_templates_repo.get.return_value = template
 
     await generate_application.execute(user_id, application_id, new_application)
 

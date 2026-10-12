@@ -33,9 +33,9 @@ from src.domain.exceptions.regulations import (
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
     RegulationDetails,
-    RegulationOrganizationFilter,
     RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
@@ -853,7 +853,7 @@ async def test_list_regulations_with_organization_filter(
 ):
     organization_id = next(uuid_generator)
     suborganization_id = next(uuid_generator)
-    organization_filter = RegulationOrganizationFilter(organization_id, suborganization_id)
+    organization_filter = OrganizationFilter(organization_id, suborganization_id)
     mock_regulations_repository.list_regulations.return_value = []
 
     use_case = ListRegulations(

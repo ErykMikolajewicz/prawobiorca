@@ -18,22 +18,22 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 - **Adaptery:**
   - `ApplicationWriter` (`src/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/infrastructure/ai_services/prompts/application.md`) z instrukcjami szablonu i danymi wniosku i generuje treść przez `LlmChat`; osobnym wywołaniem (`write_name`, prompt `src/infrastructure/ai_services/prompts/application_name.md`) generuje nazwę wniosku.
   - `LlmChat` (`src/infrastructure/ai_services/llm_chat.py`) – klient czatu przez API zgodne z OpenAI: na GCP Vertex AI Model-as-a-Service, on-premise i lokalnie kontener `llm-service` z OVMS (port 8083 na hoście / 8080 w klastrze).
-  - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX pobrany z object storage (w `SandboxedEnvironment`) z wartościami pól, `current_date` i `paragraphs` i zwraca go jako `bytes`.
+  - `DocxApplicationRenderer` (`src/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX pobrany z object storage (w `SandboxedEnvironment`) z wartościami pól, `current_date` i `paragraphs` (stałe `CURRENT_DATE_TEMPLATE_VARIABLE` i `CONTENT_TEMPLATE_VARIABLE`) i zwraca go jako `bytes`.
   - `ApplicationsRepository` (`src/infrastructure/relational_db/repositories/applications.py`) – tabela `applications` (wniosek należy do sprawy, usuwany kaskadowo razem z nią).
   - `S3ApplicationsStorage` (`src/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `applications/{id}`.
 - **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL` (bazowy URL API razem z `/v1`). Na GCP `LLM_SERVICE_USE_GOOGLE_AUTH=true` – klient uwierzytelnia się tokenem OAuth z Workload Identity (`src/infrastructure/ai_services/openai_client/google_auth.py`).
 
 ## 2. Szablony wniosków
 
-Szablonami zarządza administrator (`require_admin`), a zalogowany użytkownik widzi tylko szablony opublikowane.
+Szablonami zarządza administrator, a zalogowany użytkownik widzi tylko szablony opublikowane. Use case'y dostają `Caller` i sprawdzają dostęp politykami z `src/domain/services/application_template_access.py` (`check_can_manage_application_templates`, `check_can_read_published_application_templates`).
 
 - **Endpointy** (`src/framework/api/endpoints/application_templates.py`):
   - `GET /api/application-templates/published` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
   - `GET /api/application-templates` i `GET /api/application-templates/{templateId}` zwracają szablony (`ApplicationTemplateRepresentation`) niezależnie od statusu.
   - `POST /api/application-templates` przyjmuje nazwę szablonu, zapisuje go z domyślnymi instrukcjami i zwraca presigned POST do wgrania pliku DOCX.
-  - `POST /api/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Zwraca `409`, jeśli wgranie było już potwierdzone albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
-  - `PUT /api/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól zwraca `422`.
-  - `POST /api/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (inaczej `409`).
+  - `POST /api/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Plik jest pobierany i analizowany poza transakcją, a zmiana statusu jest warunkowa (`confirm_upload` aktualizuje tylko szablon w statusie `NOT_UPLOADED`). Zwraca `409`, jeśli wgranie było już potwierdzone (także równolegle) albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
+  - `PUT /api/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól albo suborganizacji podanej bez organizacji zwraca `422`.
+  - `POST /api/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (`is_ready_to_publish`, `src/domain/services/application_templates.py`, inaczej `409`).
   - `POST /api/application-templates/{templateId}/unpublish` przywraca opublikowanemu szablonowi status `DRAFT` (inaczej `409`).
   - `GET /api/application-templates/{templateId}/download-url` zwraca presigned URL do pliku DOCX (`409`, jeśli plik nie został wgrany). Frontend używa go do pobrania i podglądu szablonu.
   - `DELETE /api/application-templates/{templateId}` usuwa szablon i jego plik. Wygenerowane wnioski zostają, z `template_id` ustawionym na `NULL`.
@@ -58,7 +58,7 @@ Szablonami zarządza administrator (`require_admin`), a zalogowany użytkownik w
 ## 3. Pipeline generowania wniosku
 
 1. `core-service` zapisuje wniosek ze statusem `IN_PROGRESS` i w tej samej transakcji wstawia zadanie do kolejki Taskiq. Dane z formularza (`NewApplication`) trafiają wyłącznie do argumentów zadania, nie są zapisywane przy wniosku. Wiersz zadania jest usuwany po jego wykonaniu.
-2. Worker pobiera szablon (instrukcje, pola i plik DOCX) oraz dokumenty przypięte do sprawy. Jeśli szablon został usunięty, wniosek dostaje status `FAILED`.
+2. Worker pobiera szablon (instrukcje, pola i plik DOCX) oraz dokumenty przypięte do sprawy. Jeśli szablon został usunięty, nie jest już opublikowany albo wartości pól nie przechodzą `validate_field_values` dla jego aktualnej konfiguracji, wniosek dostaje status `FAILED`.
 3. Renderowanie promptu w Jinja2: instrukcje szablonu, a po nich dane w blokach XML (`<dane_wniosku>` z polami oznaczonymi `passToAi`, `<opis_sytuacji>`, `<podstawa_prawna>`).
 4. Inferencja LLM (generowanie merytorycznej treści uzasadnienia), a następnie osobne wywołanie generujące krótką nazwę wniosku.
 5. Połączenie tekstu z szablonem DOCX i wygenerowanie dokumentu przez docxtpl.

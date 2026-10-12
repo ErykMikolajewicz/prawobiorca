@@ -10,9 +10,9 @@ from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.value_objects.application_templates import (
     ApplicationTemplateDetails,
     ApplicationTemplateField,
-    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
 from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
 
 
@@ -21,7 +21,7 @@ class ApplicationTemplatesRepository:
     async def list_templates(
         session: AsyncSession,
         status: ApplicationTemplateStatus | None = None,
-        organization_filter: ApplicationTemplateOrganizationFilter | None = None,
+        organization_filter: OrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]:
         statement = select(ApplicationTemplateRepresentation).order_by(application_templates_table.c.create_date)
 
@@ -66,10 +66,22 @@ class ApplicationTemplatesRepository:
         template_id = result.scalar_one()
         return template_id
 
-    async def set_fields(
-        self, session: AsyncSession, id_: UUID, fields: list[ApplicationTemplateField]
-    ) -> ApplicationTemplateRepresentation:
-        return await self._update(session, id_, fields=fields)
+    @staticmethod
+    async def confirm_upload(
+        session: AsyncSession, id_: UUID, fields: list[ApplicationTemplateField]
+    ) -> ApplicationTemplateRepresentation | None:
+        statement = (
+            update(ApplicationTemplateRepresentation)
+            .where(
+                application_templates_table.c.id == id_,
+                application_templates_table.c.status == ApplicationTemplateStatus.NOT_UPLOADED,
+            )
+            .values(fields=fields, status=ApplicationTemplateStatus.DRAFT)
+            .returning(ApplicationTemplateRepresentation)
+        )
+        result = await session.scalars(statement)
+        template = result.one_or_none()
+        return template
 
     async def set_status(
         self, session: AsyncSession, id_: UUID, status: ApplicationTemplateStatus

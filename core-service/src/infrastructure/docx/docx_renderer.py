@@ -6,6 +6,8 @@ from docxtpl import DocxTemplate
 from jinja2.sandbox import SandboxedEnvironment
 
 from src.app.dtos.applications import NewApplication
+from src.domain.services.application_fields import DATE_FORMAT
+from src.domain.value_objects.application_templates import CONTENT_TEMPLATE_VARIABLE, CURRENT_DATE_TEMPLATE_VARIABLE
 
 
 class DocxApplicationRenderer:
@@ -18,8 +20,8 @@ class DocxApplicationRenderer:
         document.render(
             {
                 **new_application.field_values,
-                "current_date": datetime.now().strftime("%d.%m.%Y"),
-                "paragraphs": [line.strip() for line in content.splitlines() if line.strip()],
+                CURRENT_DATE_TEMPLATE_VARIABLE: datetime.now().strftime(DATE_FORMAT),
+                CONTENT_TEMPLATE_VARIABLE: [line.strip() for line in content.splitlines() if line.strip()],
             },
             jinja_env=SandboxedEnvironment(),
             autoescape=True,

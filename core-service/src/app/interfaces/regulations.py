@@ -3,9 +3,9 @@ from uuid import UUID
 
 from src.app.dtos.regulations import RegulationRepresentation, RegulationUploadTarget
 from src.app.interfaces.relational import AsyncSession
+from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
     RegulationDetails,
-    RegulationOrganizationFilter,
     RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
@@ -35,7 +35,7 @@ class RegulationsRepository(Protocol):
         session: AsyncSession,
         user_id: UUID | None,
         regulation_type: RegulationType | None,
-        organization_filter: RegulationOrganizationFilter | None,
+        organization_filter: OrganizationFilter | None,
     ) -> list[RegulationRepresentation]: ...
 
     async def register_regulation(

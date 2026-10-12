@@ -1300,6 +1300,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "422": {
             "description": "Suborganization given without organization!"
           }
@@ -1330,6 +1336,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           }
         }
       },
@@ -1362,6 +1374,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "422": {
             "description": "Validation Error",
@@ -1408,6 +1426,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Application template not found!"
@@ -1466,6 +1490,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "404": {
             "description": "Application template or organization not found!"
           },
@@ -1501,6 +1531,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Application template not found!"
@@ -1551,6 +1587,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "404": {
             "description": "Application template not found!"
           },
@@ -1596,6 +1638,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Application template not found!"
@@ -1649,6 +1697,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "404": {
             "description": "Application template not found!"
           },
@@ -1700,6 +1754,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Application template not found!"
