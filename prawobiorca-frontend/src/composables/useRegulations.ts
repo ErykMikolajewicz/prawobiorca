@@ -1,14 +1,13 @@
 import { computed, ref, watch } from 'vue'
 import { showApiError } from '@/utils/error'
-import { getPublicRegulations } from '@/api/generated/endpoints/regulations/regulations'
-import { getUserRegulations } from '@/api/generated/endpoints/user-regulations/user-regulations'
+import { getRegulations as getRegulationsByScope } from '@/api/generated/endpoints/regulations/regulations'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationScope } from '@/domain/regulations'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 
 const loadErrorMessages: Record<RegulationScope, string> = {
-  public: 'Nie udało się pobrać regulacji publicznych.',
-  user: 'Nie udało się pobrać regulacji użytkownika.',
+  PUBLIC: 'Nie udało się pobrać regulacji publicznych.',
+  PRIVATE: 'Nie udało się pobrać regulacji użytkownika.',
 }
 
 function isPending(regulation: RegulationRepresentation): boolean {
@@ -27,10 +26,11 @@ export function useRegulations(scope: RegulationScope) {
   let lastRequestId = 0
 
   function getRegulations() {
-    if (scope === 'user') {
-      return getUserRegulations({ documentType: typeFilter.value })
+    if (scope === 'PRIVATE') {
+      return getRegulationsByScope({ scope, documentType: typeFilter.value })
     }
-    return getPublicRegulations({
+    return getRegulationsByScope({
+      scope,
       documentType: typeFilter.value,
       organizationId: organizationsStore.selectedOrganizationId || undefined,
       suborganizationId: organizationsStore.selectedSuborganizationId || undefined,
@@ -78,7 +78,7 @@ export function useRegulations(scope: RegulationScope) {
   }
 
   watch(typeFilter, load)
-  if (scope === 'public') {
+  if (scope === 'PUBLIC') {
     watch(
       () => [
         organizationsStore.selectedOrganizationId,

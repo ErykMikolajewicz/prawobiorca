@@ -76,13 +76,13 @@ async function handleSubmit() {
 
       <el-form-item v-if="isAdmin" label="Widoczność pliku:">
         <el-radio-group v-model="target">
-          <el-radio value="user">Plik użytkownika (prywatny)</el-radio>
-          <el-radio value="public">Plik publiczny</el-radio>
+          <el-radio value="PRIVATE">Plik użytkownika (prywatny)</el-radio>
+          <el-radio value="PUBLIC">Plik publiczny</el-radio>
         </el-radio-group>
       </el-form-item>
 
       <OrganizationScopeSelect
-        v-if="isAdmin && target === 'public'"
+        v-if="isAdmin && target === 'PUBLIC'"
         v-model:organization-id="selectedOrganizationId"
         v-model:suborganization-id="selectedSuborganizationId"
       />

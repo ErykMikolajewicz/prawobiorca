@@ -133,7 +133,7 @@ async def test_get_published_application_templates(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.get("/api/application-templates")
+        response = await client.get("/api/application-templates/published")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == [
@@ -155,7 +155,7 @@ async def test_get_application_templates_as_admin(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.get("/api/admin/application-templates")
+        response = await client.get("/api/application-templates")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == [
@@ -182,7 +182,7 @@ async def test_get_application_template_as_admin(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.get(f"/api/admin/application-templates/{template_id}")
+        response = await client.get(f"/api/application-templates/{template_id}")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == {
@@ -198,7 +198,7 @@ async def test_get_application_template_as_admin(
     finally:
         await delete_templates(session_maker, template_id)
 
-    response = await client.get(f"/api/admin/application-templates/{template_id}")
+    response = await client.get(f"/api/application-templates/{template_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -206,7 +206,7 @@ async def test_get_application_template_as_admin(
 async def test_get_application_templates_as_normal_user(client, override_session_maker, override_authorize_normal_user):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get("/api/admin/application-templates")
+    response = await client.get("/api/application-templates")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -225,7 +225,7 @@ async def test_add_application_template(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post("/api/admin/application-templates", json={"name": "Wniosek"})
+    response = await client.post("/api/application-templates", json={"name": "Wniosek"})
 
     assert response.status_code == status.HTTP_201_CREATED
     template_id = UUID(response.json()["id"])
@@ -259,7 +259,7 @@ async def test_confirm_application_template_upload(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.post(f"/api/admin/application-templates/{template_id}/confirm-upload")
+        response = await client.post(f"/api/application-templates/{template_id}/confirm-upload")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["status"] == "DRAFT"
@@ -283,7 +283,7 @@ async def test_confirm_application_template_upload_invalid_file(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.post(f"/api/admin/application-templates/{template_id}/confirm-upload")
+        response = await client.post(f"/api/application-templates/{template_id}/confirm-upload")
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     finally:
@@ -307,13 +307,13 @@ async def test_get_application_template_download_url(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.get(f"/api/admin/application-templates/{template_id}/download-url")
+        response = await client.get(f"/api/application-templates/{template_id}/download-url")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == "http://storage.local/bucket/template"
         mock_application_templates_storage.get_download_url.assert_awaited_once_with(template_id)
 
-        response = await client.get(f"/api/admin/application-templates/{not_uploaded_template_id}/download-url")
+        response = await client.get(f"/api/application-templates/{not_uploaded_template_id}/download-url")
 
         assert response.status_code == status.HTTP_409_CONFLICT
     finally:
@@ -333,7 +333,7 @@ async def test_update_application_template(
 
     try:
         response = await client.put(
-            f"/api/admin/application-templates/{template_id}",
+            f"/api/application-templates/{template_id}",
             json={"name": "Nowa nazwa", "instructions": "Instrukcje", "fields": new_fields},
         )
 
@@ -368,7 +368,7 @@ async def test_update_application_template_with_invalid_fields(
 
     try:
         response = await client.put(
-            f"/api/admin/application-templates/{template_id}",
+            f"/api/application-templates/{template_id}",
             json={"name": "Wniosek", "fields": [FIELDS_JSON[0]]},
         )
 
@@ -385,12 +385,12 @@ async def test_publish_and_unpublish_application_template(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.post(f"/api/admin/application-templates/{template_id}/publish")
+        response = await client.post(f"/api/application-templates/{template_id}/publish")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["status"] == "PUBLISHED"
 
-        response = await client.post(f"/api/admin/application-templates/{template_id}/unpublish")
+        response = await client.post(f"/api/application-templates/{template_id}/unpublish")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["status"] == "DRAFT"
@@ -406,7 +406,7 @@ async def test_publish_application_template_without_instructions(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.post(f"/api/admin/application-templates/{template_id}/publish")
+        response = await client.post(f"/api/application-templates/{template_id}/publish")
 
         assert response.status_code == status.HTTP_409_CONFLICT
     finally:
@@ -425,12 +425,12 @@ async def test_delete_application_template(
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/admin/application-templates/{template_id}")
+    response = await client.delete(f"/api/application-templates/{template_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     mock_application_templates_storage.delete_template.assert_awaited_once_with(template_id)
 
-    response = await client.delete(f"/api/admin/application-templates/{template_id}")
+    response = await client.delete(f"/api/application-templates/{template_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -465,7 +465,7 @@ async def test_get_published_application_templates_filtered_by_organization(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.get("/api/application-templates")
+        response = await client.get("/api/application-templates/published")
 
         assert response.status_code == status.HTTP_200_OK
         assert {template["name"] for template in response.json()} >= {
@@ -476,13 +476,15 @@ async def test_get_published_application_templates_filtered_by_organization(
             "Other organization",
         }
 
-        response = await client.get("/api/application-templates", params={"organizationId": str(organization_id)})
+        response = await client.get(
+            "/api/application-templates/published", params={"organizationId": str(organization_id)}
+        )
 
         assert response.status_code == status.HTTP_200_OK
         assert {template["name"] for template in response.json()} == {"General", "Organization", "Law", "Chemistry"}
 
         response = await client.get(
-            "/api/application-templates",
+            "/api/application-templates/published",
             params={"organizationId": str(organization_id), "suborganizationId": str(suborganization_id)},
         )
 
@@ -504,7 +506,7 @@ async def test_get_published_application_templates_suborganization_without_organ
 ):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get("/api/application-templates", params={"suborganizationId": str(uuid4())})
+    response = await client.get("/api/application-templates/published", params={"suborganizationId": str(uuid4())})
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -520,7 +522,7 @@ async def test_update_application_template_with_organization(
 
     try:
         response = await client.put(
-            f"/api/admin/application-templates/{template_id}",
+            f"/api/application-templates/{template_id}",
             json={
                 "name": "Wniosek",
                 "fields": FIELDS_JSON,
@@ -546,7 +548,7 @@ async def test_update_application_template_with_not_existing_organization(
 
     try:
         response = await client.put(
-            f"/api/admin/application-templates/{template_id}",
+            f"/api/application-templates/{template_id}",
             json={"name": "Wniosek", "fields": FIELDS_JSON, "organizationId": str(uuid4())},
         )
 
@@ -567,7 +569,7 @@ async def test_update_application_template_with_suborganization_of_other_organiz
 
     try:
         response = await client.put(
-            f"/api/admin/application-templates/{template_id}",
+            f"/api/application-templates/{template_id}",
             json={
                 "name": "Wniosek",
                 "fields": FIELDS_JSON,
@@ -625,7 +627,7 @@ async def test_update_application_template_with_suborganization_without_organiza
 
     try:
         response = await client.put(
-            f"/api/admin/application-templates/{template_id}",
+            f"/api/application-templates/{template_id}",
             json={"name": "Wniosek", "fields": FIELDS_JSON, "suborganizationId": str(uuid4())},
         )
 

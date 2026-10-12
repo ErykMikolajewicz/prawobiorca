@@ -19,8 +19,7 @@ import type {
   SearchResultElement,
   SearchResultHighlight,
 } from '@/api/generated/model'
-import { getPublicRegulation } from '@/api/generated/endpoints/regulations/regulations'
-import { getUserRegulation } from '@/api/generated/endpoints/user-regulations/user-regulations'
+import { getRegulationById } from '@/api/generated/endpoints/regulations/regulations'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +27,6 @@ const authStore = useAuthStore()
 const { isUserLogged } = storeToRefs(authStore)
 
 const regulationId = route.params.regulationId as string
-const isUserRegulation = route.name === 'SearchUserRegulation'
 const regulationName = ref('')
 const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
@@ -38,11 +36,7 @@ const searchParams = ref<SearchRegulationDocumentsParams>({
 })
 
 const { activeCaseId, activeCase } = storeToRefs(useCasesStore())
-const {
-  results,
-  isSearching,
-  search: performSearch,
-} = useRegulationSearch(isUserRegulation ? 'user' : 'public', regulationId)
+const { results, isSearching, search: performSearch } = useRegulationSearch(regulationId)
 
 onBeforeMount(() => {
   void loadRegulationName()
@@ -53,9 +47,8 @@ onBeforeMount(() => {
 })
 
 async function loadRegulationName() {
-  const getRegulation = isUserRegulation ? getUserRegulation : getPublicRegulation
   try {
-    const regulation = await getRegulation(regulationId)
+    const regulation = await getRegulationById(regulationId)
     regulationName.value = regulation.presentationName
   } catch (error) {
     showApiError(error, { defaultMessage: 'Nie udało się pobrać regulacji.' })

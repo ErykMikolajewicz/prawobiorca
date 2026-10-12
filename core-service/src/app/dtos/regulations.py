@@ -5,18 +5,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationScope, RegulationType
 from src.shared.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH, MIN_FILENAME_LENGTH
 
 
 class RegulationData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel)
 
+    scope: RegulationScope
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     regulation_type: RegulationType | None = None
-
-
-class PublicRegulationData(RegulationData):
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
 

@@ -53,7 +53,7 @@ export function useCaseApplications(caseId: string) {
 
   async function download(applicationId: string) {
     try {
-      await downloadApplicationDocument(applicationId)
+      await downloadApplicationDocument(caseId, applicationId)
     } catch (error) {
       showApiError(error, { defaultMessage: 'Nie udało się pobrać wniosku.' })
     }
@@ -61,7 +61,7 @@ export function useCaseApplications(caseId: string) {
 
   async function remove(applicationId: string) {
     try {
-      await deleteApplication(applicationId)
+      await deleteApplication(caseId, applicationId)
       applications.value = applications.value.filter(
         (application) => application.id !== applicationId,
       )

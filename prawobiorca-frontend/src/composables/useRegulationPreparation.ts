@@ -1,24 +1,14 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  confirmPublicRegulationUpload,
-  retryPublicRegulationPreparation,
+  confirmRegulationUpload,
+  retryRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
-import {
-  confirmUserRegulationUpload,
-  retryUserRegulationPreparation,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { showApiError } from '@/utils/error'
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { RegulationScope } from '@/domain/regulations'
 
-export function useRegulationPreparation(target: RegulationScope) {
+export function useRegulationPreparation() {
   const isRetrying = ref(false)
-
-  const retryRegulationPreparation =
-    target === 'public' ? retryPublicRegulationPreparation : retryUserRegulationPreparation
-  const confirmRegulationUpload =
-    target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
 
   async function retry(regulation: RegulationRepresentation): Promise<boolean> {
     const isNotStarted = regulation.preparationStatus === 'NOT_STARTED'

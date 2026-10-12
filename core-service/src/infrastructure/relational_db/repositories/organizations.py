@@ -91,10 +91,15 @@ class SuborganizationsRepository:
         return suborganization_id
 
     @staticmethod
-    async def update(session: AsyncSession, suborganization_id: UUID, new_suborganization: NewSuborganization) -> None:
+    async def update(
+        session: AsyncSession, organization_id: UUID, suborganization_id: UUID, new_suborganization: NewSuborganization
+    ) -> None:
         statement = (
             update(suborganizations_table)
-            .where(suborganizations_table.c.id == suborganization_id)
+            .where(
+                suborganizations_table.c.id == suborganization_id,
+                suborganizations_table.c.organization_id == organization_id,
+            )
             .values(**new_suborganization.model_dump())
             .returning(suborganizations_table.c.id)
         )
@@ -104,10 +109,13 @@ class SuborganizationsRepository:
             raise SuborganizationNotFound
 
     @staticmethod
-    async def delete(session: AsyncSession, suborganization_id: UUID) -> None:
+    async def delete(session: AsyncSession, organization_id: UUID, suborganization_id: UUID) -> None:
         statement = (
             delete(suborganizations_table)
-            .where(suborganizations_table.c.id == suborganization_id)
+            .where(
+                suborganizations_table.c.id == suborganization_id,
+                suborganizations_table.c.organization_id == organization_id,
+            )
             .returning(suborganizations_table.c.id)
         )
         result = await session.execute(statement)

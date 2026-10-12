@@ -9,7 +9,7 @@ from src.app.interfaces.users import UsersRepository, UsersSessionsRepository
 from src.app.use_cases.auth import LogoutUser, LogUser, RefreshTokens
 from src.domain.exceptions.users import InvalidAccessToken
 from src.domain.services.security import decode_access_token
-from src.domain.value_objects.users import UserPrivileges
+from src.domain.value_objects.users import Caller, UserPrivileges
 from src.framework.dependencies.relational import get_session_maker
 from src.framework.dependencies.users import get_users_repository, get_users_sessions_repository
 from src.shared.consts import ACCESS_COOKIE_NAME, JWT_ALGORITHM
@@ -78,3 +78,10 @@ async def require_admin(request: Request, admin_id: Annotated[UUID, Depends(requ
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin permission required!")
 
     return admin_id
+
+
+async def get_caller(request: Request, _: Annotated[None, Depends(authorize_user)]) -> Caller:
+    user_privileges: UserPrivileges | None = request.state.user_privileges
+    is_admin = user_privileges.is_admin if user_privileges is not None else False
+
+    return Caller(user_id=request.state.user_id, is_admin=is_admin)

@@ -102,9 +102,7 @@ async def test_get_organizations(client, override_session_maker, session_maker):
 async def test_add_organization(client, override_session_maker, session_maker, override_authorize_admin_user):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(
-        "/api/admin/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"}
-    )
+    response = await client.post("/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"})
 
     assert response.status_code == status.HTTP_201_CREATED
     organization_id = UUID(response.json())
@@ -125,9 +123,7 @@ async def test_add_organization(client, override_session_maker, session_maker, o
 async def test_add_organization_as_normal_user(client, override_session_maker, override_authorize_normal_user):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(
-        "/api/admin/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"}
-    )
+    response = await client.post("/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"})
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -139,7 +135,7 @@ async def test_update_organization(client, override_session_maker, session_maker
 
     try:
         response = await client.put(
-            f"/api/admin/organizations/{organization_id}",
+            f"/api/organizations/{organization_id}",
             json={"name": "Uniwersytet Wrocławski im. X", "shortName": "UWr2"},
         )
 
@@ -156,9 +152,7 @@ async def test_update_organization(client, override_session_maker, session_maker
     finally:
         await delete_organization(session_maker, organization_id)
 
-    response = await client.put(
-        f"/api/admin/organizations/{organization_id}", json={"name": "Uniwersytet", "shortName": "U"}
-    )
+    response = await client.put(f"/api/organizations/{organization_id}", json={"name": "Uniwersytet", "shortName": "U"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -169,7 +163,7 @@ async def test_delete_organization(client, override_session_maker, session_maker
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/admin/organizations/{organization_id}")
+    response = await client.delete(f"/api/organizations/{organization_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -179,7 +173,7 @@ async def test_delete_organization(client, override_session_maker, session_maker
         )
     assert suborganization is None
 
-    response = await client.delete(f"/api/admin/organizations/{organization_id}")
+    response = await client.delete(f"/api/organizations/{organization_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -191,7 +185,7 @@ async def test_add_suborganization(client, override_session_maker, session_maker
 
     try:
         response = await client.post(
-            f"/api/admin/organizations/{organization_id}/suborganizations", json={"name": "Wydział Prawa"}
+            f"/api/organizations/{organization_id}/suborganizations", json={"name": "Wydział Prawa"}
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -214,7 +208,7 @@ async def test_add_suborganization_to_missing_organization(
 ):
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(f"/api/admin/organizations/{uuid4()}/suborganizations", json={"name": "Wydział Prawa"})
+    response = await client.post(f"/api/organizations/{uuid4()}/suborganizations", json={"name": "Wydział Prawa"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -227,7 +221,8 @@ async def test_update_suborganization(client, override_session_maker, session_ma
 
     try:
         response = await client.put(
-            f"/api/admin/suborganizations/{suborganization_id}", json={"name": "Wydział Nauk Społecznych"}
+            f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}",
+            json={"name": "Wydział Nauk Społecznych"},
         )
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -240,7 +235,9 @@ async def test_update_suborganization(client, override_session_maker, session_ma
     finally:
         await delete_organization(session_maker, organization_id)
 
-    response = await client.put(f"/api/admin/suborganizations/{suborganization_id}", json={"name": "Wydział"})
+    response = await client.put(
+        f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}", json={"name": "Wydział"}
+    )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -252,12 +249,32 @@ async def test_delete_suborganization(client, override_session_maker, session_ma
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.delete(f"/api/admin/suborganizations/{suborganization_id}")
+        response = await client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        response = await client.delete(f"/api/admin/suborganizations/{suborganization_id}")
+        response = await client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
     finally:
         await delete_organization(session_maker, organization_id)
+
+
+async def test_delete_suborganization_of_other_organization(
+    client, override_session_maker, session_maker, override_authorize_admin_user
+):
+    organization_id = await insert_organization(session_maker)
+    other_organization_id = await insert_organization(session_maker)
+    suborganization_id = await insert_suborganization(session_maker, organization_id)
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.delete(
+            f"/api/organizations/{other_organization_id}/suborganizations/{suborganization_id}"
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+    finally:
+        await delete_organization(session_maker, organization_id)
+        await delete_organization(session_maker, other_organization_id)

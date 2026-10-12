@@ -55,7 +55,7 @@ function openDetails(regulationId: string) {
 
     <div class="filter-row">
       <RegulationTypeFilter v-model="typeFilter" />
-      <RegulationOrganizationFilter v-if="target === 'public'" />
+      <RegulationOrganizationFilter v-if="target === 'PUBLIC'" />
     </div>
 
     <div v-if="displayedRegulations.length" class="regulations-list">
@@ -78,7 +78,6 @@ function openDetails(regulationId: string) {
       v-if="selectedRegulation"
       v-model="isDetailsDialogVisible"
       :regulation="selectedRegulation"
-      :target="target"
       :can-manage="canManage"
       @updated="(updatedRegulation) => emit('regulation-updated', updatedRegulation)"
       @deleted="(regulationId) => emit('regulation-deleted', regulationId)"

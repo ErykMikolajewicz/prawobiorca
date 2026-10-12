@@ -6,6 +6,7 @@ from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.regulations import (
     RegulationDetails,
     RegulationOrganizationFilter,
+    RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
@@ -54,3 +55,5 @@ class RegulationsRepository(Protocol):
     async def get_regulation_representation(
         self, session: AsyncSession, user_id: UUID | None, id_: UUID
     ) -> RegulationRepresentation | None: ...
+
+    async def get_regulation_owner(self, session: AsyncSession, id_: UUID) -> RegulationOwner: ...

@@ -149,12 +149,13 @@ async def test_delete_case_document_success(
     mock_session_maker, mock_opened_session, mock_case_documents_repo, uuid_generator
 ):
     user_id = next(uuid_generator)
+    case_id = next(uuid_generator)
     document_id = next(uuid_generator)
 
     use_case = DeleteCaseDocument(session_maker=mock_session_maker, case_documents_repo=mock_case_documents_repo)
-    await use_case.execute(user_id, document_id)
+    await use_case.execute(user_id, case_id, document_id)
 
-    mock_case_documents_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, document_id)
+    mock_case_documents_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id, document_id)
 
 
 async def test_list_case_documents_success(

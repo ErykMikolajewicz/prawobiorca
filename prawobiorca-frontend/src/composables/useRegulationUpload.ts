@@ -2,13 +2,9 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
 import {
-  addPublicRegulation,
-  confirmPublicRegulationUpload,
+  addRegulation,
+  confirmRegulationUpload,
 } from '@/api/generated/endpoints/regulations/regulations'
-import {
-  addUserRegulation,
-  confirmUserRegulationUpload,
-} from '@/api/generated/endpoints/user-regulations/user-regulations'
 import { uploadFileToStorage } from '@/utils/storage'
 import type { RegulationScope } from '@/domain/regulations'
 import type {
@@ -22,12 +18,9 @@ type RegulationUploadResult = {
   preparationStatus: RegulationPreparationStatus
 }
 
-async function confirmUpload(
-  regulationId: string,
-  confirm: (regulationId: string) => Promise<unknown>,
-): Promise<RegulationUploadResult> {
+async function confirmUpload(regulationId: string): Promise<RegulationUploadResult> {
   try {
-    await confirm(regulationId)
+    await confirmRegulationUpload(regulationId)
     return { id: regulationId, preparationStatus: 'IN_PROGRESS' }
   } catch (error) {
     console.error('Failed to confirm regulation upload:', error)
@@ -43,31 +36,25 @@ async function uploadRegulation(
   organizationId?: string,
   suborganizationId?: string,
 ): Promise<RegulationUploadResult> {
-  const confirm = target === 'public' ? confirmPublicRegulationUpload : confirmUserRegulationUpload
-
-  const regulationData = {
+  const isPublic = target === 'PUBLIC'
+  const uploadTarget = await addRegulation({
+    scope: target,
     name: presentationName,
     regulationType: regulationType || null,
-  }
-  const uploadTarget =
-    target === 'public'
-      ? await addPublicRegulation({
-          ...regulationData,
-          organizationId: organizationId || null,
-          suborganizationId: suborganizationId || null,
-        })
-      : await addUserRegulation(regulationData)
+    organizationId: isPublic ? organizationId || null : null,
+    suborganizationId: isPublic ? suborganizationId || null : null,
+  })
 
   await uploadFileToStorage(uploadTarget, regulation)
 
-  return await confirmUpload(uploadTarget.id, confirm)
+  return await confirmUpload(uploadTarget.id)
 }
 
 export function useRegulationUpload() {
   const selectedFile = ref<File | null>(null)
   const presentationName = ref('')
   const selectedRegulationType = ref<RegulationType | ''>('')
-  const target = ref<RegulationScope>('user')
+  const target = ref<RegulationScope>('PRIVATE')
   const selectedOrganizationId = ref('')
   const selectedSuborganizationId = ref('')
   const isSubmitting = ref(false)
@@ -76,7 +63,7 @@ export function useRegulationUpload() {
     selectedFile.value = null
     presentationName.value = ''
     selectedRegulationType.value = ''
-    target.value = 'user'
+    target.value = 'PRIVATE'
     selectedOrganizationId.value = ''
     selectedSuborganizationId.value = ''
   }
@@ -128,9 +115,9 @@ export function useRegulationUpload() {
           description: null,
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
-          organizationId: target.value === 'public' ? selectedOrganizationId.value || null : null,
+          organizationId: target.value === 'PUBLIC' ? selectedOrganizationId.value || null : null,
           suborganizationId:
-            target.value === 'public' ? selectedSuborganizationId.value || null : null,
+            target.value === 'PUBLIC' ? selectedSuborganizationId.value || null : null,
         },
         target: target.value,
       }

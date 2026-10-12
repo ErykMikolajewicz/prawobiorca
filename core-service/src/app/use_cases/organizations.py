@@ -80,10 +80,14 @@ class UpdateSuborganization:
     session_maker: SessionMaker
     suborganizations_repo: SuborganizationsRepository
 
-    async def execute(self, suborganization_id: UUID, new_suborganization: NewSuborganization) -> None:
+    async def execute(
+        self, organization_id: UUID, suborganization_id: UUID, new_suborganization: NewSuborganization
+    ) -> None:
         async with self.session_maker.begin() as session:
             try:
-                await self.suborganizations_repo.update(session, suborganization_id, new_suborganization)
+                await self.suborganizations_repo.update(
+                    session, organization_id, suborganization_id, new_suborganization
+                )
             except SuborganizationNotFound:
                 logger.warning("Suborganization not found!")
                 raise
@@ -94,10 +98,10 @@ class DeleteSuborganization:
     session_maker: SessionMaker
     suborganizations_repo: SuborganizationsRepository
 
-    async def execute(self, suborganization_id: UUID) -> None:
+    async def execute(self, organization_id: UUID, suborganization_id: UUID) -> None:
         async with self.session_maker.begin() as session:
             try:
-                await self.suborganizations_repo.delete(session, suborganization_id)
+                await self.suborganizations_repo.delete(session, organization_id, suborganization_id)
             except SuborganizationNotFound:
                 logger.warning("Suborganization not found!")
                 raise

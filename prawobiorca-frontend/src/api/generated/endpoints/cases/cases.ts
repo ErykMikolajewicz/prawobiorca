@@ -15,7 +15,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1]
  * @summary Get Cases List
  */
 export const getCasesList = (options?: SecondParameter<typeof prawobiorcaRequest<CaseData[]>>) => {
-  return prawobiorcaRequest<CaseData[]>({ url: `/api/user/cases`, method: 'GET' }, options)
+  return prawobiorcaRequest<CaseData[]>({ url: `/api/cases`, method: 'GET' }, options)
 }
 /**
  * @summary Add Case
@@ -29,7 +29,7 @@ export const addCase = (
 
   return prawobiorcaRequest<string>(
     {
-      url: `/api/user/cases`,
+      url: `/api/cases`,
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       data: formUrlEncoded,
@@ -44,7 +44,7 @@ export const deleteUserCase = (
   caseId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
-  return prawobiorcaRequest<void>({ url: `/api/user/cases/${caseId}`, method: 'DELETE' }, options)
+  return prawobiorcaRequest<void>({ url: `/api/cases/${caseId}`, method: 'DELETE' }, options)
 }
 /**
  * @summary Add Case Document
@@ -56,7 +56,7 @@ export const addCaseDocument = (
 ) => {
   return prawobiorcaRequest<unknown>(
     {
-      url: `/api/user/cases/${caseId}/documents`,
+      url: `/api/cases/${caseId}/documents`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       data: newCaseDocument,
@@ -72,7 +72,7 @@ export const getCaseDocuments = (
   options?: SecondParameter<typeof prawobiorcaRequest<CaseDocument[]>>,
 ) => {
   return prawobiorcaRequest<CaseDocument[]>(
-    { url: `/api/user/cases/${caseId}/documents`, method: 'GET' },
+    { url: `/api/cases/${caseId}/documents`, method: 'GET' },
     options,
   )
 }
@@ -80,11 +80,12 @@ export const getCaseDocuments = (
  * @summary Delete Case Document
  */
 export const deleteCaseDocument = (
+  caseId: string,
   documentId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
   return prawobiorcaRequest<void>(
-    { url: `/api/user/cases/documents/${documentId}`, method: 'DELETE' },
+    { url: `/api/cases/${caseId}/documents/${documentId}`, method: 'DELETE' },
     options,
   )
 }
@@ -98,7 +99,7 @@ export const generateApplication = (
 ) => {
   return prawobiorcaRequest<string>(
     {
-      url: `/api/user/cases/${caseId}/application`,
+      url: `/api/cases/${caseId}/applications`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       data: newApplication,
@@ -114,7 +115,7 @@ export const getCaseApplications = (
   options?: SecondParameter<typeof prawobiorcaRequest<ApplicationRepresentation[]>>,
 ) => {
   return prawobiorcaRequest<ApplicationRepresentation[]>(
-    { url: `/api/user/cases/${caseId}/applications`, method: 'GET' },
+    { url: `/api/cases/${caseId}/applications`, method: 'GET' },
     options,
   )
 }
@@ -122,11 +123,12 @@ export const getCaseApplications = (
  * @summary Get Case Application Download Url
  */
 export const getCaseApplicationDownloadUrl = (
+  caseId: string,
   applicationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<string>>,
 ) => {
   return prawobiorcaRequest<string>(
-    { url: `/api/user/cases/applications/${applicationId}/download-url`, method: 'GET' },
+    { url: `/api/cases/${caseId}/applications/${applicationId}/download-url`, method: 'GET' },
     options,
   )
 }
@@ -134,11 +136,12 @@ export const getCaseApplicationDownloadUrl = (
  * @summary Delete Application
  */
 export const deleteApplication = (
+  caseId: string,
   applicationId: string,
   options?: SecondParameter<typeof prawobiorcaRequest<void>>,
 ) => {
   return prawobiorcaRequest<void>(
-    { url: `/api/user/cases/applications/${applicationId}`, method: 'DELETE' },
+    { url: `/api/cases/${caseId}/applications/${applicationId}`, method: 'DELETE' },
     options,
   )
 }

@@ -129,9 +129,18 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Get Public Regulations",
-        "operationId": "get_public_regulations",
+        "summary": "Get Regulations",
+        "operationId": "get_regulations",
         "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RegulationScope",
+              "default": "PUBLIC"
+            }
+          },
           {
             "name": "documentType",
             "in": "query",
@@ -193,13 +202,19 @@
                   "items": {
                     "$ref": "#/components/schemas/RegulationRepresentation"
                   },
-                  "title": "Response Get Public Regulations"
+                  "title": "Response Get Regulations"
                 }
               }
             }
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "422": {
             "description": "Suborganization given without organization!"
@@ -210,14 +225,14 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Add Public Regulation",
-        "operationId": "add_public_regulation",
+        "summary": "Add Regulation",
+        "operationId": "add_regulation",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PublicRegulationData"
+                "$ref": "#/components/schemas/RegulationData"
               }
             }
           }
@@ -236,18 +251,17 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "404": {
-            "description": "Organization not found!"
+            "description": "Organization or user not found!"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Organization given for private regulation, or suborganization given without organization!"
           }
         }
       }
@@ -257,8 +271,8 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Get Public Regulation",
-        "operationId": "get_public_regulation",
+        "summary": "Get Regulation By Id",
+        "operationId": "get_regulation_by_id",
         "parameters": [
           {
             "name": "regulationId",
@@ -285,6 +299,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "404": {
             "description": "Regulation not found!"
           },
@@ -304,8 +324,8 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Update Public Regulation",
-        "operationId": "update_public_regulation",
+        "summary": "Update Regulation",
+        "operationId": "update_regulation",
         "parameters": [
           {
             "name": "regulationId",
@@ -342,6 +362,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "404": {
             "description": "Regulation not found!"
           },
@@ -361,8 +387,8 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Delete Public Regulation",
-        "operationId": "delete_public_regulation",
+        "summary": "Delete Regulation",
+        "operationId": "delete_regulation",
         "parameters": [
           {
             "name": "regulationId",
@@ -381,6 +407,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Regulation not found!"
@@ -481,6 +513,12 @@
           "503": {
             "description": "Service unavailable!"
           },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
           "400": {
             "description": "Regulation not prepared, normally should not occur."
           },
@@ -505,8 +543,8 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Confirm Public Regulation Upload",
-        "operationId": "confirm_public_regulation_upload",
+        "summary": "Confirm Regulation Upload",
+        "operationId": "confirm_regulation_upload",
         "parameters": [
           {
             "name": "regulationId",
@@ -530,6 +568,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Regulation not found!"
@@ -555,8 +599,8 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Get Public Regulation Download Url",
-        "operationId": "get_public_regulation_download_url",
+        "summary": "Get Regulation Download Url By Id",
+        "operationId": "get_regulation_download_url_by_id",
         "parameters": [
           {
             "name": "regulationId",
@@ -576,13 +620,19 @@
               "application/json": {
                 "schema": {
                   "type": "string",
-                  "title": "Response Get Public Regulation Download Url"
+                  "title": "Response Get Regulation Download Url By Id"
                 }
               }
             }
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Regulation not found!"
@@ -605,8 +655,8 @@
         "tags": [
           "regulations"
         ],
-        "summary": "Retry Public Regulation Preparation",
-        "operationId": "retry_public_regulation_preparation",
+        "summary": "Retry Regulation Preparation",
+        "operationId": "retry_regulation_preparation",
         "parameters": [
           {
             "name": "regulationId",
@@ -630,6 +680,12 @@
           },
           "503": {
             "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
           },
           "404": {
             "description": "Regulation to prepare not found!"
@@ -695,7 +751,7 @@
         }
       }
     },
-    "/api/user/cases": {
+    "/api/cases": {
       "get": {
         "tags": [
           "cases"
@@ -767,7 +823,7 @@
         }
       }
     },
-    "/api/user/cases/{caseId}": {
+    "/api/cases/{caseId}": {
       "delete": {
         "tags": [
           "cases"
@@ -809,7 +865,7 @@
         }
       }
     },
-    "/api/user/cases/{caseId}/documents": {
+    "/api/cases/{caseId}/documents": {
       "post": {
         "tags": [
           "cases"
@@ -914,7 +970,7 @@
         }
       }
     },
-    "/api/user/cases/documents/{documentId}": {
+    "/api/cases/{caseId}/documents/{documentId}": {
       "delete": {
         "tags": [
           "cases"
@@ -922,6 +978,16 @@
         "summary": "Delete Case Document",
         "operationId": "delete_case_document",
         "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caseid"
+            }
+          },
           {
             "name": "documentId",
             "in": "path",
@@ -956,7 +1022,7 @@
         }
       }
     },
-    "/api/user/cases/{caseId}/application": {
+    "/api/cases/{caseId}/applications": {
       "post": {
         "tags": [
           "cases"
@@ -1008,9 +1074,7 @@
             "description": "Invalid application field values!"
           }
         }
-      }
-    },
-    "/api/user/cases/{caseId}/applications": {
+      },
       "get": {
         "tags": [
           "cases"
@@ -1060,7 +1124,7 @@
         }
       }
     },
-    "/api/user/cases/applications/{applicationId}/download-url": {
+    "/api/cases/{caseId}/applications/{applicationId}/download-url": {
       "get": {
         "tags": [
           "cases"
@@ -1068,6 +1132,16 @@
         "summary": "Get Case Application Download Url",
         "operationId": "get_case_application_download_url",
         "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caseid"
+            }
+          },
           {
             "name": "applicationId",
             "in": "path",
@@ -1113,7 +1187,7 @@
         }
       }
     },
-    "/api/user/cases/applications/{applicationId}": {
+    "/api/cases/{caseId}/applications/{applicationId}": {
       "delete": {
         "tags": [
           "cases"
@@ -1121,6 +1195,16 @@
         "summary": "Delete Application",
         "operationId": "delete_application",
         "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caseid"
+            }
+          },
           {
             "name": "applicationId",
             "in": "path",
@@ -1155,509 +1239,7 @@
         }
       }
     },
-    "/api/user/regulations": {
-      "get": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Get User Regulations",
-        "operationId": "get_user_regulations",
-        "parameters": [
-          {
-            "name": "documentType",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/RegulationType"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Documenttype"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RegulationRepresentation"
-                  },
-                  "title": "Response Get User Regulations"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Add User Regulation",
-        "operationId": "add_user_regulation",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegulationData"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegulationUploadTarget"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "400": {
-            "description": "Can't add empty regulation."
-          },
-          "404": {
-            "description": "User not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/user/regulations/{regulationId}": {
-      "get": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Get User Regulation",
-        "operationId": "get_user_regulation",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegulationRepresentation"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Update User Regulation",
-        "operationId": "update_user_regulation",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegulationDetailsData"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegulationRepresentation"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Delete User Regulation",
-        "operationId": "delete_user_regulation",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/user/regulations/{regulationId}/confirm-upload": {
-      "post": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Confirm User Regulation Upload",
-        "operationId": "confirm_user_regulation_upload",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "409": {
-            "description": "Regulation upload already confirmed, or its content not found on storage!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/user/regulations/{regulationId}/download-url": {
-      "get": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Get User Regulation Download Url",
-        "operationId": "get_user_regulation_download_url",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "title": "Response Get User Regulation Download Url"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation not found!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/user/regulations/{regulationId}/documents": {
-      "get": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Search User Regulation Documents",
-        "operationId": "search_user_regulation_documents",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          },
-          {
-            "name": "threshold",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "maximum": 1,
-              "minimum": -1,
-              "title": "Threshold"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "exclusiveMinimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "query",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query"
-            }
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/SearchOrder",
-              "default": "document"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SearchResult"
-                  },
-                  "title": "Response Search User Regulation Documents"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "400": {
-            "description": "Regulation not prepared, by user, can't search."
-          },
-          "404": {
-            "description": "Regulation not found."
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/user/regulations/{regulationId}/preparation-retry": {
-      "post": {
-        "tags": [
-          "user_regulations"
-        ],
-        "summary": "Retry User Regulation Preparation",
-        "operationId": "retry_user_regulation_preparation",
-        "parameters": [
-          {
-            "name": "regulationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Regulationid"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable!"
-          },
-          "404": {
-            "description": "Regulation to prepare not found!"
-          },
-          "409": {
-            "description": "Regulation already prepared, preparation in progress, or its content not uploaded!"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/application-templates": {
+    "/api/application-templates/published": {
       "get": {
         "tags": [
           "application_templates"
@@ -1724,7 +1306,7 @@
         }
       }
     },
-    "/api/admin/application-templates": {
+    "/api/application-templates": {
       "get": {
         "tags": [
           "application_templates"
@@ -1794,7 +1376,7 @@
         }
       }
     },
-    "/api/admin/application-templates/{templateId}": {
+    "/api/application-templates/{templateId}": {
       "get": {
         "tags": [
           "application_templates"
@@ -1936,7 +1518,7 @@
         }
       }
     },
-    "/api/admin/application-templates/{templateId}/confirm-upload": {
+    "/api/application-templates/{templateId}/confirm-upload": {
       "post": {
         "tags": [
           "application_templates"
@@ -1981,7 +1563,7 @@
         }
       }
     },
-    "/api/admin/application-templates/{templateId}/download-url": {
+    "/api/application-templates/{templateId}/download-url": {
       "get": {
         "tags": [
           "application_templates"
@@ -2034,7 +1616,7 @@
         }
       }
     },
-    "/api/admin/application-templates/{templateId}/publish": {
+    "/api/application-templates/{templateId}/publish": {
       "post": {
         "tags": [
           "application_templates"
@@ -2086,7 +1668,7 @@
         }
       }
     },
-    "/api/admin/application-templates/{templateId}/unpublish": {
+    "/api/application-templates/{templateId}/unpublish": {
       "post": {
         "tags": [
           "application_templates"
@@ -2164,9 +1746,7 @@
             "description": "Service unavailable!"
           }
         }
-      }
-    },
-    "/api/admin/organizations": {
+      },
       "post": {
         "tags": [
           "organizations"
@@ -2212,7 +1792,7 @@
         }
       }
     },
-    "/api/admin/organizations/{organizationId}": {
+    "/api/organizations/{organizationId}": {
       "put": {
         "tags": [
           "organizations"
@@ -2304,7 +1884,7 @@
         }
       }
     },
-    "/api/admin/organizations/{organizationId}/suborganizations": {
+    "/api/organizations/{organizationId}/suborganizations": {
       "post": {
         "tags": [
           "organizations"
@@ -2365,7 +1945,7 @@
         }
       }
     },
-    "/api/admin/suborganizations/{suborganizationId}": {
+    "/api/organizations/{organizationId}/suborganizations/{suborganizationId}": {
       "put": {
         "tags": [
           "organizations"
@@ -2373,6 +1953,16 @@
         "summary": "Update Suborganization",
         "operationId": "update_suborganization",
         "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organizationid"
+            }
+          },
           {
             "name": "suborganizationId",
             "in": "path",
@@ -2423,6 +2013,16 @@
         "summary": "Delete Suborganization",
         "operationId": "delete_suborganization",
         "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organizationid"
+            }
+          },
           {
             "name": "suborganizationId",
             "in": "path",
@@ -3170,55 +2770,6 @@
         ],
         "title": "OrganizationData"
       },
-      "PublicRegulationData": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Name"
-          },
-          "regulationType": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RegulationType"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "organizationId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organizationid"
-          },
-          "suborganizationId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Suborganizationid"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "PublicRegulationData"
-      },
       "PublishedApplicationField": {
         "properties": {
           "name": {
@@ -3307,6 +2858,9 @@
       },
       "RegulationData": {
         "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/RegulationScope"
+          },
           "name": {
             "type": "string",
             "maxLength": 255,
@@ -3322,10 +2876,35 @@
                 "type": "null"
               }
             ]
+          },
+          "organizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizationid"
+          },
+          "suborganizationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suborganizationid"
           }
         },
         "type": "object",
         "required": [
+          "scope",
           "name"
         ],
         "title": "RegulationData"
@@ -3447,6 +3026,14 @@
           "suborganizationId"
         ],
         "title": "RegulationRepresentation"
+      },
+      "RegulationScope": {
+        "type": "string",
+        "enum": [
+          "PUBLIC",
+          "PRIVATE"
+        ],
+        "title": "RegulationScope"
       },
       "RegulationType": {
         "type": "string",
