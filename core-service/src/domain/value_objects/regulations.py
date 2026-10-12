@@ -352,12 +352,6 @@ class RegulationRegistrationData:
 
 
 @dataclass
-class RegulationOrganizationFilter:
-    organization_id: UUID
-    suborganization_id: UUID | None = None
-
-
-@dataclass
 class RegulationDetails:
     presentation_name: str
     description: str | None = None

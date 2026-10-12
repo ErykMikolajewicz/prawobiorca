@@ -1,6 +1,7 @@
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Query, status
 
 import src.infrastructure.relational_db.repositories.organizations as sqla_repos
 from src.app.interfaces.organizations import OrganizationsRepository, SuborganizationsRepository
@@ -14,7 +15,23 @@ from src.app.use_cases.organizations import (
     UpdateOrganization,
     UpdateSuborganization,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
 from src.framework.dependencies.relational import get_session_maker
+
+
+def get_organization_filter(
+    organization_id: UUID | None = Query(default=None, alias="organizationId"),
+    suborganization_id: UUID | None = Query(default=None, alias="suborganizationId"),
+) -> OrganizationFilter | None:
+    if organization_id is None:
+        if suborganization_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Suborganization given without organization!",
+            )
+        return None
+
+    return OrganizationFilter(organization_id, suborganization_id)
 
 
 def get_organizations_repo() -> OrganizationsRepository:

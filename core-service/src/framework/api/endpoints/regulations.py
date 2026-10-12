@@ -31,9 +31,11 @@ from src.domain.exceptions.regulations import (
     RegulationsNotPreparedToSearch,
 )
 from src.domain.exceptions.users import UserNotFound
-from src.domain.value_objects.regulations import RegulationOrganizationFilter, RegulationScope, RegulationType
+from src.domain.value_objects.organizations import OrganizationFilter
+from src.domain.value_objects.regulations import RegulationScope, RegulationType
 from src.domain.value_objects.users import Caller
 from src.framework.dependencies.authentication import get_caller
+from src.framework.dependencies.organizations import get_organization_filter
 from src.framework.dependencies.regulations import (
     get_add_regulation,
     get_confirm_regulation_upload,
@@ -66,20 +68,10 @@ regulations_router = APIRouter(
 async def get_regulations(
     list_regulations: Annotated[ListRegulations, Depends(get_list_regulations)],
     caller: Annotated[Caller, Depends(get_caller)],
+    organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
     scope: RegulationScope = Query(default=RegulationScope.PUBLIC),
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
-    organization_id: UUID | None = Query(default=None, alias="organizationId"),
-    suborganization_id: UUID | None = Query(default=None, alias="suborganizationId"),
 ) -> list[RegulationRepresentation]:
-    if organization_id is None and suborganization_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Suborganization given without organization!",
-        )
-    organization_filter = (
-        RegulationOrganizationFilter(organization_id, suborganization_id) if organization_id is not None else None
-    )
-
     return await list_regulations.execute(caller, scope, regulation_type, organization_filter)
 
 
@@ -146,17 +138,6 @@ async def add_regulation(
     caller: Annotated[Caller, Depends(get_caller)],
     regulation_data: RegulationData,
 ) -> RegulationUploadTarget:
-    if regulation_data.scope == RegulationScope.PRIVATE and regulation_data.organization_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Private regulation can't belong to organization!",
-        )
-    if regulation_data.organization_id is None and regulation_data.suborganization_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Suborganization given without organization!",
-        )
-
     try:
         return await add_regulation_.execute(caller, regulation_data)
     except OrganizationNotFound:

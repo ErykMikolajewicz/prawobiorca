@@ -24,11 +24,17 @@ from src.domain.exceptions.application_templates import (
 )
 from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.services.application_fields import create_default_fields, validate_fields_config
+from src.domain.services.application_template_access import (
+    check_can_manage_application_templates,
+    check_can_read_published_application_templates,
+)
+from src.domain.services.application_templates import is_ready_to_publish
 from src.domain.value_objects.application_templates import (
     ApplicationTemplateDetails,
-    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
+from src.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +44,9 @@ class ListApplicationTemplates:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
 
-    async def execute(self) -> list[ApplicationTemplateRepresentation]:
+    async def execute(self, caller: Caller) -> list[ApplicationTemplateRepresentation]:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker() as session:
             return await self.application_templates_repo.list_templates(session)
 
@@ -48,7 +56,9 @@ class GetApplicationTemplate:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
 
-    async def execute(self, template_id: UUID) -> ApplicationTemplateRepresentation:
+    async def execute(self, caller: Caller, template_id: UUID) -> ApplicationTemplateRepresentation:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker() as session:
             template = await self.application_templates_repo.get(session, template_id)
 
@@ -65,8 +75,10 @@ class ListPublishedApplicationTemplates:
     application_templates_repo: ApplicationTemplatesRepository
 
     async def execute(
-        self, organization_filter: ApplicationTemplateOrganizationFilter | None
+        self, caller: Caller, organization_filter: OrganizationFilter | None
     ) -> list[PublishedApplicationTemplate]:
+        check_can_read_published_application_templates(caller)
+
         async with self.session_maker() as session:
             templates = await self.application_templates_repo.list_templates(
                 session, ApplicationTemplateStatus.PUBLISHED, organization_filter
@@ -100,7 +112,9 @@ class AddApplicationTemplate:
     application_templates_storage: ApplicationTemplatesStorage
     application_template_instructions_provider: ApplicationTemplateInstructionsProvider
 
-    async def execute(self, template_data: ApplicationTemplateData) -> ApplicationTemplateUploadTarget:
+    async def execute(self, caller: Caller, template_data: ApplicationTemplateData) -> ApplicationTemplateUploadTarget:
+        check_can_manage_application_templates(caller)
+
         instructions = await self.application_template_instructions_provider.get_default_instructions()
 
         async with self.session_maker.begin() as session:
@@ -116,34 +130,41 @@ class ConfirmApplicationTemplateUpload:
     application_templates_storage: ApplicationTemplatesStorage
     application_template_inspector: ApplicationTemplateInspector
 
-    async def execute(self, template_id: UUID) -> ApplicationTemplateRepresentation:
-        async with self.session_maker.begin() as session:
+    async def execute(self, caller: Caller, template_id: UUID) -> ApplicationTemplateRepresentation:
+        check_can_manage_application_templates(caller)
+
+        async with self.session_maker() as session:
             template = await self.application_templates_repo.get(session, template_id)
-            if template is None:
-                logger.warning("Application template to confirm upload not found! template id: %s", template_id)
-                raise ApplicationTemplateNotFound
 
-            if template.status != ApplicationTemplateStatus.NOT_UPLOADED:
-                logger.warning("Application template upload already confirmed! template id: %s", template_id)
-                raise ApplicationTemplateInInvalidState
+        if template is None:
+            logger.warning("Application template to confirm upload not found! template id: %s", template_id)
+            raise ApplicationTemplateNotFound
 
-            try:
-                content = await self.application_templates_storage.get_template(template_id)
-            except ApplicationTemplateContentNotFound:
-                logger.error("Application template content not found in storage! template id: %s", template_id)
-                raise
+        if template.status != ApplicationTemplateStatus.NOT_UPLOADED:
+            logger.warning("Application template upload already confirmed! template id: %s", template_id)
+            raise ApplicationTemplateInInvalidState
 
-            try:
-                variables = await self.application_template_inspector.get_variables(content)
-                fields = create_default_fields(variables)
-            except InvalidApplicationTemplate:
-                logger.warning("Invalid application template uploaded! template id: %s", template_id)
-                raise
+        try:
+            content = await self.application_templates_storage.get_template(template_id)
+        except ApplicationTemplateContentNotFound:
+            logger.error("Application template content not found in storage! template id: %s", template_id)
+            raise
 
-            await self.application_templates_repo.set_fields(session, template_id, fields)
-            return await self.application_templates_repo.set_status(
-                session, template_id, ApplicationTemplateStatus.DRAFT
-            )
+        try:
+            variables = await self.application_template_inspector.get_variables(content)
+            fields = create_default_fields(variables)
+        except InvalidApplicationTemplate:
+            logger.warning("Invalid application template uploaded! template id: %s", template_id)
+            raise
+
+        async with self.session_maker.begin() as session:
+            confirmed_template = await self.application_templates_repo.confirm_upload(session, template_id, fields)
+
+        if confirmed_template is None:
+            logger.warning("Application template changed during upload confirmation! template id: %s", template_id)
+            raise ApplicationTemplateInInvalidState
+
+        return confirmed_template
 
 
 @dataclass
@@ -152,8 +173,10 @@ class UpdateApplicationTemplate:
     application_templates_repo: ApplicationTemplatesRepository
 
     async def execute(
-        self, template_id: UUID, details_data: ApplicationTemplateDetailsData
+        self, caller: Caller, template_id: UUID, details_data: ApplicationTemplateDetailsData
     ) -> ApplicationTemplateRepresentation:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker.begin() as session:
             template = await self.application_templates_repo.get(session, template_id)
             if template is None:
@@ -185,14 +208,16 @@ class PublishApplicationTemplate:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
 
-    async def execute(self, template_id: UUID) -> ApplicationTemplateRepresentation:
+    async def execute(self, caller: Caller, template_id: UUID) -> ApplicationTemplateRepresentation:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker.begin() as session:
             template = await self.application_templates_repo.get(session, template_id)
             if template is None:
                 logger.warning("Application template to publish not found! template id: %s", template_id)
                 raise ApplicationTemplateNotFound
 
-            if template.status != ApplicationTemplateStatus.DRAFT or not (template.instructions or "").strip():
+            if not is_ready_to_publish(template.status, template.instructions):
                 logger.warning("Application template not ready to publish! template id: %s", template_id)
                 raise ApplicationTemplateInInvalidState
 
@@ -206,7 +231,9 @@ class UnpublishApplicationTemplate:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
 
-    async def execute(self, template_id: UUID) -> ApplicationTemplateRepresentation:
+    async def execute(self, caller: Caller, template_id: UUID) -> ApplicationTemplateRepresentation:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker.begin() as session:
             template = await self.application_templates_repo.get(session, template_id)
             if template is None:
@@ -228,7 +255,9 @@ class DeleteApplicationTemplate:
     application_templates_repo: ApplicationTemplatesRepository
     application_templates_storage: ApplicationTemplatesStorage
 
-    async def execute(self, template_id: UUID) -> None:
+    async def execute(self, caller: Caller, template_id: UUID) -> None:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 await self.application_templates_repo.delete(session, template_id)
@@ -248,7 +277,9 @@ class GetApplicationTemplateDownloadUrl:
     application_templates_repo: ApplicationTemplatesRepository
     application_templates_storage: ApplicationTemplatesStorage
 
-    async def execute(self, template_id: UUID) -> str:
+    async def execute(self, caller: Caller, template_id: UUID) -> str:
+        check_can_manage_application_templates(caller)
+
         async with self.session_maker() as session:
             template = await self.application_templates_repo.get(session, template_id)
 

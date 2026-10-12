@@ -9,9 +9,9 @@ from src.app.dtos.regulations import RegulationRepresentation
 from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import RegulationNotFound
 from src.domain.exceptions.users import UserNotFound
+from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
     RegulationDetails,
-    RegulationOrganizationFilter,
     RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
@@ -26,7 +26,7 @@ class RegulationsManagerRepository:
         session: AsyncSession,
         user_id: UUID | None,
         regulation_type: RegulationType | None,
-        organization_filter: RegulationOrganizationFilter | None,
+        organization_filter: OrganizationFilter | None,
     ) -> list[RegulationRepresentation]:
         statement = select(RegulationRepresentation).where(regulations_table.c.user_id == user_id)
 

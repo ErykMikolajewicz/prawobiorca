@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
@@ -17,6 +17,14 @@ class RegulationData(BaseModel):
     regulation_type: RegulationType | None = None
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def validate_organization(self):
+        if self.scope == RegulationScope.PRIVATE and self.organization_id is not None:
+            raise ValueError("Private regulation can't belong to organization!")
+        if self.organization_id is None and self.suborganization_id is not None:
+            raise ValueError("Suborganization given without organization!")
+        return self
 
 
 class RegulationDetailsData(BaseModel):

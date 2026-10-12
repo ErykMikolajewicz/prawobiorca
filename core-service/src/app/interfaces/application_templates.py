@@ -6,9 +6,9 @@ from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.application_templates import (
     ApplicationTemplateDetails,
     ApplicationTemplateField,
-    ApplicationTemplateOrganizationFilter,
     ApplicationTemplateStatus,
 )
+from src.domain.value_objects.organizations import OrganizationFilter
 
 
 class ApplicationTemplatesRepository(Protocol):
@@ -16,16 +16,16 @@ class ApplicationTemplatesRepository(Protocol):
         self,
         session: AsyncSession,
         status: ApplicationTemplateStatus | None = None,
-        organization_filter: ApplicationTemplateOrganizationFilter | None = None,
+        organization_filter: OrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]: ...
 
     async def get(self, session: AsyncSession, id_: UUID) -> ApplicationTemplateRepresentation | None: ...
 
     async def add(self, session: AsyncSession, name: str, instructions: str) -> UUID: ...
 
-    async def set_fields(
+    async def confirm_upload(
         self, session: AsyncSession, id_: UUID, fields: list[ApplicationTemplateField]
-    ) -> ApplicationTemplateRepresentation: ...
+    ) -> ApplicationTemplateRepresentation | None: ...
 
     async def set_status(
         self, session: AsyncSession, id_: UUID, status: ApplicationTemplateStatus

@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass, replace
 from uuid import UUID
 
+from src.app.dtos.application_templates import ApplicationTemplateRepresentation
 from src.app.dtos.applications import ApplicationRepresentation, NewApplication
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsRepository, ApplicationsStorage
@@ -76,8 +77,8 @@ class GenerateApplication:
                 return
 
             template = await self.application_templates_repo.get(session, new_application.template_id)
-            if template is None:
-                logger.warning("Application template removed before generation! application id: %s", application_id)
+            if not self._is_template_valid(template, new_application):
+                logger.warning("Application template changed before generation! application id: %s", application_id)
                 await self.applications_repo.set_generation_status(
                     session, user_id, application_id, ApplicationGenerationStatus.FAILED
                 )
@@ -115,6 +116,18 @@ class GenerateApplication:
             logger.error("Failed to save generated application! %s", e)
             await self._set_failed(user_id, application_id)
             raise
+
+    @staticmethod
+    def _is_template_valid(template: ApplicationTemplateRepresentation | None, new_application: NewApplication) -> bool:
+        if template is None or template.status != ApplicationTemplateStatus.PUBLISHED:
+            return False
+
+        try:
+            validate_field_values(template.fields, new_application.field_values)
+        except InvalidApplicationFieldValues:
+            return False
+
+        return True
 
     async def _set_failed(self, user_id: UUID, application_id: UUID) -> None:
         try:

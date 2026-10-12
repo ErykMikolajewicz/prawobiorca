@@ -4,7 +4,9 @@ from uuid import UUID
 
 CONTENT_TEMPLATE_VARIABLE = "paragraphs"
 
-RESERVED_TEMPLATE_VARIABLES = frozenset({"current_date", CONTENT_TEMPLATE_VARIABLE})
+CURRENT_DATE_TEMPLATE_VARIABLE = "current_date"
+
+RESERVED_TEMPLATE_VARIABLES = frozenset({CURRENT_DATE_TEMPLATE_VARIABLE, CONTENT_TEMPLATE_VARIABLE})
 
 
 class ApplicationTemplateStatus(StrEnum):
@@ -38,10 +40,4 @@ class ApplicationTemplateDetails:
     instructions: str | None
     fields: list[ApplicationTemplateField]
     organization_id: UUID | None = None
-    suborganization_id: UUID | None = None
-
-
-@dataclass
-class ApplicationTemplateOrganizationFilter:
-    organization_id: UUID
     suborganization_id: UUID | None = None
