@@ -1,0 +1,23 @@
+name: Mirror
+
+on:
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: mirror-${{ github.ref_name }}
+
+jobs:
+  mirror:
+    if: github.repository_id == '989302666'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: git push "https://x-access-token:${WMS_MIRROR_TOKEN}@github.com/WMS-DEV/prawobiorca.git" "HEAD:refs/heads/${GITHUB_REF_NAME}"
+        env:
+          WMS_MIRROR_TOKEN: ${{ secrets.WMS_MIRROR_TOKEN }}
