@@ -117,3 +117,25 @@ Runs on every push to `main` and deploys to GKE:
 GitHub authenticates to GCP with Workload Identity Federation, configured once by `scripts/cloud/github_cicd_init.sh`.
 
 Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction-service`, `embedding-service`, `embedding-batch-service`) by their own scripts in `scripts/cloud/`.
+
+### 6.3 Mirror (`mirror.yml`)
+
+The source of truth and CI/CD live in the public repository `ErykMikolajewicz/prawobiorca`. On every push to `main` or `develop` the branch is pushed to the team repository `WMS-DEV/prawobiorca`. Other branches in `WMS-DEV/prawobiorca` are not touched.
+
+The push is not forced, so it fails when someone has added commits to `main` or `develop` in `WMS-DEV/prawobiorca`. Merge them into the public repository through a regular PR (example for `main`, the same for `develop`):
+
+```bash
+git fetch wms
+git switch -c sync-wms origin/main
+git merge wms/main
+git push -u origin sync-wms
+```
+
+The workflow authenticates with the `WMS_MIRROR_TOKEN` secret: a fine-grained PAT for `WMS-DEV/prawobiorca` with `Contents` and `Workflows` read and write permissions.
+
+Local remotes: `origin` points to the public repository, `wms` to `WMS-DEV/prawobiorca` and is fetch-only:
+
+```bash
+git remote add wms https://github.com/WMS-DEV/prawobiorca.git
+git remote set-url --push wms no_push
+```
