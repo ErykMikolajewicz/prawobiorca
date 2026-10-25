@@ -377,7 +377,13 @@ class SectionContent:
 
 
 @dataclass
+class RegulationHeading:
+    text: str
+    level: int
+
+
+@dataclass
 class RegulationDescriptionSource:
     presentation_name: str
-    headings: list[str]
+    headings: list[RegulationHeading]
     beginning: str
