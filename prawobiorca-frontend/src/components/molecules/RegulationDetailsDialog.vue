@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRegulationDetails } from '@/composables/useRegulationDetails'
+import { descriptionStatusOptions } from '@/domain/regulations'
+import { useAuthStore } from '@/stores/auth'
 import type { RegulationRepresentation } from '@/api/generated/model'
 
 type Props = {
@@ -15,7 +18,10 @@ const visible = defineModel<boolean>({ required: true })
 const emit = defineEmits<{
   (e: 'updated', regulation: RegulationRepresentation): void
   (e: 'deleted', regulationId: string): void
+  (e: 'description-generation-started', regulationId: string): void
 }>()
+
+const { isAdmin } = storeToRefs(useAuthStore())
 
 const {
   name,
@@ -23,9 +29,11 @@ const {
   isSaving,
   isDeleting,
   isLoadingPreview,
+  isGeneratingDescription,
   resetForm,
   save,
   remove,
+  generateDescription,
   showPreview,
 } = useRegulationDetails()
 
@@ -36,6 +44,21 @@ const createDate = computed(() =>
   }),
 )
 const canPreview = computed(() => props.regulation.preparationStatus !== 'NOT_STARTED')
+const isDescriptionInProgress = computed(() => props.regulation.descriptionStatus === 'IN_PROGRESS')
+const canGenerateDescription = computed(
+  () =>
+    isAdmin.value &&
+    props.canManage &&
+    props.regulation.preparationStatus === 'PREPARED' &&
+    !isDescriptionInProgress.value,
+)
+const descriptionStatus = computed(() => {
+  const status = props.regulation.descriptionStatus
+  if (status === 'IN_PROGRESS' || status === 'FAILED') {
+    return descriptionStatusOptions[status]
+  }
+  return undefined
+})
 
 watch(
   visible,
@@ -45,6 +68,13 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => props.regulation.description,
+  (newDescription) => {
+    description.value = newDescription ?? ''
+  },
 )
 
 function closeDialog() {
@@ -70,6 +100,12 @@ async function handleDelete() {
   closeDialog()
 }
 
+async function handleGenerateDescription() {
+  if (await generateDescription(props.regulation.id)) {
+    emit('description-generation-started', props.regulation.id)
+  }
+}
+
 function handlePreview() {
   showPreview(props.regulation.id)
 }
@@ -92,10 +128,31 @@ function handlePreview() {
           maxlength="1000"
           show-word-limit
           placeholder="Opis regulacji"
+          :disabled="isDescriptionInProgress"
         />
         <span v-else class="regulation-description">{{
           regulation.description || 'Brak opisu'
         }}</span>
+
+        <div v-if="canManage && isAdmin" class="description-generation">
+          <el-tag
+            v-if="descriptionStatus"
+            size="small"
+            effect="plain"
+            :type="descriptionStatus.tagType"
+            class="app-badge"
+          >
+            {{ descriptionStatus.label }}
+          </el-tag>
+          <el-button
+            v-if="canGenerateDescription"
+            size="small"
+            :loading="isGeneratingDescription"
+            @click="handleGenerateDescription"
+          >
+            Wygeneruj opis przez AI
+          </el-button>
+        </div>
       </el-form-item>
 
       <el-form-item label="Data dodania:" label-position="left">
@@ -133,6 +190,15 @@ function handlePreview() {
 <style scoped>
 .regulation-description {
   white-space: pre-wrap;
+}
+
+.description-generation {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--app-space-sm);
+  width: 100%;
+  margin-top: var(--app-space-sm);
 }
 
 .dialog-footer {

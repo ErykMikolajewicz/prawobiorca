@@ -1,6 +1,6 @@
 import anyio
 
-from src.infrastructure.ai_services.application_writer import PROMPTS_DIR
+from src.infrastructure.ai_services.prompt_templates import PROMPTS_DIR
 
 
 class PromptsApplicationTemplateInstructionsProvider:

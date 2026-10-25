@@ -12,7 +12,8 @@ from src.app.dtos.search import SearchParams, SearchResult
 from src.app.interfaces.regulations import RegulationsRepository, RegulationsStorage
 from src.app.interfaces.relational import SessionMaker
 from src.app.interfaces.sections import SectionsRepository
-from src.app.ports.tasks import RegulationPreparationScheduler
+from src.app.ports.regulations import RegulationDescriptionWriter
+from src.app.ports.tasks import RegulationDescriptionGenerationScheduler, RegulationPreparationScheduler
 from src.app.ports.texts import TextsEmbedder
 from src.app.services.regulations import RegulationPreparator
 from src.domain.exceptions.documents import RegulationDocumentsNotFound
@@ -20,6 +21,7 @@ from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
+    RegulationDescriptionGenerationInProgress,
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
@@ -27,12 +29,15 @@ from src.domain.exceptions.regulations import (
 )
 from src.domain.services.regulation_access import (
     check_can_add_regulation,
+    check_can_generate_regulation_description,
     check_can_manage_regulation,
     check_can_read_regulation,
     resolve_scope_owner,
 )
+from src.domain.services.regulation_description import create_description_source
 from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
+    RegulationDescriptionStatus,
     RegulationDetails,
     RegulationPreparationStatus,
     RegulationRegistrationData,
@@ -40,7 +45,10 @@ from src.domain.value_objects.regulations import (
     RegulationType,
 )
 from src.domain.value_objects.users import Caller
-from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
+from src.shared.consts import (
+    MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
+    MAX_REGULATION_PREPARATION_DELIVERIES,
+)
 from src.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
@@ -53,6 +61,7 @@ class PrepareRegulation:
     sections_repository: SectionsRepository
     regulations_repository: RegulationsRepository
     regulation_preparator: RegulationPreparator
+    description_generation_scheduler: RegulationDescriptionGenerationScheduler
 
     async def execute(self, user_id: UUID | None, regulation_id: UUID):
         async with self.session_maker.begin() as session:
@@ -103,6 +112,10 @@ class PrepareRegulation:
             await self.regulations_repository.set_preparation_status(
                 session, user_id, regulation_id, RegulationPreparationStatus.PREPARED
             )
+            if file_representation.description_status == RegulationDescriptionStatus.IN_PROGRESS:
+                await self.description_generation_scheduler.schedule_regulation_description_generation(
+                    session, user_id, regulation_id
+                )
 
 
 @dataclass
@@ -159,6 +172,120 @@ class RetryRegulationPreparation:
 
 
 @dataclass
+class GenerateRegulationDescription:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+    sections_repository: SectionsRepository
+    description_writer: RegulationDescriptionWriter
+    texts_embedder: TextsEmbedder
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> None:
+        async with self.session_maker.begin() as session:
+            regulation_representation = await self.regulations_repository.get_regulation_representation(
+                session, user_id, regulation_id
+            )
+            if regulation_representation is None:
+                logger.warning("Regulation to generate description not found! regulation id: %s", regulation_id)
+                return
+
+            if regulation_representation.description_status == RegulationDescriptionStatus.GENERATED:
+                logger.warning("Regulation description already generated! regulation id: %s", regulation_id)
+                return
+
+            await self.regulations_repository.set_description_status(
+                session, user_id, regulation_id, RegulationDescriptionStatus.IN_PROGRESS
+            )
+            sections = await self.sections_repository.list_sections_contents(session, user_id, regulation_id)
+
+        description_source = create_description_source(regulation_representation.presentation_name, sections)
+
+        try:
+            description = await self.description_writer.write(description_source)
+            vectors = await self.texts_embedder.embed_texts([description])
+        except ServiceUnavailable:
+            logger.error("Service to generate regulation description not working!")
+            await self._set_failed(user_id, regulation_id)
+            raise
+        except Exception as e:
+            logger.error("Unexpected error during regulation description generation! %s", e)
+            await self._set_failed(user_id, regulation_id)
+            raise
+
+        try:
+            async with self.session_maker.begin() as session:
+                await self.regulations_repository.set_generated_description(
+                    session, user_id, regulation_id, description, vectors[0]
+                )
+        except RegulationNotFound:
+            logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
+
+    async def _set_failed(self, user_id: UUID | None, regulation_id: UUID) -> None:
+        try:
+            async with self.session_maker.begin() as session:
+                await self.regulations_repository.set_description_status(
+                    session, user_id, regulation_id, RegulationDescriptionStatus.FAILED
+                )
+        except RegulationNotFound:
+            logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
+
+
+@dataclass
+class FailRegulationDescriptionGeneration:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, delivery_attempt: int) -> bool:
+        if delivery_attempt <= MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES:
+            return False
+
+        logger.error("Regulation description generation exceeded deliveries limit! regulation id: %s", regulation_id)
+        try:
+            async with self.session_maker.begin() as session:
+                await self.regulations_repository.set_description_status(
+                    session, user_id, regulation_id, RegulationDescriptionStatus.FAILED
+                )
+        except RegulationNotFound:
+            logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
+        return True
+
+
+@dataclass
+class RegenerateRegulationDescription:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+    description_generation_scheduler: RegulationDescriptionGenerationScheduler
+
+    async def execute(self, caller: Caller, regulation_id: UUID) -> None:
+        async with self.session_maker.begin() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_manage_regulation(caller, owner)
+            check_can_generate_regulation_description(caller)
+            user_id = owner.user_id
+
+            regulation_representation = await self.regulations_repository.get_regulation_representation(
+                session, user_id, regulation_id
+            )
+            if regulation_representation is None:
+                logger.warning("Regulation to generate description not found! regulation id: %s", regulation_id)
+                raise RegulationNotFound
+
+            if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
+                logger.warning("Regulation to generate description not prepared! regulation id: %s", regulation_id)
+                raise RegulationInInvalidState
+
+            if regulation_representation.description_status == RegulationDescriptionStatus.IN_PROGRESS:
+                logger.warning("Regulation description generation in progress! regulation id: %s", regulation_id)
+                raise RegulationDescriptionGenerationInProgress
+
+            await self.regulations_repository.set_description_status(
+                session, user_id, regulation_id, RegulationDescriptionStatus.IN_PROGRESS
+            )
+            await self.description_generation_scheduler.schedule_regulation_description_generation(
+                session, user_id, regulation_id
+            )
+
+
+@dataclass
 class AddRegulation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
@@ -166,6 +293,8 @@ class AddRegulation:
 
     async def execute(self, caller: Caller, regulation_data: RegulationData) -> RegulationUploadTarget:
         check_can_add_regulation(caller, regulation_data.scope)
+        if regulation_data.generate_description:
+            check_can_generate_regulation_description(caller)
         user_id = resolve_scope_owner(caller, regulation_data.scope)
 
         regulation_registration_data = RegulationRegistrationData(
@@ -173,6 +302,11 @@ class AddRegulation:
             regulation_type=regulation_data.regulation_type,
             organization_id=regulation_data.organization_id,
             suborganization_id=regulation_data.suborganization_id,
+            description_status=(
+                RegulationDescriptionStatus.IN_PROGRESS
+                if regulation_data.generate_description
+                else RegulationDescriptionStatus.NOT_REQUESTED
+            ),
         )
 
         async with self.session_maker.begin() as session:

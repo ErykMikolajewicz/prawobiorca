@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import {
   deleteRegulation,
   getRegulationDownloadUrlById,
+  regenerateRegulationDescription,
   updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { showApiError } from '@/utils/error'
@@ -15,6 +16,7 @@ export function useRegulationDetails() {
   const isSaving = ref(false)
   const isDeleting = ref(false)
   const isLoadingPreview = ref(false)
+  const isGeneratingDescription = ref(false)
 
   function resetForm(regulation: RegulationRepresentation) {
     name.value = regulation.presentationName
@@ -57,6 +59,23 @@ export function useRegulationDetails() {
     }
   }
 
+  async function generateDescription(regulationId: string): Promise<boolean> {
+    try {
+      isGeneratingDescription.value = true
+      await regenerateRegulationDescription(regulationId)
+      ElMessage.success('Generowanie opisu zostało rozpoczęte')
+      return true
+    } catch (error) {
+      showApiError(error, {
+        defaultMessage: 'Nie udało się rozpocząć generowania opisu',
+        conflictMessage: 'Opis jest już generowany lub regulacja nie jest jeszcze przetworzona.',
+      })
+      return false
+    } finally {
+      isGeneratingDescription.value = false
+    }
+  }
+
   async function showPreview(regulationId: string) {
     const previewWindow = window.open('', '_blank')
     try {
@@ -80,9 +99,11 @@ export function useRegulationDetails() {
     isSaving,
     isDeleting,
     isLoadingPreview,
+    isGeneratingDescription,
     resetForm,
     save,
     remove,
+    generateDescription,
     showPreview,
   }
 }

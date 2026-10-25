@@ -13,11 +13,14 @@ from src.app.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
+    FailRegulationDescriptionGeneration,
     FailRegulationPreparation,
+    GenerateRegulationDescription,
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
     PrepareRegulation,
+    RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
     UpdateRegulation,
@@ -28,6 +31,7 @@ from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
+    RegulationDescriptionGenerationInProgress,
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
@@ -35,20 +39,29 @@ from src.domain.exceptions.regulations import (
 )
 from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
+    RegulationDescriptionStatus,
     RegulationDetails,
     RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationScope,
     RegulationType,
+    SectionContent,
 )
 from src.domain.value_objects.users import Caller
-from src.shared.consts import MAX_REGULATION_PREPARATION_DELIVERIES
+from src.shared.consts import (
+    MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
+    MAX_REGULATION_PREPARATION_DELIVERIES,
+)
 from src.shared.exceptions import ServiceUnavailable
 
 
 def get_set_statuses(mock_regulations_repository):
     return [call.args[3] for call in mock_regulations_repository.set_preparation_status.await_args_list]
+
+
+def get_set_description_statuses(mock_regulations_repository):
+    return [call.args[3] for call in mock_regulations_repository.set_description_status.await_args_list]
 
 
 async def test_prepare_regulation_success(
@@ -76,6 +89,7 @@ async def test_prepare_regulation_success(
         sections_repository=mock_sections_repo,
         regulations_repository=mock_regulations_repository,
         regulation_preparator=mock_regulation_preparator,
+        description_generation_scheduler=AsyncMock(),
     )
 
     await use_case.execute(user_id, regulation_id)
@@ -110,6 +124,7 @@ async def test_prepare_regulation_not_found(
         sections_repository=mock_sections_repo,
         regulations_repository=mock_regulations_repository,
         regulation_preparator=mock_regulation_preparator,
+        description_generation_scheduler=AsyncMock(),
     )
 
     with pytest.raises(RegulationNotFound):
@@ -138,6 +153,7 @@ async def test_prepare_regulation_already_initialized(
         sections_repository=mock_sections_repo,
         regulations_repository=mock_regulations_repository,
         regulation_preparator=mock_regulation_preparator,
+        description_generation_scheduler=AsyncMock(),
     )
 
     with pytest.raises(RegulationAlreadyInitialized):
@@ -168,6 +184,7 @@ async def test_prepare_regulation_content_not_found(
         sections_repository=mock_sections_repo,
         regulations_repository=mock_regulations_repository,
         regulation_preparator=mock_regulation_preparator,
+        description_generation_scheduler=AsyncMock(),
     )
 
     with pytest.raises(RegulationContentNotFound):
@@ -204,6 +221,7 @@ async def test_prepare_regulation_service_unavailable(
         sections_repository=mock_sections_repo,
         regulations_repository=mock_regulations_repository,
         regulation_preparator=mock_regulation_preparator,
+        description_generation_scheduler=AsyncMock(),
     )
 
     with pytest.raises(ServiceUnavailable):
@@ -240,6 +258,7 @@ async def test_prepare_regulation_unexpected_exception(
         sections_repository=mock_sections_repo,
         regulations_repository=mock_regulations_repository,
         regulation_preparator=mock_regulation_preparator,
+        description_generation_scheduler=AsyncMock(),
     )
 
     with pytest.raises(RuntimeError):
@@ -1316,3 +1335,347 @@ async def test_delete_public_regulation_as_normal_user(
 
     mock_regulations_repository.unregister_regulation.assert_not_awaited()
     mock_regulations_storage.delete_regulation.assert_not_awaited()
+
+
+async def test_prepare_regulation_schedules_description_generation(
+    mock_session_maker,
+    mock_regulations_repository,
+    mock_regulations_storage,
+    mock_sections_repo,
+    uuid_generator,
+):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    regulation_rep = MagicMock()
+    regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
+    regulation_rep.description_status = RegulationDescriptionStatus.IN_PROGRESS
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+
+    mock_regulations_storage.get_regulation.return_value = b"content"
+    mock_scheduler = AsyncMock()
+
+    use_case = PrepareRegulation(
+        session_maker=mock_session_maker,
+        regulations_storage=mock_regulations_storage,
+        sections_repository=mock_sections_repo,
+        regulations_repository=mock_regulations_repository,
+        regulation_preparator=AsyncMock(),
+        description_generation_scheduler=mock_scheduler,
+    )
+
+    await use_case.execute(user_id, regulation_id)
+
+    mock_scheduler.schedule_regulation_description_generation.assert_awaited_once_with(
+        mock_session_maker.begin.return_value.__aenter__.return_value, user_id, regulation_id
+    )
+
+
+async def test_prepare_regulation_without_description_generation(
+    mock_session_maker,
+    mock_regulations_repository,
+    mock_regulations_storage,
+    mock_sections_repo,
+    uuid_generator,
+):
+    user_id = next(uuid_generator)
+    regulation_id = next(uuid_generator)
+
+    regulation_rep = MagicMock()
+    regulation_rep.preparation_status = RegulationPreparationStatus.NOT_STARTED
+    regulation_rep.description_status = RegulationDescriptionStatus.NOT_REQUESTED
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+
+    mock_regulations_storage.get_regulation.return_value = b"content"
+    mock_scheduler = AsyncMock()
+
+    use_case = PrepareRegulation(
+        session_maker=mock_session_maker,
+        regulations_storage=mock_regulations_storage,
+        sections_repository=mock_sections_repo,
+        regulations_repository=mock_regulations_repository,
+        regulation_preparator=AsyncMock(),
+        description_generation_scheduler=mock_scheduler,
+    )
+
+    await use_case.execute(user_id, regulation_id)
+
+    mock_scheduler.schedule_regulation_description_generation.assert_not_awaited()
+
+
+async def test_add_regulation_with_description_generation(
+    uuid_generator, mock_regulations_repository, mock_regulations_storage, mock_session_maker
+):
+    mock_regulations_repository.register_regulation.return_value = next(uuid_generator)
+
+    regulation_data = RegulationData(scope=RegulationScope.PUBLIC, name="regulation.pdf", generateDescription=True)
+
+    add_regulation = AddRegulation(
+        regulations_repository=mock_regulations_repository,
+        regulations_storage=mock_regulations_storage,
+        session_maker=mock_session_maker,
+    )
+
+    await add_regulation.execute(Caller(next(uuid_generator), is_admin=True), regulation_data)
+
+    registration_data = mock_regulations_repository.register_regulation.await_args.args[2]
+    assert registration_data.description_status == RegulationDescriptionStatus.IN_PROGRESS
+
+
+async def test_add_regulation_with_description_generation_as_normal_user(
+    uuid_generator, mock_regulations_repository, mock_regulations_storage, mock_session_maker
+):
+    regulation_data = RegulationData(scope=RegulationScope.PRIVATE, name="regulation.pdf", generateDescription=True)
+
+    add_regulation = AddRegulation(
+        regulations_repository=mock_regulations_repository,
+        regulations_storage=mock_regulations_storage,
+        session_maker=mock_session_maker,
+    )
+
+    with pytest.raises(AccessForbidden):
+        await add_regulation.execute(Caller(next(uuid_generator)), regulation_data)
+
+    mock_regulations_repository.register_regulation.assert_not_awaited()
+
+
+def create_generate_regulation_description(
+    mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port
+):
+    mock_description_writer = AsyncMock()
+    mock_description_writer.write.return_value = "Załatwianie typowych spraw przez studentów"
+
+    use_case = GenerateRegulationDescription(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+        sections_repository=mock_sections_repo,
+        description_writer=mock_description_writer,
+        texts_embedder=mock_embedding_port,
+    )
+    return use_case, mock_description_writer
+
+
+async def test_generate_regulation_description_success(
+    mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port, uuid_generator
+):
+    regulation_id = next(uuid_generator)
+
+    regulation_rep = MagicMock()
+    regulation_rep.presentation_name = "Regulamin studiów"
+    regulation_rep.description_status = RegulationDescriptionStatus.IN_PROGRESS
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+    mock_sections_repo.list_sections_contents.return_value = [
+        SectionContent(header="Rozdział 1 Postanowienia ogólne > § 1", text="§ 1. Regulamin określa...")
+    ]
+    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+
+    use_case, mock_description_writer = create_generate_regulation_description(
+        mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port
+    )
+
+    await use_case.execute(None, regulation_id)
+
+    description_source = mock_description_writer.write.await_args.args[0]
+    assert description_source.presentation_name == "Regulamin studiów"
+    assert description_source.headings == ["Rozdział 1 Postanowienia ogólne"]
+    mock_embedding_port.embed_texts.assert_awaited_once_with(["Załatwianie typowych spraw przez studentów"])
+    mock_regulations_repository.set_generated_description.assert_awaited_once_with(
+        mock_session_maker.begin.return_value.__aenter__.return_value,
+        None,
+        regulation_id,
+        "Załatwianie typowych spraw przez studentów",
+        [0.1, 0.2],
+    )
+
+
+async def test_generate_regulation_description_regulation_not_found(
+    mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port, uuid_generator
+):
+    mock_regulations_repository.get_regulation_representation.return_value = None
+
+    use_case, mock_description_writer = create_generate_regulation_description(
+        mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port
+    )
+
+    await use_case.execute(None, next(uuid_generator))
+
+    mock_description_writer.write.assert_not_awaited()
+
+
+async def test_generate_regulation_description_already_generated(
+    mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port, uuid_generator
+):
+    regulation_rep = MagicMock()
+    regulation_rep.description_status = RegulationDescriptionStatus.GENERATED
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+
+    use_case, mock_description_writer = create_generate_regulation_description(
+        mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port
+    )
+
+    await use_case.execute(None, next(uuid_generator))
+
+    mock_description_writer.write.assert_not_awaited()
+    mock_regulations_repository.set_description_status.assert_not_awaited()
+
+
+async def test_generate_regulation_description_service_unavailable(
+    mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port, uuid_generator
+):
+    regulation_rep = MagicMock()
+    regulation_rep.presentation_name = "Regulamin studiów"
+    regulation_rep.description_status = RegulationDescriptionStatus.IN_PROGRESS
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+    mock_sections_repo.list_sections_contents.return_value = []
+
+    use_case, mock_description_writer = create_generate_regulation_description(
+        mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port
+    )
+    mock_description_writer.write.side_effect = ServiceUnavailable()
+
+    with pytest.raises(ServiceUnavailable):
+        await use_case.execute(None, next(uuid_generator))
+
+    assert get_set_description_statuses(mock_regulations_repository) == [
+        RegulationDescriptionStatus.IN_PROGRESS,
+        RegulationDescriptionStatus.FAILED,
+    ]
+    mock_regulations_repository.set_generated_description.assert_not_awaited()
+
+
+async def test_generate_regulation_description_regulation_removed(
+    mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port, uuid_generator
+):
+    regulation_rep = MagicMock()
+    regulation_rep.presentation_name = "Regulamin studiów"
+    regulation_rep.description_status = RegulationDescriptionStatus.IN_PROGRESS
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+    mock_sections_repo.list_sections_contents.return_value = []
+    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    mock_regulations_repository.set_generated_description.side_effect = RegulationNotFound()
+
+    use_case, _ = create_generate_regulation_description(
+        mock_session_maker, mock_regulations_repository, mock_sections_repo, mock_embedding_port
+    )
+
+    await use_case.execute(None, next(uuid_generator))
+
+
+async def test_fail_regulation_description_generation_deliveries_limit_exceeded(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    use_case = FailRegulationDescriptionGeneration(
+        session_maker=mock_session_maker, regulations_repository=mock_regulations_repository
+    )
+
+    is_failed = await use_case.execute(None, next(uuid_generator), MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES + 1)
+
+    assert is_failed
+    assert get_set_description_statuses(mock_regulations_repository) == [RegulationDescriptionStatus.FAILED]
+
+
+async def test_fail_regulation_description_generation_deliveries_limit_not_exceeded(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    use_case = FailRegulationDescriptionGeneration(
+        session_maker=mock_session_maker, regulations_repository=mock_regulations_repository
+    )
+
+    is_failed = await use_case.execute(None, next(uuid_generator), MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES)
+
+    assert not is_failed
+    mock_regulations_repository.set_description_status.assert_not_awaited()
+
+
+def create_regenerate_regulation_description(mock_session_maker, mock_regulations_repository, regulation_rep):
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(None)
+    mock_regulations_repository.get_regulation_representation.return_value = regulation_rep
+    mock_scheduler = AsyncMock()
+
+    use_case = RegenerateRegulationDescription(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+        description_generation_scheduler=mock_scheduler,
+    )
+    return use_case, mock_scheduler
+
+
+async def test_regenerate_regulation_description_success(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    regulation_id = next(uuid_generator)
+    regulation_rep = MagicMock()
+    regulation_rep.preparation_status = RegulationPreparationStatus.PREPARED
+    regulation_rep.description_status = RegulationDescriptionStatus.GENERATED
+
+    use_case, mock_scheduler = create_regenerate_regulation_description(
+        mock_session_maker, mock_regulations_repository, regulation_rep
+    )
+
+    await use_case.execute(Caller(next(uuid_generator), is_admin=True), regulation_id)
+
+    assert get_set_description_statuses(mock_regulations_repository) == [RegulationDescriptionStatus.IN_PROGRESS]
+    mock_scheduler.schedule_regulation_description_generation.assert_awaited_once_with(
+        mock_session_maker.begin.return_value.__aenter__.return_value, None, regulation_id
+    )
+
+
+async def test_regenerate_regulation_description_as_normal_user(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    user_id = next(uuid_generator)
+    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id)
+    mock_scheduler = AsyncMock()
+
+    use_case = RegenerateRegulationDescription(
+        session_maker=mock_session_maker,
+        regulations_repository=mock_regulations_repository,
+        description_generation_scheduler=mock_scheduler,
+    )
+
+    with pytest.raises(AccessForbidden):
+        await use_case.execute(Caller(user_id), next(uuid_generator))
+
+    mock_scheduler.schedule_regulation_description_generation.assert_not_awaited()
+
+
+async def test_regenerate_regulation_description_not_prepared(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    regulation_rep = MagicMock()
+    regulation_rep.preparation_status = RegulationPreparationStatus.IN_PROGRESS
+
+    use_case, mock_scheduler = create_regenerate_regulation_description(
+        mock_session_maker, mock_regulations_repository, regulation_rep
+    )
+
+    with pytest.raises(RegulationInInvalidState):
+        await use_case.execute(Caller(next(uuid_generator), is_admin=True), next(uuid_generator))
+
+    mock_scheduler.schedule_regulation_description_generation.assert_not_awaited()
+
+
+async def test_regenerate_regulation_description_already_in_progress(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    regulation_rep = MagicMock()
+    regulation_rep.preparation_status = RegulationPreparationStatus.PREPARED
+    regulation_rep.description_status = RegulationDescriptionStatus.IN_PROGRESS
+
+    use_case, mock_scheduler = create_regenerate_regulation_description(
+        mock_session_maker, mock_regulations_repository, regulation_rep
+    )
+
+    with pytest.raises(RegulationDescriptionGenerationInProgress):
+        await use_case.execute(Caller(next(uuid_generator), is_admin=True), next(uuid_generator))
+
+    mock_scheduler.schedule_regulation_description_generation.assert_not_awaited()
+
+
+async def test_regenerate_regulation_description_not_found(
+    mock_session_maker, mock_regulations_repository, uuid_generator
+):
+    use_case, _ = create_regenerate_regulation_description(mock_session_maker, mock_regulations_repository, None)
+
+    with pytest.raises(RegulationNotFound):
+        await use_case.execute(Caller(next(uuid_generator), is_admin=True), next(uuid_generator))

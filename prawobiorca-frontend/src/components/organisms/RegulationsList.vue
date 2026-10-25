@@ -24,6 +24,7 @@ const emit = defineEmits<{
   (e: 'regulation-updated', regulation: RegulationRepresentation): void
   (e: 'regulation-deleted', regulationId: string): void
   (e: 'regulation-preparation-retried', regulationId: string): void
+  (e: 'regulation-description-generation-started', regulationId: string): void
 }>()
 
 const isDetailsDialogVisible = ref(false)
@@ -81,6 +82,9 @@ function openDetails(regulationId: string) {
       :can-manage="canManage"
       @updated="(updatedRegulation) => emit('regulation-updated', updatedRegulation)"
       @deleted="(regulationId) => emit('regulation-deleted', regulationId)"
+      @description-generation-started="
+        (regulationId) => emit('regulation-description-generation-started', regulationId)
+      "
     />
   </div>
 </template>

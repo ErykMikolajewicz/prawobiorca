@@ -29,6 +29,7 @@ function mountItem(
     description: null,
     regulationType: 'ACT',
     preparationStatus,
+    descriptionStatus: 'NOT_REQUESTED',
     organizationId: null,
     suborganizationId: null,
     ...overrides,

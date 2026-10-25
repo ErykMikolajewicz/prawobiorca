@@ -76,6 +76,7 @@ onBeforeMount(async () => {
       @regulation-updated="publicRegulations.update"
       @regulation-deleted="publicRegulations.remove"
       @regulation-preparation-retried="publicRegulations.markAsInProgress"
+      @regulation-description-generation-started="publicRegulations.markDescriptionAsInProgress"
     >
       <template v-if="isUserLogged" #actions>
         <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj regulacje</el-button>
@@ -96,6 +97,7 @@ onBeforeMount(async () => {
         @regulation-updated="userRegulations.update"
         @regulation-deleted="userRegulations.remove"
         @regulation-preparation-retried="userRegulations.markAsInProgress"
+        @regulation-description-generation-started="userRegulations.markDescriptionAsInProgress"
       />
     </template>
 

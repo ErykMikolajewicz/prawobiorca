@@ -132,6 +132,18 @@ export const retryRegulationPreparation = (
     options,
   )
 }
+/**
+ * @summary Regenerate Regulation Description
+ */
+export const regenerateRegulationDescription = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
+) => {
+  return prawobiorcaRequest<unknown>(
+    { url: `/api/regulations/${regulationId}/description-generation`, method: 'POST' },
+    options,
+  )
+}
 export type GetRegulationsResult = NonNullable<Awaited<ReturnType<typeof getRegulations>>>
 export type AddRegulationResult = NonNullable<Awaited<ReturnType<typeof addRegulation>>>
 export type GetRegulationByIdResult = NonNullable<Awaited<ReturnType<typeof getRegulationById>>>
@@ -148,4 +160,7 @@ export type GetRegulationDownloadUrlByIdResult = NonNullable<
 >
 export type RetryRegulationPreparationResult = NonNullable<
   Awaited<ReturnType<typeof retryRegulationPreparation>>
+>
+export type RegenerateRegulationDescriptionResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateRegulationDescription>>
 >

@@ -11,4 +11,5 @@ export interface RegulationData {
   regulationType?: RegulationType | null
   organizationId?: string | null
   suborganizationId?: string | null
+  generateDescription?: boolean
 }

@@ -17,6 +17,7 @@ from src.app.use_cases.regulations import (
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
+    RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
     UpdateRegulation,
@@ -25,6 +26,7 @@ from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
+    RegulationDescriptionGenerationInProgress,
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
@@ -41,6 +43,7 @@ from src.framework.dependencies.regulations import (
     get_confirm_regulation_upload,
     get_delete_regulation,
     get_list_regulations,
+    get_regenerate_regulation_description,
     get_regulation,
     get_regulation_download_url,
     get_retry_regulation_preparation,
@@ -277,4 +280,35 @@ async def retry_regulation_preparation(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Regulation content not uploaded!",
+        )
+
+
+@regulations_router.post(
+    "/regulations/{regulationId}/description-generation",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
+        status.HTTP_409_CONFLICT: {
+            "description": "Regulation not prepared, or its description generation already in progress!"
+        },
+    },
+)
+async def regenerate_regulation_description(
+    regenerate_description: Annotated[RegenerateRegulationDescription, Depends(get_regenerate_regulation_description)],
+    caller: Annotated[Caller, Depends(get_caller)],
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
+):
+    try:
+        await regenerate_description.execute(caller, regulation_id)
+    except RegulationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
+    except RegulationInInvalidState:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Regulation not prepared!",
+        )
+    except RegulationDescriptionGenerationInProgress:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Regulation description generation already in progress!",
         )

@@ -35,6 +35,7 @@ async function uploadRegulation(
   regulationType?: RegulationType,
   organizationId?: string,
   suborganizationId?: string,
+  generateDescription = false,
 ): Promise<RegulationUploadResult> {
   const isPublic = target === 'PUBLIC'
   const uploadTarget = await addRegulation({
@@ -43,6 +44,7 @@ async function uploadRegulation(
     regulationType: regulationType || null,
     organizationId: isPublic ? organizationId || null : null,
     suborganizationId: isPublic ? suborganizationId || null : null,
+    generateDescription,
   })
 
   await uploadFileToStorage(uploadTarget, regulation)
@@ -57,6 +59,7 @@ export function useRegulationUpload() {
   const target = ref<RegulationScope>('PRIVATE')
   const selectedOrganizationId = ref('')
   const selectedSuborganizationId = ref('')
+  const generateDescription = ref(false)
   const isSubmitting = ref(false)
 
   function resetForm() {
@@ -66,6 +69,7 @@ export function useRegulationUpload() {
     target.value = 'PRIVATE'
     selectedOrganizationId.value = ''
     selectedSuborganizationId.value = ''
+    generateDescription.value = false
   }
 
   function setFile(file: File | null) {
@@ -99,6 +103,7 @@ export function useRegulationUpload() {
         regulationTypeValue,
         selectedOrganizationId.value,
         selectedSuborganizationId.value,
+        generateDescription.value,
       )
 
       if (uploadResult.preparationStatus === 'IN_PROGRESS') {
@@ -115,6 +120,7 @@ export function useRegulationUpload() {
           description: null,
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
+          descriptionStatus: generateDescription.value ? 'IN_PROGRESS' : 'NOT_REQUESTED',
           organizationId: target.value === 'PUBLIC' ? selectedOrganizationId.value || null : null,
           suborganizationId:
             target.value === 'PUBLIC' ? selectedSuborganizationId.value || null : null,
@@ -136,6 +142,7 @@ export function useRegulationUpload() {
     target,
     selectedOrganizationId,
     selectedSuborganizationId,
+    generateDescription,
     isSubmitting,
     resetForm,
     setFile,

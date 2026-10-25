@@ -706,6 +706,62 @@
         }
       }
     },
+    "/api/regulations/{regulationId}/description-generation": {
+      "post": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "Regenerate Regulation Description",
+        "operationId": "regenerate_regulation_description",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "409": {
+            "description": "Regulation not prepared, or its description generation already in progress!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/accounts/register": {
       "post": {
         "tags": [
@@ -2960,6 +3016,11 @@
               }
             ],
             "title": "Suborganizationid"
+          },
+          "generateDescription": {
+            "type": "boolean",
+            "title": "Generatedescription",
+            "default": false
           }
         },
         "type": "object",
@@ -2968,6 +3029,16 @@
           "name"
         ],
         "title": "RegulationData"
+      },
+      "RegulationDescriptionStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUESTED",
+          "IN_PROGRESS",
+          "GENERATED",
+          "FAILED"
+        ],
+        "title": "RegulationDescriptionStatus"
       },
       "RegulationDetailsData": {
         "properties": {
@@ -3049,6 +3120,10 @@
             "$ref": "#/components/schemas/RegulationPreparationStatus",
             "default": "NOT_STARTED"
           },
+          "descriptionStatus": {
+            "$ref": "#/components/schemas/RegulationDescriptionStatus",
+            "default": "NOT_REQUESTED"
+          },
           "organizationId": {
             "anyOf": [
               {
@@ -3082,6 +3157,7 @@
           "description",
           "regulationType",
           "preparationStatus",
+          "descriptionStatus",
           "organizationId",
           "suborganizationId"
         ],

@@ -11,7 +11,10 @@ const loadErrorMessages: Record<RegulationScope, string> = {
 }
 
 function isPending(regulation: RegulationRepresentation): boolean {
-  return regulation.preparationStatus === 'IN_PROGRESS'
+  return (
+    regulation.preparationStatus === 'IN_PROGRESS' ||
+    (regulation.preparationStatus === 'PREPARED' && regulation.descriptionStatus === 'IN_PROGRESS')
+  )
 }
 
 export function useRegulations(scope: RegulationScope) {
@@ -77,6 +80,13 @@ export function useRegulations(scope: RegulationScope) {
     }
   }
 
+  function markDescriptionAsInProgress(regulationId: string) {
+    const regulation = regulations.value.find((item) => item.id === regulationId)
+    if (regulation) {
+      regulation.descriptionStatus = 'IN_PROGRESS'
+    }
+  }
+
   watch(typeFilter, load)
   if (scope === 'PUBLIC') {
     watch(
@@ -99,5 +109,6 @@ export function useRegulations(scope: RegulationScope) {
     update,
     remove,
     markAsInProgress,
+    markDescriptionAsInProgress,
   }
 }
