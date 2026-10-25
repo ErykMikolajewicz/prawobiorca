@@ -401,3 +401,161 @@ def test_dash_between_spaces_is_kept():
 
     paragraph = next(unit for unit in units if unit.number == "20")
     assert paragraph.elements[3].text == "- jest określony w załączniku nr 1 do rozporządzenia."
+
+
+def test_article_labelled_as_header_is_content():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 18. 5. Rada uczelni składa senatowi sprawozdanie."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Art. 19. 1. W skład rady uczelni wchodzi:"),
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text="1) 6 albo 8 osób powoływanych przez senat;"),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [unit.number for unit in units] == ["18", "19"]
+    assert units[1].title is None
+    assert [element.text for element in units[1].elements] == [
+        "1. W skład rady uczelni wchodzi:",
+        "1) 6 albo 8 osób powoływanych przez senat;",
+    ]
+
+
+@pytest.mark.parametrize(
+    "header_text",
+    [
+        "<6. Legitymacja doktoranta jest wydawana w postaci:",
+        "[3. Wpływy z kar stanowią dochód budżetu państwa.]",
+        "-uczelnia podaje do wiadomości publicznej w terminie, o którym mowa w ust. 1.>",
+    ],
+    ids=("subsection not yet in force", "repealed subsection", "continuation after dash"),
+)
+def test_mislabelled_provision_stays_in_article(header_text):
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział 2"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 202. 5. Podmiot wydaje legitymację."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text=header_text),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 203. Doktorant ma prawo."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [unit.number for unit in units] == ["202", "203"]
+    assert units[0].elements[-1].text == header_text
+    assert units[1].path == ["Rozdział 2"]
+
+
+def test_division_number_with_letter_is_recognised():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="DZIAŁ XIV"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Przepisy szczególne"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 469. Przepis."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="DZIAŁ XIVA"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Przetwarzanie danych osobowych"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 469a. Przepis."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[1].path == ["DZIAŁ XIVA Przetwarzanie danych osobowych"]
+
+
+def test_division_number_glued_to_title_is_recognised():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział V -Realizacja studiów"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 28 Powtarzanie etapu studiów"),
+        RegulationElement(label=UsefulLabels.TEXT, text="1. Student może powtarzać etap studiów."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział VIIndywidualna organizacja studiów"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 29 Indywidualna organizacja studiów"),
+        RegulationElement(label=UsefulLabels.TEXT, text="1. Student może studiować według planu."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[1].path == ["Rozdział VIIndywidualna organizacja studiów"]
+
+
+def test_split_paragraph_number_is_joined():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 3 0. Przeniesienia z innej uczelni"),
+        RegulationElement(label=UsefulLabels.TEXT, text="1. Student może przenieść się z innej uczelni."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[0].number == "30"
+    assert units[0].title == "Przeniesienia z innej uczelni"
+
+
+def test_generic_header_of_unnumbered_content_does_not_cover_following_units():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Słownik pojęć"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Przez użyte w regulaminie pojęcia rozumie się:"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 2. Szkoła Doktorska"),
+        RegulationElement(label=UsefulLabels.TEXT, text="1. W Politechnice jest prowadzona szkoła doktorska."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[0].path == ["Słownik pojęć"]
+    assert units[1].title == "Szkoła Doktorska"
+    assert units[1].path == []
+
+
+def test_attachment_starts_new_branch_of_breadcrumb():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="DZIAŁ XII"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="PRZEPISY KOŃCOWE"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 71"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Statut wchodzi w życie z dniem 1 października."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Załącznik 6 ZASADY PRZEPROWADZANIA WYBORÓW"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział 1"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="POSTANOWIENIA OGÓLNE"),
+        RegulationElement(label=UsefulLabels.TEXT, text="1. Poniższe zasady dotyczą przeprowadzania wyborów."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[1].path == ["Załącznik 6 ZASADY PRZEPROWADZANIA WYBORÓW", "Rozdział 1 POSTANOWIENIA OGÓLNE"]
+
+
+def test_attachment_marker_in_text_starts_attachment():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="§ 39. Rozporządzenie wchodzi w życie."),
+        RegulationElement(label=UsefulLabels.TEXT, text="Załącznik nr 1 38) Załącznik nr 1 38)"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="WZÓR LEGITYMACJI STUDENCKIEJ"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Blankiet legitymacji ma wymiary 85,6 mm x 54 mm."),
+        RegulationElement(label=UsefulLabels.TEXT, text="Załącznik nr 1"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Hologram ma kształt koła."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert len(units) == 2
+    assert units[1].path == ["Załącznik nr 1 WZÓR LEGITYMACJI STUDENCKIEJ"]
+    assert [element.text for element in units[1].elements] == [
+        "Blankiet legitymacji ma wymiary 85,6 mm x 54 mm.",
+        "Hologram ma kształt koła.",
+    ]
+
+
+def test_sentence_starting_with_attachment_is_content():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="§ 1. Wzory dokumentów."),
+        RegulationElement(label=UsefulLabels.TEXT, text="Załącznik nr 1 określa wzór legitymacji."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert len(units) == 1
+    assert units[0].elements[-1].text == "Załącznik nr 1 określa wzór legitymacji."
+
+
+def test_footnote_marker_is_removed_from_header():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="OBWIESZCZENIE MINISTRA NAUKI 1)"),
+        RegulationElement(label=UsefulLabels.TEXT, text="z dnia 25 sierpnia 2026 r."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[0].path == ["OBWIESZCZENIE MINISTRA NAUKI"]
