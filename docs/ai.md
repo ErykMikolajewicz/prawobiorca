@@ -73,11 +73,11 @@ Obsługa błędów:
 
 | Środowisko | Model | Uwagi |
 |---|---|---|
-| **GCP** | `google/gemma-4-26b-a4b-it-maas` (Vertex AI MaaS) | Serverless, płatność za tokeny. Wymaga włączenia modelu w Model Garden i roli `roles/aiplatform.user` (`scripts/cloud/cloud_inith.sh`). |
-| **On-premise** | `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (OVMS, `gemma-4-26b`) | `deploy/local/llm-service.yaml`. |
+| **GCP** | `google/gemini-3.5-flash-lite` (Vertex AI) | Serverless, płatność za tokeny. Multi-region `eu` (`aiplatform.eu.rep.googleapis.com`), dane przetwarzane tylko w UE. Wymaga roli `roles/aiplatform.user` (`scripts/cloud/cloud_inith.sh`). |
+| **On-premise** | `OpenVINO/Qwen3.6-35B-A3B-int4-ov` (OVMS, `qwen-3.6-35b`) | `deploy/local/llm-service.yaml`. Mixture of experts, ok. 3B aktywnych parametrów. |
 | **Lokalnie** | `OpenVINO/Qwen3.5-9B-int4-ov` (OVMS, `qwen-3.5-9b`) | `scripts/local/dev.py`, lżejszy model do testów. |
 
-Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3).
+Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3), `google/gemma-4-26b-a4b-it-maas` i `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (zastąpione przez Gemini 3.5 Flash-Lite i Qwen 3.6 35B A3B – lepsze wyniki).
 
 ## 5. Testowanie E2E (weryfikacja ręczna)
 
