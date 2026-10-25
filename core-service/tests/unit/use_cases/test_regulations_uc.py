@@ -41,6 +41,7 @@ from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
     RegulationDescriptionStatus,
     RegulationDetails,
+    RegulationHeading,
     RegulationOwner,
     RegulationPreparationStatus,
     RegulationRegistrationData,
@@ -1477,7 +1478,9 @@ async def test_generate_regulation_description_success(
 
     description_source = mock_description_writer.write.await_args.args[0]
     assert description_source.presentation_name == "Regulamin studiów"
-    assert description_source.headings == ["Rozdział 1 Postanowienia ogólne"]
+    assert description_source.headings == [
+        RegulationHeading(text="Rozdział 1 Postanowienia ogólne", level=0),
+    ]
     mock_embedding_port.embed_texts.assert_awaited_once_with(["Załatwianie typowych spraw przez studentów"])
     mock_regulations_repository.set_generated_description.assert_awaited_once_with(
         mock_session_maker.begin.return_value.__aenter__.return_value,
