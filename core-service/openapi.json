@@ -266,6 +266,125 @@
         }
       }
     },
+    "/api/regulations/search": {
+      "get": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "Search Regulations",
+        "operationId": "search_regulations",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Query"
+            }
+          },
+          {
+            "name": "threshold",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 1,
+              "minimum": -1,
+              "title": "Threshold"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RegulationScope",
+              "default": "PUBLIC"
+            }
+          },
+          {
+            "name": "documentType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RegulationType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Documenttype"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizationid"
+            }
+          },
+          {
+            "name": "suborganizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suborganizationid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegulationSearchResult"
+                  },
+                  "title": "Response Search Regulations"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
+          "422": {
+            "description": "Suborganization given without organization!"
+          }
+        }
+      }
+    },
     "/api/regulations/{regulationId}": {
       "get": {
         "tags": [
@@ -3170,6 +3289,23 @@
           "PRIVATE"
         ],
         "title": "RegulationScope"
+      },
+      "RegulationSearchResult": {
+        "properties": {
+          "regulation": {
+            "$ref": "#/components/schemas/RegulationRepresentation"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regulation",
+          "score"
+        ],
+        "title": "RegulationSearchResult"
       },
       "RegulationType": {
         "type": "string",

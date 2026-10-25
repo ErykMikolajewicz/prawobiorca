@@ -21,6 +21,7 @@ function mountItem(
   preparationStatus: RegulationPreparationStatus,
   canManage: boolean,
   overrides: Partial<RegulationRepresentation> = {},
+  score?: number,
 ) {
   const regulation: RegulationRepresentation = {
     id: 'uuid-1',
@@ -36,7 +37,7 @@ function mountItem(
   }
 
   return mount(RegulationItem, {
-    props: { regulation, target: 'PUBLIC', canManage },
+    props: { regulation, target: 'PUBLIC', canManage, score },
     global: {
       stubs: {
         RouterLink: {
@@ -76,6 +77,18 @@ describe('RegulationItem', () => {
     })
 
     expect(wrapper.find('.regulation-organization').text()).toBe('PWr · Wydział Mechaniczny')
+  })
+
+  it('renders similarity score when given', () => {
+    const wrapper = mountItem('PREPARED', false, {}, 0.73456)
+
+    expect(wrapper.find('.regulation-score').text()).toBe('Podobieństwo: 0.735')
+  })
+
+  it('does not render similarity score without it', () => {
+    const wrapper = mountItem('PREPARED', false)
+
+    expect(wrapper.find('.regulation-score').exists()).toBe(false)
   })
 
   it('does not render organization for a general regulation', () => {

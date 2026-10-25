@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onBeforeMount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { storeToRefs } from 'pinia'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
 import RegulationsList from '@/components/organisms/RegulationsList.vue'
+import RegulationsSearchForm from '@/components/organisms/RegulationsSearchForm.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
 import HowItWorks from '@/components/molecules/HowItWorks.vue'
 import LoginCtaBanner from '@/components/molecules/LoginCtaBanner.vue'
@@ -12,15 +14,50 @@ import { useRegulations } from '@/composables/useRegulations'
 import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
 
 import type { RegulationRepresentation } from '@/api/generated/model'
-import type { RegulationScope } from '@/domain/regulations'
+import type {
+  RegulationScope,
+  RegulationsOrder,
+  RegulationsSearchParams,
+} from '@/domain/regulations'
+import { defaultThreshold } from '@/domain/search'
 
 import { useAuthStore } from '@/stores/auth'
 
+const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const { isUserLogged, isAdmin } = storeToRefs(authStore)
 
-const publicRegulations = reactive(useRegulations('PUBLIC'))
-const userRegulations = reactive(useRegulations('PRIVATE'))
+const searchParams = ref<RegulationsSearchParams>({
+  query: (route.query.query as string) || '',
+  threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : defaultThreshold,
+  orderBy: (route.query.orderBy as RegulationsOrder) || 'name',
+})
+
+const publicRegulations = reactive(useRegulations('PUBLIC', () => searchParams.value))
+const userRegulations = reactive(useRegulations('PRIVATE', () => searchParams.value))
+
+const searchEmptyDescription = 'Brak regulacji pasujących do zapytania.'
+
+async function loadRegulations() {
+  await Promise.all([
+    publicRegulations.load(),
+    ...(isUserLogged.value ? [userRegulations.load()] : []),
+  ])
+}
+
+async function handleSearch(newSearchParams: RegulationsSearchParams) {
+  const isSearchChanged =
+    newSearchParams.query !== searchParams.value.query ||
+    newSearchParams.threshold !== searchParams.value.threshold
+
+  searchParams.value = newSearchParams
+  await router.replace({ query: newSearchParams.query ? newSearchParams : {} })
+
+  if (isSearchChanged) {
+    await loadRegulations()
+  }
+}
 
 const isUploadDialogVisible = ref(false)
 
@@ -50,12 +87,7 @@ async function refreshRegulations() {
 
 useRegulationsPolling(() => pendingRegulationIds.value, refreshRegulations)
 
-onBeforeMount(async () => {
-  await Promise.all([
-    publicRegulations.load(),
-    ...(isUserLogged.value ? [userRegulations.load()] : []),
-  ])
-})
+onBeforeMount(loadRegulations)
 </script>
 
 <template>
@@ -65,11 +97,22 @@ onBeforeMount(async () => {
       <HowItWorks />
     </template>
 
+    <RegulationsSearchForm
+      :search-params="searchParams"
+      :can-use-advanced-threshold="isUserLogged"
+      @search="handleSearch"
+    />
+
+    <el-divider />
+
     <RegulationsList
       v-model:type-filter="publicRegulations.typeFilter"
       title="Publiczne regulacje"
-      empty-description="Brak regulacji publicznych."
+      :empty-description="
+        searchParams.query ? searchEmptyDescription : 'Brak regulacji publicznych.'
+      "
       :regulations="publicRegulations.regulations"
+      :scores="publicRegulations.scores"
       :loading="publicRegulations.isLoading"
       target="PUBLIC"
       :can-manage="isAdmin"
@@ -89,8 +132,11 @@ onBeforeMount(async () => {
       <RegulationsList
         v-model:type-filter="userRegulations.typeFilter"
         title="Regulacje użytkownika"
-        empty-description="Brak regulacji użytkownika."
+        :empty-description="
+          searchParams.query ? searchEmptyDescription : 'Brak regulacji użytkownika.'
+        "
         :regulations="userRegulations.regulations"
+        :scores="userRegulations.scores"
         :loading="userRegulations.isLoading"
         target="PRIVATE"
         can-manage
