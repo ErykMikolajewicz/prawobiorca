@@ -13,36 +13,18 @@ from src.app.use_cases.applications import (
     GetApplicationDownloadUrl,
     ListApplications,
 )
+from src.framework.dependencies.ai_services import get_llm_chat
 from src.framework.dependencies.application_templates import get_application_templates_repo
 from src.framework.dependencies.cases import get_applications_repo, get_applications_storage
 from src.framework.dependencies.regulations import get_broker
 from src.framework.dependencies.relational import get_session_maker
 from src.infrastructure.ai_services.application_writer import ApplicationWriter as LlmApplicationWriter
-from src.infrastructure.ai_services.llm_chat import LlmChat
-from src.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
-from src.infrastructure.ai_services.openai_client.connection import client
 from src.infrastructure.docx.docx_renderer import DocxApplicationRenderer
-from src.infrastructure.relational_db.connection import async_session_maker
-from src.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
 from src.infrastructure.tasks.applications import PostgresApplicationGenerationScheduler
-from src.shared.settings.ai_services import llm_service_settings
 
 
 def get_application_writer() -> ApplicationWriter:
-    cost_limiter = None
-    if llm_service_settings.MONTHLY_COST_LIMIT_PLN is not None:
-        cost_limiter = LlmCostLimiter(
-            async_session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN
-        )
-    llm_chat = LlmChat(
-        client=client,
-        model_name=llm_service_settings.MODEL_NAME,
-        temperature=llm_service_settings.TEMPERATURE,
-        top_p=llm_service_settings.TOP_P,
-        max_tokens=llm_service_settings.MAX_TOKENS,
-        cost_limiter=cost_limiter,
-    )
-    return LlmApplicationWriter(llm_chat)
+    return LlmApplicationWriter(get_llm_chat())
 
 
 def get_application_renderer() -> ApplicationRenderer:

@@ -5,7 +5,11 @@ from fastapi import status
 from sqlalchemy import delete, insert, select
 
 from src.app.dtos.regulations import RegulationUploadTarget
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.domain.value_objects.regulations import (
+    RegulationDescriptionStatus,
+    RegulationPreparationStatus,
+    RegulationType,
+)
 from src.infrastructure.relational_db.schemas.regulations import regulations_table
 from src.shared.consts import ACCESS_COOKIE_NAME
 from tests.consts import ACCESS_TOKEN, ADMIN_ID, USER_ID
@@ -82,6 +86,7 @@ async def test_get_user_regulation(
         "description": None,
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+        "descriptionStatus": RegulationDescriptionStatus.NOT_REQUESTED,
         "organizationId": None,
         "suborganizationId": None,
     }
@@ -121,6 +126,7 @@ async def test_update_user_regulation(
         "description": "Opis regulacji",
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.NOT_STARTED,
+        "descriptionStatus": RegulationDescriptionStatus.NOT_REQUESTED,
         "organizationId": None,
         "suborganizationId": None,
     }

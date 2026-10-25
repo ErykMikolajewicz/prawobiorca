@@ -69,16 +69,28 @@ Obsługa błędów:
 - Po przekroczeniu limitu dostarczeń (`MAX_APPLICATION_GENERATION_DELIVERIES`) wniosek dostaje status `FAILED` bez kolejnej próby.
 - Jeśli wniosek albo sprawa zostaną usunięte w trakcie generowania, worker kończy zadanie bez zapisu pliku.
 
-## 4. Modele
+## 4. Opisy regulacji
+
+Administrator może zlecić wygenerowanie przez LLM bardzo ogólnego opisu regulacji (np. „Załatwianie typowych spraw przez studentów”). Opis ma posłużyć do wektorowego wyszukiwania właściwego aktu prawnego, dlatego razem z nim zapisywany jest jego wektor.
+
+- **Status generowania:** `RegulationDescriptionStatus` (`src/domain/value_objects/regulations.py`): `NOT_REQUESTED`, `IN_PROGRESS`, `GENERATED`, `FAILED`, zwracany jako `descriptionStatus` w `RegulationRepresentation`.
+- **Zlecenie przy dodaniu:** `POST /api/regulations` z `generateDescription: true` (tylko administrator, inaczej `403`) zapisuje regulację ze statusem opisu `IN_PROGRESS`. `PrepareRegulation` po ustawieniu `PREPARED` wstawia w tej samej transakcji zadanie generowania opisu – opis powstaje z sekcji zapisanych podczas przygotowania, bez ponownej ekstrakcji.
+- **Ponowne wygenerowanie:** `POST /api/regulations/{regulationId}/description-generation` (tylko administrator) ustawia `IN_PROGRESS` i zleca zadanie. Zwraca `409`, jeśli regulacja nie jest przygotowana albo opis jest już generowany.
+- **Zadanie w tle:** `generate_regulation_description` (`src/framework/workers/regulations.py`), use case `GenerateRegulationDescription`. Wejście dla LLM (`create_description_source`, `src/domain/services/regulation_description.py`) to nazwa dokumentu, unikalne nagłówki jednostek redakcyjnych (bez ostatniego segmentu breadcrumbu, maks. `MAX_DESCRIPTION_HEADINGS`) i początek tekstu (maks. `MAX_DESCRIPTION_BEGINNING_CHARS` znaków). Prompt: `src/infrastructure/ai_services/prompts/regulation_description.md`.
+- **Wektor opisu:** kolumna `regulations.description_vector`, liczona przez worker, czyli na GCP przez instancję `embedding-batch-service`. Ręczna zmiana treści opisu (`PATCH /api/regulations/{regulationId}`) czyści wektor.
+- **Obsługa błędów:** jak przy wnioskach – `ServiceUnavailable` ustawia `FAILED` i ponawia zadanie, po przekroczeniu `MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES` opis zostaje w statusie `FAILED`.
+- **Frontend:** checkbox „Wygeneruj opis przez AI” w dialogu dodawania regulacji i przycisk o tej samej nazwie w szczegółach przygotowanej regulacji (oba tylko dla administratora). W trakcie generowania pole opisu jest zablokowane, a lista regulacji jest odpytywana do zakończenia.
+
+## 5. Modele
 
 | Środowisko | Model | Uwagi |
 |---|---|---|
-| **GCP** | `google/gemma-4-26b-a4b-it-maas` (Vertex AI MaaS) | Serverless, płatność za tokeny. Wymaga włączenia modelu w Model Garden i roli `roles/aiplatform.user` (`scripts/cloud/cloud_inith.sh`). |
-| **On-premise** | `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (OVMS, `gemma-4-26b`) | `deploy/local/llm-service.yaml`. |
+| **GCP** | `google/gemini-3.5-flash-lite` (Vertex AI) | Serverless, płatność za tokeny. Multi-region `eu` (`aiplatform.eu.rep.googleapis.com`), dane przetwarzane tylko w UE. Wymaga roli `roles/aiplatform.user` (`scripts/cloud/cloud_inith.sh`). |
+| **On-premise** | `OpenVINO/Qwen3.6-35B-A3B-int4-ov` (OVMS, `qwen-3.6-35b`) | `deploy/local/llm-service.yaml`. Mixture of experts, ok. 3B aktywnych parametrów. |
 | **Lokalnie** | `OpenVINO/Qwen3.5-9B-int4-ov` (OVMS, `qwen-3.5-9b`) | `scripts/local/dev.py`, lżejszy model do testów. |
 
-Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3).
+Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3), `google/gemma-4-26b-a4b-it-maas` i `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (zastąpione przez Gemini 3.5 Flash-Lite i Qwen 3.6 35B A3B – lepsze wyniki).
 
-## 5. Testowanie E2E (weryfikacja ręczna)
+## 6. Testowanie E2E (weryfikacja ręczna)
 
 Instrukcja weryfikacji całego przepływu użytkownika (logowanie -> sprawa -> regulamin -> generowanie i pobranie DOCX) znajduje się w [docs/tests/manual_e2e_test.md](tests/manual_e2e_test.md).

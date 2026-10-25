@@ -24,6 +24,7 @@ function regulation(id: string): RegulationRepresentation {
     description: null,
     regulationType: 'ACT',
     preparationStatus: 'PREPARED',
+    descriptionStatus: 'NOT_REQUESTED',
     organizationId: null,
     suborganizationId: null,
   }
@@ -79,6 +80,20 @@ describe('useRegulations', () => {
 
     expect(regulations.value).toEqual([{ ...regulation('b'), preparationStatus: 'IN_PROGRESS' }])
     expect(pendingIds.value).toEqual(['b'])
+  })
+
+  it('treats a prepared regulation with description in progress as pending', async () => {
+    vi.mocked(getRegulations).mockResolvedValueOnce([
+      regulation('a'),
+      { ...regulation('b'), preparationStatus: 'FAILED', descriptionStatus: 'IN_PROGRESS' },
+    ])
+
+    const { pendingIds, fetch, markDescriptionAsInProgress } = useRegulations('PUBLIC')
+    await fetch()
+
+    markDescriptionAsInProgress('a')
+
+    expect(pendingIds.value).toEqual(['a'])
   })
 
   it('replaces an updated regulation', async () => {

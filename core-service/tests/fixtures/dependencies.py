@@ -8,13 +8,21 @@ from fastapi.requests import Request
 from src.app.interfaces.application_templates import ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsStorage
 from src.app.interfaces.regulations import RegulationsStorage
-from src.app.ports.tasks import ApplicationGenerationScheduler, RegulationPreparationScheduler
+from src.app.ports.tasks import (
+    ApplicationGenerationScheduler,
+    RegulationDescriptionGenerationScheduler,
+    RegulationPreparationScheduler,
+)
 from src.domain.value_objects.users import UserPrivileges
 from src.framework.dependencies.application_templates import get_application_templates_storage
 from src.framework.dependencies.applications import get_application_generation_scheduler
 from src.framework.dependencies.authentication import authorize_user
 from src.framework.dependencies.cases import get_applications_storage
-from src.framework.dependencies.regulations import get_regulations_preparation_scheduler, get_regulations_storage
+from src.framework.dependencies.regulations import (
+    get_regulation_description_generation_scheduler,
+    get_regulations_preparation_scheduler,
+    get_regulations_storage,
+)
 from src.main import prawobiorca
 from src.shared.consts import ACCESS_COOKIE_NAME
 from tests.consts import ACCESS_TOKEN, SESSION_ID, USER_ID
@@ -68,6 +76,20 @@ def override_get_regulations_preparation_scheduler(mock_regulation_preparation_s
     )
     yield
     prawobiorca.dependency_overrides.pop(get_regulations_preparation_scheduler, None)
+
+
+@pytest.fixture
+def mock_regulation_description_generation_scheduler():
+    return create_autospec(RegulationDescriptionGenerationScheduler)
+
+
+@pytest.fixture
+def override_get_regulation_description_generation_scheduler(mock_regulation_description_generation_scheduler):
+    prawobiorca.dependency_overrides[get_regulation_description_generation_scheduler] = lambda: (
+        mock_regulation_description_generation_scheduler
+    )
+    yield
+    prawobiorca.dependency_overrides.pop(get_regulation_description_generation_scheduler, None)
 
 
 @pytest.fixture

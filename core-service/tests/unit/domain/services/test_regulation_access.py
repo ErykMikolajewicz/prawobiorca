@@ -4,6 +4,7 @@ from src.domain.exceptions.access import AccessForbidden, LoginRequired
 from src.domain.exceptions.regulations import RegulationNotFound
 from src.domain.services.regulation_access import (
     check_can_add_regulation,
+    check_can_generate_regulation_description,
     check_can_manage_regulation,
     check_can_read_regulation,
     resolve_scope_owner,
@@ -104,3 +105,20 @@ def test_can_manage_regulation(caller, owner):
 def test_cannot_manage_regulation(caller, owner, error):
     with pytest.raises(error):
         check_can_manage_regulation(caller, owner)
+
+
+def test_can_generate_regulation_description():
+    check_can_generate_regulation_description(ADMIN)
+
+
+@pytest.mark.parametrize(
+    "caller, error",
+    [
+        (ANONYMOUS, LoginRequired),
+        (USER, AccessForbidden),
+    ],
+    ids=("anonymous", "user"),
+)
+def test_cannot_generate_regulation_description(caller, error):
+    with pytest.raises(error):
+        check_can_generate_regulation_description(caller)

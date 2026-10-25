@@ -32,3 +32,10 @@ def check_can_manage_regulation(caller: Caller, owner: RegulationOwner) -> None:
         raise LoginRequired
     if owner.user_id is None and not caller.is_admin:
         raise AccessForbidden
+
+
+def check_can_generate_regulation_description(caller: Caller) -> None:
+    if caller.user_id is None:
+        raise LoginRequired
+    if not caller.is_admin:
+        raise AccessForbidden

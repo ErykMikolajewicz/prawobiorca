@@ -10,8 +10,8 @@ spec:
     - name: llm-service
       image: docker.io/openvino/model_server:2026.4.0-gpu
       args:
-        - --source_model=OpenVINO/gemma-4-26b-a4b-it-int4-ov
-        - --model_name=gemma-4-26b
+        - --source_model=OpenVINO/Qwen3.6-35B-A3B-int4-ov
+        - --model_name=qwen-3.6-35b
         - --model_repository_path=/models
         - --task=text_generation
         - --target_device=AUTO

@@ -16,6 +16,9 @@ class TextsEmbedder:
     async def embed_chunks(self, chunks: Iterable[SectionChunk]) -> list[list[float]]:
         return await self._embed([chunk.embedding_text for chunk in chunks])
 
+    async def embed_texts(self, texts: Iterable[str]) -> list[list[float]]:
+        return await self._embed(list(texts))
+
     async def embed_queries(self, queries: Iterable[str]) -> list[list[float]]:
         prefix = "[query]: "
 

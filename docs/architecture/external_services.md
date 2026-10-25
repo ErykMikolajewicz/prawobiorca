@@ -43,13 +43,13 @@ Changing the model requires re-embedding all regulations — the vector column l
 ## LLM Service
 
 ### Technology Choice and Justification
-The application drafts with **Gemma 4 26B A4B** (`gemma-4-26b-a4b-it`), reached through an OpenAI-compatible chat completions API in every environment, so `core-service` uses the same client code everywhere and only the URL, model name and authentication differ:
-- **Cloud (GCP)**: **Vertex AI Model-as-a-Service** (`google/gemma-4-26b-a4b-it-maas`), serverless and billed per token, so no LLM service is deployed and nothing is paid while idle. `core-service` authenticates with an OAuth access token of its Workload Identity, which needs the `roles/aiplatform.user` role.
-- **On-Premise**: **OpenVINO Model Server (OVMS)** serves the int4 OpenVINO IR build (`OpenVINO/gemma-4-26b-a4b-it-int4-ov` on Hugging Face) — no custom application code — with continuous batching and PagedAttention for CPU and Intel iGPU inference, consistent with the stack's preference for Intel-hardware-friendly, CPU-first inference.
+The application drafts through an OpenAI-compatible chat completions API in every environment, so `core-service` uses the same client code everywhere and only the URL, model name and authentication differ:
+- **Cloud (GCP)**: **Gemini 3.5 Flash-Lite** on **Vertex AI** (`google/gemini-3.5-flash-lite`), serverless and billed per token, so no LLM service is deployed and nothing is paid while idle. It is called through the `eu` multi-region endpoint (`aiplatform.eu.rep.googleapis.com`), so data is processed only within the EU. `core-service` authenticates with an OAuth access token of its Workload Identity, which needs the `roles/aiplatform.user` role.
+- **On-Premise**: **Qwen 3.6 35B A3B**, a mixture-of-experts model with ~3B active parameters per token. **OpenVINO Model Server (OVMS)** serves the int4 OpenVINO IR build (`OpenVINO/Qwen3.6-35B-A3B-int4-ov` on Hugging Face) — no custom application code — with continuous batching and PagedAttention for CPU and Intel iGPU inference, consistent with the stack's preference for Intel-hardware-friendly, CPU-first inference.
 - **Local development**: OVMS with the lighter `OpenVINO/Qwen3.5-9B-int4-ov`.
 
 ### Scope of Use
-OpenAI-compatible `/chat/completions` endpoint (model name `google/gemma-4-26b-a4b-it-maas` on GCP, `gemma-4-26b` on-premise, `qwen-3.5-9b` locally), consumed by the `core-service` Taskiq worker for automated application/letter drafting in the background.
+OpenAI-compatible `/chat/completions` endpoint (model name `google/gemini-3.5-flash-lite` on GCP, `qwen-3.6-35b` on-premise, `qwen-3.5-9b` locally), consumed by the `core-service` Taskiq worker for automated application/letter drafting in the background.
 
 ### Abstraction Layer and Integration
 On-premise and locally, OVMS pulls the model repository from Hugging Face on first start (`--source_model`) into a mounted persistent volume, so restarts reuse the cached model instead of re-downloading it. No custom image build or model-baking step is needed.

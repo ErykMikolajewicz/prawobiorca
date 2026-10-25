@@ -7,7 +7,11 @@ from fastapi import status
 from sqlalchemy import delete, insert, select
 
 from src.app.dtos.regulations import RegulationUploadTarget
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.domain.value_objects.regulations import (
+    RegulationDescriptionStatus,
+    RegulationPreparationStatus,
+    RegulationType,
+)
 from src.framework.dependencies.ai_services import get_texts_embedder
 from src.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
 from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
@@ -67,6 +71,7 @@ async def test_get_public_regulations(client, override_session_maker, session_ma
                 "description": None,
                 "regulationType": RegulationType.ACT,
                 "preparationStatus": RegulationPreparationStatus.PREPARED,
+                "descriptionStatus": RegulationDescriptionStatus.NOT_REQUESTED,
                 "organizationId": None,
                 "suborganizationId": None,
             }
@@ -93,6 +98,7 @@ async def test_get_public_regulation(client, override_session_maker, session_mak
             "description": None,
             "regulationType": RegulationType.ACT,
             "preparationStatus": RegulationPreparationStatus.PREPARED,
+            "descriptionStatus": RegulationDescriptionStatus.NOT_REQUESTED,
             "organizationId": None,
             "suborganizationId": None,
         }
@@ -432,6 +438,7 @@ async def test_update_public_regulation_as_admin(
             "description": "Opis regulacji",
             "regulationType": RegulationType.ACT,
             "preparationStatus": RegulationPreparationStatus.PREPARED,
+            "descriptionStatus": RegulationDescriptionStatus.NOT_REQUESTED,
             "organizationId": None,
             "suborganizationId": None,
         }
@@ -659,3 +666,130 @@ async def test_delete_suborganization_deletes_its_regulations(client, override_s
     finally:
         async with session_maker.begin() as session:
             await session.execute(delete(organizations_table).where(organizations_table.c.id == organization_id))
+
+
+async def test_add_public_regulation_with_description_generation(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+    override_get_regulations_storage,
+    mock_regulations_storage,
+):
+    regulation_data = {"scope": "PUBLIC", "name": "public-regulation.pdf", "generateDescription": True}
+
+    mock_regulations_storage.get_upload_target.side_effect = lambda id_: RegulationUploadTarget(
+        id=id_, url="http://storage.local/bucket", fields={"key": str(id_)}
+    )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.post("/api/regulations", json=regulation_data)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    regulation_id = UUID(response.json()["id"])
+
+    try:
+        async with session_maker() as session:
+            description_status = await session.scalar(
+                select(regulations_table.c.description_status).where(regulations_table.c.id == regulation_id)
+            )
+
+        assert description_status == RegulationDescriptionStatus.IN_PROGRESS
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
+
+
+async def test_regenerate_public_regulation_description_as_admin(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+    override_get_regulation_description_generation_scheduler,
+    mock_regulation_description_generation_scheduler,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, "Public act.pdf")
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    scheduler = mock_regulation_description_generation_scheduler
+
+    try:
+        response = await client.post(f"/api/regulations/{regulation_id}/description-generation")
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        scheduler.schedule_regulation_description_generation.assert_awaited_once_with(ANY, None, regulation_id)
+
+        response = await client.post(f"/api/regulations/{regulation_id}/description-generation")
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
+
+
+async def test_regenerate_public_regulation_description_as_normal_user(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_regulation_description_generation_scheduler,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, "Public act.pdf")
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.post(f"/api/regulations/{regulation_id}/description-generation")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
+
+
+async def test_update_public_regulation_description_clears_description_vector(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(
+                user_id=None,
+                presentation_name="Public act.pdf",
+                description="Opis",
+                description_vector=UNRELATED_VECTOR,
+            )
+            .returning(regulations_table.c.id)
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    async def get_description_vector():
+        async with session_maker() as session:
+            return await session.scalar(
+                select(regulations_table.c.description_vector).where(regulations_table.c.id == regulation_id)
+            )
+
+    try:
+        response = await client.patch(
+            f"/api/regulations/{regulation_id}", json={"name": "Renamed act.pdf", "description": "Opis"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert await get_description_vector() is not None
+
+        response = await client.patch(
+            f"/api/regulations/{regulation_id}", json={"name": "Renamed act.pdf", "description": "Nowy opis"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert await get_description_vector() is None
+    finally:
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))

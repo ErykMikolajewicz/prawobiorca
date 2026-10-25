@@ -51,6 +51,7 @@ describe('useRegulationUpload', () => {
       regulationType: 'STATUTE',
       organizationId: null,
       suborganizationId: null,
+      generateDescription: false,
     })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
     expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-user-1')
@@ -61,6 +62,7 @@ describe('useRegulationUpload', () => {
       description: null,
       regulationType: 'STATUTE',
       preparationStatus: 'IN_PROGRESS',
+      descriptionStatus: 'NOT_REQUESTED',
       organizationId: null,
       suborganizationId: null,
     })
@@ -80,6 +82,7 @@ describe('useRegulationUpload', () => {
       regulationType: 'ACT',
       organizationId: null,
       suborganizationId: null,
+      generateDescription: false,
     })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
     expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-pub-1')
@@ -104,9 +107,36 @@ describe('useRegulationUpload', () => {
       regulationType: null,
       organizationId: 'pwr',
       suborganizationId: 'w10',
+      generateDescription: false,
     })
     expect(result?.regulation.organizationId).toBe('pwr')
     expect(result?.regulation.suborganizationId).toBe('w10')
+  })
+
+  it('submit requests description generation', async () => {
+    vi.mocked(addRegulation).mockResolvedValueOnce({
+      id: 'uuid-pub-2',
+      url: 'https://s3.local/upload',
+      fields: {},
+    })
+
+    const upload = prepareUpload('PUBLIC', 'Public Doc')
+    upload.generateDescription.value = true
+    const result = await upload.submit()
+
+    expect(addRegulation).toHaveBeenCalledWith(
+      expect.objectContaining({ generateDescription: true }),
+    )
+    expect(result?.regulation.descriptionStatus).toBe('IN_PROGRESS')
+  })
+
+  it('resets description generation with the form', () => {
+    const upload = useRegulationUpload()
+    upload.generateDescription.value = true
+
+    upload.resetForm()
+
+    expect(upload.generateDescription.value).toBe(false)
   })
 
   it('submit keeps the uploaded regulation when confirm-upload fails', async () => {
@@ -129,6 +159,7 @@ describe('useRegulationUpload', () => {
       description: null,
       regulationType: null,
       preparationStatus: 'NOT_STARTED',
+      descriptionStatus: 'NOT_REQUESTED',
       organizationId: null,
       suborganizationId: null,
     })

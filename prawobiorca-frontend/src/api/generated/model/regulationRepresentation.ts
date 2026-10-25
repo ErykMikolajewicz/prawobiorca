@@ -1,3 +1,4 @@
+import type { RegulationDescriptionStatus } from './regulationDescriptionStatus'
 import type { RegulationPreparationStatus } from './regulationPreparationStatus'
 import type { RegulationType } from './regulationType'
 
@@ -12,6 +13,7 @@ export interface RegulationRepresentation {
   description: string | null
   regulationType: RegulationType | null
   preparationStatus: RegulationPreparationStatus
+  descriptionStatus: RegulationDescriptionStatus
   organizationId: string | null
   suborganizationId: string | null
 }
