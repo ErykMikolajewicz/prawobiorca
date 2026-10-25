@@ -3,23 +3,35 @@ from src.domain.services.regulation_description import (
     MAX_DESCRIPTION_HEADINGS,
     create_description_source,
 )
-from src.domain.value_objects.regulations import SectionContent
+from src.domain.value_objects.regulations import RegulationHeading, SectionContent
 
 
-def test_create_description_source_collects_unique_headings():
+def test_create_description_source_builds_table_of_contents():
     sections = [
-        SectionContent(header="Dział I > Rozdział 1 > Art. 1", text="Art. 1."),
-        SectionContent(header="Dział I > Rozdział 1 > Art. 2", text="Art. 2."),
-        SectionContent(header="Dział I > Rozdział 2 > Art. 3", text="Art. 3."),
-        SectionContent(header="§ 1", text="§ 1."),
+        SectionContent(header="Rozdział I Postanowienia ogólne > § 1 Wprowadzenie", text="§ 1."),
+        SectionContent(header="Rozdział I Postanowienia ogólne > § 2 Słownik pojęć", text="§ 2."),
+        SectionContent(header="Rozdział V Realizacja studiów > § 27 Urlopy", text="§ 27."),
+        SectionContent(header="Rozdział V Realizacja studiów > § 3 0. Przeniesienia z innej uczelni", text="§ 30."),
+        SectionContent(header="Rozdział IX Przepisy końcowe > § 40", text="§ 40."),
+        SectionContent(header="Art. 5a", text="Art. 5a."),
+        SectionContent(header="Art. 6 Zakres ustawy", text="Art. 6."),
         SectionContent(header=None, text="Wstęp"),
     ]
 
-    description_source = create_description_source("Kodeks", sections)
+    description_source = create_description_source("Regulamin", sections)
 
-    assert description_source.presentation_name == "Kodeks"
-    assert description_source.headings == ["Dział I > Rozdział 1", "Dział I > Rozdział 2"]
-    assert description_source.beginning == "Art. 1.\nArt. 2.\nArt. 3.\n§ 1.\nWstęp"
+    assert description_source.presentation_name == "Regulamin"
+    assert description_source.headings == [
+        RegulationHeading(text="Rozdział I Postanowienia ogólne", level=0),
+        RegulationHeading(text="Wprowadzenie", level=1),
+        RegulationHeading(text="Słownik pojęć", level=1),
+        RegulationHeading(text="Rozdział V Realizacja studiów", level=0),
+        RegulationHeading(text="Urlopy", level=1),
+        RegulationHeading(text="Przeniesienia z innej uczelni", level=1),
+        RegulationHeading(text="Rozdział IX Przepisy końcowe", level=0),
+        RegulationHeading(text="Zakres ustawy", level=0),
+    ]
+    assert description_source.beginning == "§ 1.\n§ 2.\n§ 27.\n§ 30.\n§ 40.\nArt. 5a.\nArt. 6.\nWstęp"
 
 
 def test_create_description_source_limits_size():
