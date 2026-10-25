@@ -53,7 +53,8 @@ The structure is therefore recovered from the **text itself**, using the numberi
 
 | Unit | Notation | Recognised as |
 |------|----------|---------------|
-| dział / rozdział / oddział / część / księga / tytuł | `Rozdział 4`, `DZIAŁ VII` | breadcrumb segment (`LegalUnit.path`) |
+| załącznik | `Załącznik 6`, `Załącznik nr 1` | top-level breadcrumb segment, closes every division before it |
+| dział / rozdział / oddział / część / księga / tytuł | `Rozdział 4`, `DZIAŁ VII`, `DZIAŁ XIVA` | breadcrumb segment (`LegalUnit.path`) |
 | artykuł | `Art. 107.` | presentation unit (`UnitType.ARTICLE`) |
 | paragraf | `§ 6 .` | presentation unit (`UnitType.PARAGRAPH`) or content, see below |
 | ustęp | `1.` | element boundary, kept in `LegalUnitElement.subsection` |
@@ -74,11 +75,28 @@ a `section_header` may carry it anywhere, because real documents put it in every
 of the unit instead of a breadcrumb segment.
 
 Divisions are recognised only on elements labelled `section_header` — in Polish acts they are always centered
-headings, and Docling detects those reliably. A `section_header` that carries no division keyword becomes
-a breadcrumb segment of the lowest rank, which keeps unstructured documents working as before. The exception is
-a `section_header` that opens with a subsection (`2a.`), a point (`1)`) or a letter (`a)`), optionally preceded by
-the `<` marking a provision not yet in force — Docling mislabels those, so they are kept as content of the current
-unit. The cost is that a genuinely numbered heading such as `1. Postanowienia ogólne` is treated as content too.
+headings, and Docling detects those reliably. The only exception is an attachment marker (`Załącznik nr 1`), which
+Docling labels as `text`; an element is promoted to a header only when it consists of the marker alone (possibly
+repeated, with a footnote marker), so a sentence such as `Załącznik nr 1 określa wzór…` stays content. A division
+number may carry a letter (`DZIAŁ XIVA`) or be glued to the title by the extraction (`Rozdział VIIndywidualna…`).
+A division repeated on a later page (`Załącznik nr 1` on every page of the attachment) is ignored.
+
+A `section_header` that carries no division keyword becomes a breadcrumb segment of the lowest rank, which keeps
+unstructured documents working as before. Such a generic header that is followed by unnumbered content titles only
+that content, so it is removed from the path when the next numbered unit starts — otherwise a `Słownik pojęć`
+heading would end up in the breadcrumb of every paragraph after it.
+
+Docling also mislabels provisions as headers, so the following `section_header` elements are kept as content of the
+current unit:
+
+- an element opening with a subsection (`2a.`), a point (`1)`) or a letter (`a)`), optionally preceded by the `<`
+  marking a provision not yet in force or the `[` marking a repealed one,
+- an element opening with a dash — a continuation of the text above (`-uczelnia podaje do wiadomości…`),
+- an article opening its first subsection (`Art. 19. 1. W skład rady uczelni wchodzi:`) — articles never have
+  titles, so a header-labelled article is always treated as content, and so is a paragraph whose header continues
+  with a subsection (`§ 3. 1. …`).
+
+The cost is that a genuinely numbered heading such as `1. Postanowienia ogólne` is treated as content too.
 
 ---
 
@@ -92,6 +110,9 @@ Before the structure is recovered, every element's text is cleaned of extraction
   `§ 18. 1. Protokół…`, `§ 20. 13) 1. Wzór…` → `§ 20. 1. Wzór…`) or close an element after punctuation
   (`…odnotowuje się w: 11)` → `…odnotowuje się w:`). Otherwise the marker would hide the subsection number,
   or be mistaken for a point. The footnotes themselves are dropped as noise.
+- **Paragraph numbers split by OCR** (`§ 3 0. Przeniesienia…`) are joined (`§ 30.`). A paragraph number is never
+  followed directly by a subsection number without a dot in between, so the space can only be an extraction artefact.
+- **Footnote markers closing a header** (`OBWIESZCZENIE MINISTRA … 1)`) are removed.
 - **Hyphenated words** split across lines (`złoże -nia`) are joined, but only on pages that also contain a spaced
   dash (` - `). Docling renders a dash as ` -` in some documents (`braku -numer`, `student -osoba`), so a hyphenation
   can be told apart from a dash only on a page whose dashes are demonstrably spaced. Pages are delimited by
