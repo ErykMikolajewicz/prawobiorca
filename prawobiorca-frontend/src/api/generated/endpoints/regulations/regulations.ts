@@ -3,8 +3,10 @@ import type {
   RegulationData,
   RegulationDetailsData,
   RegulationRepresentation,
+  RegulationSearchResult,
   RegulationUploadTarget,
   SearchRegulationDocumentsParams,
+  SearchRegulationsParams,
   SearchResult,
 } from '../../model'
 
@@ -38,6 +40,18 @@ export const addRegulation = (
       headers: { 'Content-Type': 'application/json' },
       data: regulationData,
     },
+    options,
+  )
+}
+/**
+ * @summary Search Regulations
+ */
+export const searchRegulations = (
+  params: SearchRegulationsParams,
+  options?: SecondParameter<typeof prawobiorcaRequest<RegulationSearchResult[]>>,
+) => {
+  return prawobiorcaRequest<RegulationSearchResult[]>(
+    { url: `/api/regulations/search`, method: 'GET', params },
     options,
   )
 }
@@ -146,6 +160,7 @@ export const regenerateRegulationDescription = (
 }
 export type GetRegulationsResult = NonNullable<Awaited<ReturnType<typeof getRegulations>>>
 export type AddRegulationResult = NonNullable<Awaited<ReturnType<typeof addRegulation>>>
+export type SearchRegulationsResult = NonNullable<Awaited<ReturnType<typeof searchRegulations>>>
 export type GetRegulationByIdResult = NonNullable<Awaited<ReturnType<typeof getRegulationById>>>
 export type UpdateRegulationResult = NonNullable<Awaited<ReturnType<typeof updateRegulation>>>
 export type DeleteRegulationResult = NonNullable<Awaited<ReturnType<typeof deleteRegulation>>>

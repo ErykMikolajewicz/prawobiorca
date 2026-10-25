@@ -6,6 +6,7 @@ from src.app.dtos.regulations import (
     RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
+    RegulationSearchResult,
     RegulationUploadTarget,
 )
 from src.app.dtos.search import SearchParams, SearchResult
@@ -429,6 +430,32 @@ class ListRegulations:
                 session, user_id, regulation_type, organization_filter
             )
         return files
+
+
+@dataclass
+class SearchRegulations:
+    session_maker: SessionMaker
+    embedding_port: TextsEmbedder
+    regulations_repository: RegulationsRepository
+
+    async def execute(
+        self,
+        caller: Caller,
+        scope: RegulationScope,
+        regulation_type: RegulationType | None,
+        organization_filter: OrganizationFilter | None,
+        query: str,
+        threshold: float,
+    ) -> list[RegulationSearchResult]:
+        user_id = resolve_scope_owner(caller, scope)
+
+        embeddings = await self.embedding_port.embed_queries([query])
+        query_vector = embeddings[0]
+
+        async with self.session_maker() as session:
+            return await self.regulations_repository.search_regulations(
+                session, user_id, regulation_type, organization_filter, query_vector, threshold
+            )
 
 
 @dataclass

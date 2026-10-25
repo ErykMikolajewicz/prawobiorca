@@ -7,6 +7,7 @@ from src.app.dtos.regulations import (
     RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
+    RegulationSearchResult,
     RegulationUploadTarget,
 )
 from src.app.dtos.search import SearchParams, SearchResult
@@ -20,6 +21,7 @@ from src.app.use_cases.regulations import (
     RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
+    SearchRegulations,
     UpdateRegulation,
 )
 from src.domain.exceptions.organizations import OrganizationNotFound
@@ -48,6 +50,7 @@ from src.framework.dependencies.regulations import (
     get_regulation_download_url,
     get_retry_regulation_preparation,
     get_search_regulation,
+    get_search_regulations,
     get_update_regulation,
 )
 
@@ -76,6 +79,25 @@ async def get_regulations(
     regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
 ) -> list[RegulationRepresentation]:
     return await list_regulations.execute(caller, scope, regulation_type, organization_filter)
+
+
+@regulations_router.get(
+    "/regulations/search",
+    response_model=list[RegulationSearchResult],
+    responses={
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
+    },
+)
+async def search_regulations(
+    search_regulations_: Annotated[SearchRegulations, Depends(get_search_regulations)],
+    caller: Annotated[Caller, Depends(get_caller)],
+    organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
+    query: str = Query(min_length=1),
+    threshold: float = Query(ge=-1, le=1),
+    scope: RegulationScope = Query(default=RegulationScope.PUBLIC),
+    regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
+) -> list[RegulationSearchResult]:
+    return await search_regulations_.execute(caller, scope, regulation_type, organization_filter, query, threshold)
 
 
 @regulations_router.get(

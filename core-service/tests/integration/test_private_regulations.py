@@ -10,8 +10,10 @@ from src.domain.value_objects.regulations import (
     RegulationPreparationStatus,
     RegulationType,
 )
+from src.framework.dependencies.ai_services import get_texts_embedder
 from src.infrastructure.relational_db.schemas.regulations import regulations_table
-from src.shared.consts import ACCESS_COOKIE_NAME
+from src.main import prawobiorca
+from src.shared.consts import ACCESS_COOKIE_NAME, VECTOR_LENGTH
 from tests.consts import ACCESS_TOKEN, ADMIN_ID, USER_ID
 
 
@@ -417,6 +419,65 @@ async def test_get_private_regulations_unlogged(client, override_session_maker):
     response = await client.get("/api/regulations", params={"scope": "PRIVATE"})
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class StubTextsEmbedder:
+    @staticmethod
+    async def embed_queries(queries):
+        return [[1.0] * VECTOR_LENGTH]
+
+
+async def test_search_private_regulations(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+    query_vector = [1.0] * VECTOR_LENGTH
+
+    async with session_maker.begin() as session:
+        regulation_id = await session.scalar(
+            insert(regulations_table)
+            .values(user_id=USER_ID, presentation_name="user-regulation.pdf", description_vector=query_vector)
+            .returning(regulations_table.c.id)
+        )
+        await session.execute(
+            insert(regulations_table).values(
+                user_id=None, presentation_name="public.pdf", description_vector=query_vector
+            )
+        )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.get(
+            "/api/regulations/search", params={"scope": "PRIVATE", "query": "zapytanie", "threshold": 0.5}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [result["regulation"]["id"] for result in response.json()] == [str(regulation_id)]
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
+        async with session_maker.begin() as session:
+            await session.execute(
+                delete(regulations_table).where(regulations_table.c.presentation_name == "public.pdf")
+            )
+
+
+async def test_search_private_regulations_unlogged(client, override_session_maker):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+
+    try:
+        response = await client.get(
+            "/api/regulations/search", params={"scope": "PRIVATE", "query": "zapytanie", "threshold": 0.5}
+        )
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
 
 
 async def test_get_other_user_private_regulation(

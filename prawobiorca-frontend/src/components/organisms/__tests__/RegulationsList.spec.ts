@@ -93,6 +93,34 @@ describe('RegulationsList', () => {
     expect(cards).toHaveLength(2)
   })
 
+  it('passes similarity scores to regulation items', () => {
+    const wrapper = mount(RegulationsList, {
+      props: {
+        regulations: mockRegulations,
+        title: 'Publiczne regulacje',
+        emptyDescription: 'Brak regulacji publicznych.',
+        typeFilter: undefined,
+        target: 'PUBLIC',
+        canManage: true,
+        scores: { '1': 0.8 },
+      },
+      global: {
+        directives: { loading: {} },
+        stubs: {
+          RegulationItem: {
+            template: '<div class="stub-card">{{ score ?? "brak" }}</div>',
+            props: ['regulation', 'target', 'canManage', 'score'],
+          },
+          RegulationTypeFilter: true,
+          RegulationOrganizationFilter: true,
+          ElEmpty: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('.stub-card').map((card) => card.text())).toEqual(['0.8', 'brak'])
+  })
+
   it('shows empty state when no regulations are visible', () => {
     const wrapper = mount(RegulationsList, {
       props: {

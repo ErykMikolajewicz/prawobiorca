@@ -6,6 +6,7 @@ from src.app.dtos.regulations import (
     RegulationData,
     RegulationDetailsData,
     RegulationRepresentation,
+    RegulationSearchResult,
     RegulationUploadTarget,
 )
 from src.app.dtos.search import SearchParams
@@ -23,6 +24,7 @@ from src.app.use_cases.regulations import (
     RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
+    SearchRegulations,
     UpdateRegulation,
 )
 from src.domain.exceptions.access import AccessForbidden, LoginRequired
@@ -1301,6 +1303,56 @@ async def test_list_private_regulations_unlogged(mock_regulations_repository, mo
         await use_case.execute(Caller(None), RegulationScope.PRIVATE, None, None)
 
     mock_regulations_repository.list_regulations.assert_not_awaited()
+
+
+async def test_search_regulations_success(
+    uuid_generator, mock_embedding_port, mock_regulations_repository, mock_session_maker, mock_opened_session
+):
+    user_id = next(uuid_generator)
+    embedding_vector = [0.1, 0.2, 0.3]
+    search_results = [MagicMock(spec=RegulationSearchResult)]
+
+    mock_embedding_port.embed_queries.return_value = [embedding_vector]
+    mock_regulations_repository.search_regulations.return_value = search_results
+
+    use_case = SearchRegulations(
+        session_maker=mock_session_maker,
+        embedding_port=mock_embedding_port,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    result = await use_case.execute(
+        Caller(user_id), RegulationScope.PRIVATE, RegulationType.ACT, None, "test query", 0.5
+    )
+
+    assert result == search_results
+    mock_embedding_port.embed_queries.assert_awaited_once_with(["test query"])
+    mock_regulations_repository.search_regulations.assert_awaited_once_with(
+        mock_opened_session, user_id, RegulationType.ACT, None, embedding_vector, 0.5
+    )
+
+
+async def test_search_private_regulations_unlogged(
+    mock_embedding_port, mock_regulations_repository, mock_session_maker
+):
+    use_case = SearchRegulations(
+        session_maker=mock_session_maker,
+        embedding_port=mock_embedding_port,
+        regulations_repository=mock_regulations_repository,
+    )
+
+    with pytest.raises(LoginRequired):
+        await use_case.execute(
+            Caller(None),
+            RegulationScope.PRIVATE,
+            None,
+            None,
+            "test query",
+            0.5,
+        )
+
+    mock_embedding_port.embed_queries.assert_not_awaited()
+    mock_regulations_repository.search_regulations.assert_not_awaited()
 
 
 async def test_get_other_user_private_regulation(uuid_generator, mock_regulations_repository, mock_session_maker):
