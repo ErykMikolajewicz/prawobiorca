@@ -5,7 +5,7 @@ from fastapi import Depends, Request
 from src.app.interfaces.regulations import RegulationsRepository, RegulationsStorage
 from src.app.interfaces.relational import SessionMaker
 from src.app.interfaces.sections import SectionsRepository
-from src.app.ports.tasks import RegulationPreparationScheduler
+from src.app.ports.tasks import RegulationDescriptionGenerationScheduler, RegulationPreparationScheduler
 from src.app.ports.texts import TextsEmbedder
 from src.app.use_cases.regulations import (
     AddRegulation,
@@ -14,6 +14,7 @@ from src.app.use_cases.regulations import (
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
+    RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
     UpdateRegulation,
@@ -23,7 +24,10 @@ from src.framework.dependencies.relational import get_session_maker
 from src.infrastructure.object_storage.repository import S3RegulationsStorage
 from src.infrastructure.relational_db.repositories.regulations import RegulationsManagerRepository
 from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
-from src.infrastructure.tasks.regulations import PostgresRegulationPreparationScheduler
+from src.infrastructure.tasks.regulations import (
+    PostgresRegulationDescriptionGenerationScheduler,
+    PostgresRegulationPreparationScheduler,
+)
 
 
 def get_sections_repository() -> SectionsRepository:
@@ -57,6 +61,12 @@ def get_regulations_preparation_scheduler(
     broker: Annotated[Any, Depends(get_broker)],
 ) -> RegulationPreparationScheduler:
     return PostgresRegulationPreparationScheduler(broker)
+
+
+def get_regulation_description_generation_scheduler(
+    broker: Annotated[Any, Depends(get_broker)],
+) -> RegulationDescriptionGenerationScheduler:
+    return PostgresRegulationDescriptionGenerationScheduler(broker)
 
 
 def get_list_regulations(
@@ -136,3 +146,13 @@ def get_regulation_download_url(
     regulations_storage: Annotated[RegulationsStorage, Depends(get_regulations_storage)],
 ) -> GetRegulationDownloadUrl:
     return GetRegulationDownloadUrl(session_maker, regulations_repository, regulations_storage)
+
+
+def get_regenerate_regulation_description(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+    description_generation_scheduler: Annotated[
+        RegulationDescriptionGenerationScheduler, Depends(get_regulation_description_generation_scheduler)
+    ],
+) -> RegenerateRegulationDescription:
+    return RegenerateRegulationDescription(session_maker, regulations_repository, description_generation_scheduler)

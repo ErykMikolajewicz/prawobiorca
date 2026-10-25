@@ -1,20 +1,8 @@
-from pathlib import Path
-
-from jinja2 import Environment, FileSystemLoader
-
 from src.app.dtos.application_templates import ApplicationTemplateRepresentation
 from src.app.dtos.applications import NewApplication
 from src.app.dtos.cases import CaseDocument
 from src.infrastructure.ai_services.llm_chat import LlmChat
-
-PROMPTS_DIR = Path(__file__).parent / "prompts"
-
-prompts_env = Environment(
-    loader=FileSystemLoader(PROMPTS_DIR),
-    autoescape=False,  # noqa: S701
-    trim_blocks=True,
-    lstrip_blocks=True,
-)
+from src.infrastructure.ai_services.prompt_templates import prompts_env
 
 
 class ApplicationWriter:

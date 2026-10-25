@@ -1,4 +1,8 @@
-import type { RegulationPreparationStatus, RegulationType } from '@/api/generated/model'
+import type {
+  RegulationDescriptionStatus,
+  RegulationPreparationStatus,
+  RegulationType,
+} from '@/api/generated/model'
 
 export type { RegulationScope } from '@/api/generated/model'
 
@@ -20,4 +24,12 @@ export const preparationStatusOptions: Record<
   NOT_STARTED: { label: 'Oczekuje', tagType: 'info' },
   IN_PROGRESS: { label: 'Przetwarzanie', tagType: 'warning' },
   FAILED: { label: 'Błąd przetwarzania', tagType: 'danger' },
+}
+
+export const descriptionStatusOptions: Record<
+  Extract<RegulationDescriptionStatus, 'IN_PROGRESS' | 'FAILED'>,
+  PreparationStatusOption
+> = {
+  IN_PROGRESS: { label: 'Generowanie opisu', tagType: 'warning' },
+  FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
 }

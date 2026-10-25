@@ -1,16 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import RegulationDetailsDialog from '../RegulationDetailsDialog.vue'
 import {
   deleteRegulation,
   getRegulationDownloadUrlById,
+  regenerateRegulationDescription,
   updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
-import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
+import { useAuthStore } from '@/stores/auth'
+import type {
+  RegulationDescriptionStatus,
+  RegulationPreparationStatus,
+  RegulationRepresentation,
+} from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
   deleteRegulation: vi.fn(),
   getRegulationDownloadUrlById: vi.fn(),
+  regenerateRegulationDescription: vi.fn(),
   updateRegulation: vi.fn(),
 }))
 
@@ -24,6 +32,7 @@ vi.mock('element-plus', () => ({
 
 function createRegulation(
   preparationStatus: RegulationPreparationStatus,
+  descriptionStatus: RegulationDescriptionStatus = 'NOT_REQUESTED',
 ): RegulationRepresentation {
   return {
     id: 'uuid-1',
@@ -32,6 +41,7 @@ function createRegulation(
     description: 'Opis ustawy',
     regulationType: 'ACT',
     preparationStatus,
+    descriptionStatus,
     organizationId: null,
     suborganizationId: null,
   }
@@ -40,12 +50,13 @@ function createRegulation(
 async function mountDialog(
   canManage: boolean,
   preparationStatus: RegulationPreparationStatus = 'PREPARED',
+  descriptionStatus: RegulationDescriptionStatus = 'NOT_REQUESTED',
 ) {
   const wrapper = mount(RegulationDetailsDialog, {
     props: {
       modelValue: false,
       'onUpdate:modelValue': (value: boolean) => wrapper.setProps({ modelValue: value }),
-      regulation: createRegulation(preparationStatus),
+      regulation: createRegulation(preparationStatus, descriptionStatus),
       canManage,
     },
     global: {
@@ -59,9 +70,10 @@ async function mountDialog(
         ElFormItem: { template: '<div><slot /></div>' },
         ElInput: {
           template:
-            "<input :class=\"type === 'textarea' ? 'description-input' : 'name-input'\" :value=\"modelValue\" @input=\"$emit('update:modelValue', $event.target.value)\" />",
-          props: ['modelValue', 'type'],
+            '<input :class="type === \'textarea\' ? \'description-input\' : \'name-input\'" :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+          props: ['modelValue', 'type', 'disabled'],
         },
+        ElTag: { template: '<span class="tag-stub"><slot /></span>' },
         ElButton: {
           template: '<button @click="$emit(\'click\')"><slot /></button>',
           emits: ['click'],
@@ -84,6 +96,7 @@ function findButton(wrapper: Awaited<ReturnType<typeof mountDialog>>, text: stri
 describe('RegulationDetailsDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setActivePinia(createPinia())
   })
 
   it('saves edited name and description', async () => {
@@ -145,6 +158,55 @@ describe('RegulationDetailsDialog', () => {
     expect(previewWindow.opener).toBeNull()
     expect(previewWindow.location.href).toBe('https://storage.example.com/uuid-1')
     openSpy.mockRestore()
+  })
+
+  it('starts description generation as admin', async () => {
+    useAuthStore().isAdmin = true
+    const wrapper = await mountDialog(true)
+    vi.mocked(regenerateRegulationDescription).mockResolvedValueOnce(undefined)
+
+    await findButton(wrapper, 'Wygeneruj opis przez AI')?.trigger('click')
+    await flushPromises()
+
+    expect(regenerateRegulationDescription).toHaveBeenCalledWith('uuid-1')
+    expect(wrapper.emitted('description-generation-started')?.[0]).toEqual(['uuid-1'])
+  })
+
+  it('does not offer description generation to normal user', async () => {
+    const wrapper = await mountDialog(true)
+
+    expect(findButton(wrapper, 'Wygeneruj opis przez AI')).toBeUndefined()
+  })
+
+  it('does not offer description generation before regulation is prepared', async () => {
+    useAuthStore().isAdmin = true
+    const wrapper = await mountDialog(true, 'IN_PROGRESS')
+
+    expect(findButton(wrapper, 'Wygeneruj opis przez AI')).toBeUndefined()
+  })
+
+  it('locks description while it is being generated', async () => {
+    useAuthStore().isAdmin = true
+    const wrapper = await mountDialog(true, 'PREPARED', 'IN_PROGRESS')
+
+    expect(wrapper.find('.description-input').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('.tag-stub').text()).toBe('Generowanie opisu')
+    expect(findButton(wrapper, 'Wygeneruj opis przez AI')).toBeUndefined()
+  })
+
+  it('shows generated description when regulation is refreshed', async () => {
+    const wrapper = await mountDialog(true, 'PREPARED', 'IN_PROGRESS')
+
+    await wrapper.setProps({
+      regulation: {
+        ...createRegulation('PREPARED', 'GENERATED'),
+        description: 'Wygenerowany opis',
+      },
+    })
+
+    expect((wrapper.find('.description-input').element as HTMLInputElement).value).toBe(
+      'Wygenerowany opis',
+    )
   })
 
   it('does not offer preview when file upload was not confirmed', async () => {

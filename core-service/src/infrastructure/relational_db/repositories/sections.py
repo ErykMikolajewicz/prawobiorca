@@ -12,6 +12,7 @@ from src.app.dtos.search import (
     SearchResultHighlight,
 )
 from src.domain.exceptions.documents import RegulationDocumentsNotFound
+from src.domain.value_objects.regulations import SectionContent
 from src.domain.value_objects.sections import SectionsCollection
 from src.infrastructure.relational_db.schemas.sections import regulations_chunks_table, regulations_sections_table
 
@@ -57,6 +58,22 @@ class RegulationsSectionsRepository:
 
         await session.execute(insert(regulations_sections_table).values(sections_data))
         await session.execute(insert(regulations_chunks_table).values(chunks_data))
+
+    @staticmethod
+    async def list_sections_contents(
+        session: AsyncSession, user_id: UUID | None, regulation_id: UUID
+    ) -> list[SectionContent]:
+        statement = (
+            select(regulations_sections_table.c.header, regulations_sections_table.c.text)
+            .where(
+                regulations_sections_table.c.regulation_id == regulation_id,
+                regulations_sections_table.c.user_id == user_id,
+            )
+            .order_by(regulations_sections_table.c.section_order)
+        )
+        result = await session.execute(statement)
+
+        return [SectionContent(header=row.header, text=row.text) for row in result]
 
     @staticmethod
     async def search(

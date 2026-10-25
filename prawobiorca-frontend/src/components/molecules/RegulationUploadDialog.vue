@@ -25,6 +25,7 @@ const {
   target,
   selectedOrganizationId,
   selectedSuborganizationId,
+  generateDescription,
   isSubmitting,
   resetForm,
   setFile,
@@ -72,6 +73,10 @@ async function handleSubmit() {
             :value="option.value"
           />
         </el-select>
+      </el-form-item>
+
+      <el-form-item v-if="isAdmin">
+        <el-checkbox v-model="generateDescription">Wygeneruj opis przez AI</el-checkbox>
       </el-form-item>
 
       <el-form-item v-if="isAdmin" label="Widoczność pliku:">

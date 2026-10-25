@@ -343,12 +343,20 @@ class RegulationPreparationStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class RegulationDescriptionStatus(StrEnum):
+    NOT_REQUESTED = "NOT_REQUESTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    GENERATED = "GENERATED"
+    FAILED = "FAILED"
+
+
 @dataclass
 class RegulationRegistrationData:
     presentation_name: str
     regulation_type: RegulationType | None = None
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
+    description_status: RegulationDescriptionStatus = RegulationDescriptionStatus.NOT_REQUESTED
 
 
 @dataclass
@@ -360,3 +368,16 @@ class RegulationDetails:
 @dataclass
 class RegulationOwner:
     user_id: UUID | None
+
+
+@dataclass
+class SectionContent:
+    header: str | None
+    text: str
+
+
+@dataclass
+class RegulationDescriptionSource:
+    presentation_name: str
+    headings: list[str]
+    beginning: str

@@ -1,9 +1,14 @@
 import sqlalchemy as sqla
+from pgvector.sqlalchemy import Vector
 
 from src.app.dtos.regulations import RegulationRepresentation
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from src.domain.value_objects.regulations import (
+    RegulationDescriptionStatus,
+    RegulationPreparationStatus,
+    RegulationType,
+)
 from src.infrastructure.relational_db.connection import mapper_registry, metadata
-from src.shared.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
+from src.shared.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH, VECTOR_LENGTH
 
 regulations_table = sqla.Table(
     "regulations",
@@ -13,6 +18,13 @@ regulations_table = sqla.Table(
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=True),
     sqla.Column("presentation_name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
     sqla.Column("description", sqla.String(MAX_REGULATION_DESCRIPTION_LENGTH), nullable=True),
+    sqla.Column("description_vector", Vector(VECTOR_LENGTH), nullable=True),
+    sqla.Column(
+        "description_status",
+        sqla.Enum(RegulationDescriptionStatus, name="regulationdescriptionstatus"),
+        nullable=False,
+        default=RegulationDescriptionStatus.NOT_REQUESTED,
+    ),
     sqla.Column("regulation_type", sqla.Enum(RegulationType, name="regulationtype"), nullable=True, default=None),
     sqla.Column(
         "preparation_status",
@@ -40,4 +52,4 @@ regulations_table = sqla.Table(
 )
 
 
-mapper_registry.map_imperatively(RegulationRepresentation, regulations_table)
+mapper_registry.map_imperatively(RegulationRepresentation, regulations_table, exclude_properties=["description_vector"])

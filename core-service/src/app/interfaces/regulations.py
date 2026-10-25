@@ -5,6 +5,7 @@ from src.app.dtos.regulations import RegulationRepresentation, RegulationUploadT
 from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
+    RegulationDescriptionStatus,
     RegulationDetails,
     RegulationOwner,
     RegulationPreparationStatus,
@@ -46,6 +47,14 @@ class RegulationsRepository(Protocol):
 
     async def set_preparation_status(
         self, session: AsyncSession, user_id: UUID | None, id_: UUID, status: RegulationPreparationStatus
+    ) -> None: ...
+
+    async def set_description_status(
+        self, session: AsyncSession, user_id: UUID | None, id_: UUID, status: RegulationDescriptionStatus
+    ) -> None: ...
+
+    async def set_generated_description(
+        self, session: AsyncSession, user_id: UUID | None, id_: UUID, description: str, vector: list[float]
     ) -> None: ...
 
     async def update_regulation_details(

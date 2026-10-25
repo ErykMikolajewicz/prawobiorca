@@ -4,7 +4,13 @@ from taskiq import Context, TaskiqDepends, TaskiqEvents
 
 from src.app.services.embedding import SectionsEmbedder
 from src.app.services.regulations import RegulationPreparator
-from src.app.use_cases.regulations import FailRegulationPreparation, PrepareRegulation
+from src.app.use_cases.regulations import (
+    FailRegulationDescriptionGeneration,
+    FailRegulationPreparation,
+    GenerateRegulationDescription,
+    PrepareRegulation,
+)
+from src.framework.dependencies.ai_services import get_regulation_description_writer
 from src.framework.dependencies.file_storage import init_file_storage_client
 from src.framework.dependencies.tokenizer import get_tokenizer
 from src.infrastructure.ai_services.initialization import init_ai_services_client
@@ -15,7 +21,12 @@ from src.infrastructure.relational_db.connection import async_session_maker
 from src.infrastructure.relational_db.repositories.regulations import RegulationsManagerRepository
 from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
 from src.infrastructure.tasks.connection import broker
-from src.shared.consts import DELIVERY_ATTEMPT_LABEL, REGULATION_PREPARATION_TASK_NAME
+from src.infrastructure.tasks.regulations import PostgresRegulationDescriptionGenerationScheduler
+from src.shared.consts import (
+    DELIVERY_ATTEMPT_LABEL,
+    REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
+    REGULATION_PREPARATION_TASK_NAME,
+)
 from src.shared.settings.ai_services import embedding_service_settings, extraction_service_settings
 
 
@@ -75,9 +86,43 @@ async def prepare_regulation_task(
             SectionsEmbedder(texts_embedder, embedding_service_settings.BATCH_SIZE),
             get_tokenizer(),
         ),
+        description_generation_scheduler=PostgresRegulationDescriptionGenerationScheduler(broker),
     )
 
     await prepare_regulation.execute(
+        UUID(user_id) if user_id is not None else None,
+        UUID(regulation_id),
+    )
+
+
+@broker.task(task_name=REGULATION_DESCRIPTION_GENERATION_TASK_NAME)
+async def generate_regulation_description_task(
+    user_id: str | None,
+    regulation_id: str,
+    context: Context = TaskiqDepends(),
+) -> None:
+    fail_regulation_description_generation = FailRegulationDescriptionGeneration(
+        session_maker=async_session_maker,
+        regulations_repository=RegulationsManagerRepository(),
+    )
+    if await fail_regulation_description_generation.execute(
+        UUID(user_id) if user_id is not None else None,
+        UUID(regulation_id),
+        context.message.labels.get(DELIVERY_ATTEMPT_LABEL, 1),
+    ):
+        return
+
+    generate_regulation_description = GenerateRegulationDescription(
+        session_maker=async_session_maker,
+        regulations_repository=RegulationsManagerRepository(),
+        sections_repository=RegulationsSectionsRepository(),
+        description_writer=get_regulation_description_writer(),
+        texts_embedder=TextsEmbedder(
+            client=context.state.ai_services_client, embedding_service_url=embedding_service_settings.URL
+        ),
+    )
+
+    await generate_regulation_description.execute(
         UUID(user_id) if user_id is not None else None,
         UUID(regulation_id),
     )
