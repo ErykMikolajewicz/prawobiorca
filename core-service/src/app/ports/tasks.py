@@ -21,3 +21,9 @@ class ApplicationGenerationScheduler(Protocol):
     async def schedule_application_generation(
         self, session: AsyncSession, user_id: UUID, application_id: UUID, new_application: NewApplication
     ) -> None: ...
+
+
+class ApplicationTemplateDescriptionGenerationScheduler(Protocol):
+    async def schedule_application_template_description_generation(
+        self, session: AsyncSession, template_id: UUID
+    ) -> None: ...

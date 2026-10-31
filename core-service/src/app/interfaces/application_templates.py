@@ -4,6 +4,7 @@ from uuid import UUID
 from src.app.dtos.application_templates import ApplicationTemplateRepresentation, ApplicationTemplateUploadTarget
 from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.application_templates import (
+    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateDetails,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
@@ -19,6 +20,15 @@ class ApplicationTemplatesRepository(Protocol):
         organization_filter: OrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]: ...
 
+    async def search_templates(
+        self,
+        session: AsyncSession,
+        status: ApplicationTemplateStatus,
+        organization_filter: OrganizationFilter | None,
+        vector: list[float],
+        threshold: float,
+    ) -> list[tuple[ApplicationTemplateRepresentation, float]]: ...
+
     async def get(self, session: AsyncSession, id_: UUID) -> ApplicationTemplateRepresentation | None: ...
 
     async def add(self, session: AsyncSession, name: str, instructions: str) -> UUID: ...
@@ -29,6 +39,14 @@ class ApplicationTemplatesRepository(Protocol):
 
     async def set_status(
         self, session: AsyncSession, id_: UUID, status: ApplicationTemplateStatus
+    ) -> ApplicationTemplateRepresentation: ...
+
+    async def set_description_status(
+        self, session: AsyncSession, id_: UUID, status: ApplicationTemplateDescriptionStatus
+    ) -> ApplicationTemplateRepresentation: ...
+
+    async def set_generated_description(
+        self, session: AsyncSession, id_: UUID, description: str, vector: list[float]
     ) -> ApplicationTemplateRepresentation: ...
 
     async def update_details(

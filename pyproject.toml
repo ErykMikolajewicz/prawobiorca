@@ -6,10 +6,10 @@ license = "MIT"
 readme = "README.md"
 requires-python = "==3.14.*"
 dependencies = [
-    "ruff==0.16.*",
+    "ruff==0.17.*",
     "mkdocstrings[python]==1.0.*",
-    "zensical==0.0.67",
-    "google-auth[requests]==2.59.*",
+    "zensical==0.0.73",
+    "google-auth[requests]==2.62.*",
 ]
 
 [tool.ruff]

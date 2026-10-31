@@ -9,10 +9,10 @@ type PollingOptions = {
 }
 
 /**
- * Odpytuje backend tak długo, jak długo jakakolwiek regulacja czeka na przetworzenie w tle.
- * Pojawienie się nowej regulacji w toku wznawia odpytywanie, także po upływie limitu czasu.
+ * Odpytuje backend tak długo, jak długo jakikolwiek element czeka na przetworzenie w tle.
+ * Pojawienie się nowego elementu w toku wznawia odpytywanie, także po upływie limitu czasu.
  */
-export function useRegulationsPolling(
+export function usePendingPolling(
   pendingIds: () => Array<string>,
   refresh: () => Promise<void>,
   options?: PollingOptions,

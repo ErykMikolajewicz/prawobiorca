@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { defineComponent, ref, h } from 'vue'
 import { mount } from '@vue/test-utils'
-import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
+import { usePendingPolling } from '@/composables/usePendingPolling'
 
 function mountPolling(
   pendingIds: () => Array<string>,
@@ -11,14 +11,14 @@ function mountPolling(
   return mount(
     defineComponent({
       setup() {
-        useRegulationsPolling(pendingIds, refresh, options)
+        usePendingPolling(pendingIds, refresh, options)
         return () => h('div')
       },
     }),
   )
 }
 
-describe('useRegulationsPolling', () => {
+describe('usePendingPolling', () => {
   beforeEach(() => {
     vi.useFakeTimers()
   })

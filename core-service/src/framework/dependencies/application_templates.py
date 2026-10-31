@@ -8,6 +8,8 @@ from src.app.ports.application_templates import (
     ApplicationTemplateInspector,
     ApplicationTemplateInstructionsProvider,
 )
+from src.app.ports.tasks import ApplicationTemplateDescriptionGenerationScheduler
+from src.app.ports.texts import TextsEmbedder
 from src.app.use_cases.application_templates import (
     AddApplicationTemplate,
     ConfirmApplicationTemplateUpload,
@@ -17,10 +19,17 @@ from src.app.use_cases.application_templates import (
     ListApplicationTemplates,
     ListPublishedApplicationTemplates,
     PublishApplicationTemplate,
+    RegenerateApplicationTemplateDescription,
+    SearchPublishedApplicationTemplates,
     UnpublishApplicationTemplate,
     UpdateApplicationTemplate,
 )
-from src.framework.dependencies.regulations import get_file_storage_client, get_file_storage_presign_client
+from src.framework.dependencies.ai_services import get_texts_embedder
+from src.framework.dependencies.regulations import (
+    get_broker,
+    get_file_storage_client,
+    get_file_storage_presign_client,
+)
 from src.framework.dependencies.relational import get_session_maker
 from src.infrastructure.ai_services.application_template_instructions import (
     PromptsApplicationTemplateInstructionsProvider,
@@ -30,6 +39,7 @@ from src.infrastructure.object_storage.repository import S3ApplicationTemplatesS
 from src.infrastructure.relational_db.repositories.application_templates import (
     ApplicationTemplatesRepository as SqlaApplicationTemplatesRepository,
 )
+from src.infrastructure.tasks.application_templates import PostgresApplicationTemplateDescriptionGenerationScheduler
 
 
 def get_application_templates_repo() -> ApplicationTemplatesRepository:
@@ -51,6 +61,12 @@ def get_application_template_instructions_provider() -> ApplicationTemplateInstr
     return PromptsApplicationTemplateInstructionsProvider()
 
 
+def get_application_template_description_generation_scheduler(
+    broker: Annotated[Any, Depends(get_broker)],
+) -> ApplicationTemplateDescriptionGenerationScheduler:
+    return PostgresApplicationTemplateDescriptionGenerationScheduler(broker)
+
+
 def get_list_application_templates(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
@@ -70,6 +86,14 @@ def get_list_published_application_templates(
     application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
 ) -> ListPublishedApplicationTemplates:
     return ListPublishedApplicationTemplates(session_maker, application_templates_repo)
+
+
+def get_search_published_application_templates(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
+    application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
+) -> SearchPublishedApplicationTemplates:
+    return SearchPublishedApplicationTemplates(session_maker, texts_embedder, application_templates_repo)
 
 
 def get_add_application_template(
@@ -120,6 +144,19 @@ def get_unpublish_application_template(
     application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
 ) -> UnpublishApplicationTemplate:
     return UnpublishApplicationTemplate(session_maker, application_templates_repo)
+
+
+def get_regenerate_application_template_description(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
+    description_generation_scheduler: Annotated[
+        ApplicationTemplateDescriptionGenerationScheduler,
+        Depends(get_application_template_description_generation_scheduler),
+    ],
+) -> RegenerateApplicationTemplateDescription:
+    return RegenerateApplicationTemplateDescription(
+        session_maker, application_templates_repo, description_generation_scheduler
+    )
 
 
 def get_delete_application_template(

@@ -1,7 +1,9 @@
+import math
 from io import BytesIO
 from unittest.mock import ANY
 from uuid import UUID, uuid4
 
+import pytest
 from docx import Document
 from fastapi import status
 from sqlalchemy import delete, insert, select
@@ -9,12 +11,15 @@ from sqlalchemy import delete, insert, select
 from src.app.dtos.application_templates import ApplicationTemplateUploadTarget
 from src.domain.value_objects.application_templates import (
     ApplicationFieldType,
+    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
+from src.framework.dependencies.ai_services import get_texts_embedder
 from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
 from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
-from src.shared.consts import ACCESS_COOKIE_NAME
+from src.main import prawobiorca
+from src.shared.consts import ACCESS_COOKIE_NAME, VECTOR_LENGTH
 from tests.consts import ACCESS_TOKEN
 
 FIELDS = [
@@ -65,6 +70,8 @@ async def insert_template(
     instructions: str | None = None,
     organization_id: UUID | None = None,
     suborganization_id: UUID | None = None,
+    description: str | None = None,
+    description_vector: list[float] | None = None,
 ):
     async with session_maker.begin() as session:
         statement = (
@@ -76,6 +83,8 @@ async def insert_template(
                 instructions=instructions,
                 organization_id=organization_id,
                 suborganization_id=suborganization_id,
+                description=description,
+                description_vector=description_vector,
             )
             .returning(application_templates_table.c.id)
         )
@@ -122,6 +131,29 @@ async def get_template_organization(session_maker, template_id):
         return tuple(result.one())
 
 
+class StubTextsEmbedder:
+    @staticmethod
+    async def embed_queries(queries):
+        return [QUERY_VECTOR]
+
+
+QUERY_VECTOR = [1.0] * VECTOR_LENGTH
+HALF_RELATED_VECTOR = [1.0] * (VECTOR_LENGTH // 2) + [0.0] * (VECTOR_LENGTH // 2)
+UNRELATED_VECTOR = [1.0, *[0.0] * (VECTOR_LENGTH - 1)]
+
+
+async def get_template_description(session_maker, template_id):
+    async with session_maker() as session:
+        result = await session.execute(
+            select(
+                application_templates_table.c.description,
+                application_templates_table.c.description_vector,
+                application_templates_table.c.description_status,
+            ).where(application_templates_table.c.id == template_id)
+        )
+        return result.one()
+
+
 async def test_get_published_application_templates(
     client, override_session_maker, session_maker, override_authorize_normal_user
 ):
@@ -140,6 +172,7 @@ async def test_get_published_application_templates(
             {
                 "id": str(published_id),
                 "name": "Published",
+                "description": None,
                 "fields": [{key: value for key, value in field.items() if key != "passToAi"} for field in FIELDS_JSON],
             }
         ]
@@ -166,6 +199,8 @@ async def test_get_application_templates_as_admin(
                 "status": "DRAFT",
                 "fields": FIELDS_JSON,
                 "instructions": "Instrukcje",
+                "description": None,
+                "descriptionStatus": "NOT_REQUESTED",
                 "organizationId": None,
                 "suborganizationId": None,
             }
@@ -192,6 +227,8 @@ async def test_get_application_template_as_admin(
             "status": "DRAFT",
             "fields": FIELDS_JSON,
             "instructions": "Instrukcje",
+            "description": None,
+            "descriptionStatus": "NOT_REQUESTED",
             "organizationId": None,
             "suborganizationId": None,
         }
@@ -345,6 +382,8 @@ async def test_update_application_template(
             "status": "DRAFT",
             "fields": new_fields,
             "instructions": "Instrukcje",
+            "description": None,
+            "descriptionStatus": "NOT_REQUESTED",
             "organizationId": None,
             "suborganizationId": None,
         }
@@ -632,5 +671,200 @@ async def test_update_application_template_with_suborganization_without_organiza
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    finally:
+        await delete_templates(session_maker, template_id)
+
+
+async def test_search_published_application_templates(
+    client, override_session_maker, session_maker, override_authorize_normal_user
+):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+    organization_id = await insert_organization(session_maker, "PWR")
+    other_organization_id = await insert_organization(session_maker, "UWR")
+    matching_id = await insert_template(
+        session_maker,
+        "Matching",
+        ApplicationTemplateStatus.PUBLISHED,
+        description="Wniosek o urlop.",
+        description_vector=QUERY_VECTOR,
+    )
+    half_matching_id = await insert_template(
+        session_maker,
+        "Half matching",
+        ApplicationTemplateStatus.PUBLISHED,
+        organization_id=organization_id,
+        description_vector=HALF_RELATED_VECTOR,
+    )
+    templates_ids = [
+        matching_id,
+        half_matching_id,
+        await insert_template(
+            session_maker, "Unrelated", ApplicationTemplateStatus.PUBLISHED, description_vector=UNRELATED_VECTOR
+        ),
+        await insert_template(session_maker, "Without description", ApplicationTemplateStatus.PUBLISHED),
+        await insert_template(session_maker, "Draft", ApplicationTemplateStatus.DRAFT, description_vector=QUERY_VECTOR),
+        await insert_template(
+            session_maker,
+            "Other organization",
+            ApplicationTemplateStatus.PUBLISHED,
+            organization_id=other_organization_id,
+            description_vector=QUERY_VECTOR,
+        ),
+    ]
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.get(
+            "/api/application-templates/published/search",
+            params={"query": "urlop", "threshold": 0.5, "organizationId": str(organization_id)},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == [
+            {
+                "template": {
+                    "id": str(matching_id),
+                    "name": "Matching",
+                    "description": "Wniosek o urlop.",
+                    "fields": [],
+                },
+                "score": pytest.approx(1.0),
+            },
+            {
+                "template": {"id": str(half_matching_id), "name": "Half matching", "description": None, "fields": []},
+                "score": pytest.approx(1 / math.sqrt(2)),
+            },
+        ]
+
+        response = await client.get(
+            "/api/application-templates/published/search", params={"query": "urlop", "threshold": 0.9}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [result["template"]["name"] for result in response.json()] == ["Matching", "Other organization"]
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
+        await delete_templates(session_maker, *templates_ids)
+        await delete_organizations(session_maker, organization_id, other_organization_id)
+
+
+async def test_search_published_application_templates_empty_query(
+    client, override_session_maker, override_authorize_normal_user
+):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.get(
+            "/api/application-templates/published/search", params={"query": "", "threshold": 0.5}
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
+
+
+async def test_regenerate_application_template_description(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+    override_get_application_template_description_generation_scheduler,
+    mock_application_template_description_generation_scheduler,
+):
+    template_id = await insert_template(session_maker, fields=FIELDS, instructions="Instrukcje")
+    scheduler = mock_application_template_description_generation_scheduler
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.post(f"/api/application-templates/{template_id}/description-generation")
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        scheduler.schedule_application_template_description_generation.assert_awaited_once_with(ANY, template_id)
+        description = await get_template_description(session_maker, template_id)
+        assert description.description_status == ApplicationTemplateDescriptionStatus.IN_PROGRESS
+
+        response = await client.post(f"/api/application-templates/{template_id}/description-generation")
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+    finally:
+        await delete_templates(session_maker, template_id)
+
+    response = await client.post(f"/api/application-templates/{template_id}/description-generation")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_regenerate_published_application_template_description(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_admin_user,
+    override_get_application_template_description_generation_scheduler,
+):
+    template_id = await insert_template(
+        session_maker, template_status=ApplicationTemplateStatus.PUBLISHED, instructions="Instrukcje"
+    )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.post(f"/api/application-templates/{template_id}/description-generation")
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+    finally:
+        await delete_templates(session_maker, template_id)
+
+
+async def test_regenerate_application_template_description_as_normal_user(
+    client,
+    override_session_maker,
+    session_maker,
+    override_authorize_normal_user,
+    override_get_application_template_description_generation_scheduler,
+):
+    template_id = await insert_template(session_maker)
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.post(f"/api/application-templates/{template_id}/description-generation")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        await delete_templates(session_maker, template_id)
+
+
+async def test_update_application_template_description_clears_description_vector(
+    client, override_session_maker, session_maker, override_authorize_admin_user
+):
+    template_id = await insert_template(
+        session_maker, fields=FIELDS, description="Wniosek o urlop.", description_vector=QUERY_VECTOR
+    )
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.put(
+            f"/api/application-templates/{template_id}",
+            json={"name": "Wniosek", "description": "Wniosek o urlop.", "fields": FIELDS_JSON},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        description = await get_template_description(session_maker, template_id)
+        assert description.description_vector is not None
+
+        response = await client.put(
+            f"/api/application-templates/{template_id}",
+            json={"name": "Wniosek", "description": "Wniosek o stypendium.", "fields": FIELDS_JSON},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["description"] == "Wniosek o stypendium."
+        description = await get_template_description(session_maker, template_id)
+        assert description.description_vector is None
     finally:
         await delete_templates(session_maker, template_id)

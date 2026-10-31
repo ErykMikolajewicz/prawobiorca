@@ -94,6 +94,7 @@ async def test_refresh_rotates_tokens(client, override_session_maker, session_ma
     assert auth_response.status_code == status.HTTP_200_OK
     assert await count_user_sessions(session_maker) == 1
 
+    client.cookies.clear()
     client.cookies.set(REFRESH_COOKIE_NAME, old_refresh_token, path=REFRESH_COOKIE_PATH)
     replayed_response = await client.post("/api/auth/refresh")
 

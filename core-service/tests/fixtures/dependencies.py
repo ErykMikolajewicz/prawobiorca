@@ -10,11 +10,15 @@ from src.app.interfaces.applications import ApplicationsStorage
 from src.app.interfaces.regulations import RegulationsStorage
 from src.app.ports.tasks import (
     ApplicationGenerationScheduler,
+    ApplicationTemplateDescriptionGenerationScheduler,
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,
 )
 from src.domain.value_objects.users import UserPrivileges
-from src.framework.dependencies.application_templates import get_application_templates_storage
+from src.framework.dependencies.application_templates import (
+    get_application_template_description_generation_scheduler,
+    get_application_templates_storage,
+)
 from src.framework.dependencies.applications import get_application_generation_scheduler
 from src.framework.dependencies.authentication import authorize_user
 from src.framework.dependencies.cases import get_applications_storage
@@ -104,6 +108,22 @@ def override_get_application_generation_scheduler(mock_application_generation_sc
     )
     yield
     prawobiorca.dependency_overrides.pop(get_application_generation_scheduler, None)
+
+
+@pytest.fixture
+def mock_application_template_description_generation_scheduler():
+    return create_autospec(ApplicationTemplateDescriptionGenerationScheduler)
+
+
+@pytest.fixture
+def override_get_application_template_description_generation_scheduler(
+    mock_application_template_description_generation_scheduler,
+):
+    prawobiorca.dependency_overrides[get_application_template_description_generation_scheduler] = lambda: (
+        mock_application_template_description_generation_scheduler
+    )
+    yield
+    prawobiorca.dependency_overrides.pop(get_application_template_description_generation_scheduler, None)
 
 
 class UserType(StrEnum):

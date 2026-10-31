@@ -5,6 +5,8 @@ import type {
   ApplicationTemplateUploadTarget,
   GetPublishedApplicationTemplatesParams,
   PublishedApplicationTemplate,
+  PublishedApplicationTemplateSearchResult,
+  SearchPublishedApplicationTemplatesParams,
 } from '../../model'
 
 import { prawobiorcaRequest } from '../../../axios'
@@ -20,6 +22,18 @@ export const getPublishedApplicationTemplates = (
 ) => {
   return prawobiorcaRequest<PublishedApplicationTemplate[]>(
     { url: `/api/application-templates/published`, method: 'GET', params },
+    options,
+  )
+}
+/**
+ * @summary Search Published Application Templates
+ */
+export const searchPublishedApplicationTemplates = (
+  params: SearchPublishedApplicationTemplatesParams,
+  options?: SecondParameter<typeof prawobiorcaRequest<PublishedApplicationTemplateSearchResult[]>>,
+) => {
+  return prawobiorcaRequest<PublishedApplicationTemplateSearchResult[]>(
+    { url: `/api/application-templates/published/search`, method: 'GET', params },
     options,
   )
 }
@@ -141,8 +155,23 @@ export const unpublishApplicationTemplate = (
     options,
   )
 }
+/**
+ * @summary Regenerate Application Template Description
+ */
+export const regenerateApplicationTemplateDescription = (
+  templateId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
+) => {
+  return prawobiorcaRequest<unknown>(
+    { url: `/api/application-templates/${templateId}/description-generation`, method: 'POST' },
+    options,
+  )
+}
 export type GetPublishedApplicationTemplatesResult = NonNullable<
   Awaited<ReturnType<typeof getPublishedApplicationTemplates>>
+>
+export type SearchPublishedApplicationTemplatesResult = NonNullable<
+  Awaited<ReturnType<typeof searchPublishedApplicationTemplates>>
 >
 export type GetApplicationTemplatesResult = NonNullable<
   Awaited<ReturnType<typeof getApplicationTemplates>>
@@ -170,4 +199,7 @@ export type PublishApplicationTemplateResult = NonNullable<
 >
 export type UnpublishApplicationTemplateResult = NonNullable<
   Awaited<ReturnType<typeof unpublishApplicationTemplate>>
+>
+export type RegenerateApplicationTemplateDescriptionResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateApplicationTemplateDescription>>
 >

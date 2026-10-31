@@ -15,6 +15,13 @@ class ApplicationTemplateStatus(StrEnum):
     PUBLISHED = "PUBLISHED"
 
 
+class ApplicationTemplateDescriptionStatus(StrEnum):
+    NOT_REQUESTED = "NOT_REQUESTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    GENERATED = "GENERATED"
+    FAILED = "FAILED"
+
+
 class ApplicationFieldType(StrEnum):
     TEXT = "TEXT"
     NUMBER = "NUMBER"
@@ -39,5 +46,14 @@ class ApplicationTemplateDetails:
     name: str
     instructions: str | None
     fields: list[ApplicationTemplateField]
+    description: str | None = None
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
+
+
+@dataclass
+class ApplicationTemplateDescriptionSource:
+    name: str
+    instructions: str
+    field_labels: list[str]
+    content: str

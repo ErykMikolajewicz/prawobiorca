@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
+import { computed, ref, onBeforeMount } from 'vue'
 import { useRoute } from 'vue-router'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
 import ApplicationTemplateEditor from '@/components/organisms/ApplicationTemplateEditor.vue'
+import { usePendingPolling } from '@/composables/usePendingPolling'
 
 import { getAdminApplicationTemplate } from '@/api/generated/endpoints/application-templates/application-templates'
 
@@ -26,6 +27,20 @@ async function loadTemplate() {
     isLoading.value = false
   }
 }
+
+const pendingTemplateIds = computed(() =>
+  template.value?.descriptionStatus === 'IN_PROGRESS' ? [template.value.id] : [],
+)
+
+async function refreshTemplate() {
+  try {
+    template.value = await getAdminApplicationTemplate(templateId)
+  } catch (error) {
+    console.error('Failed to refresh application template:', error)
+  }
+}
+
+usePendingPolling(() => pendingTemplateIds.value, refreshTemplate)
 
 onBeforeMount(loadTemplate)
 </script>

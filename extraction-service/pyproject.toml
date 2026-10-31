@@ -5,17 +5,17 @@ description = "Service to parse and extract text from documents."
 license = "MIT"
 requires-python = "==3.14.*"
 dependencies = [
-    "docling==2.110.*",
-    "fastapi==0.139.*",
-    "granian==2.7.*",
+    "docling==2.142.*",
+    "fastapi==0.162.*",
+    "granian==2.8.*",
     "python-multipart==0.0.32",
-    "torch==2.13.*",
-    "torchvision==0.28.*",
+    "torch==2.14.*",
+    "torchvision==0.29.*",
 ]
 
 [dependency-groups]
 test = [
-    "httpx2==2.12.*",
+    "httpx2==2.16.*",
     "pytest==9.1.*",
     "testcontainers==4.15.*",
 ]

@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from src.app.dtos.application_templates import (
     ApplicationTemplateData,
@@ -9,6 +9,7 @@ from src.app.dtos.application_templates import (
     ApplicationTemplateRepresentation,
     ApplicationTemplateUploadTarget,
     PublishedApplicationTemplate,
+    PublishedApplicationTemplateSearchResult,
 )
 from src.app.use_cases.application_templates import (
     AddApplicationTemplate,
@@ -19,11 +20,14 @@ from src.app.use_cases.application_templates import (
     ListApplicationTemplates,
     ListPublishedApplicationTemplates,
     PublishApplicationTemplate,
+    RegenerateApplicationTemplateDescription,
+    SearchPublishedApplicationTemplates,
     UnpublishApplicationTemplate,
     UpdateApplicationTemplate,
 )
 from src.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
+    ApplicationTemplateDescriptionGenerationInProgress,
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
     InvalidApplicationFieldsConfig,
@@ -41,6 +45,8 @@ from src.framework.dependencies.application_templates import (
     get_list_application_templates,
     get_list_published_application_templates,
     get_publish_application_template,
+    get_regenerate_application_template_description,
+    get_search_published_application_templates,
     get_unpublish_application_template,
     get_update_application_template,
 )
@@ -72,6 +78,25 @@ async def get_published_application_templates(
     organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
 ) -> list[PublishedApplicationTemplate]:
     return await list_published_templates.execute(caller, organization_filter)
+
+
+@application_templates_router.get(
+    "/application-templates/published/search",
+    response_model=list[PublishedApplicationTemplateSearchResult],
+    responses={
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
+    },
+)
+async def search_published_application_templates(
+    search_templates: Annotated[
+        SearchPublishedApplicationTemplates, Depends(get_search_published_application_templates)
+    ],
+    caller: Annotated[Caller, Depends(get_caller)],
+    organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
+    query: str = Query(min_length=1),
+    threshold: float = Query(ge=-1, le=1),
+) -> list[PublishedApplicationTemplateSearchResult]:
+    return await search_templates.execute(caller, organization_filter, query, threshold)
 
 
 @application_templates_router.get(
@@ -243,6 +268,36 @@ async def unpublish_application_template(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application template not found!")
     except ApplicationTemplateInInvalidState:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Application template not published!")
+
+
+@application_templates_router.post(
+    "/application-templates/{templateId}/description-generation",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Application template not found!"},
+        status.HTTP_409_CONFLICT: {
+            "description": "Application template not a draft, or its description generation already in progress!"
+        },
+    },
+)
+async def regenerate_application_template_description(
+    regenerate_description: Annotated[
+        RegenerateApplicationTemplateDescription, Depends(get_regenerate_application_template_description)
+    ],
+    caller: Annotated[Caller, Depends(get_caller)],
+    template_id: Annotated[UUID, Path(alias="templateId")],
+):
+    try:
+        await regenerate_description.execute(caller, template_id)
+    except ApplicationTemplateNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application template not found!")
+    except ApplicationTemplateInInvalidState:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Application template not a draft!")
+    except ApplicationTemplateDescriptionGenerationInProgress:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Application template description generation already in progress!",
+        )
 
 
 @application_templates_router.delete(

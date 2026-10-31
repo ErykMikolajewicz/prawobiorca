@@ -4,4 +4,5 @@ export interface PublishedApplicationTemplate {
   id: string
   name: string
   fields: PublishedApplicationField[]
+  description?: string | null
 }

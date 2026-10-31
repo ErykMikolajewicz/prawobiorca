@@ -35,7 +35,10 @@ onBeforeMount(async () => {
           <h2 class="section-title">Kontekst / Opis Wniosku</h2>
           <GeneratePdfForm
             :templates="publishedTemplates.templates"
+            :scores="publishedTemplates.scores"
+            :searching="publishedTemplates.searching"
             @generate-pdf="caseApplications.generate"
+            @search="publishedTemplates.search"
           />
         </section>
       </el-col>

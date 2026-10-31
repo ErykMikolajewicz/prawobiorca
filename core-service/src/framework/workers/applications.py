@@ -5,15 +5,27 @@ from pydantic import TypeAdapter
 from taskiq import Context, TaskiqDepends
 
 from src.app.dtos.applications import NewApplication
+from src.app.use_cases.application_templates import (
+    FailApplicationTemplateDescriptionGeneration,
+    GenerateApplicationTemplateDescription,
+)
 from src.app.use_cases.applications import FailApplicationGeneration, GenerateApplication
+from src.framework.dependencies.ai_services import get_application_template_description_writer
 from src.framework.dependencies.applications import get_application_renderer, get_application_writer
+from src.infrastructure.ai_services.text_embedder import TextsEmbedder
+from src.infrastructure.docx.template_inspector import DocxTemplateInspector
 from src.infrastructure.object_storage.repository import S3ApplicationsStorage, S3ApplicationTemplatesStorage
 from src.infrastructure.relational_db.connection import async_session_maker
 from src.infrastructure.relational_db.repositories.application_templates import ApplicationTemplatesRepository
 from src.infrastructure.relational_db.repositories.applications import ApplicationsRepository
 from src.infrastructure.relational_db.repositories.cases import CaseDocumentsRepository
 from src.infrastructure.tasks.connection import broker
-from src.shared.consts import APPLICATION_GENERATION_TASK_NAME, DELIVERY_ATTEMPT_LABEL
+from src.shared.consts import (
+    APPLICATION_GENERATION_TASK_NAME,
+    APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME,
+    DELIVERY_ATTEMPT_LABEL,
+)
+from src.shared.settings.ai_services import embedding_service_settings
 
 
 @broker.task(task_name=APPLICATION_GENERATION_TASK_NAME)
@@ -54,3 +66,34 @@ async def generate_application_task(
         UUID(application_id),
         TypeAdapter(NewApplication).validate_python(new_application),
     )
+
+
+@broker.task(task_name=APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME)
+async def generate_application_template_description_task(
+    template_id: str,
+    context: Context = TaskiqDepends(),
+) -> None:
+    fail_description_generation = FailApplicationTemplateDescriptionGeneration(
+        session_maker=async_session_maker,
+        application_templates_repo=ApplicationTemplatesRepository(),
+    )
+    if await fail_description_generation.execute(
+        UUID(template_id),
+        context.message.labels.get(DELIVERY_ATTEMPT_LABEL, 1),
+    ):
+        return
+
+    generate_description = GenerateApplicationTemplateDescription(
+        session_maker=async_session_maker,
+        application_templates_repo=ApplicationTemplatesRepository(),
+        application_templates_storage=S3ApplicationTemplatesStorage(
+            context.state.file_storage_client, context.state.file_storage_presign_client
+        ),
+        application_template_inspector=DocxTemplateInspector(),
+        description_writer=get_application_template_description_writer(),
+        texts_embedder=TextsEmbedder(
+            client=context.state.ai_services_client, embedding_service_url=embedding_service_settings.URL
+        ),
+    )
+
+    await generate_description.execute(UUID(template_id))

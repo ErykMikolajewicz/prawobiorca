@@ -7,10 +7,11 @@ from pydantic.dataclasses import dataclass
 
 from src.domain.value_objects.application_templates import (
     ApplicationFieldType,
+    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
-from src.shared.consts import MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
+from src.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH, MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
 
 
 class ApplicationTemplateData(BaseModel):
@@ -23,6 +24,7 @@ class ApplicationTemplateDetailsData(BaseModel):
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     instructions: str | None = None
     fields: list[ApplicationTemplateField]
+    description: str | None = Field(default=None, max_length=MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH)
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
 
@@ -48,6 +50,8 @@ class ApplicationTemplateRepresentation:
     status: ApplicationTemplateStatus
     fields: list[ApplicationTemplateField]
     instructions: str | None = None
+    description: str | None = None
+    description_status: ApplicationTemplateDescriptionStatus = ApplicationTemplateDescriptionStatus.NOT_REQUESTED
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
 
@@ -70,3 +74,10 @@ class PublishedApplicationTemplate:
     id: UUID
     name: str
     fields: list[PublishedApplicationField]
+    description: str | None = None
+
+
+@dataclass(config=ConfigDict(alias_generator=to_camel))
+class PublishedApplicationTemplateSearchResult:
+    template: PublishedApplicationTemplate
+    score: float

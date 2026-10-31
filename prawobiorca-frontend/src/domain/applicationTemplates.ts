@@ -1,5 +1,6 @@
 import type {
   ApplicationFieldType,
+  ApplicationTemplateDescriptionStatus,
   ApplicationTemplateDetailsData,
   ApplicationTemplateField,
   ApplicationTemplateStatus,
@@ -7,7 +8,7 @@ import type {
 
 export type TemplateStatusOption = {
   label: string
-  tagType: 'info' | 'success' | 'danger'
+  tagType: 'info' | 'success' | 'warning' | 'danger'
 }
 
 export type EditableTemplateField = Required<ApplicationTemplateField>
@@ -15,6 +16,7 @@ export type EditableTemplateField = Required<ApplicationTemplateField>
 export type ApplicationTemplateForm = {
   name: string
   instructions: string
+  description: string
   organizationId: string
   suborganizationId: string
   fields: Array<EditableTemplateField>
@@ -35,6 +37,14 @@ export const templateStatusOptions: Record<ApplicationTemplateStatus, TemplateSt
   PUBLISHED: { label: 'Opublikowany', tagType: 'success' },
 }
 
+export const templateDescriptionStatusOptions: Record<
+  Extract<ApplicationTemplateDescriptionStatus, 'IN_PROGRESS' | 'FAILED'>,
+  TemplateStatusOption
+> = {
+  IN_PROGRESS: { label: 'Generowanie opisu', tagType: 'warning' },
+  FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
+}
+
 export function toEditableField(field: ApplicationTemplateField): EditableTemplateField {
   return {
     name: field.name,
@@ -52,6 +62,7 @@ export function toDetailsData(form: ApplicationTemplateForm): ApplicationTemplat
   return {
     name: form.name.trim(),
     instructions: form.instructions.trim() || null,
+    description: form.description.trim() || null,
     organizationId: form.organizationId || null,
     suborganizationId: form.suborganizationId || null,
     fields: form.fields.map((field) => ({

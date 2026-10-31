@@ -1,6 +1,6 @@
 FROM python:3.14-slim-trixie
 
-RUN pip install --no-cache uv==0.12.*
+RUN pip install --no-cache uv==0.13.*
 
 RUN useradd -r prawobiorca_app
 

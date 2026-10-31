@@ -1487,6 +1487,100 @@
         }
       }
     },
+    "/api/application-templates/published/search": {
+      "get": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Search Published Application Templates",
+        "operationId": "search_published_application_templates",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Query"
+            }
+          },
+          {
+            "name": "threshold",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 1,
+              "minimum": -1,
+              "title": "Threshold"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizationid"
+            }
+          },
+          {
+            "name": "suborganizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suborganizationid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishedApplicationTemplateSearchResult"
+                  },
+                  "title": "Response Search Published Application Templates"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
+          "422": {
+            "description": "Suborganization given without organization!"
+          }
+        }
+      }
+    },
     "/api/application-templates": {
       "get": {
         "tags": [
@@ -1941,6 +2035,62 @@
           },
           "409": {
             "description": "Application template not published!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/application-templates/{templateId}/description-generation": {
+      "post": {
+        "tags": [
+          "application_templates"
+        ],
+        "summary": "Regenerate Application Template Description",
+        "operationId": "regenerate_application_template_description",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Templateid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
+          "404": {
+            "description": "Application template not found!"
+          },
+          "409": {
+            "description": "Application template not a draft, or its description generation already in progress!"
           },
           "422": {
             "description": "Validation Error",
@@ -2428,6 +2578,16 @@
         ],
         "title": "ApplicationTemplateData"
       },
+      "ApplicationTemplateDescriptionStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUESTED",
+          "IN_PROGRESS",
+          "GENERATED",
+          "FAILED"
+        ],
+        "title": "ApplicationTemplateDescriptionStatus"
+      },
       "ApplicationTemplateDetailsData": {
         "properties": {
           "name": {
@@ -2449,10 +2609,22 @@
           },
           "fields": {
             "items": {
-              "$ref": "#/components/schemas/ApplicationTemplateField"
+              "$ref": "#/components/schemas/ApplicationTemplateField-Input"
             },
             "type": "array",
             "title": "Fields"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "organizationId": {
             "anyOf": [
@@ -2486,7 +2658,7 @@
         ],
         "title": "ApplicationTemplateDetailsData"
       },
-      "ApplicationTemplateField": {
+      "ApplicationTemplateField-Input": {
         "properties": {
           "name": {
             "type": "string",
@@ -2547,6 +2719,73 @@
         ],
         "title": "ApplicationTemplateField"
       },
+      "ApplicationTemplateField-Output": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "fieldType": {
+            "$ref": "#/components/schemas/ApplicationFieldType",
+            "default": "TEXT"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          },
+          "passToAi": {
+            "type": "boolean",
+            "title": "Passtoai",
+            "default": true
+          },
+          "defaultValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvalue"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "fieldType",
+          "required",
+          "passToAi",
+          "defaultValue",
+          "pattern",
+          "options"
+        ],
+        "title": "ApplicationTemplateField"
+      },
       "ApplicationTemplateRepresentation": {
         "properties": {
           "id": {
@@ -2568,7 +2807,7 @@
           },
           "fields": {
             "items": {
-              "$ref": "#/components/schemas/ApplicationTemplateField"
+              "$ref": "#/components/schemas/ApplicationTemplateField-Output"
             },
             "type": "array",
             "title": "Fields"
@@ -2583,6 +2822,21 @@
               }
             ],
             "title": "Instructions"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "descriptionStatus": {
+            "$ref": "#/components/schemas/ApplicationTemplateDescriptionStatus",
+            "default": "NOT_REQUESTED"
           },
           "organizationId": {
             "anyOf": [
@@ -2617,6 +2871,8 @@
           "status",
           "fields",
           "instructions",
+          "description",
+          "descriptionStatus",
           "organizationId",
           "suborganizationId"
         ],
@@ -3081,6 +3337,17 @@
             },
             "type": "array",
             "title": "Fields"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           }
         },
         "type": "object",
@@ -3090,6 +3357,23 @@
           "fields"
         ],
         "title": "PublishedApplicationTemplate"
+      },
+      "PublishedApplicationTemplateSearchResult": {
+        "properties": {
+          "template": {
+            "$ref": "#/components/schemas/PublishedApplicationTemplate"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template",
+          "score"
+        ],
+        "title": "PublishedApplicationTemplateSearchResult"
       },
       "RegulationData": {
         "properties": {

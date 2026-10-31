@@ -28,14 +28,16 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
 Szablonami zarządza administrator, a zalogowany użytkownik widzi tylko szablony opublikowane. Use case'y dostają `Caller` i sprawdzają dostęp politykami z `src/domain/services/application_template_access.py` (`check_can_manage_application_templates`, `check_can_read_published_application_templates`).
 
 - **Endpointy** (`src/framework/api/endpoints/application_templates.py`):
-  - `GET /api/application-templates/published` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
+  - `GET /api/application-templates/published` zwraca opublikowane szablony (`PublishedApplicationTemplate`) z opisem i definicjami pól, bez instrukcji dla AI. Dostępny dla zalogowanego użytkownika.
+  - `GET /api/application-templates/published/search` wyszukuje opublikowane szablony po opisie – patrz [Opisy szablonów](#5-opisy-szablonów).
   - `GET /api/application-templates` i `GET /api/application-templates/{templateId}` zwracają szablony (`ApplicationTemplateRepresentation`) niezależnie od statusu.
   - `POST /api/application-templates` przyjmuje nazwę szablonu, zapisuje go z domyślnymi instrukcjami i zwraca presigned POST do wgrania pliku DOCX.
   - `POST /api/application-templates/{templateId}/confirm-upload` pobiera plik z object storage, odczytuje jego zmienne, tworzy z nich domyślne pola i zmienia status na `DRAFT`. Plik jest pobierany i analizowany poza transakcją, a zmiana statusu jest warunkowa (`confirm_upload` aktualizuje tylko szablon w statusie `NOT_UPLOADED`). Zwraca `409`, jeśli wgranie było już potwierdzone (także równolegle) albo pliku nie ma w object storage, i `422` dla niepoprawnego szablonu DOCX.
-  - `PUT /api/application-templates/{templateId}` zapisuje nazwę, instrukcje i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól albo suborganizacji podanej bez organizacji zwraca `422`.
+  - `PUT /api/application-templates/{templateId}` zapisuje nazwę, instrukcje, opis i konfigurację pól (`ApplicationTemplateDetailsData`). Tylko dla statusu `DRAFT` (inaczej `409`), dla niepoprawnej konfiguracji pól albo suborganizacji podanej bez organizacji zwraca `422`.
   - `POST /api/application-templates/{templateId}/publish` publikuje szablon w statusie `DRAFT` z niepustymi instrukcjami (`is_ready_to_publish`, `src/domain/services/application_templates.py`, inaczej `409`).
   - `POST /api/application-templates/{templateId}/unpublish` przywraca opublikowanemu szablonowi status `DRAFT` (inaczej `409`).
   - `GET /api/application-templates/{templateId}/download-url` zwraca presigned URL do pliku DOCX (`409`, jeśli plik nie został wgrany). Frontend używa go do pobrania i podglądu szablonu.
+  - `POST /api/application-templates/{templateId}/description-generation` zleca wygenerowanie opisu – patrz [Opisy szablonów](#5-opisy-szablonów).
   - `DELETE /api/application-templates/{templateId}` usuwa szablon i jego plik. Wygenerowane wnioski zostają, z `template_id` ustawionym na `NULL`.
 - **Status:** `ApplicationTemplateStatus` (`src/domain/value_objects/application_templates.py`): `NOT_UPLOADED` → `DRAFT` ⇄ `PUBLISHED`.
 - **Plik DOCX:** szablon Jinja2 dla docxtpl. Musi zawierać zmienną `paragraphs` (treść wygenerowana przez LLM), `current_date` jest wypełniana automatycznie. Nagłówek, adresat, zwrot grzecznościowy, zwrot końcowy i podpis są częścią szablonu – LLM ich nie generuje. Pozostałe zmienne stają się polami szablonu (`create_default_fields`, `src/domain/services/application_fields.py`).
@@ -50,7 +52,7 @@ Szablonami zarządza administrator, a zalogowany użytkownik widzi tylko szablon
 - **Use case'y** (`src/app/use_cases/application_templates.py`): `ListApplicationTemplates`, `GetApplicationTemplate`, `ListPublishedApplicationTemplates`, `AddApplicationTemplate`, `ConfirmApplicationTemplateUpload`, `UpdateApplicationTemplate`, `PublishApplicationTemplate`, `UnpublishApplicationTemplate`, `DeleteApplicationTemplate`, `GetApplicationTemplateDownloadUrl`.
 - **Porty:** `src/app/ports/application_templates.py` (`ApplicationTemplateInspector`, `ApplicationTemplateInstructionsProvider`).
 - **Adaptery:**
-  - `DocxTemplateInspector` (`src/infrastructure/docx/template_inspector.py`) – odczytuje zmienne szablonu DOCX (w `SandboxedEnvironment`).
+  - `DocxTemplateInspector` (`src/infrastructure/docx/template_inspector.py`) – odczytuje zmienne szablonu DOCX (w `SandboxedEnvironment`) i jego tekst (akapity i komórki tabel) na potrzeby opisu.
   - `PromptsApplicationTemplateInstructionsProvider` (`src/infrastructure/ai_services/application_template_instructions.py`) – domyślne instrukcje dla AI.
   - `ApplicationTemplatesRepository` (`src/infrastructure/relational_db/repositories/application_templates.py`) – tabela `application_templates`.
   - `S3ApplicationTemplatesStorage` (`src/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `application_templates/{id}`.
@@ -82,7 +84,20 @@ Administrator może zlecić wygenerowanie przez LLM ogólnego opisu regulacji (2
 - **Obsługa błędów:** jak przy wnioskach – `ServiceUnavailable` ustawia `FAILED` i ponawia zadanie, po przekroczeniu `MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES` opis zostaje w statusie `FAILED`.
 - **Frontend:** checkbox „Wygeneruj opis przez AI” w dialogu dodawania regulacji i przycisk o tej samej nazwie w szczegółach przygotowanej regulacji (oba tylko dla administratora). W trakcie generowania pole opisu jest zablokowane, a lista regulacji jest odpytywana do zakończenia. Na stronie głównej formularz `RegulationsSearchForm` filtruje obie listy (publiczną i użytkownika) po opisie, pozwala wybrać próg istotności i kolejność (alfabetycznie albo wg trafności) i pokazuje podobieństwo przy każdej regulacji; parametry wyszukiwania są zapisywane w adresie strony.
 
-## 5. Modele
+## 5. Opisy szablonów
+
+Administrator może zlecić wygenerowanie przez LLM krótkiego opisu szablonu wniosku (1–3 zdania: o co wnioskodawca prosi, do kogo kieruje pismo i w jakiej sytuacji z niego korzysta). Opis i jego wektor służą do wyszukiwania pasującego szablonu przez użytkownika, a sam opis jest też widoczny przy wyborze szablonu.
+
+- **Status generowania:** `ApplicationTemplateDescriptionStatus` (`src/domain/value_objects/application_templates.py`): `NOT_REQUESTED`, `IN_PROGRESS`, `GENERATED`, `FAILED`, zwracany jako `descriptionStatus` w `ApplicationTemplateRepresentation`.
+- **Zlecenie:** `POST /api/application-templates/{templateId}/description-generation` (use case `RegenerateApplicationTemplateDescription`, tylko administrator) ustawia `IN_PROGRESS` i w tej samej transakcji zleca zadanie. Zwraca `202`, `404` dla nieistniejącego szablonu i `409`, jeśli szablon nie jest w statusie `DRAFT` albo opis jest już generowany.
+- **Zadanie w tle:** `generate_application_template_description` (`src/framework/workers/applications.py`), use case `GenerateApplicationTemplateDescription`. Wejście dla LLM (`create_description_source`, `src/domain/services/application_template_description.py`) to nazwa szablonu, instrukcje dla AI (maks. `MAX_DESCRIPTION_INSTRUCTIONS_CHARS` znaków), etykiety pól i tekst pliku DOCX pobranego z object storage (maks. `MAX_DESCRIPTION_CONTENT_CHARS` znaków). Prompt: `src/infrastructure/ai_services/prompts/application_template_description.md` – nakazuje pominąć ogólne wytyczne redakcyjne, wspólne dla domyślnych instrukcji wszystkich szablonów.
+- **Porty i adaptery:** `ApplicationTemplateDescriptionWriter` (`src/app/ports/application_templates.py`, adapter `src/infrastructure/ai_services/application_template_description_writer.py`) i `ApplicationTemplateDescriptionGenerationScheduler` (`src/app/ports/tasks.py`, adapter `PostgresApplicationTemplateDescriptionGenerationScheduler` w `src/infrastructure/tasks/application_templates.py`).
+- **Wektor opisu:** kolumna `application_templates.description_vector`, liczona przez worker. Ręczna zmiana treści opisu (`PUT /api/application-templates/{templateId}`) czyści wektor.
+- **Wyszukiwanie po opisie:** `GET /api/application-templates/published/search` (use case `SearchPublishedApplicationTemplates`, zalogowany użytkownik) przyjmuje zapytanie (`query`), minimalne podobieństwo (`threshold`) i filtr organizacji (`organizationId`, `suborganizationId`). Zwraca listę `PublishedApplicationTemplateSearchResult` (szablon i `score`, podobieństwo cosinusowe) posortowaną malejąco po podobieństwie. Szablony bez wektora opisu i nieopublikowane nie trafiają do wyników.
+- **Obsługa błędów:** jak przy opisach regulacji – błąd ustawia `FAILED` i ponawia zadanie, po przekroczeniu `MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES` opis zostaje w statusie `FAILED`.
+- **Frontend:** w edytorze szablonu (`ApplicationTemplateEditor`) pole „Opis szablonu” i przycisk „Wygeneruj opis przez AI”, który najpierw zapisuje szkic. W trakcie generowania formularz jest zablokowany, a strona szablonu odpytuje go do zakończenia. W formularzu wniosku (`GeneratePdfForm`) pole „Czego dotyczy wniosek?” wyszukuje szablony z domyślnym progiem istotności. Lista wyboru dzieli się wtedy na szablony pasujące (wg trafności, z podobieństwem) i pozostałe, a pod listą widać opis wybranego szablonu.
+
+## 6. Modele
 
 | Środowisko | Model | Uwagi |
 |---|---|---|
@@ -92,6 +107,6 @@ Administrator może zlecić wygenerowanie przez LLM ogólnego opisu regulacji (2
 
 Wcześniej testowane: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (brak roli `system`, ubogi korpus polski), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` w OVMS 2026.3), `google/gemma-4-26b-a4b-it-maas` i `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (zastąpione przez Gemini 3.5 Flash-Lite i Qwen 3.6 35B A3B – lepsze wyniki).
 
-## 6. Testowanie E2E (weryfikacja ręczna)
+## 7. Testowanie E2E (weryfikacja ręczna)
 
 Instrukcja weryfikacji całego przepływu użytkownika (logowanie -> sprawa -> regulamin -> generowanie i pobranie DOCX) znajduje się w [docs/tests/manual_e2e_test.md](tests/manual_e2e_test.md).

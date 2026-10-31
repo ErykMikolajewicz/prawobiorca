@@ -6,37 +6,32 @@ license = "MIT"
 readme = "README.md"
 requires-python = "==3.14.*"
 dependencies = [
-    "aiobotocore==3.9.*",
-    "alembic==1.19.*",
-    "asyncpg==0.31.*",
+    "aiobotocore==3.10.*",
+    "alembic==1.20.*",
+    "asyncpg==0.32.*",
     "bcrypt==5.0.*",
     "email-validator==2.3.*",
-    "fastapi==0.141.*",
-    "google-auth[requests]==2.59.*",
+    "fastapi==0.162.*",
+    "google-auth[requests]==2.62.*",
     "granian==2.8.*",
-    "httpx2==2.12.*",
+    "httpx2==2.16.*",
     "pgvector==0.5.*",
-    "pydantic==2.13.*",
-    "openai==3.15.*",
-    "pydantic-settings==2.15.*",
-    "pyjwt==2.13.*",
+    "pydantic==2.14.*",
+    "openai==3.39.*",
+    "pydantic-settings==2.16.*",
+    "pyjwt==2.15.*",
     "python-multipart==0.0.32",
-    "sqlalchemy[asyncio]==2.0.*",
+    "sqlalchemy[asyncio]==2.1.*",
     "jinja2==3.1.*",
     "docxtpl==0.20.*",
-    "taskiq==0.12.*",
+    "taskiq==0.13.*",
     "tokenizers==0.23.*",
 ]
 
 [dependency-groups]
 dev = [
     "granian[reload]==2.8.*",
-    "ruff==0.16.*",
-    "taskiq[reload]==0.12.*",
-]
-docs = [
-    "mkdocstrings[python]==1.0.*",
-    "zensical==0.0.59",
+    "taskiq[reload]==0.13.*",
 ]
 
 test = [

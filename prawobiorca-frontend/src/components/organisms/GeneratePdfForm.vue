@@ -7,12 +7,15 @@ import type { NewApplication, PublishedApplicationTemplate } from '@/api/generat
 
 type Props = {
   templates: Array<PublishedApplicationTemplate>
+  scores?: Record<string, number> | null
+  searching?: boolean
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'generate-pdf', newApplication: NewApplication): void
+  (e: 'search', query: string): void
 }>()
 
 const formRef = ref<FormInstance>()
@@ -26,6 +29,20 @@ const form = reactive({
 const selectedTemplate = computed(() =>
   props.templates.find((template) => template.id === form.templateId),
 )
+
+const visibleTemplates = computed(() => {
+  const scores = props.scores
+  if (!scores) {
+    return props.templates
+  }
+  const scoredTemplates = props.templates.filter((template) => template.id in scores)
+  scoredTemplates.sort((a, b) => scores[b.id]! - scores[a.id]!)
+  return scoredTemplates
+})
+
+function handleSearch(query: string) {
+  emit('search', query.trim())
+}
 
 const rules = computed(() => {
   const fieldRules: Record<string, Array<FormItemRule>> = {
@@ -88,16 +105,39 @@ async function handleSubmit() {
     <el-form-item label="Rodzaj wniosku:" prop="templateId">
       <el-select
         v-model="form.templateId"
-        placeholder="Wybierz szablon"
-        no-data-text="Brak dostępnych szablonów"
+        filterable
+        remote
+        remote-show-suffix
+        :remote-method="handleSearch"
+        :debounce="500"
+        :loading="searching"
+        placeholder="Wpisz, czego dotyczy wniosek, np. przedłużenie terminu oddania pracy dyplomowej"
+        loading-text="Wyszukiwanie szablonów..."
+        :no-data-text="
+          scores ? 'Nie znaleziono pasujących szablonów.' : 'Brak dostępnych szablonów'
+        "
         @change="handleTemplateChange"
       >
         <el-option
-          v-for="template in templates"
+          v-for="template in visibleTemplates"
           :key="template.id"
           :label="template.name"
           :value="template.id"
-        />
+        >
+          <el-tooltip
+            :content="template.description ?? ''"
+            :disabled="!template.description"
+            placement="right"
+            popper-class="template-description-tooltip"
+          >
+            <span class="template-option">
+              <span class="template-option-name">{{ template.name }}</span>
+              <span v-if="scores" class="template-option-score">
+                {{ scores[template.id]?.toFixed(3) }}
+              </span>
+            </span>
+          </el-tooltip>
+        </el-option>
       </el-select>
     </el-form-item>
     <el-form-item
@@ -139,3 +179,29 @@ async function handleSubmit() {
     </el-form-item>
   </el-form>
 </template>
+
+<style scoped>
+.template-option {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+}
+
+.template-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.template-option-score {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 0.8rem;
+}
+</style>
+
+<style>
+.template-description-tooltip {
+  max-width: 400px;
+  line-height: 1.4;
+}
+</style>
