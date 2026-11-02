@@ -244,6 +244,10 @@ class LegalStructureParser:
                 text_before_number = element.text[: unit_match.start()].strip()
                 text_after_number = element.text[unit_match.end() :].strip()
 
+                if is_header and DIVISION_PATTERN.match(text_before_number) is not None:
+                    breadcrumbs.push_header(text_before_number)
+                    text_before_number = ""
+
                 if is_header:
                     current_unit.title = f"{text_before_number} {text_after_number}".strip() or None
                 elif text_after_number:

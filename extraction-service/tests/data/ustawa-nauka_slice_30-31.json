@@ -20,7 +20,7 @@
     "text": "Art. 107. 1. Student jest obowiązany postępować zgodnie z treścią ślubowania i przepisami obowiązującymi w uczelni."
   },
   {
-    "label": "list_item",
+    "label": "text",
     "text": "2. Student jest obowiązany w szczególności do:"
   },
   {
@@ -29,7 +29,7 @@
   },
   {
     "label": "list_item",
-    "text": "2) składania  egzaminów,  odbywania  praktyk  zawodowych  i spełniania  innych  wymagań  przewidzianych  w programie studiów."
+    "text": "2) składania egzaminów, odbywania praktyk zawodowych i spełniania innych wymagań przewidzianych w programie studiów."
   },
   {
     "label": "text",
@@ -72,7 +72,7 @@
     "text": "4) niewniesienia opłat związanych z odbywaniem studiów."
   },
   {
-    "label": "list_item",
+    "label": "text",
     "text": "3. Skreślenie z listy studentów następuje w drodze decyzji administracyjnej."
   },
   {
@@ -104,12 +104,12 @@
     "text": "2) organ uchwałodawczy."
   },
   {
-    "label": "list_item",
+    "label": "text",
     "text": "3. Samorząd studencki jest wyłącznym reprezentantem ogółu studentów uczelni."
   },
   {
     "label": "text",
-    "text": "4. Samorząd  studencki  prowadzi  w uczelni  działalność  w zakresie  spraw  studenckich,  w tym  socjalno-bytowych i kulturalnych."
+    "text": "4. Samorząd studencki prowadzi w uczelni działalność w zakresie spraw studenckich, w tym socjalno-bytowych i kulturalnych."
   },
   {
     "label": "text",
@@ -117,7 +117,7 @@
   },
   {
     "label": "text",
-    "text": "6. Organ  uchwałodawczy  samorządu  studenckiego  uchwala  regulamin  określający  organizację  i sposób  działania samorządu  oraz  sposób  powoływania  przedstawicieli  do  organów  uczelni,  a w przypadku  uczelni  publicznej  także  do kolegium elektorów."
+    "text": "6. Organ uchwałodawczy samorządu studenckiego uchwala regulamin określający organizację i sposób działania samorządu oraz sposób powoływania przedstawicieli do organów uczelni, a w przypadku uczelni publicznej także do kolegium elektorów."
   },
   {
     "label": "text",
@@ -125,7 +125,7 @@
   },
   {
     "label": "text",
-    "text": "8. Rektor uchyla wydawane przez samorząd studencki akty niezgodne z przepisami prawa powszechnie obowiązującego,  statutem  uczelni,  regulaminem  studiów  lub regulaminem samorządu. Na rozstrzygnięcie w sprawie uchylenia aktu służy, w terminie 30 dni od dnia jego doręczenia, skarga do sądu administracyjnego. Przepisy o zaskarżaniu do sądu administracyjnego decyzji administracyjnych stosuje się odpowiednio."
+    "text": "8. Rektor uchyla wydawane przez samorząd studencki akty niezgodne z przepisami prawa powszechnie obowiązującego, statutem uczelni, regulaminem studiów lub regulaminem samorządu. Na rozstrzygnięcie w sprawie uchylenia aktu służy, w terminie 30 dni od dnia jego doręczenia, skarga do sądu administracyjnego. Przepisy o zaskarżaniu do sądu administracyjnego decyzji administracyjnych stosuje się odpowiednio."
   },
   {
     "label": "text",
@@ -152,16 +152,16 @@
     "text": "2. O powstaniu uczelnianej organizacji studenckiej jej organ niezwłocznie informuje rektora."
   },
   {
-    "label": "list_item",
+    "label": "text",
     "text": "3. Rektor uchyla akt organu uczelnianej organizacji studenckiej niezgodny z przepisami prawa powszechnie obowiązującego, statutem uczelni, regulaminem studiów lub regulaminem tej organizacji. Przepisy art. 110 ust. 8 zdanie drugie i trzecie stosuje się."
   },
   {
     "label": "text",
-    "text": "4. Rektor,  w drodze  decyzji  administracyjnej,  rozwiązuje  uczelnianą  organizację  studencką,  która  rażąco  lub  uporczywie narusza przepisy prawa powszechnie obowiązującego, statut uczelni, regulamin studiów lub regulamin tej organizacji."
+    "text": "4. Rektor, w drodze decyzji administracyjnej, rozwiązuje uczelnianą organizację studencką, która rażąco lub uporczywie narusza przepisy prawa powszechnie obowiązującego, statut uczelni, regulamin studiów lub regulamin tej organizacji."
   },
   {
     "label": "text",
-    "text": "5. Uczelnia  może  przeznaczać  środki  na  realizację  działań  uczelnianych  organizacji  studenckich  i działających w uczelni stowarzyszeń zrzeszających wyłącznie studentów lub studentów, doktorantów i pracowników uczelni. Podmioty te przedstawiają uczelni sprawozdanie z wykorzystania środków otrzymanych w danym roku akademickim."
+    "text": "5. Uczelnia może przeznaczać środki na realizację działań uczelnianych organizacji studenckich i działających w uczelni stowarzyszeń zrzeszających wyłącznie studentów lub studentów, doktorantów i pracowników uczelni. Podmioty te przedstawiają uczelni sprawozdanie z wykorzystania środków otrzymanych w danym roku akademickim."
   },
   {
     "label": "section_header",
@@ -221,7 +221,7 @@
   },
   {
     "label": "list_item",
-    "text": "3) badawczo-dydaktycznym  -  należy  prowadzenie  działalności  naukowej,  kształcenie  i wychowywanie  studentów  lub uczestniczenie w kształceniu doktorantów."
+    "text": "3) badawczo-dydaktycznym - należy prowadzenie działalności naukowej, kształcenie i wychowywanie studentów lub uczestniczenie w kształceniu doktorantów."
   },
   {
     "label": "text",
@@ -248,7 +248,7 @@
     "text": "4) asystenta."
   },
   {
-    "label": "list_item",
+    "label": "text",
     "text": "2. Na stanowisku:"
   },
   {
