@@ -51,7 +51,7 @@ function mountEditor(template: ApplicationTemplateRepresentation) {
     props: { template },
     global: {
       stubs: {
-        MdEditor: true,
+        MdEditorV3: true,
         ApplicationTemplateStatusBadge: true,
         ApplicationTemplateFieldEditor: true,
         ApplicationTemplatePreviewDialog: true,
