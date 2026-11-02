@@ -62,7 +62,7 @@ def test_statute_is_split_into_paragraphs_with_titles():
     paragraphs = [unit for unit in units if unit.unit_type == UnitType.PARAGRAPH]
     assert [unit.number for unit in paragraphs] == ["5", "6", "7"]
     assert paragraphs[1].title == "Prawa studenta"
-    assert paragraphs[1].breadcrumb == "Rozdział II Prawa i obowiązki studenta > § 6 Prawa studenta"
+    assert paragraphs[1].breadcrumb == "Rozdział II - Prawa i obowiązki studenta > § 6 Prawa studenta"
 
 
 def test_page_headers_and_footers_are_dropped():
@@ -266,6 +266,25 @@ def test_unit_marker_placed_after_header_title_starts_unit():
     assert units[0].number == "2"
     assert units[0].title == "Obowiązki mieszkańca domu studenckiego"
     assert units[0].path == []
+
+
+def test_division_glued_to_unit_header_becomes_path_segment():
+    elements = [
+        RegulationElement(
+            label=UsefulLabels.SECTION_HEADER,
+            text="Rozdział II - Prawa i obowiązki studenta § 6. Prawa studenta",
+        ),
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text="1. Student ma prawo do:"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 7. Obowiązki studenta"),
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text="1. Student jest zobowiązany do:"),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [unit.number for unit in units] == ["6", "7"]
+    assert units[0].title == "Prawa studenta"
+    assert units[0].path == ["Rozdział II - Prawa i obowiązki studenta"]
+    assert units[1].path == ["Rozdział II - Prawa i obowiązki studenta"]
 
 
 def test_header_above_bare_unit_marker_becomes_unit_title():

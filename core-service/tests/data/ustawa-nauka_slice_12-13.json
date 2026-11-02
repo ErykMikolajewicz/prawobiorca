@@ -9,7 +9,7 @@
   },
   {
     "label": "text",
-    "text": "6. W przypadku  ustania  członkostwa  w radzie uczelni, senat  niezwłocznie powołuje nowego członka na okres do końca kadencji."
+    "text": "6. W przypadku ustania członkostwa w radzie uczelni, senat niezwłocznie powołuje nowego członka na okres do końca kadencji."
   },
   {
     "label": "text",
@@ -17,14 +17,14 @@
   },
   {
     "label": "text",
-    "text": "2. Ta  sama  osoba  może  być  członkiem  rady  uczelni  nie  więcej  niż  przez 2 następujące po sobie kadencje. Okresu, o którym mowa w art. 20 ust. 6, nie wlicza się do liczby tych kadencji."
+    "text": "2. Ta sama osoba może być członkiem rady uczelni nie więcej niż przez 2 następujące po sobie kadencje. Okresu, o którym mowa w art. 20 ust. 6, nie wlicza się do liczby tych kadencji."
   },
   {
     "label": "text",
-    "text": "Art. 22. 1.  Przewodniczącym  rady  uczelni  jest  jej  członek  pochodzący  spoza wspólnoty uczelni, wybrany przez senat."
+    "text": "Art. 22. 1. Przewodniczącym rady uczelni jest jej członek pochodzący spoza wspólnoty uczelni, wybrany przez senat."
   },
   {
-    "label": "list_item",
+    "label": "text",
     "text": "2. Rada uczelni uchwala regulamin określający tryb jej funkcjonowania."
   },
   {
@@ -33,7 +33,7 @@
   },
   {
     "label": "text",
-    "text": "3a.  Posiedzenia rady uczelni mogą być przeprowadzane przy użyciu środków komunikacji elektronicznej, zapewniających w szczególności:"
+    "text": "3a. Posiedzenia rady uczelni mogą być przeprowadzane przy użyciu środków komunikacji elektronicznej, zapewniających w szczególności:"
   },
   {
     "label": "list_item",
@@ -44,16 +44,16 @@
     "text": "2) wielostronną komunikację w czasie rzeczywistym, w ramach której uczestnicy posiedzenia mogą wypowiadać się w jego toku"
   },
   {
-    "label": "list_item",
-    "text": "-z zachowaniem niezbędnych zasad bezpieczeństwa."
+    "label": "text",
+    "text": "- z zachowaniem niezbędnych zasad bezpieczeństwa."
   },
   {
     "label": "text",
-    "text": "4. Członkowi  rady  uczelni,  o którym  mowa  w art. 19 ust. 1 pkt 1,  przysługuje miesięczne wynagrodzenie, którego wysokość nie może przekroczyć 67 % minimalnego  miesięcznego  wynagrodzenia  zasadniczego  dla  profesora  w uczelni publicznej określonego w przepisach wydanych na podstawie art. 137 ust. 2, zwanego dalej 'wynagrodzeniem profesora'. Wysokość wynagrodzenia ustala senat."
+    "text": "4. Członkowi rady uczelni, o którym mowa w art. 19 ust. 1 pkt 1, przysługuje miesięczne wynagrodzenie, którego wysokość nie może przekroczyć 67 % minimalnego miesięcznego wynagrodzenia zasadniczego dla profesora w uczelni publicznej określonego w przepisach wydanych na podstawie art. 137 ust. 2, zwanego dalej \"wynagrodzeniem profesora\". Wysokość wynagrodzenia ustala senat."
   },
   {
     "label": "text",
-    "text": "Art. 23. 1.  Do  zadań  rektora  należą  sprawy  dotyczące  uczelni,  z wyjątkiem spraw zastrzeżonych przez ustawę lub statut do kompetencji innych organów uczelni."
+    "text": "Art. 23. 1. Do zadań rektora należą sprawy dotyczące uczelni, z wyjątkiem spraw zastrzeżonych przez ustawę lub statut do kompetencji innych organów uczelni."
   },
   {
     "label": "text",
@@ -97,7 +97,7 @@
   },
   {
     "label": "list_item",
-    "text": "6) powoływanie osób do pełnienia funkcji kierowniczych  w uczelni i ich odwoływanie;"
+    "text": "6) powoływanie osób do pełnienia funkcji kierowniczych w uczelni i ich odwoływanie;"
   },
   {
     "label": "list_item",
@@ -133,11 +133,11 @@
   },
   {
     "label": "text",
-    "text": "4. Od  decyzji  administracyjnych  wydawanych  przez  rektora  służy  wniosek o ponowne rozpatrzenie sprawy."
+    "text": "4. Od decyzji administracyjnych wydawanych przez rektora służy wniosek o ponowne rozpatrzenie sprawy."
   },
   {
     "label": "text",
-    "text": "5. Powołanie  osoby  do  pełnienia  funkcji  kierowniczej,  do  której  zakresu obowiązków należą sprawy studenckie lub sprawy doktorantów, wymaga uzgodnienia odpowiednio  z samorządem  studenckim  lub  samorządem  doktorantów.  Niezajęcie stanowiska przez samorząd w terminie wskazanym w statucie uważa się za wyrażenie zgody."
+    "text": "5. Powołanie osoby do pełnienia funkcji kierowniczej, do której zakresu obowiązków należą sprawy studenckie lub sprawy doktorantów, wymaga uzgodnienia odpowiednio z samorządem studenckim lub samorządem doktorantów. Niezajęcie stanowiska przez samorząd w terminie wskazanym w statucie uważa się za wyrażenie zgody."
   },
   {
     "label": "text",
@@ -145,7 +145,7 @@
   },
   {
     "label": "text",
-    "text": "Art. 24. 1.  Rektorem  może  być  osoba,  która  spełnia  wymagania  określone w art. 20 ust. 1 pkt 1 -6,  a w uczelni  publicznej -która  także  posiada  co  najmniej stopień doktora oraz spełnia wymaganie określone w art. 20 ust. 1 pkt 7. Statut może przewidywać dodatkowe wym agania dla rektora."
+    "text": "Art. 24. 1. Rektorem może być osoba, która spełnia wymagania określone w art. 20 ust. 1 pkt 1-6, a w uczelni publicznej - która także posiada co najmniej stopień doktora oraz spełnia wymaganie określone w art. 20 ust. 1 pkt 7. Statut może przewidywać dodatkowe wymagania dla rektora."
   },
   {
     "label": "text",
@@ -153,11 +153,11 @@
   },
   {
     "label": "list_item",
-    "text": "1) publicznej -wybiera kolegium elektorów;"
+    "text": "1) publicznej - wybiera kolegium elektorów;"
   },
   {
     "label": "list_item",
-    "text": "2) niepublicznej -powołuje  założyciel  albo  wybiera  senat  albo  inny  określony w statucie organ uczelni, o którym mowa w art. 17 ust. 2."
+    "text": "2) niepublicznej - powołuje założyciel albo wybiera senat albo inny określony w statucie organ uczelni, o którym mowa w art. 17 ust. 2."
   },
   {
     "label": "text",
