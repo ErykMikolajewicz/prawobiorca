@@ -75,9 +75,3 @@ class PublishedApplicationTemplate:
     name: str
     fields: list[PublishedApplicationField]
     description: str | None = None
-
-
-@dataclass(config=ConfigDict(alias_generator=to_camel))
-class PublishedApplicationTemplateSearchResult:
-    template: PublishedApplicationTemplate
-    score: float

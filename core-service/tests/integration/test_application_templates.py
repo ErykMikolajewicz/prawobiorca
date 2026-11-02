@@ -1,9 +1,7 @@
-import math
 from io import BytesIO
 from unittest.mock import ANY
 from uuid import UUID, uuid4
 
-import pytest
 from docx import Document
 from fastapi import status
 from sqlalchemy import delete, insert, select
@@ -138,7 +136,6 @@ class StubTextsEmbedder:
 
 
 QUERY_VECTOR = [1.0] * VECTOR_LENGTH
-HALF_RELATED_VECTOR = [1.0] * (VECTOR_LENGTH // 2) + [0.0] * (VECTOR_LENGTH // 2)
 UNRELATED_VECTOR = [1.0, *[0.0] * (VECTOR_LENGTH - 1)]
 
 
@@ -675,7 +672,7 @@ async def test_update_application_template_with_suborganization_without_organiza
         await delete_templates(session_maker, template_id)
 
 
-async def test_search_published_application_templates(
+async def test_search_published_application_templates_by_name(
     client, override_session_maker, session_maker, override_authorize_normal_user
 ):
     prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
@@ -683,32 +680,20 @@ async def test_search_published_application_templates(
     other_organization_id = await insert_organization(session_maker, "UWR")
     matching_id = await insert_template(
         session_maker,
-        "Matching",
-        ApplicationTemplateStatus.PUBLISHED,
-        description="Wniosek o urlop.",
-        description_vector=QUERY_VECTOR,
-    )
-    half_matching_id = await insert_template(
-        session_maker,
-        "Half matching",
+        "Wniosek o urlop dziekański",
         ApplicationTemplateStatus.PUBLISHED,
         organization_id=organization_id,
-        description_vector=HALF_RELATED_VECTOR,
+        description="Wniosek o urlop.",
     )
     templates_ids = [
         matching_id,
-        half_matching_id,
-        await insert_template(
-            session_maker, "Unrelated", ApplicationTemplateStatus.PUBLISHED, description_vector=UNRELATED_VECTOR
-        ),
-        await insert_template(session_maker, "Without description", ApplicationTemplateStatus.PUBLISHED),
-        await insert_template(session_maker, "Draft", ApplicationTemplateStatus.DRAFT, description_vector=QUERY_VECTOR),
+        await insert_template(session_maker, "Wniosek o stypendium socjalne", ApplicationTemplateStatus.PUBLISHED),
+        await insert_template(session_maker, "Wniosek o urlop dziekański - szkic", ApplicationTemplateStatus.DRAFT),
         await insert_template(
             session_maker,
-            "Other organization",
+            "Wniosek o urlop dziekański - UWR",
             ApplicationTemplateStatus.PUBLISHED,
             organization_id=other_organization_id,
-            description_vector=QUERY_VECTOR,
         ),
     ]
 
@@ -717,36 +702,55 @@ async def test_search_published_application_templates(
     try:
         response = await client.get(
             "/api/application-templates/published/search",
-            params={"query": "urlop", "threshold": 0.5, "organizationId": str(organization_id)},
+            params={"query": "urlop dziekanski", "aiAssisted": False, "organizationId": str(organization_id)},
         )
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == [
             {
-                "template": {
-                    "id": str(matching_id),
-                    "name": "Matching",
-                    "description": "Wniosek o urlop.",
-                    "fields": [],
-                },
-                "score": pytest.approx(1.0),
-            },
-            {
-                "template": {"id": str(half_matching_id), "name": "Half matching", "description": None, "fields": []},
-                "score": pytest.approx(1 / math.sqrt(2)),
-            },
+                "id": str(matching_id),
+                "name": "Wniosek o urlop dziekański",
+                "description": "Wniosek o urlop.",
+                "fields": [],
+            }
         ]
-
-        response = await client.get(
-            "/api/application-templates/published/search", params={"query": "urlop", "threshold": 0.9}
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        assert [result["template"]["name"] for result in response.json()] == ["Matching", "Other organization"]
     finally:
         prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
         await delete_templates(session_maker, *templates_ids)
         await delete_organizations(session_maker, organization_id, other_organization_id)
+
+
+async def test_search_published_application_templates_ai_assisted(
+    client, override_session_maker, session_maker, override_authorize_normal_user
+):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+    templates_ids = [
+        await insert_template(
+            session_maker, "Wniosek o urlop", ApplicationTemplateStatus.PUBLISHED, description_vector=UNRELATED_VECTOR
+        ),
+        await insert_template(
+            session_maker, "Podanie o urlop", ApplicationTemplateStatus.PUBLISHED, description_vector=QUERY_VECTOR
+        ),
+        await insert_template(session_maker, "Wniosek o stypendium", ApplicationTemplateStatus.PUBLISHED),
+        await insert_template(session_maker, "Szkic", ApplicationTemplateStatus.DRAFT, description_vector=QUERY_VECTOR),
+    ]
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    try:
+        response = await client.get(
+            "/api/application-templates/published/search", params={"query": "urlop ", "aiAssisted": True}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [template["name"] for template in response.json()] == [
+            "Podanie o urlop",
+            "Wniosek o urlop",
+            "Wniosek o stypendium",
+        ]
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
+        await delete_templates(session_maker, *templates_ids)
 
 
 async def test_search_published_application_templates_empty_query(
@@ -757,9 +761,7 @@ async def test_search_published_application_templates_empty_query(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     try:
-        response = await client.get(
-            "/api/application-templates/published/search", params={"query": "", "threshold": 0.5}
-        )
+        response = await client.get("/api/application-templates/published/search", params={"query": ""})
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     finally:

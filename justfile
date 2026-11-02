@@ -2,7 +2,7 @@ export VIRTUAL_ENV := ""
 
 [working-directory: 'core-service']
 dev:
-    uv run --project . ../scripts/local/dev.py
+    uv run scripts/dev.py
 
 run-locally:
     uv run scripts/local/run.py

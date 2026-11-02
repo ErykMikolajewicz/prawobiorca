@@ -1506,14 +1506,13 @@
             }
           },
           {
-            "name": "threshold",
+            "name": "aiAssisted",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "number",
-              "maximum": 1,
-              "minimum": -1,
-              "title": "Threshold"
+              "type": "boolean",
+              "default": false,
+              "title": "Aiassisted"
             }
           },
           {
@@ -1559,7 +1558,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PublishedApplicationTemplateSearchResult"
+                    "$ref": "#/components/schemas/PublishedApplicationTemplate"
                   },
                   "title": "Response Search Published Application Templates"
                 }
@@ -3357,23 +3356,6 @@
           "fields"
         ],
         "title": "PublishedApplicationTemplate"
-      },
-      "PublishedApplicationTemplateSearchResult": {
-        "properties": {
-          "template": {
-            "$ref": "#/components/schemas/PublishedApplicationTemplate"
-          },
-          "score": {
-            "type": "number",
-            "title": "Score"
-          }
-        },
-        "type": "object",
-        "required": [
-          "template",
-          "score"
-        ],
-        "title": "PublishedApplicationTemplateSearchResult"
       },
       "RegulationData": {
         "properties": {

@@ -20,14 +20,22 @@ class ApplicationTemplatesRepository(Protocol):
         organization_filter: OrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]: ...
 
-    async def search_templates(
+    async def fuzzy_search_templates(
         self,
         session: AsyncSession,
         status: ApplicationTemplateStatus,
         organization_filter: OrganizationFilter | None,
+        query: str,
+    ) -> list[ApplicationTemplateRepresentation]: ...
+
+    async def hybrid_search_templates(
+        self,
+        session: AsyncSession,
+        status: ApplicationTemplateStatus,
+        organization_filter: OrganizationFilter | None,
+        query: str,
         vector: list[float],
-        threshold: float,
-    ) -> list[tuple[ApplicationTemplateRepresentation, float]]: ...
+    ) -> list[ApplicationTemplateRepresentation]: ...
 
     async def get(self, session: AsyncSession, id_: UUID) -> ApplicationTemplateRepresentation | None: ...
 

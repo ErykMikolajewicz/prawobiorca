@@ -6,13 +6,12 @@ import {
   searchPublishedApplicationTemplates,
 } from '@/api/generated/endpoints/application-templates/application-templates'
 import type { PublishedApplicationTemplate } from '@/api/generated/model'
-import { defaultThreshold } from '@/domain/search'
 
 export function usePublishedTemplates() {
   const templates = ref<Array<PublishedApplicationTemplate>>([])
   const query = ref('')
-  const scores = ref<Record<string, number> | null>(null)
-  const searching = ref(false)
+  const aiAssisted = ref(false)
+  const searchResults = ref<Array<PublishedApplicationTemplate> | null>(null)
 
   const organizationsStore = useOrganizationsStore()
   let lastRequestId = 0
@@ -29,30 +28,22 @@ export function usePublishedTemplates() {
     query.value = newQuery
     const requestId = ++lastSearchRequestId
 
-    if (!newQuery) {
-      scores.value = null
-      searching.value = false
+    if (!newQuery.trim()) {
+      searchResults.value = null
       return
     }
 
-    searching.value = true
     try {
       const results = await searchPublishedApplicationTemplates({
         ...getOrganizationParams(),
         query: newQuery,
-        threshold: defaultThreshold,
+        aiAssisted: aiAssisted.value,
       })
       if (requestId === lastSearchRequestId) {
-        scores.value = Object.fromEntries(
-          results.map((result) => [result.template.id, result.score]),
-        )
+        searchResults.value = results
       }
     } catch (error) {
       showApiError(error, { defaultMessage: 'Nie udało się wyszukać szablonów wniosków.' })
-    } finally {
-      if (requestId === lastSearchRequestId) {
-        searching.value = false
-      }
     }
   }
 
@@ -75,10 +66,12 @@ export function usePublishedTemplates() {
     load,
   )
 
+  watch(aiAssisted, () => search(query.value))
+
   return {
     templates,
-    scores,
-    searching,
+    searchResults,
+    aiAssisted,
     load,
     search,
   }

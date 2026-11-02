@@ -7,7 +7,6 @@ from src.app.dtos.application_templates import (
     ApplicationTemplateDetailsData,
     PublishedApplicationField,
     PublishedApplicationTemplate,
-    PublishedApplicationTemplateSearchResult,
 )
 from src.app.use_cases.application_templates import (
     AddApplicationTemplate,
@@ -578,34 +577,71 @@ async def test_get_application_template_download_url_not_uploaded(
     mock_application_templates_storage.get_download_url.assert_not_awaited()
 
 
-async def test_search_published_application_templates(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    template_id = next(uuid_generator)
+def create_searchable_template(template_id):
     template = create_template(ApplicationTemplateStatus.PUBLISHED, instructions="Instrukcje")
     template.id = template_id
     template.name = "Wniosek o urlop"
     template.description = "Wniosek o urlop dziekański."
+    return template
+
+
+@pytest.mark.parametrize(
+    ("query", "ai_assisted"),
+    [("urlop dziekański", False), ("urlop", True), ("  urlop", True)],
+)
+async def test_search_published_application_templates_by_name(
+    mock_session_maker,
+    mock_opened_session,
+    mock_application_templates_repo,
+    mock_embedding_port,
+    uuid_generator,
+    query,
+    ai_assisted,
+):
+    template_id = next(uuid_generator)
     organization_filter = OrganizationFilter(next(uuid_generator))
-    mock_embedding_port.embed_queries.return_value = [[0.1, 0.2]]
-    mock_application_templates_repo.search_templates.return_value = [(template, 0.8)]
+    mock_application_templates_repo.fuzzy_search_templates.return_value = [create_searchable_template(template_id)]
 
     use_case = SearchPublishedApplicationTemplates(
         mock_session_maker, mock_embedding_port, mock_application_templates_repo
     )
 
-    results = await use_case.execute(USER, organization_filter, "urlop", 0.5)
+    results = await use_case.execute(USER, organization_filter, query, ai_assisted)
 
-    mock_embedding_port.embed_queries.assert_awaited_once_with(["urlop"])
-    mock_application_templates_repo.search_templates.assert_awaited_once_with(
-        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter, [0.1, 0.2], 0.5
+    mock_embedding_port.embed_queries.assert_not_awaited()
+    mock_application_templates_repo.hybrid_search_templates.assert_not_awaited()
+    mock_application_templates_repo.fuzzy_search_templates.assert_awaited_once_with(
+        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter, query.strip()
     )
     assert results == [
-        PublishedApplicationTemplateSearchResult(
-            template=PublishedApplicationTemplate(
-                id=template_id, name="Wniosek o urlop", description="Wniosek o urlop dziekański.", fields=[]
-            ),
-            score=0.8,
+        PublishedApplicationTemplate(
+            id=template_id, name="Wniosek o urlop", description="Wniosek o urlop dziekański.", fields=[]
+        )
+    ]
+
+
+async def test_search_published_application_templates_ai_assisted(
+    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
+):
+    template_id = next(uuid_generator)
+    organization_filter = OrganizationFilter(next(uuid_generator))
+    mock_embedding_port.embed_queries.return_value = [[0.1, 0.2]]
+    mock_application_templates_repo.hybrid_search_templates.return_value = [create_searchable_template(template_id)]
+
+    use_case = SearchPublishedApplicationTemplates(
+        mock_session_maker, mock_embedding_port, mock_application_templates_repo
+    )
+
+    results = await use_case.execute(USER, organization_filter, "urlop ", True)
+
+    mock_embedding_port.embed_queries.assert_awaited_once_with(["urlop"])
+    mock_application_templates_repo.fuzzy_search_templates.assert_not_awaited()
+    mock_application_templates_repo.hybrid_search_templates.assert_awaited_once_with(
+        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter, "urlop", [0.1, 0.2]
+    )
+    assert results == [
+        PublishedApplicationTemplate(
+            id=template_id, name="Wniosek o urlop", description="Wniosek o urlop dziekański.", fields=[]
         )
     ]
 
@@ -618,9 +654,10 @@ async def test_search_published_application_templates_without_login(
     )
 
     with pytest.raises(LoginRequired):
-        await use_case.execute(Caller(None), None, "urlop", 0.5)
+        await use_case.execute(Caller(None), None, "urlop ", True)
 
     mock_embedding_port.embed_queries.assert_not_awaited()
+    mock_application_templates_repo.fuzzy_search_templates.assert_not_awaited()
 
 
 def create_regenerate_application_template_description(mock_session_maker, mock_application_templates_repo):

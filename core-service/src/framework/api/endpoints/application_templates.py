@@ -9,7 +9,6 @@ from src.app.dtos.application_templates import (
     ApplicationTemplateRepresentation,
     ApplicationTemplateUploadTarget,
     PublishedApplicationTemplate,
-    PublishedApplicationTemplateSearchResult,
 )
 from src.app.use_cases.application_templates import (
     AddApplicationTemplate,
@@ -82,7 +81,7 @@ async def get_published_application_templates(
 
 @application_templates_router.get(
     "/application-templates/published/search",
-    response_model=list[PublishedApplicationTemplateSearchResult],
+    response_model=list[PublishedApplicationTemplate],
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
     },
@@ -94,9 +93,9 @@ async def search_published_application_templates(
     caller: Annotated[Caller, Depends(get_caller)],
     organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
     query: str = Query(min_length=1),
-    threshold: float = Query(ge=-1, le=1),
-) -> list[PublishedApplicationTemplateSearchResult]:
-    return await search_templates.execute(caller, organization_filter, query, threshold)
+    ai_assisted: bool = Query(default=False, alias="aiAssisted"),
+) -> list[PublishedApplicationTemplate]:
+    return await search_templates.execute(caller, organization_filter, query, ai_assisted)
 
 
 @application_templates_router.get(

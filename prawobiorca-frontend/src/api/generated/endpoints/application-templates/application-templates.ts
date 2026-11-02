@@ -5,7 +5,6 @@ import type {
   ApplicationTemplateUploadTarget,
   GetPublishedApplicationTemplatesParams,
   PublishedApplicationTemplate,
-  PublishedApplicationTemplateSearchResult,
   SearchPublishedApplicationTemplatesParams,
 } from '../../model'
 
@@ -30,9 +29,9 @@ export const getPublishedApplicationTemplates = (
  */
 export const searchPublishedApplicationTemplates = (
   params: SearchPublishedApplicationTemplatesParams,
-  options?: SecondParameter<typeof prawobiorcaRequest<PublishedApplicationTemplateSearchResult[]>>,
+  options?: SecondParameter<typeof prawobiorcaRequest<PublishedApplicationTemplate[]>>,
 ) => {
-  return prawobiorcaRequest<PublishedApplicationTemplateSearchResult[]>(
+  return prawobiorcaRequest<PublishedApplicationTemplate[]>(
     { url: `/api/application-templates/published/search`, method: 'GET', params },
     options,
   )

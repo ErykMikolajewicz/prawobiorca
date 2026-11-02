@@ -9,7 +9,6 @@ from src.app.dtos.application_templates import (
     ApplicationTemplateUploadTarget,
     PublishedApplicationField,
     PublishedApplicationTemplate,
-    PublishedApplicationTemplateSearchResult,
 )
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.relational import SessionMaker
@@ -34,7 +33,7 @@ from src.domain.services.application_template_access import (
     check_can_read_published_application_templates,
 )
 from src.domain.services.application_template_description import create_description_source
-from src.domain.services.application_templates import is_ready_to_publish
+from src.domain.services.application_templates import is_ready_to_publish, is_semantic_search_query
 from src.domain.value_objects.application_templates import (
     ApplicationTemplateDescriptionStatus,
     ApplicationTemplateDetails,
@@ -123,22 +122,25 @@ class SearchPublishedApplicationTemplates:
     application_templates_repo: ApplicationTemplatesRepository
 
     async def execute(
-        self, caller: Caller, organization_filter: OrganizationFilter | None, query: str, threshold: float
-    ) -> list[PublishedApplicationTemplateSearchResult]:
+        self, caller: Caller, organization_filter: OrganizationFilter | None, query: str, ai_assisted: bool
+    ) -> list[PublishedApplicationTemplate]:
         check_can_read_published_application_templates(caller)
 
-        embeddings = await self.embedding_port.embed_queries([query])
-        query_vector = embeddings[0]
+        stripped_query = query.strip()
 
-        async with self.session_maker() as session:
-            results = await self.application_templates_repo.search_templates(
-                session, ApplicationTemplateStatus.PUBLISHED, organization_filter, query_vector, threshold
-            )
+        if ai_assisted and is_semantic_search_query(query):
+            embeddings = await self.embedding_port.embed_queries([stripped_query])
+            async with self.session_maker() as session:
+                templates = await self.application_templates_repo.hybrid_search_templates(
+                    session, ApplicationTemplateStatus.PUBLISHED, organization_filter, stripped_query, embeddings[0]
+                )
+        else:
+            async with self.session_maker() as session:
+                templates = await self.application_templates_repo.fuzzy_search_templates(
+                    session, ApplicationTemplateStatus.PUBLISHED, organization_filter, stripped_query
+                )
 
-        return [
-            PublishedApplicationTemplateSearchResult(template=_to_published_template(template), score=score)
-            for template, score in results
-        ]
+        return [_to_published_template(template) for template in templates]
 
 
 @dataclass

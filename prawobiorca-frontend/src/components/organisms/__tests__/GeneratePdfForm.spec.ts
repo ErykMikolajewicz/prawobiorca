@@ -9,9 +9,9 @@ function template(id: string, description: string | null = null): PublishedAppli
 
 const templates = [template('a', 'Wniosek o urlop.'), template('b'), template('c')]
 
-function mountForm(scores: Record<string, number> | null = null) {
+function mountForm(searchResults: Array<PublishedApplicationTemplate> | null = null) {
   return mount(GeneratePdfForm, {
-    props: { templates, scores },
+    props: { templates, searchResults },
     global: {
       stubs: {
         ElForm: { template: '<form><slot /></form>', methods: { clearValidate() {} } },
@@ -31,6 +31,11 @@ function mountForm(scores: Record<string, number> | null = null) {
           template: '<span class="tooltip" :data-content="content"><slot /></span>',
           props: ['content'],
         },
+        ElSwitch: {
+          template:
+            '<input class="ai-switch" type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+          props: ['modelValue'],
+        },
       },
     },
   })
@@ -41,26 +46,32 @@ function optionValues(wrapper: ReturnType<typeof mountForm>) {
 }
 
 describe('GeneratePdfForm', () => {
-  it('emits trimmed query typed into the template select', async () => {
+  it('emits query typed into the template select without trimming', async () => {
     const wrapper = mountForm()
 
-    await wrapper.find('.select-query').setValue('  urlop dziekański  ')
+    await wrapper.find('.select-query').setValue('urlop ')
 
-    expect(wrapper.emitted('search')).toEqual([['urlop dziekański']])
+    expect(wrapper.emitted('search')).toEqual([['urlop ']])
   })
 
   it('lists all templates without search', () => {
     const wrapper = mountForm()
 
     expect(optionValues(wrapper)).toEqual(['a', 'b', 'c'])
-    expect(wrapper.find('.template-option-score').exists()).toBe(false)
   })
 
-  it('lists only matching templates ordered by score', () => {
-    const wrapper = mountForm({ a: 0.6, c: 0.9 })
+  it('lists search results in the given order', () => {
+    const wrapper = mountForm([templates[2]!, templates[0]!])
 
     expect(optionValues(wrapper)).toEqual(['c', 'a'])
-    expect(wrapper.find('.option').text()).toContain('0.900')
+  })
+
+  it('updates AI assisted search when the switch is toggled', async () => {
+    const wrapper = mountForm()
+
+    await wrapper.find('.ai-switch').setValue(true)
+
+    expect(wrapper.emitted('update:aiAssisted')).toEqual([[true]])
   })
 
   it('shows template description as a tooltip', () => {
@@ -70,7 +81,7 @@ describe('GeneratePdfForm', () => {
   })
 
   it('informs when no template matches', () => {
-    const wrapper = mountForm({})
+    const wrapper = mountForm([])
 
     expect(optionValues(wrapper)).toEqual([])
     expect(wrapper.find('.select').attributes('data-no-data-text')).toBe(

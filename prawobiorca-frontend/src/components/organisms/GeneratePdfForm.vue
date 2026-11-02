@@ -7,11 +7,12 @@ import type { NewApplication, PublishedApplicationTemplate } from '@/api/generat
 
 type Props = {
   templates: Array<PublishedApplicationTemplate>
-  scores?: Record<string, number> | null
-  searching?: boolean
+  searchResults?: Array<PublishedApplicationTemplate> | null
 }
 
 const props = defineProps<Props>()
+
+const aiAssisted = defineModel<boolean>('aiAssisted', { default: false })
 
 const emit = defineEmits<{
   (e: 'generate-pdf', newApplication: NewApplication): void
@@ -30,18 +31,10 @@ const selectedTemplate = computed(() =>
   props.templates.find((template) => template.id === form.templateId),
 )
 
-const visibleTemplates = computed(() => {
-  const scores = props.scores
-  if (!scores) {
-    return props.templates
-  }
-  const scoredTemplates = props.templates.filter((template) => template.id in scores)
-  scoredTemplates.sort((a, b) => scores[b.id]! - scores[a.id]!)
-  return scoredTemplates
-})
+const visibleTemplates = computed(() => props.searchResults ?? props.templates)
 
 function handleSearch(query: string) {
-  emit('search', query.trim())
+  emit('search', query)
 }
 
 const rules = computed(() => {
@@ -103,42 +96,38 @@ async function handleSubmit() {
     @submit.prevent="handleSubmit"
   >
     <el-form-item label="Rodzaj wniosku:" prop="templateId">
-      <el-select
-        v-model="form.templateId"
-        filterable
-        remote
-        remote-show-suffix
-        :remote-method="handleSearch"
-        :debounce="500"
-        :loading="searching"
-        placeholder="Wpisz, czego dotyczy wniosek, np. przedłużenie terminu oddania pracy dyplomowej"
-        loading-text="Wyszukiwanie szablonów..."
-        :no-data-text="
-          scores ? 'Nie znaleziono pasujących szablonów.' : 'Brak dostępnych szablonów'
-        "
-        @change="handleTemplateChange"
-      >
-        <el-option
-          v-for="template in visibleTemplates"
-          :key="template.id"
-          :label="template.name"
-          :value="template.id"
+      <div class="template-search">
+        <el-select
+          v-model="form.templateId"
+          filterable
+          remote
+          remote-show-suffix
+          :remote-method="handleSearch"
+          :debounce="0"
+          placeholder="Wpisz, czego dotyczy wniosek, np. przedłużenie terminu oddania pracy dyplomowej"
+          :no-data-text="
+            searchResults ? 'Nie znaleziono pasujących szablonów.' : 'Brak dostępnych szablonów'
+          "
+          @change="handleTemplateChange"
         >
-          <el-tooltip
-            :content="template.description ?? ''"
-            :disabled="!template.description"
-            placement="right"
-            popper-class="template-description-tooltip"
+          <el-option
+            v-for="template in visibleTemplates"
+            :key="template.id"
+            :label="template.name"
+            :value="template.id"
           >
-            <span class="template-option">
-              <span class="template-option-name">{{ template.name }}</span>
-              <span v-if="scores" class="template-option-score">
-                {{ scores[template.id]?.toFixed(3) }}
-              </span>
-            </span>
-          </el-tooltip>
-        </el-option>
-      </el-select>
+            <el-tooltip
+              :content="template.description ?? ''"
+              :disabled="!template.description"
+              placement="right"
+              popper-class="template-description-tooltip"
+            >
+              <span class="template-option">{{ template.name }}</span>
+            </el-tooltip>
+          </el-option>
+        </el-select>
+        <el-switch v-model="aiAssisted" active-text="Wyszukiwanie AI" />
+      </div>
     </el-form-item>
     <el-form-item
       v-for="field in selectedTemplate?.fields ?? []"
@@ -181,21 +170,17 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.template-option {
+.template-search {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--app-space-md);
+  width: 100%;
 }
 
-.template-option-name {
+.template-option {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.template-option-score {
-  flex-shrink: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 0.8rem;
 }
 </style>
 

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import Select, and_, case, delete, insert, or_, select, update
+from sqlalchemy import ColumnElement, Select, and_, case, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,11 @@ from src.domain.value_objects.application_templates import (
 )
 from src.domain.value_objects.organizations import OrganizationFilter
 from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
+from src.shared.consts import (
+    HYBRID_TEMPLATE_SEARCH_LIMIT,
+    TEMPLATE_NAME_SCORE_WEIGHT,
+    TEMPLATE_NAME_SIMILARITY_THRESHOLD,
+)
 
 
 def _filter_templates(
@@ -40,6 +45,10 @@ def _filter_templates(
     return statement
 
 
+def _name_similarity(query: str) -> ColumnElement[float]:
+    return func.word_similarity(func.unaccent(query), func.unaccent(application_templates_table.c.name))
+
+
 class ApplicationTemplatesRepository:
     @staticmethod
     async def list_templates(
@@ -58,25 +67,46 @@ class ApplicationTemplatesRepository:
         return templates
 
     @staticmethod
-    async def search_templates(
+    async def fuzzy_search_templates(
         session: AsyncSession,
         status: ApplicationTemplateStatus,
         organization_filter: OrganizationFilter | None,
+        query: str,
+    ) -> list[ApplicationTemplateRepresentation]:
+        name_similarity = _name_similarity(query)
+
+        statement = _filter_templates(select(ApplicationTemplateRepresentation), status, organization_filter)
+        statement = statement.where(name_similarity >= TEMPLATE_NAME_SIMILARITY_THRESHOLD).order_by(
+            name_similarity.desc(), application_templates_table.c.name
+        )
+
+        result = await session.scalars(statement)
+
+        return list(result.all())
+
+    @staticmethod
+    async def hybrid_search_templates(
+        session: AsyncSession,
+        status: ApplicationTemplateStatus,
+        organization_filter: OrganizationFilter | None,
+        query: str,
         vector: list[float],
-        threshold: float,
-    ) -> list[tuple[ApplicationTemplateRepresentation, float]]:
+    ) -> list[ApplicationTemplateRepresentation]:
         distance = application_templates_table.c.description_vector.cosine_distance(vector)
-        score = (1 - distance).label("score")
+        description_similarity = func.coalesce(1 - distance, 0)
+        score = (
+            TEMPLATE_NAME_SCORE_WEIGHT * _name_similarity(query)
+            + (1 - TEMPLATE_NAME_SCORE_WEIGHT) * description_similarity
+        )
 
-        statement = _filter_templates(select(ApplicationTemplateRepresentation, score), status, organization_filter)
-        statement = statement.where(
-            application_templates_table.c.description_vector.is_not(None),
-            1 - distance >= threshold,
-        ).order_by(distance.asc())
+        statement = _filter_templates(select(ApplicationTemplateRepresentation), status, organization_filter)
+        statement = statement.order_by(score.desc(), application_templates_table.c.name).limit(
+            HYBRID_TEMPLATE_SEARCH_LIMIT
+        )
 
-        result = await session.execute(statement)
+        result = await session.scalars(statement)
 
-        return [(template, score) for template, score in result.all()]
+        return list(result.all())
 
     @staticmethod
     async def get(session: AsyncSession, id_: UUID) -> ApplicationTemplateRepresentation | None:

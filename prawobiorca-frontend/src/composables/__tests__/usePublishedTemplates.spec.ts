@@ -6,12 +6,8 @@ import {
   searchPublishedApplicationTemplates,
 } from '@/api/generated/endpoints/application-templates/application-templates'
 import { usePublishedTemplates } from '@/composables/usePublishedTemplates'
-import { defaultThreshold } from '@/domain/search'
 import { useOrganizationsStore } from '@/stores/organizations'
-import type {
-  PublishedApplicationTemplate,
-  PublishedApplicationTemplateSearchResult,
-} from '@/api/generated/model'
+import type { PublishedApplicationTemplate } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/application-templates/application-templates', () => ({
   getPublishedApplicationTemplates: vi.fn(),
@@ -28,10 +24,6 @@ function template(id: string): PublishedApplicationTemplate {
   return { id, name: `Wniosek ${id}`, description: null, fields: [] }
 }
 
-function result(id: string, score: number): PublishedApplicationTemplateSearchResult {
-  return { template: template(id), score }
-}
-
 describe('usePublishedTemplates', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -41,64 +33,63 @@ describe('usePublishedTemplates', () => {
   })
 
   it('does not search without a query', async () => {
-    const { templates, scores, load } = usePublishedTemplates()
+    const { templates, searchResults, load } = usePublishedTemplates()
 
     await load()
 
     expect(templates.value).toEqual([template('a'), template('b')])
-    expect(scores.value).toBeNull()
+    expect(searchResults.value).toBeNull()
     expect(searchPublishedApplicationTemplates).not.toHaveBeenCalled()
   })
 
   it('searches templates filtered by the selected organization', async () => {
     useOrganizationsStore().select('pwr', 'w10')
-    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([result('b', 0.7)])
+    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([template('b')])
 
-    const { scores, search } = usePublishedTemplates()
+    const { searchResults, search } = usePublishedTemplates()
 
-    await search('urlop')
+    await search('urlop ')
 
     expect(searchPublishedApplicationTemplates).toHaveBeenCalledWith({
       organizationId: 'pwr',
       suborganizationId: 'w10',
-      query: 'urlop',
-      threshold: defaultThreshold,
+      query: 'urlop ',
+      aiAssisted: false,
     })
-    expect(scores.value).toEqual({ b: 0.7 })
+    expect(searchResults.value).toEqual([template('b')])
   })
 
-  it('marks searching until the response arrives', async () => {
-    let resolveSearch:
-      | ((value: Array<PublishedApplicationTemplateSearchResult>) => void)
-      | undefined
-    vi.mocked(searchPublishedApplicationTemplates).mockImplementationOnce(
-      () => new Promise((resolve) => (resolveSearch = resolve)),
-    )
+  it('clears search results for a blank query', async () => {
+    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([template('b')])
 
-    const { searching, search } = usePublishedTemplates()
-
-    const pendingSearch = search('urlop')
-    expect(searching.value).toBe(true)
-
-    resolveSearch!([])
-    await pendingSearch
-
-    expect(searching.value).toBe(false)
-  })
-
-  it('clears scores for an empty query', async () => {
-    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([result('b', 0.7)])
-
-    const { scores, search } = usePublishedTemplates()
+    const { searchResults, search } = usePublishedTemplates()
 
     await search('urlop')
-    await search('')
+    await search('  ')
 
-    expect(scores.value).toBeNull()
+    expect(searchResults.value).toBeNull()
+    expect(searchPublishedApplicationTemplates).toHaveBeenCalledTimes(1)
+  })
+
+  it('repeats the search with AI assistance when it is enabled', async () => {
+    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([template('a')])
+
+    const { aiAssisted, search } = usePublishedTemplates()
+    await search('urlop dziekański')
+
+    aiAssisted.value = true
+    await flushPromises()
+
+    expect(searchPublishedApplicationTemplates).toHaveBeenLastCalledWith({
+      organizationId: undefined,
+      suborganizationId: undefined,
+      query: 'urlop dziekański',
+      aiAssisted: true,
+    })
   })
 
   it('repeats the search when the selected organization changes', async () => {
-    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([result('a', 0.6)])
+    vi.mocked(searchPublishedApplicationTemplates).mockResolvedValue([template('a')])
 
     const { search } = usePublishedTemplates()
     await search('urlop')
@@ -110,23 +101,23 @@ describe('usePublishedTemplates', () => {
       organizationId: 'pwr',
       suborganizationId: undefined,
       query: 'urlop',
-      threshold: defaultThreshold,
+      aiAssisted: false,
     })
   })
 
   it('ignores a search response that arrives after a newer search', async () => {
-    let resolveStale: ((value: Array<PublishedApplicationTemplateSearchResult>) => void) | undefined
+    let resolveStale: ((value: Array<PublishedApplicationTemplate>) => void) | undefined
     vi.mocked(searchPublishedApplicationTemplates)
       .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)))
-      .mockResolvedValueOnce([result('b', 0.8)])
+      .mockResolvedValueOnce([template('b')])
 
-    const { scores, search } = usePublishedTemplates()
+    const { searchResults, search } = usePublishedTemplates()
 
     const staleSearch = search('stary')
     await search('nowy')
-    resolveStale!([result('a', 0.9)])
+    resolveStale!([template('a')])
     await staleSearch
 
-    expect(scores.value).toEqual({ b: 0.8 })
+    expect(searchResults.value).toEqual([template('b')])
   })
 })
