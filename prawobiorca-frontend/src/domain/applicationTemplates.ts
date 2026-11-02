@@ -2,7 +2,7 @@ import type {
   ApplicationFieldType,
   ApplicationTemplateDescriptionStatus,
   ApplicationTemplateDetailsData,
-  ApplicationTemplateField,
+  ApplicationTemplateFieldOutput,
   ApplicationTemplateStatus,
 } from '@/api/generated/model'
 
@@ -11,7 +11,7 @@ export type TemplateStatusOption = {
   tagType: 'info' | 'success' | 'warning' | 'danger'
 }
 
-export type EditableTemplateField = Required<ApplicationTemplateField>
+export type EditableTemplateField = ApplicationTemplateFieldOutput
 
 export type ApplicationTemplateForm = {
   name: string
@@ -45,17 +45,8 @@ export const templateDescriptionStatusOptions: Record<
   FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
 }
 
-export function toEditableField(field: ApplicationTemplateField): EditableTemplateField {
-  return {
-    name: field.name,
-    label: field.label,
-    fieldType: field.fieldType ?? 'TEXT',
-    required: field.required ?? true,
-    passToAi: field.passToAi ?? true,
-    defaultValue: field.defaultValue ?? null,
-    pattern: field.pattern ?? null,
-    options: [...(field.options ?? [])],
-  }
+export function toEditableField(field: ApplicationTemplateFieldOutput): EditableTemplateField {
+  return { ...field, options: [...field.options] }
 }
 
 export function toDetailsData(form: ApplicationTemplateForm): ApplicationTemplateDetailsData {
