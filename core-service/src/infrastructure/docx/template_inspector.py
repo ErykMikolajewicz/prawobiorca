@@ -18,3 +18,20 @@ class DocxTemplateInspector:
             return document.get_undeclared_template_variables(jinja_env=SandboxedEnvironment())
         except Exception:
             raise InvalidApplicationTemplate("Invalid DOCX template!")
+
+    async def get_text(self, template: bytes) -> str:
+        return await anyio.to_thread.run_sync(self._get_text, template)
+
+    @staticmethod
+    def _get_text(template: bytes) -> str:
+        try:
+            document = DocxTemplate(BytesIO(template)).get_docx()
+        except Exception:
+            raise InvalidApplicationTemplate("Invalid DOCX template!")
+
+        lines = [paragraph.text for paragraph in document.paragraphs]
+        for table in document.tables:
+            for row in table.rows:
+                lines.extend(cell.text for cell in row.cells)
+
+        return "\n".join(line for line in lines if line.strip())

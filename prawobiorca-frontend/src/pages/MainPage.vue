@@ -11,7 +11,7 @@ import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialo
 import HowItWorks from '@/components/molecules/HowItWorks.vue'
 import LoginCtaBanner from '@/components/molecules/LoginCtaBanner.vue'
 import { useRegulations } from '@/composables/useRegulations'
-import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
+import { usePendingPolling } from '@/composables/usePendingPolling'
 
 import type { RegulationRepresentation } from '@/api/generated/model'
 import type {
@@ -85,7 +85,7 @@ async function refreshRegulations() {
   }
 }
 
-useRegulationsPolling(() => pendingRegulationIds.value, refreshRegulations)
+usePendingPolling(() => pendingRegulationIds.value, refreshRegulations)
 
 onBeforeMount(loadRegulations)
 </script>

@@ -1,20 +1,22 @@
 import type {
   ApplicationFieldType,
+  ApplicationTemplateDescriptionStatus,
   ApplicationTemplateDetailsData,
-  ApplicationTemplateField,
+  ApplicationTemplateFieldOutput,
   ApplicationTemplateStatus,
 } from '@/api/generated/model'
 
 export type TemplateStatusOption = {
   label: string
-  tagType: 'info' | 'success' | 'danger'
+  tagType: 'info' | 'success' | 'warning' | 'danger'
 }
 
-export type EditableTemplateField = Required<ApplicationTemplateField>
+export type EditableTemplateField = ApplicationTemplateFieldOutput
 
 export type ApplicationTemplateForm = {
   name: string
   instructions: string
+  description: string
   organizationId: string
   suborganizationId: string
   fields: Array<EditableTemplateField>
@@ -35,23 +37,23 @@ export const templateStatusOptions: Record<ApplicationTemplateStatus, TemplateSt
   PUBLISHED: { label: 'Opublikowany', tagType: 'success' },
 }
 
-export function toEditableField(field: ApplicationTemplateField): EditableTemplateField {
-  return {
-    name: field.name,
-    label: field.label,
-    fieldType: field.fieldType ?? 'TEXT',
-    required: field.required ?? true,
-    passToAi: field.passToAi ?? true,
-    defaultValue: field.defaultValue ?? null,
-    pattern: field.pattern ?? null,
-    options: [...(field.options ?? [])],
-  }
+export const templateDescriptionStatusOptions: Record<
+  Extract<ApplicationTemplateDescriptionStatus, 'IN_PROGRESS' | 'FAILED'>,
+  TemplateStatusOption
+> = {
+  IN_PROGRESS: { label: 'Generowanie opisu', tagType: 'warning' },
+  FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
+}
+
+export function toEditableField(field: ApplicationTemplateFieldOutput): EditableTemplateField {
+  return { ...field, options: [...field.options] }
 }
 
 export function toDetailsData(form: ApplicationTemplateForm): ApplicationTemplateDetailsData {
   return {
     name: form.name.trim(),
     instructions: form.instructions.trim() || null,
+    description: form.description.trim() || null,
     organizationId: form.organizationId || null,
     suborganizationId: form.suborganizationId || null,
     fields: form.fields.map((field) => ({

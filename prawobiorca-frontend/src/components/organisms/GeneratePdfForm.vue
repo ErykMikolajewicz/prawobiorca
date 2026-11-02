@@ -7,12 +7,16 @@ import type { NewApplication, PublishedApplicationTemplate } from '@/api/generat
 
 type Props = {
   templates: Array<PublishedApplicationTemplate>
+  searchResults?: Array<PublishedApplicationTemplate> | null
 }
 
 const props = defineProps<Props>()
 
+const aiAssisted = defineModel<boolean>('aiAssisted', { default: false })
+
 const emit = defineEmits<{
   (e: 'generate-pdf', newApplication: NewApplication): void
+  (e: 'search', query: string): void
 }>()
 
 const formRef = ref<FormInstance>()
@@ -26,6 +30,12 @@ const form = reactive({
 const selectedTemplate = computed(() =>
   props.templates.find((template) => template.id === form.templateId),
 )
+
+const visibleTemplates = computed(() => props.searchResults ?? props.templates)
+
+function handleSearch(query: string) {
+  emit('search', query)
+}
 
 const rules = computed(() => {
   const fieldRules: Record<string, Array<FormItemRule>> = {
@@ -86,19 +96,38 @@ async function handleSubmit() {
     @submit.prevent="handleSubmit"
   >
     <el-form-item label="Rodzaj wniosku:" prop="templateId">
-      <el-select
-        v-model="form.templateId"
-        placeholder="Wybierz szablon"
-        no-data-text="Brak dostępnych szablonów"
-        @change="handleTemplateChange"
-      >
-        <el-option
-          v-for="template in templates"
-          :key="template.id"
-          :label="template.name"
-          :value="template.id"
-        />
-      </el-select>
+      <div class="template-search">
+        <el-select
+          v-model="form.templateId"
+          filterable
+          remote
+          remote-show-suffix
+          :remote-method="handleSearch"
+          :debounce="0"
+          placeholder="Wpisz, czego dotyczy wniosek, np. przedłużenie terminu oddania pracy dyplomowej"
+          :no-data-text="
+            searchResults ? 'Nie znaleziono pasujących szablonów.' : 'Brak dostępnych szablonów'
+          "
+          @change="handleTemplateChange"
+        >
+          <el-option
+            v-for="template in visibleTemplates"
+            :key="template.id"
+            :label="template.name"
+            :value="template.id"
+          >
+            <el-tooltip
+              :content="template.description ?? ''"
+              :disabled="!template.description"
+              placement="right"
+              popper-class="template-description-tooltip"
+            >
+              <span class="template-option">{{ template.name }}</span>
+            </el-tooltip>
+          </el-option>
+        </el-select>
+        <el-switch v-model="aiAssisted" active-text="Wyszukiwanie AI" />
+      </div>
     </el-form-item>
     <el-form-item
       v-for="field in selectedTemplate?.fields ?? []"
@@ -139,3 +168,25 @@ async function handleSubmit() {
     </el-form-item>
   </el-form>
 </template>
+
+<style scoped>
+.template-search {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-md);
+  width: 100%;
+}
+
+.template-option {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>
+
+<style>
+.template-description-tooltip {
+  max-width: 400px;
+  line-height: 1.4;
+}
+</style>

@@ -19,10 +19,11 @@ vi.mock('@/api/generated/endpoints/cases/cases', () => ({
 
 vi.mock('@/api/generated/endpoints/application-templates/application-templates', () => ({
   getPublishedApplicationTemplates: vi.fn(),
+  searchPublishedApplicationTemplates: vi.fn(),
 }))
 
-vi.mock('@/composables/useRegulationsPolling', () => ({
-  useRegulationsPolling: vi.fn(),
+vi.mock('@/composables/usePendingPolling', () => ({
+  usePendingPolling: vi.fn(),
 }))
 
 function mountPage() {

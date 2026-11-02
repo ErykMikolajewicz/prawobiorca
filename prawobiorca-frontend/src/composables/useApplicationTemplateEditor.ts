@@ -3,7 +3,9 @@ import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
 import { downloadApplicationTemplate } from '@/api/applicationTemplates'
 import {
+  getAdminApplicationTemplate,
   publishApplicationTemplate,
+  regenerateApplicationTemplateDescription,
   unpublishApplicationTemplate,
   updateApplicationTemplate,
 } from '@/api/generated/endpoints/application-templates/application-templates'
@@ -20,6 +22,7 @@ export function useApplicationTemplateEditor(
   const form = reactive<ApplicationTemplateForm>({
     name: '',
     instructions: '',
+    description: '',
     organizationId: '',
     suborganizationId: '',
     fields: [],
@@ -27,10 +30,12 @@ export function useApplicationTemplateEditor(
   const isSaving = ref(false)
   const isPublishing = ref(false)
   const isDownloading = ref(false)
+  const isGeneratingDescription = ref(false)
 
   function resetForm(template: ApplicationTemplateRepresentation) {
     form.name = template.name
     form.instructions = template.instructions ?? ''
+    form.description = template.description ?? ''
     form.organizationId = template.organizationId ?? ''
     form.suborganizationId = template.suborganizationId ?? ''
     form.fields = template.fields.map(toEditableField)
@@ -90,6 +95,25 @@ export function useApplicationTemplateEditor(
     }
   }
 
+  async function generateDescription(templateId: string) {
+    isGeneratingDescription.value = true
+    try {
+      if (!(await update(templateId))) {
+        return
+      }
+      await regenerateApplicationTemplateDescription(templateId)
+      onUpdated(await getAdminApplicationTemplate(templateId))
+      ElMessage.success('Generowanie opisu zostało rozpoczęte.')
+    } catch (error) {
+      showApiError(error, {
+        conflictMessage: 'Opis jest już generowany lub szablon nie jest szkicem.',
+        defaultMessage: 'Nie udało się rozpocząć generowania opisu.',
+      })
+    } finally {
+      isGeneratingDescription.value = false
+    }
+  }
+
   async function download(templateId: string) {
     isDownloading.value = true
     try {
@@ -106,10 +130,12 @@ export function useApplicationTemplateEditor(
     isSaving,
     isPublishing,
     isDownloading,
+    isGeneratingDescription,
     resetForm,
     save,
     publish,
     unpublish,
+    generateDescription,
     download,
   }
 }
