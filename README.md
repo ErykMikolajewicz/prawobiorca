@@ -91,3 +91,25 @@ Everything is served by the nginx ingress on [http://localhost:8080](http://loca
 - [http://localhost:8080/storage/](http://localhost:8080/storage/) - the object storage
 
 To stop the deployment run `just run-locally-down`.
+
+## Development Mode
+For day-to-day development, run the backend and the frontend from the sources, with hot reload.
+
+Build the images of the compute services once (or after changing them):
+```sh
+just build-embedding-service
+just build-extraction-service
+```
+
+Start the backend:
+```sh
+just dev
+```
+This launches the Postgres, RustFS, embedding, extraction and LLM containers, runs the migrations, and starts the Taskiq worker and the API on [http://localhost:8000](http://localhost:8000), both reloading on code changes. The configuration is read from `core-service/.env` (see `core-service/.env.example`).
+
+In a second terminal start the frontend:
+```sh
+cd prawobiorca-frontend
+pnpm dev
+```
+The Vite dev server runs on [http://localhost:5173](http://localhost:5173) and proxies `/api` to the backend.

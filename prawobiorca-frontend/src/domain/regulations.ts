@@ -33,3 +33,11 @@ export const descriptionStatusOptions: Record<
   IN_PROGRESS: { label: 'Generowanie opisu', tagType: 'warning' },
   FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
 }
+
+export type RegulationsOrder = 'name' | 'score'
+
+export type RegulationsSearchParams = {
+  query: string
+  threshold: number
+  orderBy: RegulationsOrder
+}

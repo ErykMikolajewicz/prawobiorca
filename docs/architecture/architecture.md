@@ -90,7 +90,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * Used by the `core-service` Taskiq worker to draft student applications (*wnioski*) rendered to DOCX and to generate general descriptions of regulations for vector search of acts — see [AI module](../ai.md).
   * **GCP**: no service is deployed — the worker calls the serverless **Vertex AI** OpenAI-compatible endpoint (`google/gemini-3.5-flash-lite`, billed per token) in the `eu` multi-region, so data stays within the EU with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
   * **On-Premise**: served directly by **OpenVINO Model Server (OVMS)** (`OpenVINO/Qwen3.6-35B-A3B-int4-ov`, a mixture-of-experts model with ~3B active parameters) — no custom application code. OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), and runs with `--target_device=AUTO` and `/dev/dri` passed through, so it uses the Intel iGPU when the host exposes one and falls back to CPU otherwise.
-  * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `scripts/local/dev.py`.
+  * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `core-service/scripts/dev.py`.
 
 ### 2.5. `prawobiorca-frontend`
 * **Responsibilities**:

@@ -4,8 +4,12 @@ from fastapi import Depends, Request
 from httpx2 import AsyncClient
 
 import src.infrastructure.ai_services.text_embedder as te
+from src.app.ports.application_templates import ApplicationTemplateDescriptionWriter
 from src.app.ports.regulations import RegulationDescriptionWriter
 from src.app.ports.texts import TextsEmbedder
+from src.infrastructure.ai_services.application_template_description_writer import (
+    ApplicationTemplateDescriptionWriter as LlmApplicationTemplateDescriptionWriter,
+)
 from src.infrastructure.ai_services.llm_chat import LlmChat
 from src.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
 from src.infrastructure.ai_services.openai_client.connection import client as llm_client
@@ -45,3 +49,7 @@ def get_llm_chat() -> LlmChat:
 
 def get_regulation_description_writer() -> RegulationDescriptionWriter:
     return LlmRegulationDescriptionWriter(get_llm_chat())
+
+
+def get_application_template_description_writer() -> ApplicationTemplateDescriptionWriter:
+    return LlmApplicationTemplateDescriptionWriter(get_llm_chat())

@@ -1,6 +1,6 @@
 import type { ApplicationFieldType } from './applicationFieldType'
 
-export interface ApplicationTemplateField {
+export interface ApplicationTemplateFieldInput {
   name: string
   label: string
   fieldType?: ApplicationFieldType

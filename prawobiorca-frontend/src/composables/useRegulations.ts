@@ -1,8 +1,11 @@
 import { computed, ref, watch } from 'vue'
 import { showApiError } from '@/utils/error'
-import { getRegulations as getRegulationsByScope } from '@/api/generated/endpoints/regulations/regulations'
+import {
+  getRegulations as getRegulationsByScope,
+  searchRegulations,
+} from '@/api/generated/endpoints/regulations/regulations'
 import { useOrganizationsStore } from '@/stores/organizations'
-import type { RegulationScope } from '@/domain/regulations'
+import type { RegulationScope, RegulationsSearchParams } from '@/domain/regulations'
 import type { RegulationRepresentation, RegulationType } from '@/api/generated/model'
 
 const loadErrorMessages: Record<RegulationScope, string> = {
@@ -17,34 +20,73 @@ function isPending(regulation: RegulationRepresentation): boolean {
   )
 }
 
-export function useRegulations(scope: RegulationScope) {
-  const regulations = ref<Array<RegulationRepresentation>>([])
+function sortByName(regulations: Array<RegulationRepresentation>): Array<RegulationRepresentation> {
+  const sortedRegulations = [...regulations]
+  sortedRegulations.sort((a, b) => a.presentationName.localeCompare(b.presentationName, 'pl'))
+  return sortedRegulations
+}
+
+export function useRegulations(
+  scope: RegulationScope,
+  searchParams: () => RegulationsSearchParams,
+) {
+  const fetchedRegulations = ref<Array<RegulationRepresentation>>([])
+  const scores = ref<Record<string, number>>({})
   const typeFilter = ref<RegulationType | undefined>(undefined)
   const isLoading = ref(false)
   const pendingIds = computed(() =>
-    regulations.value.filter(isPending).map((regulation) => regulation.id),
+    fetchedRegulations.value.filter(isPending).map((regulation) => regulation.id),
   )
+
+  const regulations = computed(() => {
+    const { query, orderBy } = searchParams()
+    if (!query) {
+      return sortByName(fetchedRegulations.value)
+    }
+
+    const scoredRegulations = fetchedRegulations.value.filter(
+      (regulation) => regulation.id in scores.value,
+    )
+    if (orderBy === 'score') {
+      return scoredRegulations
+    }
+    return sortByName(scoredRegulations)
+  })
 
   const organizationsStore = useOrganizationsStore()
   let lastRequestId = 0
 
-  function getRegulations() {
+  function getFilterParams() {
     if (scope === 'PRIVATE') {
-      return getRegulationsByScope({ scope, documentType: typeFilter.value })
+      return { scope, documentType: typeFilter.value }
     }
-    return getRegulationsByScope({
+    return {
       scope,
       documentType: typeFilter.value,
       organizationId: organizationsStore.selectedOrganizationId || undefined,
       suborganizationId: organizationsStore.selectedSuborganizationId || undefined,
-    })
+    }
   }
 
   async function fetch() {
     const requestId = ++lastRequestId
-    const fetchedRegulations = await getRegulations()
+    const { query, threshold } = searchParams()
+
+    if (!query) {
+      const foundRegulations = await getRegulationsByScope(getFilterParams())
+      if (requestId === lastRequestId) {
+        fetchedRegulations.value = foundRegulations
+        scores.value = {}
+      }
+      return
+    }
+
+    const results = await searchRegulations({ ...getFilterParams(), query, threshold })
     if (requestId === lastRequestId) {
-      regulations.value = fetchedRegulations
+      fetchedRegulations.value = results.map((result) => result.regulation)
+      scores.value = Object.fromEntries(
+        results.map((result) => [result.regulation.id, result.score]),
+      )
     }
   }
 
@@ -60,28 +102,30 @@ export function useRegulations(scope: RegulationScope) {
   }
 
   function add(regulation: RegulationRepresentation) {
-    regulations.value.push(regulation)
+    fetchedRegulations.value.push(regulation)
   }
 
   function update(updatedRegulation: RegulationRepresentation) {
-    regulations.value = regulations.value.map((regulation) =>
+    fetchedRegulations.value = fetchedRegulations.value.map((regulation) =>
       regulation.id === updatedRegulation.id ? updatedRegulation : regulation,
     )
   }
 
   function remove(regulationId: string) {
-    regulations.value = regulations.value.filter((regulation) => regulation.id !== regulationId)
+    fetchedRegulations.value = fetchedRegulations.value.filter(
+      (regulation) => regulation.id !== regulationId,
+    )
   }
 
   function markAsInProgress(regulationId: string) {
-    const regulation = regulations.value.find((item) => item.id === regulationId)
+    const regulation = fetchedRegulations.value.find((item) => item.id === regulationId)
     if (regulation) {
       regulation.preparationStatus = 'IN_PROGRESS'
     }
   }
 
   function markDescriptionAsInProgress(regulationId: string) {
-    const regulation = regulations.value.find((item) => item.id === regulationId)
+    const regulation = fetchedRegulations.value.find((item) => item.id === regulationId)
     if (regulation) {
       regulation.descriptionStatus = 'IN_PROGRESS'
     }
@@ -100,6 +144,7 @@ export function useRegulations(scope: RegulationScope) {
 
   return {
     regulations,
+    scores,
     typeFilter,
     isLoading,
     pendingIds,

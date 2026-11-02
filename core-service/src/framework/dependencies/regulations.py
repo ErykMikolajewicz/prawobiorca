@@ -17,6 +17,7 @@ from src.app.use_cases.regulations import (
     RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
+    SearchRegulations,
     UpdateRegulation,
 )
 from src.framework.dependencies.ai_services import get_texts_embedder
@@ -117,6 +118,14 @@ def get_search_regulation(
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
 ) -> SearchRegulation:
     return SearchRegulation(session_maker, texts_embedder, sections_repository, regulations_repository)
+
+
+def get_search_regulations(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+) -> SearchRegulations:
+    return SearchRegulations(session_maker, texts_embedder, regulations_repository)
 
 
 def get_add_regulation(

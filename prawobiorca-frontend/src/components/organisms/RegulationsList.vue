@@ -14,6 +14,7 @@ type Props = {
   target: RegulationScope
   canManage: boolean
   loading?: boolean
+  scores?: Record<string, number>
 }
 
 const props = defineProps<Props>()
@@ -66,6 +67,7 @@ function openDetails(regulationId: string) {
         :regulation="regulation"
         :target="target"
         :can-manage="canManage"
+        :score="scores?.[regulation.id]"
         @open-details="openDetails"
         @preparation-retried="
           (regulationId) => emit('regulation-preparation-retried', regulationId)

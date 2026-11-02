@@ -16,6 +16,7 @@ type Props = {
   regulation: RegulationRepresentation
   target: RegulationScope
   canManage: boolean
+  score?: number
 }
 
 const props = defineProps<Props>()
@@ -79,6 +80,10 @@ async function retryPreparation() {
       </component>
 
       <div class="regulation-meta">
+        <span v-if="score !== undefined" class="regulation-score app-text-secondary">
+          Podobieństwo: {{ score.toFixed(3) }}
+        </span>
+
         <span
           v-if="organizationLabel"
           class="regulation-organization app-text-secondary app-text-truncate"
@@ -179,6 +184,10 @@ async function retryPreparation() {
 
 .regulation-organization {
   max-width: 16em;
+}
+
+.regulation-score {
+  font-size: 0.8rem;
 }
 
 .regulation-link::after {

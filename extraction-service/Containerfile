@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache uv==0.11.*
+RUN pip install --no-cache uv==0.13.*
 
 RUN useradd -m extraction_service
 

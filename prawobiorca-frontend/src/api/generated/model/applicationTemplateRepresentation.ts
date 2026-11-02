@@ -1,4 +1,5 @@
-import type { ApplicationTemplateField } from './applicationTemplateField'
+import type { ApplicationTemplateDescriptionStatus } from './applicationTemplateDescriptionStatus'
+import type { ApplicationTemplateFieldOutput } from './applicationTemplateFieldOutput'
 import type { ApplicationTemplateStatus } from './applicationTemplateStatus'
 
 export interface ApplicationTemplateRepresentation {
@@ -6,8 +7,10 @@ export interface ApplicationTemplateRepresentation {
   createDate: string
   name: string
   status: ApplicationTemplateStatus
-  fields: ApplicationTemplateField[]
+  fields: ApplicationTemplateFieldOutput[]
   instructions: string | null
+  description: string | null
+  descriptionStatus: ApplicationTemplateDescriptionStatus
   organizationId: string | null
   suborganizationId: string | null
 }

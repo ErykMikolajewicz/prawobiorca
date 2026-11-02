@@ -1,7 +1,7 @@
 from typing import Protocol
 from uuid import UUID
 
-from src.app.dtos.regulations import RegulationRepresentation, RegulationUploadTarget
+from src.app.dtos.regulations import RegulationRepresentation, RegulationSearchResult, RegulationUploadTarget
 from src.app.interfaces.relational import AsyncSession
 from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.regulations import (
@@ -38,6 +38,16 @@ class RegulationsRepository(Protocol):
         regulation_type: RegulationType | None,
         organization_filter: OrganizationFilter | None,
     ) -> list[RegulationRepresentation]: ...
+
+    async def search_regulations(
+        self,
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_type: RegulationType | None,
+        organization_filter: OrganizationFilter | None,
+        vector: list[float],
+        threshold: float,
+    ) -> list[RegulationSearchResult]: ...
 
     async def register_regulation(
         self, session: AsyncSession, user_id: UUID | None, regulation_registration_data: RegulationRegistrationData

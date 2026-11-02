@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
-import { useRegulationsPolling } from '@/composables/useRegulationsPolling'
+import { usePendingPolling } from '@/composables/usePendingPolling'
 import { downloadApplicationDocument } from '@/api/cases'
 import {
   deleteApplication,
@@ -70,7 +70,7 @@ export function useCaseApplications(caseId: string) {
     }
   }
 
-  useRegulationsPolling(() => pendingIds.value, refresh)
+  usePendingPolling(() => pendingIds.value, refresh)
 
   return {
     applications,

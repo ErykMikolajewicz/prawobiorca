@@ -1,4 +1,4 @@
-import type { ApplicationTemplateField } from './applicationTemplateField'
+import type { ApplicationTemplateFieldInput } from './applicationTemplateFieldInput'
 
 export interface ApplicationTemplateDetailsData {
   /**
@@ -7,7 +7,8 @@ export interface ApplicationTemplateDetailsData {
    */
   name: string
   instructions?: string | null
-  fields: ApplicationTemplateField[]
+  fields: ApplicationTemplateFieldInput[]
+  description?: string | null
   organizationId?: string | null
   suborganizationId?: string | null
 }

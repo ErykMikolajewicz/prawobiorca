@@ -325,6 +325,87 @@ async def test_search_orders_results(
             await session.execute(delete(regulations_table).where(regulations_table.c.id == regulation_id))
 
 
+async def test_search_public_regulations_by_description(
+    client, override_session_maker, session_maker, set_user, clean_user
+):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+    half_related_vector = [1.0] * (VECTOR_LENGTH // 2) + [0.0] * (VECTOR_LENGTH // 2)
+
+    async with session_maker.begin() as session:
+        regulations_ids = await session.scalars(
+            insert(regulations_table)
+            .values(
+                [
+                    {
+                        "user_id": None,
+                        "presentation_name": "Matching act.pdf",
+                        "regulation_type": RegulationType.ACT,
+                        "description_vector": QUERY_VECTOR,
+                    },
+                    {
+                        "user_id": None,
+                        "presentation_name": "Half matching decree.pdf",
+                        "regulation_type": RegulationType.DECREE,
+                        "description_vector": half_related_vector,
+                    },
+                    {
+                        "user_id": None,
+                        "presentation_name": "Unrelated act.pdf",
+                        "regulation_type": RegulationType.ACT,
+                        "description_vector": UNRELATED_VECTOR,
+                    },
+                    {
+                        "user_id": None,
+                        "presentation_name": "Act without description.pdf",
+                        "regulation_type": RegulationType.ACT,
+                        "description_vector": None,
+                    },
+                    {
+                        "user_id": USER_ID,
+                        "presentation_name": "Private matching act.pdf",
+                        "regulation_type": RegulationType.ACT,
+                        "description_vector": QUERY_VECTOR,
+                    },
+                ]
+            )
+            .returning(regulations_table.c.id)
+        )
+    regulations_ids = regulations_ids.all()
+    matching_id, half_matching_id, *_ = regulations_ids
+
+    try:
+        response = await client.get("/api/regulations/search", params={"query": "zapytanie", "threshold": 0.5})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [(result["regulation"]["id"], result["score"]) for result in response.json()] == [
+            (str(matching_id), pytest.approx(1.0)),
+            (str(half_matching_id), pytest.approx(1 / math.sqrt(2))),
+        ]
+
+        response = await client.get(
+            "/api/regulations/search",
+            params={"query": "zapytanie", "threshold": 0.5, "documentType": RegulationType.ACT},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [result["regulation"]["id"] for result in response.json()] == [str(matching_id)]
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
+        async with session_maker.begin() as session:
+            await session.execute(delete(regulations_table).where(regulations_table.c.id.in_(regulations_ids)))
+
+
+async def test_search_public_regulations_empty_query(client, override_session_maker):
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+
+    try:
+        response = await client.get("/api/regulations/search", params={"query": "", "threshold": 0.5})
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    finally:
+        prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
+
+
 async def test_add_public_regulation_as_admin(
     client,
     override_session_maker,

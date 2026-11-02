@@ -59,3 +59,9 @@ class RegulationRepresentation:
     description_status: RegulationDescriptionStatus = RegulationDescriptionStatus.NOT_REQUESTED
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
+
+
+@dataclass(config=ConfigDict(alias_generator=to_camel))
+class RegulationSearchResult:
+    regulation: RegulationRepresentation
+    score: float

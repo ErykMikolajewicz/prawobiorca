@@ -34,8 +34,11 @@ onBeforeMount(async () => {
         <section class="case-section">
           <h2 class="section-title">Kontekst / Opis Wniosku</h2>
           <GeneratePdfForm
+            v-model:ai-assisted="publishedTemplates.aiAssisted"
             :templates="publishedTemplates.templates"
+            :search-results="publishedTemplates.searchResults"
             @generate-pdf="caseApplications.generate"
+            @search="publishedTemplates.search"
           />
         </section>
       </el-col>

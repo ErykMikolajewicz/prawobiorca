@@ -13,7 +13,7 @@ export async function prawobiorcaRequest<T>(
   return response.data
 }
 
-type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
+type RetriableConfig = InternalAxiosRequestConfig & { retried?: boolean }
 
 /**
  * Ścieżki, dla których 401 nie oznacza wygasłego access tokena, bo same obsługują tokeny.
@@ -50,11 +50,11 @@ prawobiorcaClient.interceptors.response.use(
     }
 
     const config = error.config as RetriableConfig | undefined
-    if (!config || config._retried || !isRefreshable(config.url)) {
+    if (!config || config.retried || !isRefreshable(config.url)) {
       return Promise.reject(error)
     }
 
-    config._retried = true
+    config.retried = true
 
     try {
       await refreshTokens()

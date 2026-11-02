@@ -4,6 +4,7 @@ import { MdEditor, type ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { useApplicationTemplateEditor } from '@/composables/useApplicationTemplateEditor'
+import { templateDescriptionStatusOptions } from '@/domain/applicationTemplates'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
 import OrganizationScopeSelect from '@/components/molecules/OrganizationScopeSelect.vue'
@@ -43,10 +44,12 @@ const {
   isSaving,
   isPublishing,
   isDownloading,
+  isGeneratingDescription,
   resetForm,
   save,
   publish,
   unpublish,
+  generateDescription,
   download,
 } = useApplicationTemplateEditor((template) => emit('updated', template))
 
@@ -55,6 +58,15 @@ const isPreviewVisible = ref(false)
 const isDraft = computed(() => props.template.status === 'DRAFT')
 const isPublished = computed(() => props.template.status === 'PUBLISHED')
 const isNotUploaded = computed(() => props.template.status === 'NOT_UPLOADED')
+const isDescriptionInProgress = computed(() => props.template.descriptionStatus === 'IN_PROGRESS')
+const isEditable = computed(() => isDraft.value && !isDescriptionInProgress.value)
+const descriptionStatus = computed(() => {
+  const status = props.template.descriptionStatus
+  if (status === 'IN_PROGRESS' || status === 'FAILED') {
+    return templateDescriptionStatusOptions[status]
+  }
+  return undefined
+})
 
 watch(() => props.template, resetForm, { immediate: true })
 </script>
@@ -75,8 +87,19 @@ watch(() => props.template, resetForm, { immediate: true })
       </el-button>
       <el-button v-if="!isNotUploaded" @click="isPreviewVisible = true">Pokaż podgląd</el-button>
       <template v-if="isDraft">
-        <el-button :loading="isSaving" @click="save(template.id)">Zapisz</el-button>
-        <el-button type="primary" :loading="isPublishing" @click="publish(template.id)">
+        <el-button
+          :loading="isSaving"
+          :disabled="isDescriptionInProgress"
+          @click="save(template.id)"
+        >
+          Zapisz
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="isPublishing"
+          :disabled="isDescriptionInProgress"
+          @click="publish(template.id)"
+        >
           Zapisz i opublikuj
         </el-button>
       </template>
@@ -103,7 +126,7 @@ watch(() => props.template, resetForm, { immediate: true })
     <el-form
       v-if="!isNotUploaded"
       label-position="top"
-      :disabled="!isDraft"
+      :disabled="!isEditable"
       @submit.prevent="save(template.id)"
     >
       <OrganizationScopeSelect
@@ -111,6 +134,36 @@ watch(() => props.template, resetForm, { immediate: true })
         v-model:suborganization-id="form.suborganizationId"
         inline
       />
+
+      <el-form-item label="Opis szablonu:">
+        <el-input
+          v-model="form.description"
+          type="textarea"
+          :rows="3"
+          maxlength="1000"
+          show-word-limit
+          placeholder="Krótki opis, w jakiej sytuacji użyć szablonu. Służy do wyszukiwania pasujących szablonów."
+        />
+        <div class="description-generation">
+          <el-tag
+            v-if="descriptionStatus"
+            size="small"
+            effect="plain"
+            :type="descriptionStatus.tagType"
+            class="app-badge"
+          >
+            {{ descriptionStatus.label }}
+          </el-tag>
+          <el-button
+            v-if="isEditable"
+            size="small"
+            :loading="isGeneratingDescription"
+            @click="generateDescription(template.id)"
+          >
+            Wygeneruj opis przez AI
+          </el-button>
+        </div>
+      </el-form-item>
 
       <el-row :gutter="24">
         <el-col :span="12" :xs="24">
@@ -121,7 +174,7 @@ watch(() => props.template, resetForm, { immediate: true })
               language="en-US"
               :theme="isDark ? 'dark' : 'light'"
               :toolbars="instructionsToolbars"
-              :read-only="!isDraft"
+              :read-only="!isEditable"
               placeholder="np. Sporządź wniosek do Dziekana o przedłużenie terminu złożenia pracy dyplomowej. Podziel treść na 3 akapity: ..."
             />
           </el-form-item>
@@ -188,6 +241,15 @@ watch(() => props.template, resetForm, { immediate: true })
 
 .instructions-input {
   height: 50vh;
+}
+
+.description-generation {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--app-space-sm);
+  width: 100%;
+  margin-top: var(--app-space-sm);
 }
 
 .fields-title {
