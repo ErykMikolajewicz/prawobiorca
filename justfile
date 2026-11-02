@@ -82,3 +82,15 @@ check-frontend:
     pnpm check
     pnpm type-check
     pnpm test:unit --run
+
+audit-backend:
+    uv audit --frozen --preview-features audit-command
+    uv audit --frozen --preview-features audit-command --directory core-service
+    uv audit --frozen --preview-features audit-command --directory extraction-service
+
+[working-directory: 'prawobiorca-frontend']
+audit-frontend:
+    pnpm audit --prod
+    pnpm audit --dev --audit-level high
+
+audit: audit-backend audit-frontend

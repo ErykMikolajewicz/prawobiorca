@@ -9,7 +9,7 @@
   },
   {
     "label": "text",
-    "text": "której nadano  stopień,  w postaci dokumentu  mobilnego,  o którym  mowa w art. 2 pkt 7 ustawy z dnia 26 maja 2023 r. o aplikacji mObywatel, po uwierzytelnieniu tego absolwenta albo tej osoby przy użyciu certyfikatu podstawowego, o którym mowa w art. 2 pkt 2 tej ustawy.>"
+    "text": "której nadano stopień, w postaci dokumentu mobilnego, o którym mowa w art. 2 pkt 7 ustawy z dnia 26 maja 2023 r. o aplikacji mObywatel, po uwierzytelnieniu tego absolwenta albo tej osoby przy użyciu certyfikatu podstawowego, o którym mowa w art. 2 pkt 2 tej ustawy.>"
   },
   {
     "label": "text",
@@ -25,15 +25,15 @@
   },
   {
     "label": "list_item",
-    "text": "b) numer PESEL, a w przypadku jego braku -numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało,"
+    "text": "b) numer PESEL, a w przypadku jego braku - numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało,"
   },
   {
     "label": "list_item",
-    "text": "c) treść rozprawy doktorskiej będącej pracą pisemną wraz z jej streszczeniem albo opis rozprawy doktorskiej nie będącej pracą pisemną i datę ich złożenia,"
+    "text": "c) treść rozprawy doktorskiej będącej pracą pisemną wraz z jej streszczeniem albo opis rozprawy doktorskiej niebędącej pracą pisemną i datę ich złożenia,"
   },
   {
     "label": "list_item",
-    "text": "d) imiona i nazwisko recenzenta, numer PESEL, a w przypadku jego braku -numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało, oraz miejsce zatrudnienia,"
+    "text": "d) imiona i nazwisko recenzenta, numer PESEL, a w przypadku jego braku - numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało, oraz miejsce zatrudnienia,"
   },
   {
     "label": "list_item",
@@ -53,7 +53,7 @@
   },
   {
     "label": "list_item",
-    "text": "b) numer PESEL, a w przypadku jego braku -numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało,"
+    "text": "b) numer PESEL, a w przypadku jego braku - numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało,"
   },
   {
     "label": "list_item",
@@ -61,7 +61,7 @@
   },
   {
     "label": "list_item",
-    "text": "d) imiona i nazwisko członka komisji habilitacyjnej, numer PESEL, a w przypadku jego braku -numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało, oraz miejsce zatrudnienia,"
+    "text": "d) imiona i nazwisko członka komisji habilitacyjnej, numer PESEL, a w przypadku jego braku - numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało, oraz miejsce zatrudnienia,"
   },
   {
     "label": "list_item",
@@ -81,7 +81,7 @@
   },
   {
     "label": "list_item",
-    "text": "b) numer PESEL, a w przypadku jego braku -numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało,"
+    "text": "b) numer PESEL, a w przypadku jego braku - numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało,"
   },
   {
     "label": "list_item",
@@ -101,11 +101,11 @@
   },
   {
     "label": "list_item",
-    "text": "d) imiona i nazwisko recenzenta, numer PESEL, a w przypadku jego braku -numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało, oraz miejsce zatrudnienia,"
+    "text": "d) imiona i nazwisko recenzenta, numer PESEL, a w przypadku jego braku - numer dokumentu potwierdzającego tożsamość oraz nazwę państwa, które go wydało, oraz miejsce zatrudnienia,"
   },
   {
     "label": "list_item",
-    "text": "e) opinie  recenzentów  w zakresie  spełniania  wymagań,  o których  mowa w art. 227 ust. 1 i 2, i daty ich opracowania,"
+    "text": "e) opinie recenzentów w zakresie spełniania wymagań, o których mowa w art. 227 ust. 1 i 2, i daty ich opracowania,"
   },
   {
     "label": "list_item",
@@ -113,19 +113,19 @@
   },
   {
     "label": "text",
-    "text": "2. Dane,  o których  mowa  w ust. 1  oraz  w przepisach  wydanych  na  podstawie art. 353, wprowadzają do Systemu POL -on:"
+    "text": "2. Dane, o których mowa w ust. 1 oraz w przepisach wydanych na podstawie art. 353, wprowadzają do Systemu POL-on:"
   },
   {
     "label": "list_item",
-    "text": "1) rektorzy, rektorzy uczelni prowadzonych przez kościoły i inne związki wyznaniowe, dyrektorzy instytutów PAN, dyrektorzy instytutów badawczych, dyrektorzy instytutów  międzynarodowych  i dyrektor  CMKP -w zakresie określonym w ust. 1 pkt 1 i 2;"
+    "text": "1) rektorzy, rektorzy uczelni prowadzonych przez kościoły i inne związki wyznaniowe, dyrektorzy instytutów PAN, dyrektorzy instytutów badawczych, dyrektorzy instytutów międzynarodowych i dyrektor CMKP - w zakresie określonym w ust. 1 pkt 1 i 2;"
   },
   {
     "label": "list_item",
-    "text": "2) przewodniczący RDN -w zakresie określonym w ust. 1 pkt 3."
+    "text": "2) przewodniczący RDN - w zakresie określonym w ust. 1 pkt 3."
   },
   {
     "label": "text",
-    "text": "3. Dane,  o których  mowa  w ust. 1,  są  powszechnie  dostępne,  z wyłączeniem numeru PESEL i numeru dokumentu potwierdzającego tożsamość."
+    "text": "3. Dane, o których mowa w ust. 1, są powszechnie dostępne, z wyłączeniem numeru PESEL i numeru dokumentu potwierdzającego tożsamość."
   },
   {
     "label": "text",
@@ -157,7 +157,7 @@
   },
   {
     "label": "list_item",
-    "text": "4) informacje  o wzorze  pieczęci  urzędowej  uczelni,  instytutu  PAN,  instytutu badawczego, instytutu międzynarodowego lub CMKP;"
+    "text": "4) informacje o wzorze pieczęci urzędowej uczelni, instytutu PAN, instytutu badawczego, instytutu międzynarodowego lub CMKP;"
   },
   {
     "label": "list_item",
@@ -169,7 +169,7 @@
   },
   {
     "label": "list_item",
-    "text": "b) odpisów dokumentów, o których mowa w lit. a,  w tym odpisów w języku obcym,"
+    "text": "b) odpisów dokumentów, o których mowa w lit. a, w tym odpisów w języku obcym,"
   },
   {
     "label": "list_item",
@@ -181,11 +181,11 @@
   },
   {
     "label": "text",
-    "text": "Dodane  pkt  1a  i 1b w ust. 1 w art. 349 wejdą w życie z  dn.  30.06.2026 r. (Dz. U. 2025 r. poz. 1837)."
+    "text": "Dodane pkt 1a i 1b w ust. 1 w art. 349 wejdą w życie z dn. 30.06.2026 r. (Dz. U. 2025 r. poz. 1837)."
   },
   {
     "label": "text",
-    "text": "Dodany pkt 3a w ust.  1  w  art.  349 wejdzie w życie z dn.  30.06.2026  r. (Dz.  U.  z  2023  r. poz. 2005, z 2025 r. poz. 1837)."
+    "text": "Dodany pkt 3a w ust. 1 w art. 349 wejdzie w życie z dn. 30.06.2026 r. (Dz. U. z 2023 r. poz. 2005, z 2025 r. poz. 1837)."
   },
   {
     "label": "page_footer",

@@ -2,9 +2,7 @@ import type { RegulationScope } from './regulationScope'
 import type { RegulationType } from './regulationType'
 
 export type SearchRegulationsParams = {
-  /**
-   * @minLength 1
-   */
+  /** @minLength 1 */
   query: string
   /**
    * @minimum -1
