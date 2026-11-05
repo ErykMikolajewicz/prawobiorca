@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 type Props = {
   label?: string
@@ -17,10 +18,30 @@ function triggerFileInput() {
   fileInputRef.value?.click()
 }
 
-function handleFileChange(event: Event) {
+async function copyToMemory(file: File): Promise<File> {
+  return new File([await file.arrayBuffer()], file.name, {
+    type: file.type,
+    lastModified: file.lastModified,
+  })
+}
+
+async function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  selectedFile.value = input.files?.[0] ?? null
+  const file = input.files?.[0] ?? null
   input.value = ''
+
+  if (!file) {
+    selectedFile.value = null
+    return
+  }
+
+  try {
+    selectedFile.value = await copyToMemory(file)
+  } catch (error) {
+    selectedFile.value = null
+    ElMessage.error('Nie udało się odczytać pliku. Wybierz go ponownie.')
+    console.error(error)
+  }
 }
 </script>
 

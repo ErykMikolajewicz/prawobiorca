@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import {
   addApplicationTemplate,
@@ -25,6 +26,7 @@ vi.mock('element-plus', () => ({
   ElMessage: {
     success: vi.fn(),
     warning: vi.fn(),
+    error: vi.fn(),
   },
 }))
 
@@ -53,11 +55,61 @@ describe('useApplicationTemplateUpload', () => {
     const upload = prepareUpload()
     const templateId = await upload.submit()
 
-    expect(addApplicationTemplate).toHaveBeenCalledWith({ name: 'Wniosek o urlop' })
-    expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
-    expect(confirmApplicationTemplateUpload).toHaveBeenCalledWith('template-1')
+    const signal = expect.any(AbortSignal)
+    expect(addApplicationTemplate).toHaveBeenCalledWith({ name: 'Wniosek o urlop' }, { signal })
+    expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File), signal)
+    expect(confirmApplicationTemplateUpload).toHaveBeenCalledWith('template-1', { signal })
     expect(templateId).toBe('template-1')
     expect(ElMessage.success).toHaveBeenCalled()
+  })
+
+  it('submit returns null and shows upload error when sending file fails', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+    vi.mocked(addApplicationTemplate).mockResolvedValueOnce(uploadTarget)
+    vi.mocked(uploadFileToStorage).mockRejectedValueOnce(new Error('timeout'))
+
+    const upload = prepareUpload()
+    const templateId = await upload.submit()
+
+    expect(templateId).toBeNull()
+    expect(ElMessage.error).toHaveBeenCalledWith(
+      'Nie udało się wysłać pliku szablonu. Spróbuj ponownie.',
+    )
+    expect(showApiError).not.toHaveBeenCalled()
+    expect(confirmApplicationTemplateUpload).not.toHaveBeenCalled()
+    expect(upload.isSubmitting.value).toBe(false)
+  })
+
+  it('cancelSubmit aborts sending file without showing an error', async () => {
+    vi.mocked(addApplicationTemplate).mockResolvedValueOnce(uploadTarget)
+    vi.mocked(uploadFileToStorage).mockImplementationOnce(
+      (_target, _file, signal) =>
+        new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new axios.CanceledError()))
+        }),
+    )
+
+    const upload = prepareUpload()
+    const submission = upload.submit()
+    await vi.waitFor(() => expect(uploadFileToStorage).toHaveBeenCalled())
+    upload.cancelSubmit()
+
+    expect(await submission).toBeNull()
+    expect(ElMessage.error).not.toHaveBeenCalled()
+    expect(showApiError).not.toHaveBeenCalled()
+    expect(confirmApplicationTemplateUpload).not.toHaveBeenCalled()
+    expect(upload.isSubmitting.value).toBe(false)
+  })
+
+  it('submit returns null without error when cancelled during confirmation', async () => {
+    vi.mocked(addApplicationTemplate).mockResolvedValueOnce(uploadTarget)
+    vi.mocked(confirmApplicationTemplateUpload).mockRejectedValueOnce(new axios.CanceledError())
+
+    const upload = prepareUpload()
+
+    expect(await upload.submit()).toBeNull()
+    expect(showApiError).not.toHaveBeenCalled()
+    expect(ElMessage.success).not.toHaveBeenCalled()
   })
 
   it('submit returns created template id when confirmation fails', async () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import { ElMessage } from 'element-plus'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   getPublishedApplicationTemplates,
@@ -119,5 +120,67 @@ describe('usePublishedTemplates', () => {
     await staleSearch
 
     expect(searchResults.value).toEqual([template('b')])
+  })
+
+  it('marks searching until the newest search finishes', async () => {
+    let resolveStale: ((value: Array<PublishedApplicationTemplate>) => void) | undefined
+    let resolveNewest: ((value: Array<PublishedApplicationTemplate>) => void) | undefined
+    vi.mocked(searchPublishedApplicationTemplates)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)))
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveNewest = resolve)))
+
+    const { isSearching, search } = usePublishedTemplates()
+
+    const staleSearch = search('stary')
+    const newestSearch = search('nowy')
+    expect(isSearching.value).toBe(true)
+
+    resolveStale!([template('a')])
+    await staleSearch
+    expect(isSearching.value).toBe(true)
+
+    resolveNewest!([template('b')])
+    await newestSearch
+    expect(isSearching.value).toBe(false)
+  })
+
+  it('stops searching when the query is cleared during a search', async () => {
+    let resolveSearch: ((value: Array<PublishedApplicationTemplate>) => void) | undefined
+    vi.mocked(searchPublishedApplicationTemplates).mockImplementationOnce(
+      () => new Promise((resolve) => (resolveSearch = resolve)),
+    )
+
+    const { isSearching, searchResults, search } = usePublishedTemplates()
+
+    const pendingSearch = search('urlop')
+    await search('')
+    expect(isSearching.value).toBe(false)
+
+    resolveSearch!([template('a')])
+    await pendingSearch
+    expect(isSearching.value).toBe(false)
+    expect(searchResults.value).toBeNull()
+  })
+
+  it('falls back to all templates and reports an error once when the newest search fails', async () => {
+    let rejectStale: ((reason: Error) => void) | undefined
+    vi.mocked(searchPublishedApplicationTemplates)
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(() => new Promise((_, reject) => (rejectStale = reject)))
+      .mockRejectedValueOnce(new Error('Service unavailable'))
+
+    const { isSearching, searchResults, search } = usePublishedTemplates()
+
+    await search('Zmiana')
+    expect(searchResults.value).toEqual([])
+
+    const staleSearch = search('Zmiana w')
+    await search('Zmiana wy')
+    rejectStale!(new Error('Service unavailable'))
+    await staleSearch
+
+    expect(searchResults.value).toBeNull()
+    expect(isSearching.value).toBe(false)
+    expect(ElMessage.error).toHaveBeenCalledTimes(1)
   })
 })

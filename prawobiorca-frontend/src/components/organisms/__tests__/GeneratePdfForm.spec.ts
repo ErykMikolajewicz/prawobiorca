@@ -9,9 +9,12 @@ function template(id: string, description: string | null = null): PublishedAppli
 
 const templates = [template('a', 'Wniosek o urlop.'), template('b'), template('c')]
 
-function mountForm(searchResults: Array<PublishedApplicationTemplate> | null = null) {
+function mountForm(
+  searchResults: Array<PublishedApplicationTemplate> | null = null,
+  isSearching = false,
+) {
   return mount(GeneratePdfForm, {
-    props: { templates, searchResults },
+    props: { templates, searchResults, isSearching },
     global: {
       stubs: {
         ElForm: { template: '<form><slot /></form>', methods: { clearValidate() {} } },
@@ -20,8 +23,8 @@ function mountForm(searchResults: Array<PublishedApplicationTemplate> | null = n
         ElButton: true,
         ElSelect: {
           template:
-            '<div class="select" :data-no-data-text="noDataText"><input class="select-query" @input="remoteMethod($event.target.value)" /><slot /></div>',
-          props: ['modelValue', 'remoteMethod', 'noDataText'],
+            '<div class="select" :data-no-data-text="noDataText" :data-loading="loading"><input class="select-query" @input="remoteMethod($event.target.value)" /><slot /></div>',
+          props: ['modelValue', 'remoteMethod', 'noDataText', 'loading'],
         },
         ElOption: {
           template: '<div class="option" :data-value="value"><slot /></div>',
@@ -87,5 +90,11 @@ describe('GeneratePdfForm', () => {
     expect(wrapper.find('.select').attributes('data-no-data-text')).toBe(
       'Nie znaleziono pasujących szablonów.',
     )
+  })
+
+  it('shows loading state in the template select while searching', () => {
+    const wrapper = mountForm([], true)
+
+    expect(wrapper.find('.select').attributes('data-loading')).toBe('true')
   })
 })

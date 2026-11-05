@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus, { ElMessage } from 'element-plus'
+import ElementPlus, { ElMessage, messageConfig } from 'element-plus'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import '@fontsource-variable/inter'
@@ -13,6 +13,8 @@ import { getApiErrorMessage } from './utils/error'
 
 import App from './App.vue'
 import router from './router'
+
+messageConfig.placement = 'top-right'
 
 initDarkMode()
 initBreakpoint()

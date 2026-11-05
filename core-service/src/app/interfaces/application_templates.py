@@ -57,6 +57,10 @@ class ApplicationTemplatesRepository(Protocol):
         self, session: AsyncSession, id_: UUID, description: str, vector: list[float]
     ) -> ApplicationTemplateRepresentation: ...
 
+    async def set_description_vector(
+        self, session: AsyncSession, id_: UUID, vector: list[float] | None
+    ) -> ApplicationTemplateRepresentation: ...
+
     async def update_details(
         self, session: AsyncSession, id_: UUID, details: ApplicationTemplateDetails
     ) -> ApplicationTemplateRepresentation: ...
