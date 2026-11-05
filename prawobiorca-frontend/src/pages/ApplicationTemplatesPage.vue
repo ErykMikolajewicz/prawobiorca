@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
+import { ref, onBeforeMount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { showApiError } from '@/utils/error'
@@ -47,6 +47,12 @@ async function handleDelete(templateId: string) {
 }
 
 onBeforeMount(loadTemplates)
+
+watch(isUploadDialogVisible, (isVisible) => {
+  if (!isVisible) {
+    void loadTemplates()
+  }
+})
 </script>
 
 <template>

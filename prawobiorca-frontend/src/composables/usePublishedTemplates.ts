@@ -12,6 +12,7 @@ export function usePublishedTemplates() {
   const query = ref('')
   const aiAssisted = ref(false)
   const searchResults = ref<Array<PublishedApplicationTemplate> | null>(null)
+  const isSearching = ref(false)
 
   const organizationsStore = useOrganizationsStore()
   let lastRequestId = 0
@@ -30,9 +31,11 @@ export function usePublishedTemplates() {
 
     if (!newQuery.trim()) {
       searchResults.value = null
+      isSearching.value = false
       return
     }
 
+    isSearching.value = true
     try {
       const results = await searchPublishedApplicationTemplates({
         ...getOrganizationParams(),
@@ -43,7 +46,14 @@ export function usePublishedTemplates() {
         searchResults.value = results
       }
     } catch (error) {
-      showApiError(error, { defaultMessage: 'Nie udało się wyszukać szablonów wniosków.' })
+      if (requestId === lastSearchRequestId) {
+        searchResults.value = null
+        showApiError(error, { defaultMessage: 'Nie udało się wyszukać szablonów wniosków.' })
+      }
+    } finally {
+      if (requestId === lastSearchRequestId) {
+        isSearching.value = false
+      }
     }
   }
 
@@ -71,6 +81,7 @@ export function usePublishedTemplates() {
   return {
     templates,
     searchResults,
+    isSearching,
     aiAssisted,
     load,
     search,

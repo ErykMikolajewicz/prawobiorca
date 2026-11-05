@@ -324,7 +324,7 @@ async def test_confirm_application_template_upload_without_content_variable(
 
 
 async def test_update_application_template(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
+    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
 ):
     template_id = next(uuid_generator)
     mock_application_templates_repo.get.return_value = create_template(
@@ -332,7 +332,7 @@ async def test_update_application_template(
     )
     fields = [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")]
 
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
 
     result = await use_case.execute(
         ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", instructions="Instrukcje", fields=fields)
@@ -343,17 +343,19 @@ async def test_update_application_template(
         template_id,
         ApplicationTemplateDetails(name="Wniosek", instructions="Instrukcje", fields=fields),
     )
+    mock_embedding_port.embed_texts.assert_not_awaited()
+    mock_application_templates_repo.set_description_vector.assert_not_awaited()
     assert result == mock_application_templates_repo.update_details.return_value
 
 
 async def test_update_application_template_with_invalid_fields(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
+    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
 ):
     mock_application_templates_repo.get.return_value = create_template(
         ApplicationTemplateStatus.DRAFT, [ApplicationTemplateField(name="student_id", label="student_id")]
     )
 
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
 
     with pytest.raises(InvalidApplicationFieldsConfig):
         await use_case.execute(
@@ -368,14 +370,14 @@ async def test_update_application_template_with_invalid_fields(
 
 
 async def test_update_application_template_with_organization(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
+    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
 ):
     template_id = next(uuid_generator)
     organization_id = next(uuid_generator)
     suborganization_id = next(uuid_generator)
     mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
 
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
 
     await use_case.execute(
         ADMIN,
@@ -399,12 +401,12 @@ async def test_update_application_template_with_organization(
 
 
 async def test_update_application_template_organization_not_found(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
+    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
 ):
     mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
     mock_application_templates_repo.update_details.side_effect = OrganizationNotFound
 
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
 
     with pytest.raises(OrganizationNotFound):
         await use_case.execute(
@@ -414,13 +416,111 @@ async def test_update_application_template_organization_not_found(
         )
 
 
+async def test_update_application_template_changed_description_recalculates_vector(
+    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
+):
+    template_id = next(uuid_generator)
+    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
+    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
+
+    result = await use_case.execute(
+        ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Nowy opis.")
+    )
+
+    mock_embedding_port.embed_texts.assert_awaited_once_with(["Nowy opis."])
+    mock_application_templates_repo.set_description_vector.assert_awaited_once_with(
+        mock_opened_session, template_id, [0.1, 0.2]
+    )
+    assert result == mock_application_templates_repo.set_description_vector.return_value
+
+
+async def test_update_application_template_unchanged_description_keeps_vector(
+    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
+):
+    template = create_template(ApplicationTemplateStatus.DRAFT)
+    template.description = "Opis."
+    mock_application_templates_repo.get.return_value = template
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
+
+    await use_case.execute(
+        ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Opis.")
+    )
+
+    mock_embedding_port.embed_texts.assert_not_awaited()
+    mock_application_templates_repo.set_description_vector.assert_not_awaited()
+
+
+@pytest.mark.parametrize("description", [None, "", "   "])
+async def test_update_application_template_removed_description_clears_vector(
+    mock_session_maker,
+    mock_opened_session,
+    mock_application_templates_repo,
+    mock_embedding_port,
+    uuid_generator,
+    description,
+):
+    template_id = next(uuid_generator)
+    template = create_template(ApplicationTemplateStatus.DRAFT)
+    template.description = "Opis."
+    mock_application_templates_repo.get.return_value = template
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
+
+    await use_case.execute(
+        ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", fields=[], description=description)
+    )
+
+    mock_embedding_port.embed_texts.assert_not_awaited()
+    mock_application_templates_repo.set_description_vector.assert_awaited_once_with(
+        mock_opened_session, template_id, None
+    )
+
+
+async def test_update_application_template_embedding_unavailable(
+    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
+):
+    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
+    mock_embedding_port.embed_texts.side_effect = ServiceUnavailable
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
+
+    with pytest.raises(ServiceUnavailable):
+        await use_case.execute(
+            ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Opis.")
+        )
+
+    mock_application_templates_repo.update_details.assert_not_awaited()
+
+
+async def test_update_application_template_published_during_embedding(
+    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
+):
+    mock_application_templates_repo.get.side_effect = [
+        create_template(ApplicationTemplateStatus.DRAFT),
+        create_template(ApplicationTemplateStatus.PUBLISHED),
+    ]
+    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
+
+    with pytest.raises(ApplicationTemplateInInvalidState):
+        await use_case.execute(
+            ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Opis.")
+        )
+
+    mock_application_templates_repo.update_details.assert_not_awaited()
+
+
 @pytest.mark.parametrize("status", [ApplicationTemplateStatus.NOT_UPLOADED, ApplicationTemplateStatus.PUBLISHED])
 async def test_update_application_template_not_draft(
-    mock_session_maker, mock_application_templates_repo, uuid_generator, status
+    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator, status
 ):
     mock_application_templates_repo.get.return_value = create_template(status)
 
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo)
+    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
 
     with pytest.raises(ApplicationTemplateInInvalidState):
         await use_case.execute(ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[]))

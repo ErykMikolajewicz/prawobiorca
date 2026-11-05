@@ -9,12 +9,14 @@ const emit = defineEmits<{
   (e: 'submitted', templateId: string): void
 }>()
 
-const { selectedFile, name, isSubmitting, resetForm, setFile, submit } =
+const { selectedFile, name, isSubmitting, resetForm, setFile, cancelSubmit, submit } =
   useApplicationTemplateUpload()
 
 watch(visible, (isVisible) => {
   if (isVisible) {
     resetForm()
+  } else {
+    cancelSubmit()
   }
 })
 

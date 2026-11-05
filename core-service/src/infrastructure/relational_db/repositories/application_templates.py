@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, Select, and_, case, delete, func, insert, or_, select, update
+from sqlalchemy import ColumnElement, Select, and_, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -164,16 +164,14 @@ class ApplicationTemplatesRepository:
             description_status=ApplicationTemplateDescriptionStatus.GENERATED,
         )
 
+    async def set_description_vector(
+        self, session: AsyncSession, id_: UUID, vector: list[float] | None
+    ) -> ApplicationTemplateRepresentation:
+        return await self._update(session, id_, description_vector=vector)
+
     async def update_details(
         self, session: AsyncSession, id_: UUID, details: ApplicationTemplateDetails
     ) -> ApplicationTemplateRepresentation:
-        description_vector = case(
-            (
-                application_templates_table.c.description.is_not_distinct_from(details.description),
-                application_templates_table.c.description_vector,
-            ),
-            else_=None,
-        )
         try:
             return await self._update(
                 session,
@@ -182,7 +180,6 @@ class ApplicationTemplatesRepository:
                 instructions=details.instructions,
                 fields=details.fields,
                 description=details.description,
-                description_vector=description_vector,
                 organization_id=details.organization_id,
                 suborganization_id=details.suborganization_id,
             )

@@ -2,6 +2,7 @@ from io import BytesIO
 from unittest.mock import ANY
 from uuid import UUID, uuid4
 
+import pytest
 from docx import Document
 from fastapi import status
 from sqlalchemy import delete, insert, select
@@ -134,9 +135,21 @@ class StubTextsEmbedder:
     async def embed_queries(queries):
         return [QUERY_VECTOR]
 
+    @staticmethod
+    async def embed_texts(texts):
+        return [DESCRIPTION_VECTOR]
+
 
 QUERY_VECTOR = [1.0] * VECTOR_LENGTH
 UNRELATED_VECTOR = [1.0, *[0.0] * (VECTOR_LENGTH - 1)]
+DESCRIPTION_VECTOR = [0.0, 1.0, *[0.0] * (VECTOR_LENGTH - 2)]
+
+
+@pytest.fixture(autouse=True)
+def override_texts_embedder():
+    prawobiorca.dependency_overrides[get_texts_embedder] = lambda: StubTextsEmbedder()
+    yield
+    prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
 
 
 async def get_template_description(session_maker, template_id):
@@ -840,11 +853,11 @@ async def test_regenerate_application_template_description_as_normal_user(
         await delete_templates(session_maker, template_id)
 
 
-async def test_update_application_template_description_clears_description_vector(
+async def test_update_application_template_description_recalculates_description_vector(
     client, override_session_maker, session_maker, override_authorize_admin_user
 ):
     template_id = await insert_template(
-        session_maker, fields=FIELDS, description="Wniosek o urlop.", description_vector=QUERY_VECTOR
+        session_maker, fields=FIELDS, description="Wniosek o urlop.", description_vector=UNRELATED_VECTOR
     )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -857,7 +870,7 @@ async def test_update_application_template_description_clears_description_vector
 
         assert response.status_code == status.HTTP_200_OK
         description = await get_template_description(session_maker, template_id)
-        assert description.description_vector is not None
+        assert list(description.description_vector) == UNRELATED_VECTOR
 
         response = await client.put(
             f"/api/application-templates/{template_id}",
@@ -866,6 +879,15 @@ async def test_update_application_template_description_clears_description_vector
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["description"] == "Wniosek o stypendium."
+        description = await get_template_description(session_maker, template_id)
+        assert list(description.description_vector) == DESCRIPTION_VECTOR
+
+        response = await client.put(
+            f"/api/application-templates/{template_id}",
+            json={"name": "Wniosek", "description": None, "fields": FIELDS_JSON},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
         description = await get_template_description(session_maker, template_id)
         assert description.description_vector is None
     finally:
