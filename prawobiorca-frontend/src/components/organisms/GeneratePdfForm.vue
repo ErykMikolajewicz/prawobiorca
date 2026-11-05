@@ -8,6 +8,7 @@ import type { NewApplication, PublishedApplicationTemplate } from '@/api/generat
 type Props = {
   templates: Array<PublishedApplicationTemplate>
   searchResults?: Array<PublishedApplicationTemplate> | null
+  isSearching?: boolean
 }
 
 const props = defineProps<Props>()
@@ -103,7 +104,8 @@ async function handleSubmit() {
           remote
           remote-show-suffix
           :remote-method="handleSearch"
-          :debounce="0"
+          :loading="isSearching"
+          loading-text="Wyszukiwanie szablonów..."
           placeholder="Wpisz, czego dotyczy wniosek, np. przedłużenie terminu oddania pracy dyplomowej"
           :no-data-text="
             searchResults ? 'Nie znaleziono pasujących szablonów.' : 'Brak dostępnych szablonów'

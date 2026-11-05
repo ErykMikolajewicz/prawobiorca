@@ -37,6 +37,7 @@ onBeforeMount(async () => {
             v-model:ai-assisted="publishedTemplates.aiAssisted"
             :templates="publishedTemplates.templates"
             :search-results="publishedTemplates.searchResults"
+            :is-searching="publishedTemplates.isSearching"
             @generate-pdf="caseApplications.generate"
             @search="publishedTemplates.search"
           />

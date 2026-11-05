@@ -36,6 +36,17 @@ describe('storage utils', () => {
     expect((formData as FormData).get('file')).toEqual(file)
   })
 
+  it('uploadFileToStorage limits upload time and forwards the abort signal', async () => {
+    vi.mocked(axios.post).mockResolvedValueOnce({ status: 204 })
+    const target = { id: 'uuid-123', url: 'https://storage.example.com/upload', fields: {} }
+    const { signal } = new AbortController()
+
+    await uploadFileToStorage(target, new File(['content'], 'test.pdf'), signal)
+
+    const [, , config] = vi.mocked(axios.post).mock.calls[0] ?? []
+    expect(config).toEqual({ timeout: 300_000, signal })
+  })
+
   it('uploadFileToStorage rewrites the dev storage origin to /storage', async () => {
     vi.stubEnv('VITE_DEV_STORAGE_ORIGIN', 'http://localhost:9000')
     vi.mocked(axios.post).mockResolvedValueOnce({ status: 204 })

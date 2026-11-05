@@ -128,8 +128,9 @@ def get_confirm_application_template_upload(
 def get_update_application_template(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
+    texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
 ) -> UpdateApplicationTemplate:
-    return UpdateApplicationTemplate(session_maker, application_templates_repo)
+    return UpdateApplicationTemplate(session_maker, application_templates_repo, texts_embedder)
 
 
 def get_publish_application_template(

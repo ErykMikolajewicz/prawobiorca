@@ -11,7 +11,7 @@ from src.app.dtos.application_templates import (
     PublishedApplicationTemplate,
 )
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
-from src.app.interfaces.relational import SessionMaker
+from src.app.interfaces.relational import AsyncSession, SessionMaker
 from src.app.ports.application_templates import (
     ApplicationTemplateDescriptionWriter,
     ApplicationTemplateInspector,
@@ -209,37 +209,64 @@ class ConfirmApplicationTemplateUpload:
 class UpdateApplicationTemplate:
     session_maker: SessionMaker
     application_templates_repo: ApplicationTemplatesRepository
+    texts_embedder: TextsEmbedder
 
     async def execute(
         self, caller: Caller, template_id: UUID, details_data: ApplicationTemplateDetailsData
     ) -> ApplicationTemplateRepresentation:
         check_can_manage_application_templates(caller)
 
+        async with self.session_maker() as session:
+            template = await self._get_draft(session, template_id)
+
+        validate_fields_config({field.name for field in template.fields}, details_data.fields)
+
+        description_changed = details_data.description != template.description
+        description_vector = await self._embed_description(details_data.description) if description_changed else None
+
+        details = ApplicationTemplateDetails(
+            name=details_data.name,
+            instructions=details_data.instructions,
+            fields=details_data.fields,
+            description=details_data.description,
+            organization_id=details_data.organization_id,
+            suborganization_id=details_data.suborganization_id,
+        )
+
         async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get(session, template_id)
-            if template is None:
-                logger.warning("Application template to update not found! template id: %s", template_id)
-                raise ApplicationTemplateNotFound
+            await self._get_draft(session, template_id)
 
-            if template.status != ApplicationTemplateStatus.DRAFT:
-                logger.warning("Tried to update not draft application template! template id: %s", template_id)
-                raise ApplicationTemplateInInvalidState
-
-            validate_fields_config({field.name for field in template.fields}, details_data.fields)
-
-            details = ApplicationTemplateDetails(
-                name=details_data.name,
-                instructions=details_data.instructions,
-                fields=details_data.fields,
-                description=details_data.description,
-                organization_id=details_data.organization_id,
-                suborganization_id=details_data.suborganization_id,
-            )
             try:
-                return await self.application_templates_repo.update_details(session, template_id, details)
+                updated_template = await self.application_templates_repo.update_details(session, template_id, details)
             except OrganizationNotFound:
                 logger.warning("Organization for application template not found! template id: %s", template_id)
                 raise
+
+            if description_changed:
+                return await self.application_templates_repo.set_description_vector(
+                    session, template_id, description_vector
+                )
+
+            return updated_template
+
+    async def _get_draft(self, session: AsyncSession, template_id: UUID) -> ApplicationTemplateRepresentation:
+        template = await self.application_templates_repo.get(session, template_id)
+        if template is None:
+            logger.warning("Application template to update not found! template id: %s", template_id)
+            raise ApplicationTemplateNotFound
+
+        if template.status != ApplicationTemplateStatus.DRAFT:
+            logger.warning("Tried to update not draft application template! template id: %s", template_id)
+            raise ApplicationTemplateInInvalidState
+
+        return template
+
+    async def _embed_description(self, description: str | None) -> list[float] | None:
+        if not (description or "").strip():
+            return None
+
+        vectors = await self.texts_embedder.embed_texts([description])
+        return vectors[0]
 
 
 @dataclass
