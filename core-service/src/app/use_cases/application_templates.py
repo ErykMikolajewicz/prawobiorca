@@ -446,7 +446,7 @@ class DeleteApplicationTemplate:
         try:
             await self.application_templates_storage.delete_template(template_id)
         except Exception:
-            logger.error("Failed to remove from storage application template: %s", template_id)
+            logger.exception("Failed to remove from storage application template: %s", template_id)
 
 
 @dataclass

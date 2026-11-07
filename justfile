@@ -85,7 +85,7 @@ check-workflows:
 check-frontend:
     pnpm check
     pnpm type-check
-    pnpm test:unit --run
+    pnpm test:unit --run --coverage
 
 audit-backend:
     uv audit --frozen --preview-features audit-command

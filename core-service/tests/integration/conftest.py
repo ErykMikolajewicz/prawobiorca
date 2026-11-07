@@ -26,7 +26,7 @@ def configure_podman():
     if "DOCKER_HOST" in os.environ:
         return
 
-    subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"])
+    subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"], check=True)
 
     uid = os.getuid()
     podman_sock = f"unix:///run/user/{uid}/podman/podman.sock"

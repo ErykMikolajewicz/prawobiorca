@@ -118,8 +118,7 @@ async def check_is_user_logged(request: Request) -> CurrentUser:
 
     if user_id is None or user_privileges is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    else:
-        return CurrentUser(is_admin=user_privileges.is_admin)
+    return CurrentUser(is_admin=user_privileges.is_admin)
 
 
 @auth_router.post(

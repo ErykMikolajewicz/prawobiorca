@@ -16,7 +16,7 @@ from tests.consts import EXTRACTION_SERVICE_IMAGE_TAG, EXTRACTION_SERVICE_PORT, 
 
 @pytest.fixture(scope="session", autouse=True)
 def configure_podman():
-    subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"])
+    subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"], check=True)
 
     uid = os.getuid()
     podman_sock = f"unix:///run/user/{uid}/podman/podman.sock"

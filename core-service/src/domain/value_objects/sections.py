@@ -49,7 +49,4 @@ class SectionsCollection:
         chunks_to_embed = [chunk for section in self._sections for chunk in section.chunks]
         chunks_to_embed.sort(key=lambda chunk: len(chunk.text))
 
-        batches = []
-        for batch in batched(chunks_to_embed, batch_size, strict=False):
-            batches.append(batch)
-        return batches
+        return [list(batch) for batch in batched(chunks_to_embed, batch_size, strict=False)]

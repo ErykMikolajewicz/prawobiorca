@@ -42,7 +42,7 @@ class DeleteCase:
             try:
                 await self.applications_storage.delete_application(application_id)
             except Exception:
-                logger.error("Failed to remove from storage application: %s", application_id)
+                logger.exception("Failed to remove from storage application: %s", application_id)
 
 
 @dataclass

@@ -4,7 +4,7 @@ const REGULATION_NAME = 'Prawo o nauce i szkolnictwie wyższym - fragment'
 const PASSWORD = 'StrongPassword12;'
 
 test('user searches regulation and adds result to case', async ({ page }) => {
-  const username = `e2e-${Date.now()}`
+  const username = `e2e-${Date.now().toString()}`
   const caseName = `Sprawa ${username}`
 
   await page.goto('/accounts/register')

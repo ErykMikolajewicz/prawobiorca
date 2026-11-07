@@ -11,12 +11,12 @@ const suborganizations = computed(() => selectedOrganization.value?.suborganizat
 
 const organizationId = computed<string>({
   get: () => selectedOrganization.value?.id ?? '',
-  set: (value) => organizationsStore.select(value ?? '', ''),
+  set: (value) => organizationsStore.select(value, ''),
 })
 
 const suborganizationId = computed<string>({
   get: () => selectedSuborganization.value?.id ?? '',
-  set: (value) => organizationsStore.select(organizationId.value, value ?? ''),
+  set: (value) => organizationsStore.select(organizationId.value, value),
 })
 </script>
 

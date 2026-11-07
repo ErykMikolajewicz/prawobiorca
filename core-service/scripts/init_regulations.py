@@ -79,8 +79,7 @@ async def init_regulations():
         for file_path in init_files_dir.iterdir():
             file_name = file_path.name
 
-            with open(file_path, "rb") as file:
-                file_content = file.read()
+            file_content = file_path.read_bytes()
 
             regulation_id = uuid.uuid4()
             regulation_type = REGULATION_TYPES_BY_FILE_NAME.get(file_name)

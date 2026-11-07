@@ -176,8 +176,10 @@ class LegalStructureParser:
                     )
                     continue
 
-                for fragment in GLUED_ARTICLE_PATTERN.split(text):
-                    prepared_elements.append(RegulationElement(label=element.label, text=fragment))
+                prepared_elements.extend(
+                    RegulationElement(label=element.label, text=fragment)
+                    for fragment in GLUED_ARTICLE_PATTERN.split(text)
+                )
 
         return prepared_elements
 

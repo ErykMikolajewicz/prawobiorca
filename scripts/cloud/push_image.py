@@ -55,7 +55,7 @@ stdout, stderr = login.communicate(input=token.encode("utf-8"))
 if login.returncode != 0:
     raise RuntimeError("Podman login failed!")
 
-subprocess.run(["podman", "tag", f"{image_name}:{tag}", remote_ref])
-subprocess.run(["podman", "push", remote_ref])
+subprocess.run(["podman", "tag", f"{image_name}:{tag}", remote_ref], check=True)
+subprocess.run(["podman", "push", remote_ref], check=True)
 
 print(f"Success! Image pushed: {remote_ref}")

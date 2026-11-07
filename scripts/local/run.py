@@ -42,6 +42,7 @@ def image_created_at(name: str) -> float | None:
         ["podman", "image", "inspect", name, "--format", "{{.Created.Unix}}"],
         capture_output=True,
         text=True,
+        check=False,
     )
     if result.returncode != 0:
         return None
@@ -79,6 +80,7 @@ def wait_for_postgres():
         result = subprocess.run(
             ["podman", "exec", POSTGRES_CONTAINER, "pg_isready", "-h", "localhost", "-U", "postgres"],
             capture_output=True,
+            check=False,
         )
         if result.returncode == 0:
             return

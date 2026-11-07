@@ -31,7 +31,7 @@ const { isUserLogged, isAdmin } = storeToRefs(authStore)
 const searchParams = ref<RegulationsSearchParams>({
   query: (route.query.query as string) || '',
   threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : defaultThreshold,
-  orderBy: (route.query.orderBy as RegulationsOrder) || 'name',
+  orderBy: (route.query.orderBy as RegulationsOrder | undefined) || 'name',
 })
 
 const publicRegulations = reactive(useRegulations('PUBLIC', () => searchParams.value))
