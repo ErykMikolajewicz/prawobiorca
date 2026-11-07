@@ -115,7 +115,10 @@ podman tag docker.io/pgvector/pgvector:0.8.4-pg18-trixie ghcr.io/erykmikolajewic
 podman push ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
 ```
 
-The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-DEV/prawobiorca`: weekly, on demand, and on PRs to `main` that change dependency files.
+The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-DEV/prawobiorca`: weekly, on demand, and on PRs to `main` that change dependency files. Accepted findings in the `deployment` dependency group, pulled in by checkov:
+
+- `asteval` – checkov pins a vulnerable version, so `override-dependencies` in `pyproject.toml` forces the fixed one.
+- `ecdsa` (`PYSEC-2026-1325`) – there is no fixed version, so `just audit-backend` ignores it with `--ignore-until-fixed` and reports it again once a fix is released. The vulnerability affects signing, while checkov only verifies signatures of external checks with it.
 
 ### 6.2 E2E (`e2e.yml`)
 

@@ -105,7 +105,7 @@ check-frontend:
     pnpm test:unit --run --coverage
 
 audit-backend:
-    uv audit --frozen --preview-features audit-command
+    uv audit --frozen --preview-features audit-command --ignore-until-fixed PYSEC-2026-1325
     uv audit --frozen --preview-features audit-command --directory core-service
     uv audit --frozen --preview-features audit-command --directory extraction-service
 

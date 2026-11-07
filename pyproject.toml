@@ -21,6 +21,9 @@ deployment = [
     "checkov==3.4.*",
 ]
 
+[tool.uv]
+override-dependencies = ["asteval>=1.0.9"]
+
 [tool.ruff]
 extend = "ruff.toml"
 
