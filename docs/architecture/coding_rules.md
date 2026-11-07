@@ -158,6 +158,8 @@ Before every commit, only for the parts of the repository with staged changes:
 - `core-service/src/` – regenerate the API types with `just api-types`
 - `prawobiorca-frontend/` – format with oxfmt, check with oxlint, stylelint and knip
 - `.github/` – check the workflows with zizmor and actionlint
+- `Containerfile` – lint with hadolint
+- `deploy/gcp/` – check the Kubernetes manifests with checkov
 
 The hook runs only fast checks. ESLint, `vue-tsc` and tests are run by CI.
 

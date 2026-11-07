@@ -1,8 +1,8 @@
 FROM docker.io/library/python:3.12-slim AS export
 
-RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu torch \
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu "torch==2.15.*" \
     "optimum-intel[openvino]==2.2.*" "openvino==2026.4.*" "openvino-tokenizers[transformers]==2026.4.*" \
-    sentence-transformers
+    "sentence-transformers==6.2.*"
 
 RUN optimum-cli export openvino --model sdadas/mmlw-retrieval-roberta-large-v2 \
     --disable-convert-tokenizer --task feature-extraction --weight-format int8 \

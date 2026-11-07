@@ -92,6 +92,12 @@ check-workflows:
     uv run zizmor --offline .github
     uv run actionlint
 
+check-containers:
+    uv run hadolint */Containerfile
+
+check-deployment:
+    uv run --group deployment checkov --directory deploy/gcp
+
 [working-directory: 'prawobiorca-frontend']
 check-frontend:
     pnpm check

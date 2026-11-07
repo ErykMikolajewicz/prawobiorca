@@ -13,6 +13,12 @@ dependencies = [
     "zizmor==1.32.*",
     "actionlint-py==1.7.12.*",
     "ty==0.0.99",
+    "hadolint-py==2.15.1.*",
+]
+
+[dependency-groups]
+deployment = [
+    "checkov==3.4.*",
 ]
 
 [tool.ruff]

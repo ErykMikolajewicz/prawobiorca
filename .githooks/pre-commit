@@ -41,4 +41,12 @@ if changed '^\.github/'; then
   just check-workflows
 fi
 
+if changed 'Containerfile$|^\.hadolint\.yaml$'; then
+  just check-containers
+fi
+
+if changed '^deploy/gcp/|^\.checkov\.yaml$'; then
+  just check-deployment
+fi
+
 echo "$staged_files" | xargs git add --

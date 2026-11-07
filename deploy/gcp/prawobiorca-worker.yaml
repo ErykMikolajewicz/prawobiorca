@@ -2,6 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prawobiorca-worker
+  annotations:
+    checkov.io/skip1: CKV_K8S_8=The worker has no HTTP endpoint to probe
+    checkov.io/skip2: CKV_K8S_9=The worker does not receive traffic
 spec:
   replicas: 1
   selector:
@@ -17,10 +20,22 @@ spec:
       nodeSelector:
         cloud.google.com/gke-spot: "true"
       serviceAccountName: prawobiorca-runner
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: prawobiorca-worker
           image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/prawobiorca-backend:latest
           command: ["taskiq", "worker", "src.framework.workers.regulations:broker", "src.framework.workers.applications"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               cpu: "100m"

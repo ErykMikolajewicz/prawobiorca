@@ -6,9 +6,21 @@ metadata:
     app: prawobiorca
     component: prawobiorca-backend
 spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: prawobiorca-backend
       image: localhost/prawobiorca-backend:latest
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
       ports:
         - containerPort: 8000
       envFrom:

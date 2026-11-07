@@ -19,6 +19,8 @@ jobs:
       extraction: ${{ steps.filter.outputs.extraction }}
       frontend: ${{ steps.filter.outputs.frontend }}
       workflows: ${{ steps.filter.outputs.workflows }}
+      containers: ${{ steps.filter.outputs.containers }}
+      deployment: ${{ steps.filter.outputs.deployment }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
       - id: filter
@@ -53,6 +55,22 @@ jobs:
               - pyproject.toml
               - uv.lock
               - justfile
+            containers:
+              - '**/Containerfile'
+              - .hadolint.yaml
+              - pyproject.toml
+              - uv.lock
+              - justfile
+              - .github/workflows/ci.yml
+              - .github/actions/setup-backend/**
+            deployment:
+              - deploy/gcp/**
+              - .checkov.yaml
+              - pyproject.toml
+              - uv.lock
+              - justfile
+              - .github/workflows/ci.yml
+              - .github/actions/setup-backend/**
 
   backend:
     needs: changes
@@ -136,3 +154,29 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-backend
       - run: just check-workflows
+
+  containers:
+    needs: changes
+    if: needs.changes.outputs.containers == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - run: just check-containers
+
+  deployment:
+    needs: changes
+    if: needs.changes.outputs.deployment == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - run: just check-deployment
