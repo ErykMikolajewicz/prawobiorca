@@ -90,6 +90,8 @@ E2E tests cover only the most basic functionality of the application — searchi
 
 There is a single scenario (`prawobiorca-frontend/e2e/search.spec.ts`): register and log in, create a case, search a legal act and add the result to the case.
 
+In CI they run only in the release repository, on every push to `main` and before every deployment, not on PRs in `WMS-DEV/prawobiorca` (see [E2E](../workflow.md#62-e2e-e2eyml)).
+
 ### Environment
 
 - The tests run against the built `prawobiorca-backend` and `prawobiorca-frontend` images, deployed like the local environment (`podman kube play` with `deploy/local/`), through the nginx ingress at `http://localhost:8080`.

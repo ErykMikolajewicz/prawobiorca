@@ -13,9 +13,8 @@ When additional team members join the project:
 
 The repository maintains the following branches:
 
-- `develop` – Main development branch where developers merge their changes.
+- `main` – The only long-lived branch. Developers merge their changes directly into it, and it must always be ready to release.
 - `<jira number>` – Per task/subtask branches for implementing individual functionalities.
-- `main` – Main production branch for production releases.
 
 ## 3. Workflow
 
@@ -26,27 +25,28 @@ The repository maintains the following branches:
     A branch `<jira number>` is created e.g. 55, 78.  
     The developer implements the feature and prepares unit tests.
 
-- **Merging to develop**  
-    After development and initial testing, the feature branch is merged (PR) into `develop`.
-
 - **Integration Testing**  
     A designated developer prepares integration tests for new or modified components.
 
+- **Merging to main**  
+    After development and testing, the feature branch is merged (PR) into `main` in `WMS-DEV/prawobiorca`.
+
 - **E2E/Manual Testing**  
-    After successful E2E/manual testing, the approved code is merged into `main`.
+    E2E tests run automatically on `main` in the release repository after the merge. Manual testing is done as needed.
 
 - **Production Release**  
-    Code from `main` is deployed to the production environment according to business needs (e.g., new features, critical fixes).
+    A release from `main` is deployed to the production environment according to business needs (e.g., new features, critical fixes), see [CD](#63-cd-cdyml).
 
 ### 3.1 Exceptions
 
-- Branches may be created directly from `main`, and dedicated test branches may be used for urgent fixes observed in production; however, all changes must undergo full testing and code review before merging.
+- Dedicated test branches may be used for urgent fixes observed in production; however, all changes must undergo full testing and code review before merging.
 - Optionally, Test Driven Development (TDD) can be applied—writing tests before code—though not required for every task.
 
 ## 4. Additional Guidelines
 
 - Every change must undergo code review (including test quality).
-- Automated tests run on every PR to `develop` and `main`.
+- Unit and integration tests run on every PR to `main` and every push to `main`.
+- Branch protection is not available in `WMS-DEV/prawobiorca` on the current GitHub plan, so nothing blocks a direct push to `main`. Use PRs anyway and never force-push `main`.
 - Commit messages follow the **Conventional Commits** specification.
 - Every feature branch is named according to the Jira task number and description.
 - Documentation is updated as needed, at the latest in the sprint following feature implementation.
@@ -76,27 +76,21 @@ The repository maintains the following branches:
 
 ## 6. CI/CD
 
-Pipelines are defined with GitHub Actions in `.github/workflows/`.
+Pipelines are defined with GitHub Actions in `.github/workflows/`. The code lives in two repositories, with the same workflow files in both. A `github.repository_id` condition limits each job to one of them:
+
+- `WMS-DEV/prawobiorca` (private, id `1120768327`) – the source of truth. All development happens here: branches, PRs, unit and integration tests, and the dependency audit.
+- `ErykMikolajewicz/prawobiorca` (public, id `989302666`) – the release repository. It receives `main` from the mirror, runs the E2E tests and deploys to GCP. Nobody develops or pushes here directly.
 
 ### 6.1 CI (`ci.yml`)
 
-Runs on every push to `develop` and on every PR to `develop` and `main`:
+Runs in `WMS-DEV/prawobiorca` on every PR to `main` and every push to `main`:
 
 - **backend** – `just check-backend`: Ruff lint and format check, unit tests with coverage (fails below 90%).
 - **integration** – integration tests (`just test-integration`).
 - **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest.
 - **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
-- **e2e** – runs only on PRs to `main`: builds the backend and frontend images, deploys them with `just run-e2e-env` and runs the Playwright tests (see [Tests](tests/tests.md#e2e-tests)). On failure it prints the backend and nginx logs and uploads the Playwright report as an artifact.
 
 When the API contract changes, run `just api-types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
-
-The e2e job pulls `embedding-service` from `ghcr.io/erykmikolajewicz/embedding-service:latest` instead of building it. The image is public and pushed manually; push it again whenever `embedding-service/Containerfile` changes:
-
-```bash
-podman login ghcr.io -u ErykMikolajewicz
-podman tag localhost/embedding-service:latest ghcr.io/erykmikolajewicz/embedding-service:latest
-podman push ghcr.io/erykmikolajewicz/embedding-service:latest
-```
 
 The integration tests pull PostgreSQL with pgvector from `ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie` instead of Docker Hub, to avoid its unauthenticated pull rate limit. The image is a public copy of `pgvector/pgvector:0.8.4-pg18-trixie`, pushed manually; push a new tag and update `POSTGRES_IMAGE_VERSION` in `core-service/tests/integration/conftest.py` when changing the version:
 
@@ -106,36 +100,62 @@ podman tag docker.io/pgvector/pgvector:0.8.4-pg18-trixie ghcr.io/erykmikolajewic
 podman push ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
 ```
 
-### 6.2 CD (`cd.yml`)
+The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-DEV/prawobiorca`: weekly, on demand, and on PRs to `main` that change dependency files.
 
-Runs on every push to `main` and deploys to GKE:
+### 6.2 E2E (`e2e.yml`)
 
-- Detects whether the backend (`core-service/`) or the frontend (`prawobiorca-frontend/`) changed, together with their manifests in `deploy/gcp/`.
-- Builds only the changed images and pushes them to Artifact Registry, tagged with the commit SHA and `latest`.
-- For the backend, runs the migrations job first, then rolls out `prawobiorca-backend` and `prawobiorca-worker`; for the frontend, rolls out `prawobiorca-frontend`.
+Runs only in the release repository, on every push to `main` and as the first step of every release. It builds the backend and frontend images, deploys them with `just run-e2e-env` and runs the Playwright tests (see [Tests](tests/tests.md#e2e-tests)). On failure it prints the backend and nginx logs and uploads the Playwright report as an artifact.
 
-GitHub authenticates to GCP with Workload Identity Federation, configured once by `scripts/cloud/github_cicd_init.sh`.
+The result is not reported back to `WMS-DEV/prawobiorca`. The release repository is public, so its logs can be shared with developers by a link.
+
+The job pulls `embedding-service` from `ghcr.io/erykmikolajewicz/embedding-service:latest` instead of building it. The image is public and pushed manually; push it again whenever `embedding-service/Containerfile` changes:
+
+```bash
+podman login ghcr.io -u ErykMikolajewicz
+podman tag localhost/embedding-service:latest ghcr.io/erykmikolajewicz/embedding-service:latest
+podman push ghcr.io/erykmikolajewicz/embedding-service:latest
+```
+
+### 6.3 CD (`cd.yml`)
+
+Runs only in the release repository, when a release is published. Pushes to `main` do not deploy, and neither do prereleases. To release:
+
+```bash
+just release v1.2.3
+```
+
+The recipe fails if `main` differs between the repositories, which means the mirror is out of date. Otherwise it creates a release from `main` in the release repository. The release then goes through these steps:
+
+- Runs the E2E tests on the released commit.
+- Waits for approval in the `production` environment of the release repository.
+- Builds both images and pushes them to Artifact Registry, tagged with the commit SHA and `latest`.
+- Runs the migrations job, then rolls out `prawobiorca-backend`, `prawobiorca-worker` and `prawobiorca-frontend`.
+
+The `production` environment accepts only `v*` tags and requires the approval of the repository owner. This approval is the protection against an unwanted deployment, because `MIRROR_TOKEN` is readable by the administrators of `WMS-DEV/prawobiorca` and allows creating releases, but not approving deployments.
+
+To roll back, create a new release from the previous commit (`just release` always uses `main`):
+
+```bash
+gh release create v1.2.4 -R ErykMikolajewicz/prawobiorca --target <commit sha> --generate-notes
+```
+
+The migrations job of an older image fails if the database already has a newer migration. In that case, release a fix instead of rolling back.
+
+GitHub authenticates to GCP with Workload Identity Federation, limited to the `production` environment and configured once by `scripts/cloud/github_cicd_init.sh`.
 
 Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction-service`, `embedding-service`, `embedding-batch-service`) by their own scripts in `scripts/cloud/`.
 
-### 6.3 Mirror (`mirror.yml`)
+### 6.4 Mirror (`mirror.yml`)
 
-The source of truth and CI/CD live in the public repository `ErykMikolajewicz/prawobiorca`. On every push to `main` or `develop` the branch is pushed to the team repository `WMS-DEV/prawobiorca`. Other branches in `WMS-DEV/prawobiorca` are not touched.
+On every push to `main` in `WMS-DEV/prawobiorca`, the branch is pushed to the release repository, which starts the E2E tests there. Other branches are not mirrored. Everything merged to `main` becomes public.
 
-The push is not forced, so it fails when someone has added commits to `main` or `develop` in `WMS-DEV/prawobiorca`. Merge them into the public repository through a regular PR (example for `main`, the same for `develop`):
+The push is not forced, so it fails when `main` in `WMS-DEV/prawobiorca` was force-pushed or the release repository got its own commits. Failures are not visible in the release repository, so `just release` checks that both repositories are on the same commit.
 
-```bash
-git fetch wms
-git switch -c sync-wms origin/main
-git merge wms/main
-git push -u origin sync-wms
-```
+The workflow authenticates with the `MIRROR_TOKEN` secret of `WMS-DEV/prawobiorca`: a fine-grained PAT for `ErykMikolajewicz/prawobiorca` with `Contents` and `Workflows` read and write permissions. It must be renewed before it expires.
 
-The workflow authenticates with the `WMS_MIRROR_TOKEN` secret: a fine-grained PAT for `WMS-DEV/prawobiorca` with `Contents` and `Workflows` read and write permissions.
-
-Local remotes: `origin` points to the public repository, `wms` to `WMS-DEV/prawobiorca` and is fetch-only:
+Local remotes: `origin` points to `WMS-DEV/prawobiorca`, `release` to the release repository and is fetch-only:
 
 ```bash
-git remote add wms https://github.com/WMS-DEV/prawobiorca.git
-git remote set-url --push wms no_push
+git remote add release https://github.com/ErykMikolajewicz/prawobiorca.git
+git remote set-url --push release no_push
 ```
