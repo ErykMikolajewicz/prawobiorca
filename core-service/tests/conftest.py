@@ -5,7 +5,7 @@ Contains common fixtures used in tests, such as the FastAPI test client
 and generators for tokens and UUIDs.
 """
 
-from collections.abc import Iterator
+from collections.abc import AsyncGenerator, Iterator
 from uuid import UUID
 
 import pytest
@@ -35,7 +35,7 @@ def uuid_generator() -> Iterator[UUID]:
 
 
 @pytest.fixture
-async def client() -> AsyncClient:
+async def client() -> AsyncGenerator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=prawobiorca), base_url="http://test") as client:
         yield client
 

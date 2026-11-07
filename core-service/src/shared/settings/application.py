@@ -13,7 +13,7 @@ class HttpClientType(StrEnum):
 
 
 class ApplicationSettings(BaseSettings):
-    LOGGING_LEVEL: str = ...
+    LOGGING_LEVEL: str
 
     JWT_SECRET_KEY: SecretStr = Field(..., min_length=32)
 

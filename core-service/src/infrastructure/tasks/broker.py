@@ -64,7 +64,7 @@ class PostgresBroker(AsyncBroker):
 
     async def listen(self) -> AsyncGenerator[AckableMessage]:
         while True:
-            if self._listen_connection.is_closed():
+            if self._listen_connection is None or self._listen_connection.is_closed():
                 try:
                     await self._connect_listener()
                 except OSError, TimeoutError, asyncpg.PostgresError:

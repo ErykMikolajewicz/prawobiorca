@@ -73,7 +73,11 @@ api-types: export-openapi generate-api-client
 
 init-db: upgrade-db seed init-regulations
 
-check-backend: && cov
+[working-directory: 'core-service']
+type-check-backend:
+    uv run ty check
+
+check-backend: && type-check-backend cov
     uv run ruff check .
     uv run ruff format --check
 

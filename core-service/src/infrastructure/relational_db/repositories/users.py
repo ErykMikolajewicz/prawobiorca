@@ -54,9 +54,9 @@ class UsersSessionsRepository:
             .values(user_id=user_id, refresh_token_hash=refresh_token_hash, valid_until=valid_until)
             .returning(users_sessions_table.c.id)
         )
-        session_id = await session.scalar(statement)
+        result = await session.execute(statement)
 
-        return session_id
+        return result.scalar_one()
 
     @staticmethod
     async def rotate_session(

@@ -58,7 +58,7 @@ class RegulationsManagerRepository:
         statement = _filter_regulations(select(RegulationRepresentation), user_id, regulation_type, organization_filter)
 
         result = await session.scalars(statement)
-        regulations_representation = result.all()
+        regulations_representation = list(result.all())
 
         return regulations_representation
 

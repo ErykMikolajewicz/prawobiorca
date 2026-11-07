@@ -301,10 +301,10 @@ class RegulationAct:
 
         part_titles = []
         for part_index, (part, subsection_suffix) in enumerate(zip(parts, subsection_suffixes, strict=True), start=1):
-            if are_suffixes_unambiguous:
-                part_suffix = subsection_suffix
-            elif subsection_suffix is None:
+            if subsection_suffix is None:
                 part_suffix = f"(część {part_index}/{parts_total})"
+            elif are_suffixes_unambiguous:
+                part_suffix = subsection_suffix
             else:
                 part_suffix = f"{subsection_suffix} (część {part_index}/{parts_total})"
 

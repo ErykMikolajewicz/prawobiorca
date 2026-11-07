@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from sqlalchemy import exc, text
@@ -36,7 +36,7 @@ class DatabaseSessionMaker:
         self._session_maker = session_maker
 
     @asynccontextmanager
-    async def begin(self) -> AsyncIterator[AsyncSession]:
+    async def begin(self) -> AsyncGenerator[AsyncSession]:
         try:
             async with self._session_maker.begin() as session:
                 yield session
@@ -44,7 +44,7 @@ class DatabaseSessionMaker:
             raise ServiceUnavailable() from e
 
     @asynccontextmanager
-    async def __call__(self) -> AsyncIterator[AsyncSession]:
+    async def __call__(self) -> AsyncGenerator[AsyncSession]:
         try:
             async with self._session_maker() as session:
                 yield session

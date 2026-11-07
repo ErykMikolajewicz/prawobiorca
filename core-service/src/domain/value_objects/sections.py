@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import batched
 from uuid import UUID, uuid4
@@ -42,7 +42,7 @@ class RegulationSection:
 class SectionsCollection:
     _sections: list[RegulationSection]
 
-    def __iter__(self) -> Iterable[RegulationSection]:
+    def __iter__(self) -> Iterator[RegulationSection]:
         return iter(self._sections)
 
     def get_chunks_batch_iterator(self, batch_size: int) -> list[list[SectionChunk]]:

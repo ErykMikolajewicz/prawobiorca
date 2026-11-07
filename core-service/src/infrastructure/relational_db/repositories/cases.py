@@ -15,7 +15,7 @@ class CasesRepository:
     async def list_by_user_id(session: AsyncSession, user_id: UUID) -> list[CaseData]:
         statement = select(CaseData).where(cases_table.c.user_id == user_id).order_by(cases_table.c.create_date.desc())
         result = await session.scalars(statement)
-        cases = result.all()
+        cases = list(result.all())
         return cases
 
     @staticmethod
@@ -45,7 +45,7 @@ class CaseDocumentsRepository:
             case_documents_table.c.case_id == case_id, case_documents_table.c.user_id == user_id
         )
         result = await session.scalars(statement)
-        case_documents = result.all()
+        case_documents = list(result.all())
 
         return case_documents
 

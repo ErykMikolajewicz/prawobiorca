@@ -116,7 +116,7 @@ class LogoutUser:
         async with self.session_maker.begin() as session:
             if session_id is not None:
                 await self.sessions_repo.delete_session(session, session_id)
-            else:
+            elif refresh_token is not None:
                 await self.sessions_repo.delete_session_by_refresh_token_hash(
                     session, hash_refresh_token(refresh_token)
                 )

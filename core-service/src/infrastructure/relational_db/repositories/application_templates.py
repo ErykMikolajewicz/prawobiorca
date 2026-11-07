@@ -63,7 +63,7 @@ class ApplicationTemplatesRepository:
         )
 
         result = await session.scalars(statement)
-        templates = result.all()
+        templates = list(result.all())
         return templates
 
     @staticmethod

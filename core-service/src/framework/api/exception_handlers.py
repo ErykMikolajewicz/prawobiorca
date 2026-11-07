@@ -9,7 +9,7 @@ from src.shared.exceptions import ServiceUnavailable
 logger = logging.getLogger(__name__)
 
 
-async def handle_service_unavailable(request: Request, exc: ServiceUnavailable) -> JSONResponse:
+async def handle_service_unavailable(request: Request, exc: Exception) -> JSONResponse:
     logger.error("Service unavailable during %s %s", request.method, request.url.path, exc_info=exc)
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -17,7 +17,7 @@ async def handle_service_unavailable(request: Request, exc: ServiceUnavailable) 
     )
 
 
-async def handle_login_required(request: Request, exc: LoginRequired) -> JSONResponse:
+async def handle_login_required(request: Request, exc: Exception) -> JSONResponse:
     logger.warning("Unlogged user attempt to use endpoint: %s %s!", request.method, request.url.path)
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -25,7 +25,7 @@ async def handle_login_required(request: Request, exc: LoginRequired) -> JSONRes
     )
 
 
-async def handle_access_forbidden(request: Request, exc: AccessForbidden) -> JSONResponse:
+async def handle_access_forbidden(request: Request, exc: Exception) -> JSONResponse:
     logger.warning("Forbidden access attempt to endpoint: %s %s!", request.method, request.url.path)
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,
