@@ -77,6 +77,10 @@ check-backend: && cov
     uv run ruff check .
     uv run ruff format --check
 
+check-workflows:
+    uv run zizmor --offline .github
+    uv run actionlint
+
 [working-directory: 'prawobiorca-frontend']
 check-frontend:
     pnpm check

@@ -89,6 +89,12 @@ Runs in `WMS-DEV/prawobiorca` on every PR to `main` and every push to `main`:
 - **integration** – integration tests (`just test-integration`).
 - **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest.
 - **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
+- **workflows** – `just check-workflows`: security audit of `.github/` with zizmor (configured in `.github/zizmor.yml`) and workflow linting with actionlint.
+
+Every action in `.github/` is pinned to a full commit SHA, with its exact version in a comment (`uses: actions/checkout@<sha> # v7.0.1`). When updating an action, change both. Every job declares its own `permissions`, and `actions/checkout` runs with `persist-credentials: false`. Accepted zizmor findings are marked with `# zizmor: ignore[<audit>]` on the reported line:
+
+- `artipacked` in the `changes` job of `ci.yml` – `dorny/paths-filter` fetches the base commit with git on push events, so the checkout keeps its credentials.
+- `cache-poisoning` in `e2e.yml` – known and postponed.
 
 When the API contract changes, run `just api-types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
 

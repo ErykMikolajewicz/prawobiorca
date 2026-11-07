@@ -10,6 +10,8 @@ dependencies = [
     "mkdocstrings[python]==1.0.*",
     "zensical==0.0.74",
     "google-auth[requests]==2.62.*",
+    "zizmor==1.32.*",
+    "actionlint-py==1.7.12.*",
 ]
 
 [tool.ruff]
