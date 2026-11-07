@@ -92,8 +92,8 @@ async def search_published_application_templates(
     ],
     caller: Annotated[Caller, Depends(get_caller)],
     organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
-    query: str = Query(min_length=1),
-    ai_assisted: bool = Query(default=False, alias="aiAssisted"),
+    query: Annotated[str, Query(min_length=1)],
+    ai_assisted: Annotated[bool, Query(alias="aiAssisted")] = False,
 ) -> list[PublishedApplicationTemplate]:
     return await search_templates.execute(caller, organization_filter, query, ai_assisted)
 

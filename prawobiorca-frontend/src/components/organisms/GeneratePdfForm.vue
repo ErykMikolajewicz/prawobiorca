@@ -22,10 +22,10 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInstance>()
 
-const form = reactive({
+const form = reactive<Required<NewApplication>>({
   templateId: '',
   description: '',
-  fieldValues: {} as Record<string, string>,
+  fieldValues: {},
 })
 
 const selectedTemplate = computed(() =>

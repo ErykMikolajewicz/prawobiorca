@@ -7,7 +7,7 @@ from tests.consts import ACCESS_TOKEN, UNKNOWN_ACCESS_TOKEN
 
 
 @pytest.mark.parametrize(
-    "file_name, file_type, error_status",
+    ("file_name", "file_type", "error_status"),
     [
         ("", RegulationType.STATUTE, status.HTTP_422_UNPROCESSABLE_CONTENT),
         ("a" * 300, RegulationType.ACT, status.HTTP_422_UNPROCESSABLE_CONTENT),

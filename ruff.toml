@@ -9,9 +9,9 @@ exclude = [
 src = ["core-service", "extraction-service", "scripts/local"]
 
 [lint]
-select = ["S", "I", "E", "F", "B"]
+select = ["S", "I", "E", "F", "B", "UP", "ASYNC", "DTZ", "FAST", "LOG", "RUF", "C4", "PT"]
 ignore = ["B904", "B008"]
 
 [lint.per-file-ignores]
 "**/tests/**" = ["S"]
-"**/scripts/**" = ["S"]
+"**/scripts/**" = ["S", "ASYNC"]

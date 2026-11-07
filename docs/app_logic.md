@@ -120,7 +120,7 @@ View available exclusively for the **Administrator**, serving to manage template
 
 2. **Adding a Template**:
     - The Administrator uploads a DOCX file and gives the template a name (by default the file name).
-    - The DOCX file is a Jinja2 template. It must contain the `paragraphs` variable, where the generated content is inserted. The `current_date` variable is filled automatically.
+    - The DOCX file is a Jinja2 template. It must contain the `paragraphs` variable, where the generated content is inserted. The `current_date` variable is filled automatically with the current date in Polish time (`Europe/Warsaw`).
     - Every other template variable becomes a template field. The new template gets the "Draft" status and default AI instructions.
 
 3. **Template Editor**:

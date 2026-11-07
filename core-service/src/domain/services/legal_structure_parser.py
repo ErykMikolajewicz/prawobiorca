@@ -24,7 +24,7 @@ SUBSECTION_PATTERN = re.compile(r"^(\d+[a-z]*)\.\s")
 POINT_PATTERN = re.compile(r"^<?\d+[a-z]*\)\s")
 LETTER_PATTERN = re.compile(r"^<?[a-z]\)\s")
 MARKED_SUBSECTION_PATTERN = re.compile(r"^[<\[]\d+[a-z]*\.\s")
-DASH_PATTERN = re.compile(r"^[-–]")
+DASH_PATTERN = re.compile(r"^[-\u2013]")
 ATTACHMENT_MARKER_PATTERN = re.compile(r"^(Załącznik\s+nr\s*\d+[a-z]*)(?:\s\d+\))?(?:\s\1(?:\s\d+\))?)*$")
 GLUED_ARTICLE_PATTERN = re.compile(r"(?<=[.;:])\s+(?=Art\.\s*\d+[a-z]*\s*\.)")
 

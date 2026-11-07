@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import status
@@ -24,9 +24,21 @@ async def test_get_cases_list(
             insert(cases_table)
             .values(
                 [
-                    {"user_id": USER_ID, "name": "First case", "create_date": datetime(2026, 1, 1, 10, 0, 0)},
-                    {"user_id": USER_ID, "name": "Second case", "create_date": datetime(2026, 1, 2, 10, 0, 0)},
-                    {"user_id": ADMIN_ID, "name": "Other user case", "create_date": datetime(2026, 1, 3, 10, 0, 0)},
+                    {
+                        "user_id": USER_ID,
+                        "name": "First case",
+                        "create_date": datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
+                    },
+                    {
+                        "user_id": USER_ID,
+                        "name": "Second case",
+                        "create_date": datetime(2026, 1, 2, 10, 0, 0, tzinfo=UTC),
+                    },
+                    {
+                        "user_id": ADMIN_ID,
+                        "name": "Other user case",
+                        "create_date": datetime(2026, 1, 3, 10, 0, 0, tzinfo=UTC),
+                    },
                 ]
             )
             .returning(cases_table.c.id)

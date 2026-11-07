@@ -37,11 +37,11 @@ function httpError(config: InternalAxiosRequestConfig, status: number): AxiosErr
 
 /** Adapter zwracający statusy wg kolejki na ścieżkę; brak wpisu oznacza 200. */
 function adapterFor(statuses: Record<string, number[]>): AxiosAdapter {
-  return vi.fn(async (config: InternalAxiosRequestConfig) => {
+  return vi.fn((config: InternalAxiosRequestConfig) => {
     const queue = statuses[config.url ?? '']
     const status = queue?.shift() ?? 200
-    if (status >= 400) throw httpError(config, status)
-    return response(config, status)
+    if (status >= 400) return Promise.reject(httpError(config, status))
+    return Promise.resolve(response(config, status))
   })
 }
 

@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from math import ceil
 from uuid import UUID
 
@@ -41,7 +41,7 @@ def hash_refresh_token(refresh_token: str) -> str:
 
 
 def create_access_token(claims: AccessTokenClaims, secret: SecretStr, algorithm: str, expires_in: int) -> str:
-    issued_at = datetime.now(timezone.utc)
+    issued_at = datetime.now(UTC)
     payload = {
         "sub": str(claims.user_id),
         "sid": str(claims.session_id),

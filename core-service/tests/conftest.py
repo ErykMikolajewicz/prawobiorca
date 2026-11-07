@@ -14,7 +14,7 @@ from httpx2 import ASGITransport, AsyncClient
 from src.main import prawobiorca
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def uuid_generator() -> Iterator[UUID]:
     """
     Generates a sequence of predefined UUIDs.
@@ -34,7 +34,7 @@ def uuid_generator() -> Iterator[UUID]:
     return iter(uuids)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 async def client() -> AsyncClient:
     async with AsyncClient(transport=ASGITransport(app=prawobiorca), base_url="http://test") as client:
         yield client

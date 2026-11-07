@@ -35,7 +35,7 @@ def test_resolve_private_scope_owner_unlogged():
 
 
 @pytest.mark.parametrize(
-    "caller, scope",
+    ("caller", "scope"),
     [
         (USER, RegulationScope.PRIVATE),
         (ADMIN, RegulationScope.PRIVATE),
@@ -48,7 +48,7 @@ def test_can_add_regulation(caller, scope):
 
 
 @pytest.mark.parametrize(
-    "caller, scope, error",
+    ("caller", "scope", "error"),
     [
         (ANONYMOUS, RegulationScope.PRIVATE, LoginRequired),
         (ANONYMOUS, RegulationScope.PUBLIC, LoginRequired),
@@ -62,7 +62,7 @@ def test_cannot_add_regulation(caller, scope, error):
 
 
 @pytest.mark.parametrize(
-    "caller, owner",
+    ("caller", "owner"),
     [
         (ANONYMOUS, PUBLIC_REGULATION),
         (USER, PUBLIC_REGULATION),
@@ -81,7 +81,7 @@ def test_cannot_read_other_user_regulation(caller):
 
 
 @pytest.mark.parametrize(
-    "caller, owner",
+    ("caller", "owner"),
     [
         (USER, USER_REGULATION),
         (ADMIN, PUBLIC_REGULATION),
@@ -93,7 +93,7 @@ def test_can_manage_regulation(caller, owner):
 
 
 @pytest.mark.parametrize(
-    "caller, owner, error",
+    ("caller", "owner", "error"),
     [
         (ANONYMOUS, PUBLIC_REGULATION, LoginRequired),
         (USER, PUBLIC_REGULATION, AccessForbidden),
@@ -112,7 +112,7 @@ def test_can_generate_regulation_description():
 
 
 @pytest.mark.parametrize(
-    "caller, error",
+    ("caller", "error"),
     [
         (ANONYMOUS, LoginRequired),
         (USER, AccessForbidden),

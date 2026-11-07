@@ -1,5 +1,5 @@
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Awaitable, Callable
 
 from sqlalchemy import exc, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

@@ -1,4 +1,4 @@
-from pytest import fixture
+import pytest
 from sqlalchemy import delete
 from sqlalchemy.engine import make_url
 
@@ -7,7 +7,7 @@ from src.infrastructure.relational_db.schemas.tasks import task_messages_table
 from src.infrastructure.tasks.broker import PostgresBroker
 
 
-@fixture(scope="function")
+@pytest.fixture
 async def task_broker(postgres_container, session_maker):
     listen_dsn = make_url(postgres_container.get_connection_url()).set(drivername="postgresql")
     broker = PostgresBroker(
@@ -22,7 +22,7 @@ async def task_broker(postgres_container, session_maker):
     await broker.shutdown()
 
 
-@fixture(scope="function")
+@pytest.fixture
 async def clean_task_messages(session_maker):
     yield
     async with session_maker.begin() as session:

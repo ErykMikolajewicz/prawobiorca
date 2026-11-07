@@ -1,5 +1,5 @@
+import pytest
 from pydantic import SecretStr
-from pytest import fixture
 from sqlalchemy import delete, insert
 
 from src.domain.services.security import hash_password
@@ -7,7 +7,7 @@ from src.infrastructure.relational_db.schemas.users import users_table
 from tests.consts import ADMIN_ID, ADMIN_USERNAME, STRONG_PASSWORD, USER_ID, VALID_USERNAME
 
 
-@fixture(scope="function")
+@pytest.fixture
 async def set_user(session_maker):
     password = SecretStr(STRONG_PASSWORD)
     hashed_password = hash_password(password)
@@ -16,10 +16,8 @@ async def set_user(session_maker):
         statement = insert(users_table).values(id=USER_ID, username=VALID_USERNAME, hashed_password=hashed_password)
         await session.execute(statement)
 
-    yield
 
-
-@fixture(scope="function")
+@pytest.fixture
 async def clean_user(session_maker):
     yield
     async with session_maker.begin() as session:
@@ -27,7 +25,7 @@ async def clean_user(session_maker):
         await session.execute(statement)
 
 
-@fixture(scope="function")
+@pytest.fixture
 async def set_admin_user(session_maker):
     password = SecretStr(STRONG_PASSWORD)
     hashed_password = hash_password(password)
@@ -38,10 +36,8 @@ async def set_admin_user(session_maker):
         )
         await session.execute(statement)
 
-    yield
 
-
-@fixture(scope="function")
+@pytest.fixture
 async def clean_admin_user(session_maker):
     yield
     async with session_maker.begin() as session:

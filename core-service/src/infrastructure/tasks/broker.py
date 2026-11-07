@@ -1,9 +1,10 @@
 import asyncio
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import suppress
 from datetime import timedelta
 from functools import partial
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import asyncpg
 from sqlalchemy import delete, func, insert, or_, select, update
@@ -61,7 +62,7 @@ class PostgresBroker(AsyncBroker):
         async with self.session_maker.begin() as session:
             await insert_task_message(session, message)
 
-    async def listen(self) -> AsyncGenerator[AckableMessage, None]:
+    async def listen(self) -> AsyncGenerator[AckableMessage]:
         while True:
             if self._listen_connection.is_closed():
                 try:

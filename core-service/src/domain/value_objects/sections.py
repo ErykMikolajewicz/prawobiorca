@@ -1,6 +1,6 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from itertools import batched
-from typing import Iterable
 from uuid import UUID, uuid4
 
 from src.domain.value_objects.legal_units import LegalUnitElement

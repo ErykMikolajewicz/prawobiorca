@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import status
@@ -43,7 +43,7 @@ async def test_get_organizations(client, override_session_maker, session_maker):
         )
         statement = (
             insert(organizations_table)
-            .values(name="Uniwersytet Wrocławski", short_name="UWr", create_date=datetime(2100, 1, 1))
+            .values(name="Uniwersytet Wrocławski", short_name="UWr", create_date=datetime(2100, 1, 1, tzinfo=UTC))
             .returning(organizations_table.c.id)
         )
         organization_id = await session.scalar(statement)
@@ -54,12 +54,12 @@ async def test_get_organizations(client, override_session_maker, session_maker):
                     {
                         "organization_id": default_organization_id,
                         "name": "Wydział Mechaniczny",
-                        "create_date": datetime(2100, 1, 1),
+                        "create_date": datetime(2100, 1, 1, tzinfo=UTC),
                     },
                     {
                         "organization_id": default_organization_id,
                         "name": "Wydział Chemiczny",
-                        "create_date": datetime(2100, 1, 2),
+                        "create_date": datetime(2100, 1, 2, tzinfo=UTC),
                     },
                 ]
             )

@@ -1,5 +1,6 @@
 from datetime import datetime
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 import anyio
 from docxtpl import DocxTemplate
@@ -8,6 +9,8 @@ from jinja2.sandbox import SandboxedEnvironment
 from src.app.dtos.applications import NewApplication
 from src.domain.services.application_fields import DATE_FORMAT
 from src.domain.value_objects.application_templates import CONTENT_TEMPLATE_VARIABLE, CURRENT_DATE_TEMPLATE_VARIABLE
+
+APPLICATION_TIMEZONE = ZoneInfo("Europe/Warsaw")
 
 
 class DocxApplicationRenderer:
@@ -20,7 +23,7 @@ class DocxApplicationRenderer:
         document.render(
             {
                 **new_application.field_values,
-                CURRENT_DATE_TEMPLATE_VARIABLE: datetime.now().strftime(DATE_FORMAT),
+                CURRENT_DATE_TEMPLATE_VARIABLE: datetime.now(APPLICATION_TIMEZONE).strftime(DATE_FORMAT),
                 CONTENT_TEMPLATE_VARIABLE: [line.strip() for line in content.splitlines() if line.strip()],
             },
             jinja_env=SandboxedEnvironment(),

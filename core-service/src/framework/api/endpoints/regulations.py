@@ -75,8 +75,8 @@ async def get_regulations(
     list_regulations: Annotated[ListRegulations, Depends(get_list_regulations)],
     caller: Annotated[Caller, Depends(get_caller)],
     organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
-    scope: RegulationScope = Query(default=RegulationScope.PUBLIC),
-    regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
+    scope: Annotated[RegulationScope, Query()] = RegulationScope.PUBLIC,
+    regulation_type: Annotated[RegulationType | None, Query(alias="documentType")] = None,
 ) -> list[RegulationRepresentation]:
     return await list_regulations.execute(caller, scope, regulation_type, organization_filter)
 
@@ -92,10 +92,10 @@ async def search_regulations(
     search_regulations_: Annotated[SearchRegulations, Depends(get_search_regulations)],
     caller: Annotated[Caller, Depends(get_caller)],
     organization_filter: Annotated[OrganizationFilter | None, Depends(get_organization_filter)],
-    query: str = Query(min_length=1),
-    threshold: float = Query(ge=-1, le=1),
-    scope: RegulationScope = Query(default=RegulationScope.PUBLIC),
-    regulation_type: RegulationType | None = Query(default=None, alias="documentType"),
+    query: Annotated[str, Query(min_length=1)],
+    threshold: Annotated[float, Query(ge=-1, le=1)],
+    scope: Annotated[RegulationScope, Query()] = RegulationScope.PUBLIC,
+    regulation_type: Annotated[RegulationType | None, Query(alias="documentType")] = None,
 ) -> list[RegulationSearchResult]:
     return await search_regulations_.execute(caller, scope, regulation_type, organization_filter, query, threshold)
 
@@ -258,7 +258,7 @@ async def update_regulation(
 async def delete_regulation(
     delete_regulation_: Annotated[DeleteRegulation, Depends(get_delete_regulation)],
     caller: Annotated[Caller, Depends(get_caller)],
-    regulation_id: UUID = Path(alias="regulationId"),
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
 ):
     try:
         await delete_regulation_.execute(caller, regulation_id)

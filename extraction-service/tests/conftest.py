@@ -5,7 +5,7 @@ These fixtures handle container initialization of the extraction service.
 
 import os
 import subprocess
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
 from testcontainers.core.container import DockerContainer
@@ -25,7 +25,7 @@ def configure_podman():
 
 
 @pytest.fixture(scope="session")
-def extraction_service_container() -> Generator[DockerContainer, None, None]:
+def extraction_service_container() -> Generator[DockerContainer]:
     wait_strategy = HttpWaitStrategy(
         EXTRACTION_SERVICE_PORT,
         "/health",
