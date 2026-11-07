@@ -21,6 +21,8 @@ export default defineConfigWithVueTs(
       'vue/singleline-html-element-content-newline': 'off',
       'vue/html-indent': 'off',
       'vue/html-self-closing': 'off',
+      'vue/no-v-html': 'error',
+      'no-new-func': 'error',
     },
   },
 
