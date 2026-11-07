@@ -12,7 +12,14 @@ dependencies = [
     "google-auth[requests]==2.62.*",
     "zizmor==1.32.*",
     "actionlint-py==1.7.12.*",
+    "ty==0.0.99",
 ]
 
 [tool.ruff]
 extend = "ruff.toml"
+
+[tool.ty.src]
+include = ["scripts"]
+
+[tool.ty.environment]
+root = ["scripts/local"]

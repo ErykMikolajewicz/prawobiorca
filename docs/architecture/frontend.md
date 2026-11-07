@@ -93,7 +93,7 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [Tests](../tests/tests.md#e2e-tests)). |
 | `pnpm lint` | Run oxlint, ESLint and stylelint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
-| `pnpm check` | Run oxlint, ESLint, stylelint, oxfmt and knip without fixing; used by the pre-commit hook. |
+| `pnpm check` | Run oxlint, ESLint, stylelint, oxfmt and knip without fixing; used by CI. |
 | `pnpm generate:api-client` | Generate `src/api/generated/` from `core-service/openapi.json` with Orval. |
 
 A JetBrains IDE (PyCharm Professional, free for students under a non-commercial licence) with the Vue plugin is recommended, so that the whole repository — Python services and frontend — is handled by a single IDE. In VS Code, the [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) extension is required to make the TypeScript language service aware of `.vue` types.

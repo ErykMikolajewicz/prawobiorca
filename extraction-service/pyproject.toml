@@ -14,11 +14,18 @@ dependencies = [
 ]
 
 [dependency-groups]
+dev = [
+    "ty==0.0.99",
+]
+
 test = [
     "httpx2==2.16.*",
     "pytest==9.2.*",
     "testcontainers==4.15.*",
 ]
+
+[tool.ty.src]
+include = ["src", "tests"]
 
 [tool.uv.sources]
 torch = { index = "pytorch-cpu" }

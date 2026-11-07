@@ -152,12 +152,14 @@ else:
 ---
 
 ## Commit hook
-Before every commit:
-- Lint and format the code with Ruff
-- Check the frontend code with `pnpm check`
-- When `core-service/src/` is changed, regenerate the API types with `just api-types`
+Before every commit, only for the parts of the repository with staged changes:
+- Python files – lint and format the code with Ruff
+- `core-service/`, `extraction-service/`, `scripts/` – type-check with ty
+- `core-service/src/` – regenerate the API types with `just api-types`
+- `prawobiorca-frontend/` – format with oxfmt, check with oxlint, stylelint and knip
+- `.github/` – check the workflows with zizmor and actionlint
 
-Tests are not run by the hook, they are run by CI.
+The hook runs only fast checks. ESLint, `vue-tsc` and tests are run by CI.
 
 ---
 

@@ -32,6 +32,8 @@ target_creds = impersonated_credentials.Credentials(
 
 target_creds.refresh(Request())
 token = target_creds.token
+if token is None:
+    raise RuntimeError("Failed to obtain access token!")
 
 registry_host = f"{LOCATION}-docker.pkg.dev"
 

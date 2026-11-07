@@ -77,7 +77,14 @@ init-db: upgrade-db seed init-regulations
 type-check-backend:
     uv run ty check
 
-check-backend: && type-check-backend cov
+type-check-scripts:
+    uv run ty check
+
+[working-directory: 'extraction-service']
+type-check-extraction:
+    uv run --group dev --group test ty check
+
+check-backend: && type-check-backend type-check-scripts cov
     uv run ruff check .
     uv run ruff format --check
 
