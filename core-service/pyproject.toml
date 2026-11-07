@@ -32,6 +32,7 @@ dependencies = [
 dev = [
     "granian[reload]==2.8.*",
     "taskiq[reload]==0.13.*",
+    "ty==0.0.99",
 ]
 
 test = [
@@ -43,3 +44,18 @@ test = [
 
 [tool.uv]
 default-groups = ["dev", "test"]
+
+[[tool.ty.overrides]]
+include = ["src/framework/dependencies/**", "src/framework/workers/**"]
+
+[tool.ty.overrides.rules]
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+
+[[tool.ty.overrides]]
+include = ["tests/**"]
+
+[tool.ty.overrides.rules]
+missing-argument = "ignore"
+unknown-argument = "ignore"
+pydantic-discarded-extra-argument = "ignore"

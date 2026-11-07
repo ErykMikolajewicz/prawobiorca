@@ -85,10 +85,25 @@ Pipelines are defined with GitHub Actions in `.github/workflows/`. The code live
 
 Runs in `WMS-DEV/prawobiorca` on every PR to `main` and every push to `main`:
 
-- **backend** – `just check-backend`: Ruff lint and format check, unit tests with coverage (fails below 90%).
-- **integration** – integration tests (`just test-integration`).
-- **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest.
+- **backend** – `just check-backend`: Ruff lint and format check, type checking of `core-service` and `scripts/` with ty (configured in `core-service/pyproject.toml` and the root `pyproject.toml`), unit tests with coverage (fails below 90%).
+- **integration** – integration tests (`just test-integration`), including a check that the Alembic migrations match the SQLAlchemy schemas.
+- **extraction** – `just type-check-extraction`: type checking of `extraction-service` with ty. It is a separate job, because it installs the heavy service dependencies (docling, torch) and runs only when `extraction-service/` changes.
+- **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest and coverage (thresholds in `vitest.config.ts`).
 - **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
+- **workflows** – `just check-workflows`: security audit of `.github/` with zizmor (configured in `.github/zizmor.yml`) and workflow linting with actionlint.
+- **containers** – `just check-containers`: linting of every `Containerfile` with hadolint. Ignored rules are listed in `.hadolint.yaml`: `DL3008` (apt package versions are not pinned, as Debian removes old versions from its repositories), `DL3059` (consecutive `RUN` instructions are kept separate for layer caching) and `DL3066` (non-numeric user names).
+- **deployment** – `just check-deployment`: checks of the Kubernetes manifests in `deploy/gcp/` with checkov, installed in the separate `deployment` dependency group, as it pulls many packages. The manifests in `deploy/local/` are not checked, but they keep the same security settings as their GCP counterparts. Checks skipped in `.checkov.yaml`:
+    - `CKV_K8S_14`, `CKV_K8S_43` – images use the `latest` tag instead of a digest, CD replaces it with the commit SHA.
+    - `CKV_K8S_15` – the image pull policy is left default, as every deployed image has an immutable tag.
+    - `CKV_K8S_21` – all resources live in the `default` namespace.
+    - `CKV2_K8S_6` – there are no network policies.
+
+    Checks skipped for a single resource are marked with a `checkov.io/skip<n>` annotation with the reason: probes of the worker, which has no HTTP endpoint, and the UID of postgres, which runs as the `postgres` user of the image (UID 999), the owner of the existing data.
+
+Every action in `.github/` is pinned to a full commit SHA, with its exact version in a comment (`uses: actions/checkout@<sha> # v7.0.1`). When updating an action, change both. Every job declares its own `permissions`, and `actions/checkout` runs with `persist-credentials: false`. Accepted zizmor findings are marked with `# zizmor: ignore[<audit>]` on the reported line:
+
+- `artipacked` in the `changes` job of `ci.yml` – `dorny/paths-filter` fetches the base commit with git on push events, so the checkout keeps its credentials.
+- `cache-poisoning` in `e2e.yml` – known and postponed.
 
 When the API contract changes, run `just api-types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
 
@@ -100,7 +115,10 @@ podman tag docker.io/pgvector/pgvector:0.8.4-pg18-trixie ghcr.io/erykmikolajewic
 podman push ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
 ```
 
-The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-DEV/prawobiorca`: weekly, on demand, and on PRs to `main` that change dependency files.
+The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-DEV/prawobiorca`: weekly, on demand, and on PRs to `main` that change dependency files. Accepted findings in the `deployment` dependency group, pulled in by checkov:
+
+- `asteval` – checkov pins a vulnerable version, so `override-dependencies` in `pyproject.toml` forces the fixed one.
+- `ecdsa` (`PYSEC-2026-1325`) – there is no fixed version, so `just audit-backend` ignores it with `--ignore-until-fixed` and reports it again once a fix is released. The vulnerability affects signing, while checkov only verifies signatures of external checks with it.
 
 ### 6.2 E2E (`e2e.yml`)
 

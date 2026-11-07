@@ -40,6 +40,7 @@ def wait_for_postgres(name):
         result = subprocess.run(
             ["podman", "exec", name, "pg_isready", "-h", "localhost", "-U", "postgres"],
             capture_output=True,
+            check=False,
         )
         if result.returncode == 0:
             return

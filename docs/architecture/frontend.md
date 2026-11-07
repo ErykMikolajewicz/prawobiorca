@@ -19,7 +19,7 @@ It talks to `core-service` exclusively over the HTTP REST API — it has no dire
 * **axios** as the HTTP client, with the API client generated from the OpenAPI contract by **Orval**.
 * **md-editor-v3** for editing the AI instructions and **docx-preview** for previewing DOCX files of application templates.
 * **Material Symbols** icons (`@iconify-vue/material-symbols`) and the **Inter** font (`@fontsource-variable/inter`).
-* **Vitest** for unit tests, **Playwright** for E2E tests, **oxlint** + **ESLint** for linting, **stylelint** for CSS and **oxfmt** for formatting.
+* **Vitest** for unit tests, **Playwright** for E2E tests, **oxlint** + **ESLint** (with type-aware rules) for linting, **stylelint** for CSS, **oxfmt** for formatting and **knip** for unused files, exports and dependencies (`src/api/generated/` is excluded in `knip.json`).
 
 Required toolchain versions are declared in `prawobiorca-frontend/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
 
@@ -93,7 +93,7 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [Tests](../tests/tests.md#e2e-tests)). |
 | `pnpm lint` | Run oxlint, ESLint and stylelint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
-| `pnpm check` | Run oxlint, ESLint, stylelint and oxfmt without fixing; used by the pre-commit hook. |
+| `pnpm check` | Run oxlint, ESLint, stylelint, oxfmt and knip without fixing; used by CI. |
 | `pnpm generate:api-client` | Generate `src/api/generated/` from `core-service/openapi.json` with Orval. |
 
 A JetBrains IDE (PyCharm Professional, free for students under a non-commercial licence) with the Vue plugin is recommended, so that the whole repository — Python services and frontend — is handled by a single IDE. In VS Code, the [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) extension is required to make the TypeScript language service aware of `.vue` types.

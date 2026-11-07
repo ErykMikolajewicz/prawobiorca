@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -75,7 +75,7 @@ def create_template(
 ):
     return ApplicationTemplateRepresentation(
         id=TEMPLATE_ID,
-        createDate=datetime(2026, 1, 1, 10, 0, 0),
+        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
         name="Wniosek o urlop",
         status=status,
         fields=fields or [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")],
@@ -87,7 +87,7 @@ def create_application(application_id, case_id, generation_status):
     return ApplicationRepresentation(
         id=application_id,
         caseId=case_id,
-        createDate=datetime(2026, 1, 1, 10, 0, 0),
+        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
         templateName="Wniosek o urlop",
         generationStatus=generation_status,
         name=None,

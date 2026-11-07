@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from src.app.dtos.account import LoginData
@@ -39,7 +39,7 @@ def build_auth_tokens(claims: AccessTokenClaims, refresh_token: str) -> AuthToke
 
 
 def build_refresh_token_validity() -> datetime:
-    return datetime.now(timezone.utc) + timedelta(seconds=refresh_token_expiration_seconds)
+    return datetime.now(UTC) + timedelta(seconds=refresh_token_expiration_seconds)
 
 
 @dataclass
@@ -116,7 +116,7 @@ class LogoutUser:
         async with self.session_maker.begin() as session:
             if session_id is not None:
                 await self.sessions_repo.delete_session(session, session_id)
-            else:
+            elif refresh_token is not None:
                 await self.sessions_repo.delete_session_by_refresh_token_hash(
                     session, hash_refresh_token(refresh_token)
                 )

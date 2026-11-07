@@ -44,7 +44,8 @@ async def test_login_sets_both_cookies(client, override_session_maker, session_m
     assert int(refresh_cookie["max-age"]) == app_settings.REFRESH_TOKEN_EXPIRATION_SECONDS
     assert access_cookie["path"] == AUTH_COOKIE_PATH
     assert refresh_cookie["path"] == REFRESH_COOKIE_PATH
-    assert access_cookie["httponly"] and refresh_cookie["httponly"]
+    assert access_cookie["httponly"]
+    assert refresh_cookie["httponly"]
     assert access_cookie["samesite"].lower() == app_settings.COOKIE_SAMESITE
 
     async with session_maker() as session:

@@ -94,6 +94,7 @@ router.beforeEach((to) => {
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return { name: 'MainPage' }
   }
+  return true
 })
 
 router.afterEach((to) => {

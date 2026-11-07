@@ -1,4 +1,4 @@
-from unittest.mock import create_autospec
+from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
@@ -16,16 +16,16 @@ from src.app.ports.texts import TextsEmbedder
 
 
 @pytest.fixture
-async def mock_session():
-    session = create_autospec(AsyncSession)
-    opened_session = await session.__aenter__()
+def mock_opened_session():
+    opened_session = create_autospec(AsyncSession)
     return opened_session
 
 
 @pytest.fixture
-async def mock_opened_session(mock_session):
-    opened_session = await mock_session.__aenter__()
-    return opened_session
+def mock_session(mock_opened_session):
+    session = MagicMock()
+    session.__aenter__.return_value = mock_opened_session
+    return session
 
 
 @pytest.fixture

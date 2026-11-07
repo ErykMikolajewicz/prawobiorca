@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "password, error_detail",
+    ("password", "error_detail"),
     [
         ("nouppercase1!", "Password must contain at least one uppercase letter."),
         ("NOLOWERCASE1!", "Password must contain at least one lowercase letter."),

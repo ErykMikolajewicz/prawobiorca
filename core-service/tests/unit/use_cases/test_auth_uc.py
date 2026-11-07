@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -55,7 +55,7 @@ async def test_log_user_success(
         assert call_args[0][1] == user_id
         assert call_args[0][2] == hash_refresh_token(REFRESH_TOKEN)
         assert isinstance(call_args[0][3], datetime)
-        assert call_args[0][3].tzinfo == timezone.utc
+        assert call_args[0][3].tzinfo == UTC
 
         assert isinstance(result, AuthTokens)
         assert result.refresh_token == REFRESH_TOKEN

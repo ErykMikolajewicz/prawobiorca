@@ -6,11 +6,23 @@ metadata:
     app: prawobiorca
     component: prawobiorca-migrations
 spec:
+  automountServiceAccountToken: false
   restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: prawobiorca-migrations
       image: localhost/prawobiorca-backend:latest
       command: ["alembic", "upgrade", "head"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
       envFrom:
         - configMapRef:
             name: prawobiorca-backend-config

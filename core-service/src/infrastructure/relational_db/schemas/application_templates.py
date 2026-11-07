@@ -1,4 +1,4 @@
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 import sqlalchemy as sqla
 from pgvector.sqlalchemy import Vector
@@ -28,7 +28,7 @@ class ApplicationTemplateFieldsType(sqla.types.TypeDecorator):
         if value is None:
             return None
         return [
-            ApplicationTemplateField(**{**field, "field_type": ApplicationFieldType(field["field_type"])})
+            replace(ApplicationTemplateField(**field), field_type=ApplicationFieldType(field["field_type"]))
             for field in value
         ]
 

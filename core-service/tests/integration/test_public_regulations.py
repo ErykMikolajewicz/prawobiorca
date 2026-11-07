@@ -57,7 +57,7 @@ async def test_get_public_regulations(client, override_session_maker, session_ma
         result = await session.scalars(statement)
 
     regulations_ids = result.all()
-    public_act_id, public_decree_id, private_act_id = regulations_ids
+    public_act_id, _public_decree_id, _private_act_id = regulations_ids
 
     try:
         response = await client.get("/api/regulations", params={"documentType": RegulationType.ACT})

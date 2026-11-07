@@ -262,7 +262,7 @@ class UpdateApplicationTemplate:
         return template
 
     async def _embed_description(self, description: str | None) -> list[float] | None:
-        if not (description or "").strip():
+        if description is None or not description.strip():
             return None
 
         vectors = await self.texts_embedder.embed_texts([description])
@@ -446,7 +446,7 @@ class DeleteApplicationTemplate:
         try:
             await self.application_templates_storage.delete_template(template_id)
         except Exception:
-            logger.error("Failed to remove from storage application template: %s", template_id)
+            logger.exception("Failed to remove from storage application template: %s", template_id)
 
 
 @dataclass

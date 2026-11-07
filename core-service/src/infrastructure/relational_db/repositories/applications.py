@@ -20,7 +20,7 @@ class ApplicationsRepository:
             .order_by(applications_table.c.create_date.desc())
         )
         result = await session.scalars(statement)
-        applications = result.all()
+        applications = list(result.all())
         return applications
 
     @staticmethod
@@ -29,7 +29,7 @@ class ApplicationsRepository:
             applications_table.c.case_id == case_id, applications_table.c.user_id == user_id
         )
         result = await session.scalars(statement)
-        application_ids = result.all()
+        application_ids = list(result.all())
         return application_ids
 
     @staticmethod

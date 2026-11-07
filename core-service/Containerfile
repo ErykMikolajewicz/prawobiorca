@@ -1,8 +1,8 @@
 FROM python:3.14-slim-trixie
 
-RUN pip install --no-cache uv==0.13.*
+RUN pip install --no-cache-dir uv==0.13.*
 
-RUN useradd -r prawobiorca_app
+RUN useradd -r -u 10001 prawobiorca_app
 
 WORKDIR /prawobiorca
 RUN chown prawobiorca_app /prawobiorca

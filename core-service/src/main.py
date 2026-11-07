@@ -2,6 +2,7 @@ import asyncio
 import logging
 import tomllib
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +18,7 @@ from src.shared.logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger("src")
 
-with open("pyproject.toml", "rb") as f:
+with Path("pyproject.toml").open("rb") as f:
     data = tomllib.load(f)
 version = data["project"]["version"]
 
@@ -63,8 +64,8 @@ async def lifespan(app: FastAPI):
             try:
                 async with asyncio.timeout(30):
                     await callback()
-            except Exception as e:
-                logger.error("Error during clean up: %s", e)
+            except Exception:
+                logger.exception("Error during clean up!")
 
 
 prawobiorca = FastAPI(

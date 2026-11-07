@@ -10,7 +10,25 @@ dependencies = [
     "mkdocstrings[python]==1.0.*",
     "zensical==0.0.74",
     "google-auth[requests]==2.62.*",
+    "zizmor==1.32.*",
+    "actionlint-py==1.7.12.*",
+    "ty==0.0.99",
+    "hadolint-py==2.15.1.*",
 ]
+
+[dependency-groups]
+deployment = [
+    "checkov==3.4.*",
+]
+
+[tool.uv]
+override-dependencies = ["asteval>=1.0.9"]
 
 [tool.ruff]
 extend = "ruff.toml"
+
+[tool.ty.src]
+include = ["scripts"]
+
+[tool.ty.environment]
+root = ["scripts/local"]

@@ -107,7 +107,7 @@ async function handleGenerateDescription() {
 }
 
 function handlePreview() {
-  showPreview(props.regulation.id)
+  void showPreview(props.regulation.id)
 }
 </script>
 

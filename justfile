@@ -73,18 +73,39 @@ api-types: export-openapi generate-api-client
 
 init-db: upgrade-db seed init-regulations
 
-check-backend: && cov
+[working-directory: 'core-service']
+type-check-backend:
+    uv run ty check
+
+type-check-scripts:
+    uv run ty check
+
+[working-directory: 'extraction-service']
+type-check-extraction:
+    uv run --group dev --group test ty check
+
+check-backend: && type-check-backend type-check-scripts cov
     uv run ruff check .
     uv run ruff format --check
+
+check-workflows:
+    uv run zizmor --offline .github
+    uv run actionlint
+
+check-containers:
+    uv run hadolint */Containerfile
+
+check-deployment:
+    uv run --group deployment checkov --directory deploy/gcp
 
 [working-directory: 'prawobiorca-frontend']
 check-frontend:
     pnpm check
     pnpm type-check
-    pnpm test:unit --run
+    pnpm test:unit --run --coverage
 
 audit-backend:
-    uv audit --frozen --preview-features audit-command
+    uv audit --frozen --preview-features audit-command --ignore-until-fixed PYSEC-2026-1325
     uv audit --frozen --preview-features audit-command --directory core-service
     uv audit --frozen --preview-features audit-command --directory extraction-service
 

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from enum import StrEnum
-from typing import Callable
 from unittest.mock import create_autospec
 
 import pytest

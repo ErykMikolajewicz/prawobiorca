@@ -16,11 +16,15 @@ jobs:
     outputs:
       python: ${{ steps.filter.outputs.python }}
       backend: ${{ steps.filter.outputs.backend }}
+      extraction: ${{ steps.filter.outputs.extraction }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      containers: ${{ steps.filter.outputs.containers }}
+      deployment: ${{ steps.filter.outputs.deployment }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
       - id: filter
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
             python:
@@ -35,17 +39,49 @@ jobs:
               - uv.lock
               - justfile
               - .github/workflows/ci.yml
+              - .github/actions/setup-backend/**
+            extraction:
+              - extraction-service/**
+              - justfile
+              - .github/workflows/ci.yml
+              - .github/actions/setup-backend/**
             frontend:
               - prawobiorca-frontend/**
               - justfile
               - .github/workflows/ci.yml
+              - .github/actions/setup-frontend/**
+            workflows:
+              - .github/**
+              - pyproject.toml
+              - uv.lock
+              - justfile
+            containers:
+              - '**/Containerfile'
+              - .hadolint.yaml
+              - pyproject.toml
+              - uv.lock
+              - justfile
+              - .github/workflows/ci.yml
+              - .github/actions/setup-backend/**
+            deployment:
+              - deploy/gcp/**
+              - .checkov.yaml
+              - pyproject.toml
+              - uv.lock
+              - justfile
+              - .github/workflows/ci.yml
+              - .github/actions/setup-backend/**
 
   backend:
     needs: changes
     if: needs.changes.outputs.python == 'true' || needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-backend
       - run: just check-backend
 
@@ -53,20 +89,41 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       DOCKER_HOST: unix:///var/run/docker.sock
       TESTCONTAINERS_RYUK_DISABLED: "true"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-backend
       - run: just test-integration
+
+  extraction:
+    needs: changes
+    if: needs.changes.outputs.extraction == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - run: just type-check-extraction
 
   frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-frontend
       - run: just check-frontend
 
@@ -74,9 +131,52 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-backend
       - uses: ./.github/actions/setup-frontend
       - run: just api-types
       - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/api/generated
+
+  workflows:
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - run: just check-workflows
+
+  containers:
+    needs: changes
+    if: needs.changes.outputs.containers == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - run: just check-containers
+
+  deployment:
+    needs: changes
+    if: needs.changes.outputs.deployment == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - run: just check-deployment

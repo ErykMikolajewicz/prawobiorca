@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, insert, select, update
@@ -54,9 +54,9 @@ class UsersSessionsRepository:
             .values(user_id=user_id, refresh_token_hash=refresh_token_hash, valid_until=valid_until)
             .returning(users_sessions_table.c.id)
         )
-        session_id = await session.scalar(statement)
+        result = await session.execute(statement)
 
-        return session_id
+        return result.scalar_one()
 
     @staticmethod
     async def rotate_session(
@@ -66,7 +66,7 @@ class UsersSessionsRepository:
             update(users_sessions_table)
             .where(
                 users_sessions_table.c.refresh_token_hash == old_refresh_token_hash,
-                users_sessions_table.c.valid_until > datetime.now(timezone.utc),
+                users_sessions_table.c.valid_until > datetime.now(UTC),
             )
             .values(refresh_token_hash=new_refresh_token_hash, valid_until=valid_until)
             .returning(users_sessions_table.c.id, users_sessions_table.c.user_id)

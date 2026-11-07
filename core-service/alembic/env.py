@@ -9,6 +9,17 @@ from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.infrastructure.relational_db.connection import DATABASE_URL, metadata
+from src.infrastructure.relational_db.schemas import (
+    application_templates,
+    applications,
+    cases,
+    llm_usage,
+    organizations,
+    regulations,
+    sections,
+    tasks,
+    users,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

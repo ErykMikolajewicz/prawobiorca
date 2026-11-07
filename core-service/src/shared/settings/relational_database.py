@@ -7,11 +7,11 @@ _SECRETS_DIR = Path("/mnt/secrets-store")
 
 class RelationalDatabaseSettings(BaseSettings):
     DRIVER: str = "postgresql+asyncpg"
-    USER: str = ...
-    PASSWORD: str = ...
-    HOST: str = ...
-    PORT: int = ...
-    NAME: str = ...
+    USER: str
+    PASSWORD: str
+    HOST: str
+    PORT: int
+    NAME: str
     POOL_SIZE: int = 50
     MAX_OVERFLOW: int = 20
     POOL_TIMEOUT: int = 30

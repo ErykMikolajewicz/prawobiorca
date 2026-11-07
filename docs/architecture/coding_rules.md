@@ -72,6 +72,15 @@ and for explaining the operation of functions/classes with many parameters or be
 Use type hints in function signatures. For variables/class fields, do so when the type is not obvious or required
 for other reasons, such as Pydantic validation.
 
+Type hints in `core-service` are checked by ty (`just type-check-backend`), also in CI. Its configuration in
+`core-service/pyproject.toml` disables two groups of rules:
+
+- `invalid-argument-type` and `invalid-return-type` in `src/framework/dependencies/` and `src/framework/workers/`.
+  Repositories accept the SQLAlchemy `AsyncSession`, while the ports declare the narrower `AsyncSession` protocol,
+  so a repository is formally not assignable to its port at the places where they are wired together.
+- `missing-argument`, `unknown-argument` and `pydantic-discarded-extra-argument` in tests. ty does not support
+  Pydantic alias generators, and tests create DTOs with camelCase aliases.
+
 ---
 
 ## Advanced Python Constructs
@@ -143,12 +152,16 @@ else:
 ---
 
 ## Commit hook
-Before every commit:
-- Lint and format the code with Ruff
-- Check the frontend code with `pnpm check`
-- When `core-service/src/` is changed, regenerate the API types with `just api-types`
+Before every commit, only for the parts of the repository with staged changes:
+- Python files – lint and format the code with Ruff
+- `core-service/`, `extraction-service/`, `scripts/` – type-check with ty
+- `core-service/src/` – regenerate the API types with `just api-types`
+- `prawobiorca-frontend/` – format with oxfmt, check with oxlint, stylelint and knip
+- `.github/` – check the workflows with zizmor and actionlint
+- `Containerfile` – lint with hadolint
+- `deploy/gcp/` – check the Kubernetes manifests with checkov
 
-Tests are not run by the hook, they are run by CI.
+The hook runs only fast checks. ESLint, `vue-tsc` and tests are run by CI.
 
 ---
 

@@ -1,5 +1,6 @@
+from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from aiobotocore.config import AioConfig
 from aiobotocore.session import get_session

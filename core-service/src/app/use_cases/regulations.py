@@ -506,7 +506,7 @@ class DeleteRegulation:
             # Orphaned files are tolerable, too much hassle with eventual consistency
             await self.regulations_storage.delete_regulation(regulation_id)
         except Exception:
-            logger.error("Failed to remove from storage regulation: %s", regulation_id)
+            logger.exception("Failed to remove from storage regulation: %s", regulation_id)
 
 
 @dataclass

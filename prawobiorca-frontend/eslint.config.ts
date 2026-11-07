@@ -10,10 +10,10 @@ export default defineConfigWithVueTs(
     files: ['**/*.{vue,ts,mts,tsx}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'src/api/generated/**']),
 
   ...pluginVue.configs['flat/recommended'],
-  vueTsConfigs.recommended,
+  vueTsConfigs.strictTypeChecked,
 
   {
     rules: {
@@ -21,12 +21,30 @@ export default defineConfigWithVueTs(
       'vue/singleline-html-element-content-newline': 'off',
       'vue/html-indent': 'off',
       'vue/html-self-closing': 'off',
+      'vue/no-v-html': 'error',
+      'no-new-func': 'error',
+      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
+    },
+  },
+
+  {
+    files: ['**/*.vue'],
+    rules: {
+      '@typescript-eslint/unified-signatures': 'off',
     },
   },
 
   {
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/**'],
+  },
+
+  {
+    files: ['src/**/__tests__/**'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
   },
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json')

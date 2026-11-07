@@ -32,7 +32,7 @@ const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
   threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.5,
   limit: route.query.limit ? Number(route.query.limit) : 10,
-  order_by: (route.query.order_by as SearchOrder) || 'score',
+  order_by: (route.query.order_by as SearchOrder | undefined) || 'score',
 })
 
 const { activeCaseId, activeCase } = storeToRefs(useCasesStore())

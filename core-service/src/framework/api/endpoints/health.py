@@ -28,6 +28,5 @@ async def check_readiness(request: Request) -> Literal[True]:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Application not ready yet")
     if is_ready:
         return is_ready
-    else:
-        logger.critical("Application is in invalid readiness state!.", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Application is in invalid state!")
+    logger.critical("Application is in invalid readiness state!.")
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Application is in invalid state!")

@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class EmbeddingServiceSettings(BaseSettings):
-    URL: str = ...
+    URL: str
     BATCH_SIZE: int = Field(default=10, gt=0)
 
     model_config = SettingsConfigDict(
@@ -19,7 +19,7 @@ class EmbeddingServiceSettings(BaseSettings):
 
 
 class ExtractionServiceSettings(BaseSettings):
-    URL: str = ...
+    URL: str
 
     model_config = SettingsConfigDict(
         env_file=Path(".env"),
@@ -32,7 +32,7 @@ class ExtractionServiceSettings(BaseSettings):
 
 
 class LlmServiceSettings(BaseSettings):
-    URL: str = ...
+    URL: str
     MODEL_NAME: str = "qwen-3.5-9b"
     TEMPERATURE: float = 0.7
     TOP_P: float = 0.9

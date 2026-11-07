@@ -3,16 +3,50 @@ set -euo pipefail
 
 staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
 
-uv run ruff check . --fix
-uv run ruff format
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
 
-(cd prawobiorca-frontend && pnpm check)
+changed() {
+  echo "$staged_files" | grep -qE "$1"
+}
 
-if echo "$staged_files" | grep -q '^core-service/src/'; then
+if changed '\.py$|ruff\.toml$|pyproject\.toml$'; then
+  uv run ruff check . --fix
+  uv run ruff format
+fi
+
+if changed '^core-service/'; then
+  just type-check-backend
+fi
+
+if changed '^scripts/|^pyproject\.toml$'; then
+  just type-check-scripts
+fi
+
+if changed '^extraction-service/'; then
+  just type-check-extraction
+fi
+
+if changed '^core-service/src/'; then
   just api-types
   git add core-service/openapi.json prawobiorca-frontend/src/api/generated
 fi
 
-if [ -n "$staged_files" ]; then
-  echo "$staged_files" | xargs git add --
+if changed '^prawobiorca-frontend/'; then
+  (cd prawobiorca-frontend && pnpm format && pnpm exec run-s check:oxlint check:stylelint check:knip)
 fi
+
+if changed '^\.github/'; then
+  just check-workflows
+fi
+
+if changed 'Containerfile$|^\.hadolint\.yaml$'; then
+  just check-containers
+fi
+
+if changed '^deploy/gcp/|^\.checkov\.yaml$'; then
+  just check-deployment
+fi
+
+echo "$staged_files" | xargs git add --

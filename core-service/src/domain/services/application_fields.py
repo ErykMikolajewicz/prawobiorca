@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from src.domain.exceptions.application_templates import (
@@ -88,7 +88,7 @@ def _is_value_valid(field: ApplicationTemplateField, value: str) -> bool:
             return value in field.options
         case ApplicationFieldType.DATE:
             try:
-                datetime.strptime(value, DATE_FORMAT)
+                date.strptime(value, DATE_FORMAT)
                 return True
             except ValueError:
                 return False

@@ -6,12 +6,12 @@ _SECRETS_DIR = Path("/mnt/secrets-store")
 
 
 class ObjectStorageSettings(BaseSettings):
-    ENDPOINT_URL: str = ...
+    ENDPOINT_URL: str
     PUBLIC_ENDPOINT_URL: str = ""
-    REGION: str = ...
-    ACCESS_KEY: str = ...
-    SECRET_KEY: str = ...
-    BUCKET: str = ...
+    REGION: str
+    ACCESS_KEY: str
+    SECRET_KEY: str
+    BUCKET: str
     SIGNED_URL_EXPIRATION_SECONDS: int = 3600
     MAX_FILE_SIZE_BYTES: int = 10485760
 

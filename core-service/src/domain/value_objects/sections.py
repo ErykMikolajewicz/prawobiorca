@@ -1,6 +1,6 @@
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import batched
-from typing import Iterable
 from uuid import UUID, uuid4
 
 from src.domain.value_objects.legal_units import LegalUnitElement
@@ -42,14 +42,11 @@ class RegulationSection:
 class SectionsCollection:
     _sections: list[RegulationSection]
 
-    def __iter__(self) -> Iterable[RegulationSection]:
+    def __iter__(self) -> Iterator[RegulationSection]:
         return iter(self._sections)
 
     def get_chunks_batch_iterator(self, batch_size: int) -> list[list[SectionChunk]]:
         chunks_to_embed = [chunk for section in self._sections for chunk in section.chunks]
         chunks_to_embed.sort(key=lambda chunk: len(chunk.text))
 
-        batches = []
-        for batch in batched(chunks_to_embed, batch_size, strict=False):
-            batches.append(batch)
-        return batches
+        return [list(batch) for batch in batched(chunks_to_embed, batch_size, strict=False)]

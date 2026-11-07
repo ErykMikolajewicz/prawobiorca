@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
+  annotations:
+    checkov.io/skip1: CKV_K8S_40=The postgres user of the image owns the existing data
 spec:
   replicas: 1
   strategy:
@@ -17,9 +19,23 @@ spec:
         component: postgres
     spec:
       serviceAccountName: prawobiorca-runner
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
           image: pgvector/pgvector:0.8.2-pg18-trixie
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 5432
           volumeMounts:
@@ -28,6 +44,8 @@ spec:
               readOnly: true
             - name: pg-data
               mountPath: /var/lib/postgresql
+            - name: pg-run
+              mountPath: /run/postgresql
           env:
             - name: POSTGRES_USER
               value: "postgres"
@@ -42,6 +60,20 @@ spec:
             limits:
               cpu: "500m"
               memory: "1Gi"
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            periodSeconds: 20
+            failureThreshold: 6
       volumes:
         - name: secrets-store
           csi:
@@ -52,6 +84,8 @@ spec:
         - name: pg-data
           persistentVolumeClaim:
             claimName: pg-data
+        - name: pg-run
+          emptyDir: {}
 
 ---
 apiVersion: v1

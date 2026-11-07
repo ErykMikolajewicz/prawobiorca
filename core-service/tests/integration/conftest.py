@@ -7,7 +7,7 @@ and dependency overrides for FastAPI, ensuring test isolation.
 # The justification for the applied solutions is in the mkdocs documentation.
 import os
 import subprocess
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 
 import alembic.command
 import alembic.config
@@ -26,7 +26,7 @@ def configure_podman():
     if "DOCKER_HOST" in os.environ:
         return
 
-    subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"])
+    subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"], check=True)
 
     uid = os.getuid()
     podman_sock = f"unix:///run/user/{uid}/podman/podman.sock"
@@ -51,7 +51,7 @@ def run_migrations(postgres_container: PostgresContainer) -> None:
 
 
 @pytest.fixture(scope="session")
-def postgres_container() -> Generator[PostgresContainer, None]:
+def postgres_container() -> Generator[PostgresContainer]:
     """Create and manage a PostgresSQL test container.
 
     Scope is set to `session` to avoid repeated startup overhead.
@@ -64,7 +64,7 @@ def postgres_container() -> Generator[PostgresContainer, None]:
 
 
 @pytest.fixture
-async def override_session_maker(postgres_container: PostgresContainer) -> AsyncGenerator[None, None]:
+async def override_session_maker(postgres_container: PostgresContainer) -> AsyncGenerator[None]:
     """Override the FastAPI relational DB dependency with a test session.
 
     Replaces the default `get_session_maker` dependency with a session maker
@@ -93,7 +93,7 @@ async def override_session_maker(postgres_container: PostgresContainer) -> Async
 
 
 @pytest.fixture
-async def session_maker(postgres_container: PostgresContainer) -> AsyncGenerator[async_sessionmaker, None]:
+async def session_maker(postgres_container: PostgresContainer) -> AsyncGenerator[async_sessionmaker]:
     """Get separated session maker, to can make session in pytest - they are running in separated thread than FASTapi.
     This is due to internal pytest implementation, avery async test in separated thread."""
     url = postgres_container.get_connection_url()

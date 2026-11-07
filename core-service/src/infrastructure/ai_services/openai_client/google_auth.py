@@ -17,4 +17,7 @@ async def get_access_token() -> str:
     if not _credentials.valid:
         await asyncio.to_thread(_credentials.refresh, Request())
 
-    return _credentials.token
+    token = _credentials.token
+    if token is None:
+        raise RuntimeError("Google credentials have no access token!")
+    return token

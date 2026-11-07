@@ -46,12 +46,12 @@ prawobiorcaClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     if (!axios.isAxiosError(error) || error.response?.status !== 401) {
-      return Promise.reject(error)
+      throw error
     }
 
     const config = error.config as RetriableConfig | undefined
     if (!config || config.retried || !isRefreshable(config.url)) {
-      return Promise.reject(error)
+      throw error
     }
 
     config.retried = true
@@ -60,10 +60,10 @@ prawobiorcaClient.interceptors.response.use(
       await refreshTokens()
     } catch (refreshError: unknown) {
       if (!axios.isAxiosError(refreshError) || refreshError.response?.status !== 401) {
-        return Promise.reject(refreshError)
+        throw refreshError
       }
       notifySessionExpired()
-      return Promise.reject(new SessionExpiredError('Session expired'))
+      throw new SessionExpiredError('Session expired')
     }
 
     return prawobiorcaClient(config)

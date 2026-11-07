@@ -1,6 +1,6 @@
 FROM python:3.14-slim-trixie
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache uv==0.13.*
+RUN pip install --no-cache-dir uv==0.13.*
 
 RUN useradd -m extraction_service
 
@@ -21,7 +21,7 @@ USER extraction_service
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
 
-RUN uv sync --compile-bytecode --no-cache
+RUN uv sync --locked --compile-bytecode --no-cache --no-default-groups
 
 RUN .venv/bin/docling-tools models download layout tableformer rapidocr -o /extraction-service/models
 

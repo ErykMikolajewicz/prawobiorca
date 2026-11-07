@@ -365,8 +365,9 @@ def test_point_lead_is_not_separated_from_its_first_letter():
 def test_split_subsection_parts_are_balanced():
     point = " ".join(["słowo"] * 10)
     elements = [RegulationElement(label=UsefulLabels.TEXT, text="Art. 110. 1. Samorząd studencki w zakresie:")]
-    for point_number in range(1, 7):
-        elements.append(RegulationElement(label=UsefulLabels.LIST_ITEM, text=f"{point_number}) {point};"))
+    elements.extend(
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text=f"{number}) {point};") for number in range(1, 7)
+    )
 
     section = create_sections(elements)[0]
 

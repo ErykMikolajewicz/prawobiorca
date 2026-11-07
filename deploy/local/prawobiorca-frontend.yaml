@@ -6,8 +6,37 @@ metadata:
     app: prawobiorca
     component: prawobiorca-frontend
 spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: prawobiorca-frontend
       image: localhost/prawobiorca-frontend:latest
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
       ports:
         - containerPort: 8000
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8000
+        periodSeconds: 10
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 8000
+        initialDelaySeconds: 5
+        periodSeconds: 20
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}

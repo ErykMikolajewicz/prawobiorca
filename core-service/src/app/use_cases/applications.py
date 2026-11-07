@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass, replace
+from typing import TypeGuard
 from uuid import UUID
 
 from src.app.dtos.application_templates import ApplicationTemplateRepresentation
@@ -118,7 +119,9 @@ class GenerateApplication:
             raise
 
     @staticmethod
-    def _is_template_valid(template: ApplicationTemplateRepresentation | None, new_application: NewApplication) -> bool:
+    def _is_template_valid(
+        template: ApplicationTemplateRepresentation | None, new_application: NewApplication
+    ) -> TypeGuard[ApplicationTemplateRepresentation]:
         if template is None or template.status != ApplicationTemplateStatus.PUBLISHED:
             return False
 
@@ -208,4 +211,4 @@ class DeleteApplication:
         try:
             await self.applications_storage.delete_application(application_id)
         except Exception:
-            logger.error("Failed to remove from storage application: %s", application_id)
+            logger.exception("Failed to remove from storage application: %s", application_id)

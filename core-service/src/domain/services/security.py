@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from math import ceil
 from uuid import UUID
 
@@ -19,9 +19,8 @@ _required_access_token_claims = ["sub", "sid", "adm", "iat", "exp"]
 
 
 def hash_password(password: SecretStr) -> bytes:
-    password = password.get_secret_value()
-    password = password.encode("utf-8")
-    hashed_password = bcrypt.hashpw(password, bcrypt.gensalt())
+    password_bytes = password.get_secret_value().encode("utf-8")
+    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     return hashed_password
 
 
@@ -31,9 +30,8 @@ def generate_authorization_token(authorization_token_length: int = AUTHORIZATION
 
 
 def verify_password(password: SecretStr, hashed_password: bytes) -> bool:
-    password = password.get_secret_value()
-    password = password.encode("utf-8")
-    return bcrypt.checkpw(password, hashed_password)
+    password_bytes = password.get_secret_value().encode("utf-8")
+    return bcrypt.checkpw(password_bytes, hashed_password)
 
 
 def hash_refresh_token(refresh_token: str) -> str:
@@ -41,7 +39,7 @@ def hash_refresh_token(refresh_token: str) -> str:
 
 
 def create_access_token(claims: AccessTokenClaims, secret: SecretStr, algorithm: str, expires_in: int) -> str:
-    issued_at = datetime.now(timezone.utc)
+    issued_at = datetime.now(UTC)
     payload = {
         "sub": str(claims.user_id),
         "sid": str(claims.session_id),

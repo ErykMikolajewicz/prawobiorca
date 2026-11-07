@@ -32,6 +32,8 @@ target_creds = impersonated_credentials.Credentials(
 
 target_creds.refresh(Request())
 token = target_creds.token
+if token is None:
+    raise RuntimeError("Failed to obtain access token!")
 
 registry_host = f"{LOCATION}-docker.pkg.dev"
 
@@ -55,7 +57,7 @@ stdout, stderr = login.communicate(input=token.encode("utf-8"))
 if login.returncode != 0:
     raise RuntimeError("Podman login failed!")
 
-subprocess.run(["podman", "tag", f"{image_name}:{tag}", remote_ref])
-subprocess.run(["podman", "push", remote_ref])
+subprocess.run(["podman", "tag", f"{image_name}:{tag}", remote_ref], check=True)
+subprocess.run(["podman", "push", remote_ref], check=True)
 
 print(f"Success! Image pushed: {remote_ref}")
