@@ -94,3 +94,14 @@ audit-frontend:
     pnpm audit --dev --audit-level high
 
 audit: audit-backend audit-frontend
+
+release version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source_sha=$(gh api repos/WMS-DEV/prawobiorca/commits/main --jq .sha)
+    release_sha=$(gh api repos/ErykMikolajewicz/prawobiorca/commits/main --jq .sha)
+    if [ "$source_sha" != "$release_sha" ]; then
+        echo "Mirror is out of date: WMS-DEV/prawobiorca main is $source_sha, ErykMikolajewicz/prawobiorca main is $release_sha" >&2
+        exit 1
+    fi
+    gh release create {{version}} -R ErykMikolajewicz/prawobiorca --target "$release_sha" --generate-notes
