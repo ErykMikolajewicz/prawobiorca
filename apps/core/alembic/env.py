@@ -8,8 +8,8 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from src.infrastructure.relational_db.connection import DATABASE_URL, metadata
-from src.infrastructure.relational_db.schemas import (
+from core_service.infrastructure.relational_db.connection import DATABASE_URL, metadata
+from core_service.infrastructure.relational_db.schemas import (
     application_templates,
     applications,
     cases,

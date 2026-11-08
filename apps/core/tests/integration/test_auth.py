@@ -3,10 +3,10 @@ from http.cookies import SimpleCookie
 from fastapi import status
 from sqlalchemy import select
 
-from src.domain.services.security import hash_refresh_token
-from src.infrastructure.relational_db.schemas.users import users_sessions_table
-from src.shared.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
-from src.shared.settings.application import app_settings
+from core_service.domain.services.security import hash_refresh_token
+from core_service.infrastructure.relational_db.schemas.users import users_sessions_table
+from core_service.shared.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
+from core_service.shared.settings.application import app_settings
 from tests.consts import STRONG_PASSWORD, VALID_USERNAME, build_access_token
 from tests.fixtures.clients import create_client
 

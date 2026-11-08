@@ -28,10 +28,10 @@ import json
 
 import sqlalchemy.orm as orm
 
-import src.database
+import core_service.database
 # ... further imports from app related to database/sql, then one blank line and more imports from app
 
-from src.services import do_something
+from core_service.services import do_something
 ```
 
 ---
@@ -75,7 +75,7 @@ for other reasons, such as Pydantic validation.
 Type hints in `apps/core` are checked by ty (`just type-check-backend`), also in CI. Its configuration in
 `apps/core/pyproject.toml` disables two groups of rules:
 
-- `invalid-argument-type` and `invalid-return-type` in `src/framework/dependencies/` and `src/framework/workers/`.
+- `invalid-argument-type` and `invalid-return-type` in `src/core_service/framework/dependencies/` and `src/core_service/framework/workers/`.
   Repositories accept the SQLAlchemy `AsyncSession`, while the ports declare the narrower `AsyncSession` protocol,
   so a repository is formally not assignable to its port at the places where they are wired together.
 - `missing-argument`, `unknown-argument` and `pydantic-discarded-extra-argument` in tests. ty does not support

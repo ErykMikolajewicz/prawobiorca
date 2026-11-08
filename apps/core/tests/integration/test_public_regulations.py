@@ -6,15 +6,15 @@ import pytest
 from fastapi import status
 from sqlalchemy import select
 
-from src.app.dtos.regulations import RegulationUploadTarget
-from src.domain.value_objects.regulations import (
+from core_service.application.dtos.regulations import RegulationUploadTarget
+from core_service.domain.value_objects.regulations import (
     RegulationDescriptionStatus,
     RegulationPreparationStatus,
     RegulationType,
 )
-from src.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
-from src.shared.consts import REGULATION_DESCRIPTION_GENERATION_TASK_NAME, VECTOR_LENGTH
+from core_service.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
+from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.shared.consts import REGULATION_DESCRIPTION_GENERATION_TASK_NAME, VECTOR_LENGTH
 from tests.consts import UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.ai_services import QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.organizations import insert_organization, insert_suborganization

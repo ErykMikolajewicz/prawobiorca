@@ -5,9 +5,9 @@ import pytest
 from httpx2 import AsyncClient, MockTransport, Response
 from openai import AsyncOpenAI
 
-from src.infrastructure.ai_services.llm_chat import LlmChat
-from src.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
-from src.shared.exceptions import ServiceUnavailable
+from core_service.infrastructure.ai_services.llm_chat import LlmChat
+from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
+from core_service.shared.exceptions import ServiceUnavailable
 
 
 def create_llm_chat(handler, cost_limiter: LlmCostLimiter | None = None) -> LlmChat:

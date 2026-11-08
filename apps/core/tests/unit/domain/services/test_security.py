@@ -8,8 +8,8 @@ import jwt
 import pytest
 from pydantic import SecretStr
 
-from src.domain.exceptions.users import InvalidAccessToken
-from src.domain.services.security import (
+from core_service.domain.exceptions.users import InvalidAccessToken
+from core_service.domain.services.security import (
     create_access_token,
     decode_access_token,
     generate_authorization_token,
@@ -19,8 +19,8 @@ from src.domain.services.security import (
     url_safe_authorization_token_length,
     verify_password,
 )
-from src.domain.value_objects.auth import AccessTokenClaims
-from src.shared.consts import SECURITY_MIN_RESPONSE_TIME
+from core_service.domain.value_objects.auth import AccessTokenClaims
+from core_service.shared.consts import SECURITY_MIN_RESPONSE_TIME
 from tests.consts import SESSION_ID, STRONG_PASSWORD, USER_ID
 
 SECRET = SecretStr("a" * 32)
@@ -92,7 +92,7 @@ async def test_prevent_timing_attack_waits_for_remaining_time():
     elapsed_time = 0.5
     execution_start_time = asyncio.get_running_loop().time() - elapsed_time
 
-    with patch("src.domain.services.security.asyncio.sleep", new_callable=AsyncMock) as sleep:
+    with patch("core_service.domain.services.security.asyncio.sleep", new_callable=AsyncMock) as sleep:
         await prevent_timing_attack(execution_start_time)
 
     sleep.assert_awaited_once_with(pytest.approx(SECURITY_MIN_RESPONSE_TIME - elapsed_time, abs=0.1))
@@ -101,7 +101,7 @@ async def test_prevent_timing_attack_waits_for_remaining_time():
 async def test_prevent_timing_attack_does_not_wait_after_min_response_time():
     execution_start_time = asyncio.get_running_loop().time() - SECURITY_MIN_RESPONSE_TIME - 1
 
-    with patch("src.domain.services.security.asyncio.sleep", new_callable=AsyncMock) as sleep:
+    with patch("core_service.domain.services.security.asyncio.sleep", new_callable=AsyncMock) as sleep:
         await prevent_timing_attack(execution_start_time)
 
     sleep.assert_awaited_once_with(0.0)

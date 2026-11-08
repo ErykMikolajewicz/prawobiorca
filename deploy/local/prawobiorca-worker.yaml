@@ -16,7 +16,7 @@ spec:
   containers:
     - name: prawobiorca-worker
       image: localhost/prawobiorca-backend:latest
-      command: ["taskiq", "worker", "src.framework.workers.regulations:broker", "src.framework.workers.applications"]
+      command: ["taskiq", "worker", "core_service.framework.workers.regulations:broker", "core_service.framework.workers.applications"]
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true

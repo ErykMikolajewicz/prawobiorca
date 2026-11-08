@@ -1,9 +1,6 @@
 import asyncio
-import sys
 import uuid
 from pathlib import Path
-
-sys.path.append("")
 
 import httpx2
 from aiobotocore.config import AioConfig
@@ -11,25 +8,25 @@ from aiobotocore.session import get_session
 from botocore.exceptions import ClientError
 from sqlalchemy import insert
 
-from src.app.services.embedding import SectionsEmbedder
-from src.app.services.regulations import RegulationPreparator
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
-from src.infrastructure.ai_services.regulation_splitter import RegulationSplitter
-from src.infrastructure.ai_services.text_embedder import TextsEmbedder
-from src.infrastructure.object_storage.repository import S3RegulationsStorage
-from src.infrastructure.relational_db.connection import async_session_maker
-from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
+from core_service.application.services.embedding import SectionsEmbedder
+from core_service.application.services.regulations import RegulationPreparator
+from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from core_service.infrastructure.ai_services.regulation_splitter import RegulationSplitter
+from core_service.infrastructure.ai_services.text_embedder import TextsEmbedder
+from core_service.infrastructure.object_storage.repository import S3RegulationsStorage
+from core_service.infrastructure.relational_db.connection import async_session_maker
+from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
 
 # Unused import necessary for sqlalchemy
-from src.infrastructure.relational_db.schemas.organizations import organizations_table  # noqa: F401
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
-from src.infrastructure.relational_db.schemas.users import users_table  # noqa: F401
-from src.infrastructure.tokenizers.mmlw import MmlwTokenizer
-from src.shared.settings.ai_services import (
+from core_service.infrastructure.relational_db.schemas.organizations import organizations_table  # noqa: F401
+from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.relational_db.schemas.users import users_table  # noqa: F401
+from core_service.infrastructure.tokenizers.mmlw import MmlwTokenizer
+from core_service.shared.settings.ai_services import (
     embedding_service_settings,
     extraction_service_settings,
 )
-from src.shared.settings.object_storage import object_storage_settings
+from core_service.shared.settings.object_storage import object_storage_settings
 
 REGULATION_TYPES_BY_FILE_NAME = {
     "Prawo o nauce i szkolnictwie wyższym.pdf": RegulationType.ACT,

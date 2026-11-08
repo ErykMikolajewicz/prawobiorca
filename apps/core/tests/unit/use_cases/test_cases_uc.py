@@ -2,8 +2,8 @@ from uuid import UUID
 
 import pytest
 
-from src.app.use_cases.cases import DeleteCase
-from src.domain.exceptions.cases import CaseNotFound
+from core_service.application.use_cases.cases import DeleteCase
+from core_service.domain.exceptions.cases import CaseNotFound
 from tests.consts import USER_ID
 from tests.mocks import get_awaited_arguments
 

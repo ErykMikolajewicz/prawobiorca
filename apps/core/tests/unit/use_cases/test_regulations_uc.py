@@ -3,9 +3,9 @@ from uuid import UUID
 
 import pytest
 
-from src.app.dtos.regulations import RegulationData, RegulationRepresentation
-from src.app.dtos.search import SearchParams
-from src.app.use_cases.regulations import (
+from core_service.application.dtos.regulations import RegulationData, RegulationRepresentation
+from core_service.application.dtos.search import SearchParams
+from core_service.application.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
@@ -17,8 +17,8 @@ from src.app.use_cases.regulations import (
     RetryRegulationPreparation,
     SearchRegulation,
 )
-from src.domain.exceptions.documents import RegulationDocumentsNotFound
-from src.domain.exceptions.regulations import (
+from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
+from core_service.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
     RegulationDescriptionGenerationInProgress,
@@ -27,7 +27,7 @@ from src.domain.exceptions.regulations import (
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
 )
-from src.domain.value_objects.regulations import (
+from core_service.domain.value_objects.regulations import (
     RegulationDescriptionStatus,
     RegulationOwner,
     RegulationPreparationStatus,
@@ -35,12 +35,12 @@ from src.domain.value_objects.regulations import (
     RegulationScope,
     RegulationType,
 )
-from src.domain.value_objects.users import Caller
-from src.shared.consts import (
+from core_service.domain.value_objects.users import Caller
+from core_service.shared.consts import (
     MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
     MAX_REGULATION_PREPARATION_DELIVERIES,
 )
-from src.shared.exceptions import ServiceUnavailable
+from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments
 

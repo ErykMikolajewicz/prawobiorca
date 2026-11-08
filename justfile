@@ -27,7 +27,7 @@ test-extraction:
 
 [working-directory: 'apps/core']
 cov:
-    uv run pytest tests/unit tests/integration --cov=src --cov-config=coverage.toml
+    uv run pytest tests/unit tests/integration --cov=core_service --cov-config=coverage.toml
 
 build-app:
     podman image build --tag=prawobiorca-backend apps/core

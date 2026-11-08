@@ -16,13 +16,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
 
-from src.framework.dependencies import workers
-from src.framework.dependencies.ai_services import get_texts_embedder
-from src.framework.dependencies.application_templates import get_application_templates_storage
-from src.framework.dependencies.cases import get_applications_storage
-from src.framework.dependencies.regulations import get_broker, get_regulations_storage
-from src.framework.dependencies.relational import get_session_maker
-from src.main import prawobiorca
+from core_service.framework.dependencies import workers
+from core_service.framework.dependencies.ai_services import get_texts_embedder
+from core_service.framework.dependencies.application_templates import get_application_templates_storage
+from core_service.framework.dependencies.cases import get_applications_storage
+from core_service.framework.dependencies.regulations import get_broker, get_regulations_storage
+from core_service.framework.dependencies.relational import get_session_maker
+from core_service.main import prawobiorca
 
 POSTGRES_IMAGE_VERSION = "ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie"
 

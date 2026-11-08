@@ -166,7 +166,7 @@ always sum to 1 and the score stays on the cosine scale — it is shown to the u
 
 ## Extending the Parser
 
-New patterns belong in `../../apps/core/src/domain/services/legal_structure_parser.py`, as module-level
+New patterns belong in `../../apps/core/src/core_service/domain/services/legal_structure_parser.py`, as module-level
 constants next to the existing ones. When adding a unit type, remember to:
 
 1. add its pattern and, for divisions, its rank in `DIVISION_RANKS`,

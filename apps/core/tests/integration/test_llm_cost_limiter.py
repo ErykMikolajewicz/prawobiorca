@@ -1,16 +1,16 @@
 import pytest
 from sqlalchemy import select
 
-from src.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
-from src.infrastructure.relational_db.connection import DatabaseSessionMaker
-from src.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
-from src.infrastructure.relational_db.schemas.llm_usage import llm_usage_table
-from src.shared.consts import (
+from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
+from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
+from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
+from core_service.infrastructure.relational_db.schemas.llm_usage import llm_usage_table
+from core_service.shared.consts import (
     LLM_INPUT_PRICE_USD_PER_MILLION_TOKENS,
     LLM_OUTPUT_PRICE_USD_PER_MILLION_TOKENS,
     USD_TO_PLN_RATE,
 )
-from src.shared.exceptions import ServiceUnavailable
+from core_service.shared.exceptions import ServiceUnavailable
 
 MILLION = 1_000_000
 

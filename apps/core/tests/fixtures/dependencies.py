@@ -2,20 +2,20 @@ from unittest.mock import create_autospec
 
 import pytest
 
-from src.app.interfaces.application_templates import ApplicationTemplatesStorage
-from src.app.interfaces.applications import ApplicationsStorage
-from src.app.interfaces.regulations import RegulationsStorage
-from src.app.ports.application_templates import ApplicationTemplateDescriptionWriter
-from src.app.ports.applications import ApplicationWriter
-from src.app.ports.regulations import RegulationDescriptionWriter, RegulationSplitter
-from src.app.ports.tasks import (
+from core_service.application.interfaces.application_templates import ApplicationTemplatesStorage
+from core_service.application.interfaces.applications import ApplicationsStorage
+from core_service.application.interfaces.regulations import RegulationsStorage
+from core_service.application.ports.application_templates import ApplicationTemplateDescriptionWriter
+from core_service.application.ports.applications import ApplicationWriter
+from core_service.application.ports.regulations import RegulationDescriptionWriter, RegulationSplitter
+from core_service.application.ports.tasks import (
     ApplicationGenerationScheduler,
     ApplicationTemplateDescriptionGenerationScheduler,
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,
 )
-from src.framework.dependencies.regulations import get_regulations_storage
-from src.main import prawobiorca
+from core_service.framework.dependencies.regulations import get_regulations_storage
+from core_service.main import prawobiorca
 
 
 @pytest.fixture

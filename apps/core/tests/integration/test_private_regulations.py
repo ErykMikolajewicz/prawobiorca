@@ -3,10 +3,10 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy import select
 
-from src.app.dtos.regulations import RegulationUploadTarget
-from src.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
-from src.shared.consts import REGULATION_PREPARATION_TASK_NAME
+from core_service.application.dtos.regulations import RegulationUploadTarget
+from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.shared.consts import REGULATION_PREPARATION_TASK_NAME
 from tests.consts import ADMIN_ID, UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.ai_services import QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.regulations import insert_regulation

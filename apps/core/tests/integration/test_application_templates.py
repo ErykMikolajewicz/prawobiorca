@@ -4,16 +4,16 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy import delete, select
 
-from src.app.dtos.application_templates import ApplicationTemplateUploadTarget
-from src.domain.value_objects.application_templates import (
+from core_service.application.dtos.application_templates import ApplicationTemplateUploadTarget
+from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
-from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
-from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
-from src.shared.consts import APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME
+from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
+from core_service.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
+from core_service.shared.consts import APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME
 from tests.consts import UNKNOWN_ID
 from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR, QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.application_templates import create_docx_template, insert_application_template

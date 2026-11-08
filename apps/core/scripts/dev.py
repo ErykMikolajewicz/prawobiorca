@@ -60,8 +60,8 @@ def run_worker():
         [
             "taskiq",
             "worker",
-            "src.framework.workers.regulations:broker",
-            "src.framework.workers.applications",
+            "core_service.framework.workers.regulations:broker",
+            "core_service.framework.workers.applications",
             "--reload",
             "--reload-dir",
             "src",
@@ -127,7 +127,7 @@ def main():
                 "asgi",
                 "--reload",
                 "--access-log",
-                "src.main:prawobiorca",
+                "core_service.main:prawobiorca",
             ],
             check=True,
         )

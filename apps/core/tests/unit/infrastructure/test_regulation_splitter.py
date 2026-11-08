@@ -1,9 +1,9 @@
 import pytest
 from httpx2 import AsyncClient, MockTransport, Response
 
-from src.domain.value_objects.legal_units import RegulationElement, UsefulLabels
-from src.infrastructure.ai_services.regulation_splitter import RegulationSplitter
-from src.shared.exceptions import ServiceUnavailable
+from core_service.domain.value_objects.legal_units import RegulationElement, UsefulLabels
+from core_service.infrastructure.ai_services.regulation_splitter import RegulationSplitter
+from core_service.shared.exceptions import ServiceUnavailable
 
 EXTRACTION_SERVICE_URL = "http://extraction.local"
 

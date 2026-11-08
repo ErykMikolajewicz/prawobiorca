@@ -1,9 +1,9 @@
-from src.domain.services.regulation_description import (
+from core_service.domain.services.regulation_description import (
     MAX_DESCRIPTION_BEGINNING_CHARS,
     MAX_DESCRIPTION_HEADINGS,
     create_description_source,
 )
-from src.domain.value_objects.regulations import RegulationHeading, SectionContent
+from core_service.domain.value_objects.regulations import RegulationHeading, SectionContent
 
 
 def test_create_description_source_builds_table_of_contents():

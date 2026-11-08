@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from src.domain.value_objects.legal_units import RegulationElement
+from core_service.domain.value_objects.legal_units import RegulationElement
 
 DATA_DIR = Path(__file__).parents[1] / "data"
 

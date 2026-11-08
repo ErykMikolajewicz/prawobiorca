@@ -1,7 +1,7 @@
 import pytest
 
-from src.domain.services.legal_structure_parser import LegalStructureParser
-from src.domain.value_objects.legal_units import RegulationElement, UnitType, UsefulLabels
+from core_service.domain.services.legal_structure_parser import LegalStructureParser
+from core_service.domain.value_objects.legal_units import RegulationElement, UnitType, UsefulLabels
 from tests.fixtures.regulation_elements import load_regulation_elements
 
 ACT_FIXTURE = "ustawa-nauka_slice_30-31"

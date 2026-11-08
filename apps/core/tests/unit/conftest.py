@@ -2,17 +2,17 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from src.app.interfaces.application_templates import ApplicationTemplatesRepository
-from src.app.interfaces.applications import ApplicationsRepository
-from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
-from src.app.interfaces.regulations import RegulationsRepository
-from src.app.interfaces.relational import AsyncSession, SessionMaker
-from src.app.interfaces.sections import SectionsRepository
-from src.app.interfaces.users import UsersRepository, UsersSessionsRepository
-from src.app.ports.application_templates import ApplicationTemplateInspector
-from src.app.ports.applications import ApplicationRenderer
-from src.app.ports.texts import TextsEmbedder
-from src.app.services.regulations import RegulationPreparator
+from core_service.application.interfaces.application_templates import ApplicationTemplatesRepository
+from core_service.application.interfaces.applications import ApplicationsRepository
+from core_service.application.interfaces.cases import CaseDocumentsRepository, CasesRepository
+from core_service.application.interfaces.regulations import RegulationsRepository
+from core_service.application.interfaces.relational import AsyncSession, SessionMaker
+from core_service.application.interfaces.sections import SectionsRepository
+from core_service.application.interfaces.users import UsersRepository, UsersSessionsRepository
+from core_service.application.ports.application_templates import ApplicationTemplateInspector
+from core_service.application.ports.applications import ApplicationRenderer
+from core_service.application.ports.texts import TextsEmbedder
+from core_service.application.services.regulations import RegulationPreparator
 
 
 @pytest.fixture

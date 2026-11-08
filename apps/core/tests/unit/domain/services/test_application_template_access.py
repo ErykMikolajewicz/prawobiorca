@@ -1,11 +1,11 @@
 import pytest
 
-from src.domain.exceptions.access import AccessForbidden, LoginRequired
-from src.domain.services.application_template_access import (
+from core_service.domain.exceptions.access import AccessForbidden, LoginRequired
+from core_service.domain.services.application_template_access import (
     check_can_manage_application_templates,
     check_can_read_published_application_templates,
 )
-from src.domain.value_objects.users import Caller
+from core_service.domain.value_objects.users import Caller
 from tests.consts import ADMIN_ID, USER_ID
 
 ANONYMOUS = Caller(user_id=None)

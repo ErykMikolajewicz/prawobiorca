@@ -4,9 +4,9 @@ from uuid import UUID
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.value_objects.applications import ApplicationGenerationStatus
-from src.infrastructure.relational_db.schemas.applications import applications_table
-from src.infrastructure.relational_db.schemas.cases import case_documents_table, cases_table
+from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.infrastructure.relational_db.schemas.applications import applications_table
+from core_service.infrastructure.relational_db.schemas.cases import case_documents_table, cases_table
 from tests.consts import USER_ID
 
 

@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 
-from src.domain.value_objects.regulations import RegulationType
+from core_service.domain.value_objects.regulations import RegulationType
 from tests.consts import ACCESS_TOKEN
 from tests.fixtures.clients import create_client
 

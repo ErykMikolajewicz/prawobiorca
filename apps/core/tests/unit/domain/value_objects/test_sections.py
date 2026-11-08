@@ -1,4 +1,4 @@
-from src.domain.value_objects.sections import RegulationSection, SectionChunk, SectionsCollection
+from core_service.domain.value_objects.sections import RegulationSection, SectionChunk, SectionsCollection
 
 BATCH_SIZE = 10
 

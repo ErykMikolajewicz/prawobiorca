@@ -1,12 +1,9 @@
 import asyncio
-import sys
-
-sys.path.append("")
 
 from sqlalchemy import insert
 
-from src.infrastructure.relational_db.connection import async_session_maker
-from src.infrastructure.relational_db.schemas.users import users_table
+from core_service.infrastructure.relational_db.connection import async_session_maker
+from core_service.infrastructure.relational_db.schemas.users import users_table
 
 
 async def seed_db():
