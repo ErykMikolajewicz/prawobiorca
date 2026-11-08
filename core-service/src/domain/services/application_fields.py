@@ -84,6 +84,10 @@ def validate_field_values(fields: list[ApplicationTemplateField], values: dict[s
     return validated_values
 
 
+def get_ai_field_values(fields: list[ApplicationTemplateField], values: dict[str, str]) -> list[tuple[str, str]]:
+    return [(field.label, values[field.name]) for field in fields if field.pass_to_ai and values.get(field.name)]
+
+
 def _is_value_valid(field: ApplicationTemplateField, value: str) -> bool:
     match field.field_type:
         case ApplicationFieldType.TEXT:

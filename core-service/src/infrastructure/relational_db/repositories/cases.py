@@ -10,6 +10,12 @@ from src.domain.exceptions.cases import CaseNotFound
 from src.infrastructure.relational_db.schemas.cases import case_documents_table, cases_table
 
 
+async def check_case_exists(session: AsyncSession, user_id: UUID, case_id: UUID) -> None:
+    statement = select(cases_table.c.id).where(cases_table.c.id == case_id, cases_table.c.user_id == user_id)
+    if await session.scalar(statement) is None:
+        raise CaseNotFound
+
+
 class CasesRepository:
     @staticmethod
     async def list_by_user_id(session: AsyncSession, user_id: UUID) -> list[CaseData]:
@@ -51,6 +57,7 @@ class CaseDocumentsRepository:
 
     @staticmethod
     async def add(session: AsyncSession, user_id: UUID, case_id: UUID, new_document: NewCaseDocument) -> UUID:
+        await check_case_exists(session, user_id, case_id)
         statement = (
             insert(case_documents_table)
             .values(case_id=case_id, user_id=user_id, **TypeAdapter(NewCaseDocument).dump_python(new_document))

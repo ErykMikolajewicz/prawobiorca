@@ -5,7 +5,7 @@ import pytest
 from src.app.use_cases.cases import DeleteCase
 from src.domain.exceptions.cases import CaseNotFound
 from tests.consts import USER_ID
-from tests.unit.mocks import get_awaited_arguments
+from tests.mocks import get_awaited_arguments
 
 CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
 

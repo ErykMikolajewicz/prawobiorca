@@ -7,6 +7,7 @@ from src.domain.exceptions.application_templates import (
 )
 from src.domain.services.application_fields import (
     create_default_fields,
+    get_ai_field_values,
     validate_field_values,
     validate_fields_config,
 )
@@ -113,3 +114,15 @@ def test_validate_field_values_rejects_invalid_values(values, invalid_field_name
         validate_field_values(FIELDS, values)
 
     assert exception_info.value.field_names == invalid_field_names
+
+
+def test_get_ai_field_values_skips_fields_not_passed_to_ai_and_empty_values():
+    fields = [
+        ApplicationTemplateField(name="student_id", label="Numer albumu"),
+        ApplicationTemplateField(name="pesel", label="PESEL", pass_to_ai=False),
+        ApplicationTemplateField(name="title", label="Tytuł", required=False),
+        ApplicationTemplateField(name="department", label="Wydział"),
+    ]
+    values = {"student_id": "123456", "pesel": "90010112345", "title": "", "department": "W4"}
+
+    assert get_ai_field_values(fields, values) == [("Numer albumu", "123456"), ("Wydział", "W4")]

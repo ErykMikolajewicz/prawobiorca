@@ -8,6 +8,7 @@ from src.app.dtos.applications import ApplicationRepresentation
 from src.domain.exceptions.applications import ApplicationNotFound
 from src.domain.exceptions.cases import CaseNotFound
 from src.domain.value_objects.applications import ApplicationGenerationStatus
+from src.infrastructure.relational_db.repositories.cases import check_case_exists
 from src.infrastructure.relational_db.schemas.applications import applications_table
 
 
@@ -43,6 +44,7 @@ class ApplicationsRepository:
 
     @staticmethod
     async def add(session: AsyncSession, user_id: UUID, case_id: UUID, template_id: UUID, template_name: str) -> UUID:
+        await check_case_exists(session, user_id, case_id)
         statement = (
             insert(applications_table)
             .values(case_id=case_id, user_id=user_id, template_id=template_id, template_name=template_name)

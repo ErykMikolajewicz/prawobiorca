@@ -9,9 +9,8 @@ from src.app.interfaces.regulations import RegulationsRepository
 from src.app.interfaces.relational import AsyncSession, SessionMaker
 from src.app.interfaces.sections import SectionsRepository
 from src.app.interfaces.users import UsersRepository, UsersSessionsRepository
-from src.app.ports.application_templates import ApplicationTemplateDescriptionWriter, ApplicationTemplateInspector
-from src.app.ports.applications import ApplicationRenderer, ApplicationWriter
-from src.app.ports.regulations import RegulationDescriptionWriter
+from src.app.ports.application_templates import ApplicationTemplateInspector
+from src.app.ports.applications import ApplicationRenderer
 from src.app.ports.texts import TextsEmbedder
 from src.app.services.regulations import RegulationPreparator
 
@@ -50,13 +49,13 @@ def mock_sessions_repo():
 
 
 @pytest.fixture
-def mock_regulations_repository():
+def mock_regulations_repo():
     repo = create_autospec(RegulationsRepository)
     return repo
 
 
 @pytest.fixture
-def mock_embedding_port():
+def mock_texts_embedder():
     port = create_autospec(TextsEmbedder)
     return port
 
@@ -65,12 +64,6 @@ def mock_embedding_port():
 def mock_regulation_preparator():
     preparator = create_autospec(RegulationPreparator)
     return preparator
-
-
-@pytest.fixture
-def mock_regulation_description_writer():
-    port = create_autospec(RegulationDescriptionWriter)
-    return port
 
 
 @pytest.fixture
@@ -89,12 +82,6 @@ def mock_cases_repo():
 def mock_case_documents_repo():
     repo = create_autospec(CaseDocumentsRepository)
     return repo
-
-
-@pytest.fixture
-def mock_application_writer():
-    port = create_autospec(ApplicationWriter)
-    return port
 
 
 @pytest.fixture
@@ -118,10 +105,4 @@ def mock_application_templates_repo():
 @pytest.fixture
 def mock_application_template_inspector():
     port = create_autospec(ApplicationTemplateInspector)
-    return port
-
-
-@pytest.fixture
-def mock_application_template_description_writer():
-    port = create_autospec(ApplicationTemplateDescriptionWriter)
     return port

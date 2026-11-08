@@ -23,12 +23,16 @@ UNKNOWN_ID = UUID("8f7a6b5c-4d3e-4f1a-9b8c-7d6e5f4a3b2c")
 REFRESH_TOKEN = "O8KwTwMvXTSn3VdWl6iZlNqmw39UvFRvIbeHfo-mykY"
 
 
-def build_access_token(user_id: UUID = USER_ID, session_id: UUID = SESSION_ID, is_admin: bool = False) -> str:
+def build_access_token(
+    user_id: UUID = USER_ID,
+    session_id: UUID = SESSION_ID,
+    is_admin: bool = False,
+    expires_in: int = app_settings.ACCESS_TOKEN_EXPIRATION_SECONDS,
+) -> str:
     claims = AccessTokenClaims(user_id=user_id, session_id=session_id, is_admin=is_admin)
 
-    return create_access_token(
-        claims, app_settings.JWT_SECRET_KEY, JWT_ALGORITHM, app_settings.ACCESS_TOKEN_EXPIRATION_SECONDS
-    )
+    return create_access_token(claims, app_settings.JWT_SECRET_KEY, JWT_ALGORITHM, expires_in)
 
 
 ACCESS_TOKEN = build_access_token()
+ADMIN_ACCESS_TOKEN = build_access_token(ADMIN_ID, is_admin=True)

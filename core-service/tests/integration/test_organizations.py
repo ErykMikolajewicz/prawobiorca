@@ -1,88 +1,31 @@
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import status
-from sqlalchemy import delete, insert, select
+from sqlalchemy import select
 
 from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
-from src.shared.consts import ACCESS_COOKIE_NAME
-from tests.consts import ACCESS_TOKEN
+from src.infrastructure.relational_db.schemas.regulations import regulations_table
+from tests.consts import UNKNOWN_ID
+from tests.integration.fixtures.organizations import insert_organization, insert_suborganization
+from tests.integration.fixtures.regulations import insert_regulation
 
 
-async def insert_organization(session_maker) -> UUID:
+async def test_get_organizations(client, session_maker):
     async with session_maker.begin() as session:
-        statement = (
-            insert(organizations_table)
-            .values(name="Uniwersytet Wrocławski", short_name="UWr")
-            .returning(organizations_table.c.id)
+        organization_id = await insert_organization(
+            session, "Politechnika Wrocławska", "PWr", create_date=datetime(2026, 1, 1, tzinfo=UTC)
         )
-        organization_id = await session.scalar(statement)
-    return organization_id
+        other_organization_id = await insert_organization(session, create_date=datetime(2026, 1, 2, tzinfo=UTC))
+        mechanical_id = await insert_suborganization(session, organization_id, "Wydział Mechaniczny")
+        chemical_id = await insert_suborganization(session, organization_id, "Wydział Chemiczny")
 
-
-async def insert_suborganization(session_maker, organization_id: UUID) -> UUID:
-    async with session_maker.begin() as session:
-        statement = (
-            insert(suborganizations_table)
-            .values(organization_id=organization_id, name="Wydział Prawa")
-            .returning(suborganizations_table.c.id)
-        )
-        suborganization_id = await session.scalar(statement)
-    return suborganization_id
-
-
-async def delete_organization(session_maker, organization_id: UUID) -> None:
-    async with session_maker.begin() as session:
-        await session.execute(delete(organizations_table).where(organizations_table.c.id == organization_id))
-
-
-async def test_get_organizations(client, override_session_maker, session_maker):
-    async with session_maker.begin() as session:
-        default_organization_id = await session.scalar(
-            select(organizations_table.c.id).where(organizations_table.c.short_name == "PWr")
-        )
-        statement = (
-            insert(organizations_table)
-            .values(name="Uniwersytet Wrocławski", short_name="UWr", create_date=datetime(2100, 1, 1, tzinfo=UTC))
-            .returning(organizations_table.c.id)
-        )
-        organization_id = await session.scalar(statement)
-        statement = (
-            insert(suborganizations_table)
-            .values(
-                [
-                    {
-                        "organization_id": default_organization_id,
-                        "name": "Wydział Mechaniczny",
-                        "create_date": datetime(2100, 1, 1, tzinfo=UTC),
-                    },
-                    {
-                        "organization_id": default_organization_id,
-                        "name": "Wydział Chemiczny",
-                        "create_date": datetime(2100, 1, 2, tzinfo=UTC),
-                    },
-                ]
-            )
-            .returning(suborganizations_table.c.id)
-        )
-        result = await session.scalars(statement)
-    mechanical_id, chemical_id = result.all()
-
-    try:
-        response = await client.get("/api/organizations")
-    finally:
-        async with session_maker.begin() as session:
-            await session.execute(delete(organizations_table).where(organizations_table.c.id == organization_id))
-            await session.execute(
-                delete(suborganizations_table).where(
-                    suborganizations_table.c.organization_id == default_organization_id
-                )
-            )
+    response = await client.get("/api/organizations")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [
         {
-            "id": str(default_organization_id),
+            "id": str(organization_id),
             "name": "Politechnika Wrocławska",
             "shortName": "PWr",
             "suborganizations": [
@@ -91,7 +34,7 @@ async def test_get_organizations(client, override_session_maker, session_maker):
             ],
         },
         {
-            "id": str(organization_id),
+            "id": str(other_organization_id),
             "name": "Uniwersytet Wrocławski",
             "shortName": "UWr",
             "suborganizations": [],
@@ -99,71 +42,61 @@ async def test_get_organizations(client, override_session_maker, session_maker):
     ]
 
 
-async def test_add_organization(client, override_session_maker, session_maker, override_authorize_admin_user):
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post("/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"})
+async def test_add_organization(admin_client, session_maker):
+    response = await admin_client.post(
+        "/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"}
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
     organization_id = UUID(response.json())
 
-    try:
-        async with session_maker() as session:
-            result = await session.execute(
-                select(organizations_table).where(organizations_table.c.id == organization_id)
-            )
-        organization = result.one()
+    async with session_maker() as session:
+        result = await session.execute(select(organizations_table).where(organizations_table.c.id == organization_id))
+    organization = result.one()
 
-        assert organization.name == "Uniwersytet Wrocławski"
-        assert organization.short_name == "UWr"
-    finally:
-        await delete_organization(session_maker, organization_id)
+    assert organization.name == "Uniwersytet Wrocławski"
+    assert organization.short_name == "UWr"
 
 
-async def test_add_organization_as_normal_user(client, override_session_maker, override_authorize_normal_user):
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post("/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"})
+async def test_add_organization_as_normal_user(user_client):
+    response = await user_client.post("/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"})
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-async def test_update_organization(client, override_session_maker, session_maker, override_authorize_admin_user):
-    organization_id = await insert_organization(session_maker)
+async def test_update_organization(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    response = await admin_client.put(
+        f"/api/organizations/{organization_id}",
+        json={"name": "Uniwersytet Wrocławski im. X", "shortName": "UWr2"},
+    )
 
-    try:
-        response = await client.put(
-            f"/api/organizations/{organization_id}",
-            json={"name": "Uniwersytet Wrocławski im. X", "shortName": "UWr2"},
-        )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        assert response.status_code == status.HTTP_204_NO_CONTENT
+    async with session_maker() as session:
+        result = await session.execute(select(organizations_table).where(organizations_table.c.id == organization_id))
+    organization = result.one()
 
-        async with session_maker() as session:
-            result = await session.execute(
-                select(organizations_table).where(organizations_table.c.id == organization_id)
-            )
-        organization = result.one()
+    assert organization.name == "Uniwersytet Wrocławski im. X"
+    assert organization.short_name == "UWr2"
 
-        assert organization.name == "Uniwersytet Wrocławski im. X"
-        assert organization.short_name == "UWr2"
-    finally:
-        await delete_organization(session_maker, organization_id)
 
-    response = await client.put(f"/api/organizations/{organization_id}", json={"name": "Uniwersytet", "shortName": "U"})
+async def test_update_organization_not_found(admin_client):
+    response = await admin_client.put(
+        f"/api/organizations/{UNKNOWN_ID}", json={"name": "Uniwersytet", "shortName": "U"}
+    )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_delete_organization(client, override_session_maker, session_maker, override_authorize_admin_user):
-    organization_id = await insert_organization(session_maker)
-    suborganization_id = await insert_suborganization(session_maker, organization_id)
+async def test_delete_organization(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
+        suborganization_id = await insert_suborganization(session, organization_id)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.delete(f"/api/organizations/{organization_id}")
+    response = await admin_client.delete(f"/api/organizations/{organization_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -173,108 +106,101 @@ async def test_delete_organization(client, override_session_maker, session_maker
         )
     assert suborganization is None
 
-    response = await client.delete(f"/api/organizations/{organization_id}")
+    response = await admin_client.delete(f"/api/organizations/{organization_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_add_suborganization(client, override_session_maker, session_maker, override_authorize_admin_user):
-    organization_id = await insert_organization(session_maker)
+async def test_add_suborganization(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    response = await admin_client.post(
+        f"/api/organizations/{organization_id}/suborganizations", json={"name": "Wydział Prawa"}
+    )
 
-    try:
-        response = await client.post(
-            f"/api/organizations/{organization_id}/suborganizations", json={"name": "Wydział Prawa"}
+    assert response.status_code == status.HTTP_201_CREATED
+    suborganization_id = UUID(response.json())
+
+    async with session_maker() as session:
+        result = await session.execute(
+            select(suborganizations_table).where(suborganizations_table.c.id == suborganization_id)
         )
+    suborganization = result.one()
 
-        assert response.status_code == status.HTTP_201_CREATED
-        suborganization_id = UUID(response.json())
-
-        async with session_maker() as session:
-            result = await session.execute(
-                select(suborganizations_table).where(suborganizations_table.c.id == suborganization_id)
-            )
-        suborganization = result.one()
-
-        assert suborganization.organization_id == organization_id
-        assert suborganization.name == "Wydział Prawa"
-    finally:
-        await delete_organization(session_maker, organization_id)
+    assert suborganization.organization_id == organization_id
+    assert suborganization.name == "Wydział Prawa"
 
 
-async def test_add_suborganization_to_missing_organization(
-    client, override_session_maker, override_authorize_admin_user
-):
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post(f"/api/organizations/{uuid4()}/suborganizations", json={"name": "Wydział Prawa"})
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_update_suborganization(client, override_session_maker, session_maker, override_authorize_admin_user):
-    organization_id = await insert_organization(session_maker)
-    suborganization_id = await insert_suborganization(session_maker, organization_id)
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    try:
-        response = await client.put(
-            f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}",
-            json={"name": "Wydział Nauk Społecznych"},
-        )
-
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-
-        async with session_maker() as session:
-            name = await session.scalar(
-                select(suborganizations_table.c.name).where(suborganizations_table.c.id == suborganization_id)
-            )
-        assert name == "Wydział Nauk Społecznych"
-    finally:
-        await delete_organization(session_maker, organization_id)
-
-    response = await client.put(
-        f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}", json={"name": "Wydział"}
+async def test_add_suborganization_to_missing_organization(admin_client):
+    response = await admin_client.post(
+        f"/api/organizations/{UNKNOWN_ID}/suborganizations", json={"name": "Wydział Prawa"}
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_delete_suborganization(client, override_session_maker, session_maker, override_authorize_admin_user):
-    organization_id = await insert_organization(session_maker)
-    suborganization_id = await insert_suborganization(session_maker, organization_id)
+async def test_update_suborganization(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
+        suborganization_id = await insert_suborganization(session, organization_id)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    response = await admin_client.put(
+        f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}",
+        json={"name": "Wydział Nauk Społecznych"},
+    )
 
-    try:
-        response = await client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-
-        response = await client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
-
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-    finally:
-        await delete_organization(session_maker, organization_id)
+    async with session_maker() as session:
+        name = await session.scalar(
+            select(suborganizations_table.c.name).where(suborganizations_table.c.id == suborganization_id)
+        )
+    assert name == "Wydział Nauk Społecznych"
 
 
-async def test_delete_suborganization_of_other_organization(
-    client, override_session_maker, session_maker, override_authorize_admin_user
-):
-    organization_id = await insert_organization(session_maker)
-    other_organization_id = await insert_organization(session_maker)
-    suborganization_id = await insert_suborganization(session_maker, organization_id)
+async def test_update_suborganization_not_found(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    response = await admin_client.put(
+        f"/api/organizations/{organization_id}/suborganizations/{UNKNOWN_ID}", json={"name": "Wydział"}
+    )
 
-    try:
-        response = await client.delete(
-            f"/api/organizations/{other_organization_id}/suborganizations/{suborganization_id}"
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_suborganization(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
+        suborganization_id = await insert_suborganization(session, organization_id)
+        statute_id = await insert_regulation(session, None, "Statute.pdf", organization_id=organization_id)
+        await insert_regulation(
+            session, None, "Law rules.pdf", organization_id=organization_id, suborganization_id=suborganization_id
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-    finally:
-        await delete_organization(session_maker, organization_id)
-        await delete_organization(session_maker, other_organization_id)
+    response = await admin_client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    async with session_maker() as session:
+        remaining_ids = await session.scalars(select(regulations_table.c.id))
+
+    assert remaining_ids.all() == [statute_id]
+
+    response = await admin_client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_suborganization_of_other_organization(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        organization_id = await insert_organization(session)
+        other_organization_id = await insert_organization(session)
+        suborganization_id = await insert_suborganization(session, organization_id)
+
+    response = await admin_client.delete(
+        f"/api/organizations/{other_organization_id}/suborganizations/{suborganization_id}"
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -1,22 +1,18 @@
-import asyncio
 from datetime import UTC, datetime
 
 from fastapi import status
 from pydantic import TypeAdapter
-from sqlalchemy import delete, insert, select
+from sqlalchemy import select
 
 from src.app.dtos.applications import NewApplication
 from src.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from src.domain.value_objects.applications import ApplicationGenerationStatus
-from src.framework.dependencies.regulations import get_broker
-from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
 from src.infrastructure.relational_db.schemas.applications import applications_table
-from src.infrastructure.relational_db.schemas.cases import cases_table
-from src.main import prawobiorca
-from src.shared.consts import ACCESS_COOKIE_NAME, APPLICATION_GENERATION_TASK_NAME
-from tests.consts import ACCESS_TOKEN, UNKNOWN_ID, USER_ID
-
-LISTEN_TIMEOUT = 3
+from src.shared.consts import APPLICATION_GENERATION_TASK_NAME
+from tests.consts import ADMIN_ID, UNKNOWN_ID, USER_ID
+from tests.integration.fixtures.application_templates import insert_application_template
+from tests.integration.fixtures.cases import insert_application, insert_case
+from tests.integration.fixtures.tasks import get_scheduled_tasks
 
 FIELDS = [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")]
 
@@ -29,64 +25,25 @@ def create_new_application(template_id, field_values: dict[str, str] | None = No
     }
 
 
-async def insert_template(
-    session_maker, template_status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED
-):
+async def insert_template(session, template_status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED):
+    return await insert_application_template(
+        session, "Wniosek o urlop", template_status, fields=FIELDS, instructions="Instrukcje"
+    )
+
+
+async def test_get_case_applications(user_client, session_maker):
     async with session_maker.begin() as session:
-        statement = (
-            insert(application_templates_table)
-            .values(name="Wniosek o urlop", status=template_status, fields=FIELDS, instructions="Instrukcje")
-            .returning(application_templates_table.c.id)
+        case_id = await insert_case(session)
+        other_case_id = await insert_case(session, name="Other case")
+        first_application_id = await insert_application(
+            session, case_id, create_date=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
         )
-        return await session.scalar(statement)
-
-
-async def delete_template(session_maker, template_id):
-    async with session_maker.begin() as session:
-        await session.execute(
-            delete(application_templates_table).where(application_templates_table.c.id == template_id)
+        second_application_id = await insert_application(
+            session, case_id, create_date=datetime(2026, 1, 2, 10, 0, 0, tzinfo=UTC)
         )
+        await insert_application(session, other_case_id)
 
-
-async def insert_case(session_maker, name: str = "Case"):
-    async with session_maker.begin() as session:
-        statement = insert(cases_table).values(user_id=USER_ID, name=name).returning(cases_table.c.id)
-        return await session.scalar(statement)
-
-
-async def insert_application(
-    session_maker,
-    case_id,
-    create_date: datetime = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
-    generation_status: ApplicationGenerationStatus = ApplicationGenerationStatus.GENERATED,
-):
-    async with session_maker.begin() as session:
-        statement = (
-            insert(applications_table)
-            .values(
-                case_id=case_id,
-                user_id=USER_ID,
-                template_name="Wniosek o urlop",
-                create_date=create_date,
-                generation_status=generation_status,
-            )
-            .returning(applications_table.c.id)
-        )
-        return await session.scalar(statement)
-
-
-async def test_get_case_applications(
-    client, override_session_maker, session_maker, override_authorize_normal_user, set_user, clean_user
-):
-    case_id = await insert_case(session_maker)
-    other_case_id = await insert_case(session_maker, "Other case")
-    first_application_id = await insert_application(session_maker, case_id, datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC))
-    second_application_id = await insert_application(session_maker, case_id, datetime(2026, 1, 2, 10, 0, 0, tzinfo=UTC))
-    await insert_application(session_maker, other_case_id)
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.get(f"/api/cases/{case_id}/applications")
+    response = await user_client.get(f"/api/cases/{case_id}/applications")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [
@@ -109,205 +66,87 @@ async def test_get_case_applications(
     ]
 
 
-async def test_get_application_download_url(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    application_id = await insert_application(session_maker, case_id)
+async def test_get_application_download_url(user_client, session_maker, mock_applications_storage):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        application_id = await insert_application(session, case_id)
     mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/applications"
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.get(f"/api/cases/{case_id}/applications/{application_id}/download-url")
+    response = await user_client.get(f"/api/cases/{case_id}/applications/{application_id}/download-url")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "http://storage.local/bucket/applications"
-    mock_applications_storage.get_download_url.assert_awaited_once_with(application_id)
 
 
-async def test_get_application_download_url_not_found(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
+async def test_get_application_download_url_not_found(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.get(f"/api/cases/{case_id}/applications/{UNKNOWN_ID}/download-url")
+    response = await user_client.get(f"/api/cases/{case_id}/applications/{UNKNOWN_ID}/download-url")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_applications_storage.get_download_url.assert_not_awaited()
 
 
-async def test_delete_application(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    application_id = await insert_application(session_maker, case_id)
+async def test_get_application_download_url_not_generated(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        application_id = await insert_application(session, case_id, ApplicationGenerationStatus.IN_PROGRESS)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    response = await user_client.get(f"/api/cases/{case_id}/applications/{application_id}/download-url")
 
-    response = await client.delete(f"/api/cases/{case_id}/applications/{application_id}")
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_delete_application(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        application_id = await insert_application(session, case_id)
+
+    response = await user_client.delete(f"/api/cases/{case_id}/applications/{application_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
 
     async with session_maker() as session:
-        statement = select(applications_table).where(applications_table.c.id == application_id)
-        result = await session.execute(statement)
+        application = await session.scalar(
+            select(applications_table.c.id).where(applications_table.c.id == application_id)
+        )
 
-    assert result.one_or_none() is None
+    assert application is None
 
 
-async def test_delete_application_not_found(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
+async def test_delete_application_of_other_case(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        other_case_id = await insert_case(session)
+        application_id = await insert_application(session, case_id)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.delete(f"/api/cases/{case_id}/applications/{UNKNOWN_ID}")
+    response = await user_client.delete(f"/api/cases/{other_case_id}/applications/{application_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_applications_storage.delete_application.assert_not_awaited()
 
 
-async def test_get_application_download_url_of_other_case(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    other_case_id = await insert_case(session_maker)
-    application_id = await insert_application(session_maker, case_id)
+async def test_generate_application_schedules_task(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        template_id = await insert_template(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.get(f"/api/cases/{other_case_id}/applications/{application_id}/download-url")
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_applications_storage.get_download_url.assert_not_awaited()
-
-
-async def test_delete_application_of_other_case(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    other_case_id = await insert_case(session_maker)
-    application_id = await insert_application(session_maker, case_id)
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.delete(f"/api/cases/{other_case_id}/applications/{application_id}")
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_applications_storage.delete_application.assert_not_awaited()
-
-
-async def test_delete_case_removes_application_files(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    application_id = await insert_application(session_maker, case_id)
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.delete(f"/api/cases/{case_id}")
-
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-    mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
-
-    async with session_maker() as session:
-        statement = select(applications_table).where(applications_table.c.id == application_id)
-        result = await session.execute(statement)
-
-    assert result.one_or_none() is None
-
-
-async def test_generate_application_schedules_task(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    task_broker,
-    clean_task_messages,
-    set_user,
-    clean_user,
-):
-    prawobiorca.dependency_overrides[get_broker] = lambda: task_broker
-    case_id = await insert_case(session_maker)
-    template_id = await insert_template(session_maker)
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post(
-        f"/api/cases/{case_id}/applications",
-        json=create_new_application(template_id, {"student_id": " 123456 "}),
-    )
-    await delete_template(session_maker, template_id)
+    response = await user_client.post(f"/api/cases/{case_id}/applications", json=create_new_application(template_id))
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     application_id = response.json()
 
     async with session_maker() as session:
-        statement = select(applications_table).where(applications_table.c.id == application_id)
-        application = (await session.execute(statement)).one()
+        result = await session.execute(select(applications_table).where(applications_table.c.id == application_id))
+    application = result.one()
 
     assert application.case_id == case_id
     assert application.template_name == "Wniosek o urlop"
     assert application.generation_status == ApplicationGenerationStatus.IN_PROGRESS
 
-    delivered = await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
-    taskiq_message = task_broker.formatter.loads(delivered.data)
+    (task,) = await get_scheduled_tasks(session_maker)
+    user_id, scheduled_application_id, new_application = task.args
 
-    assert taskiq_message.task_name == APPLICATION_GENERATION_TASK_NAME
-    user_id, scheduled_application_id, new_application = taskiq_message.args
+    assert task.task_name == APPLICATION_GENERATION_TASK_NAME
     assert user_id == str(USER_ID)
     assert scheduled_application_id == application_id
     assert TypeAdapter(NewApplication).validate_python(new_application) == NewApplication(
@@ -315,92 +154,44 @@ async def test_generate_application_schedules_task(
     )
 
 
-async def test_generate_application_case_not_found(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_application_generation_scheduler,
-    mock_application_generation_scheduler,
-    set_user,
-    clean_user,
-):
-    template_id = await insert_template(session_maker)
+async def test_generate_application_case_not_found(user_client, session_maker):
+    async with session_maker.begin() as session:
+        template_id = await insert_template(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post(f"/api/cases/{UNKNOWN_ID}/applications", json=create_new_application(template_id))
-    await delete_template(session_maker, template_id)
+    response = await user_client.post(f"/api/cases/{UNKNOWN_ID}/applications", json=create_new_application(template_id))
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
 
 
-async def test_generate_application_template_not_published(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_application_generation_scheduler,
-    mock_application_generation_scheduler,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    template_id = await insert_template(session_maker, ApplicationTemplateStatus.DRAFT)
+async def test_generate_application_in_other_user_case(user_client, session_maker, admin):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session, ADMIN_ID)
+        template_id = await insert_template(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post(f"/api/cases/{case_id}/applications", json=create_new_application(template_id))
-    await delete_template(session_maker, template_id)
+    response = await user_client.post(f"/api/cases/{case_id}/applications", json=create_new_application(template_id))
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
+    assert await get_scheduled_tasks(session_maker) == []
 
 
-async def test_generate_application_invalid_field_values(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_application_generation_scheduler,
-    mock_application_generation_scheduler,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    template_id = await insert_template(session_maker)
+async def test_generate_application_template_not_published(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        template_id = await insert_template(session, ApplicationTemplateStatus.DRAFT)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+    response = await user_client.post(f"/api/cases/{case_id}/applications", json=create_new_application(template_id))
 
-    response = await client.post(
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_generate_application_invalid_field_values(user_client, session_maker):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session)
+        template_id = await insert_template(session)
+
+    response = await user_client.post(
         f"/api/cases/{case_id}/applications", json=create_new_application(template_id, {"student_id": "abc"})
     )
-    await delete_template(session_maker, template_id)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert response.json()["detail"] == ["student_id"]
-    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
-
-
-async def test_get_application_download_url_not_generated(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    override_get_applications_storage,
-    mock_applications_storage,
-    set_user,
-    clean_user,
-):
-    case_id = await insert_case(session_maker)
-    application_id = await insert_application(
-        session_maker, case_id, generation_status=ApplicationGenerationStatus.IN_PROGRESS
-    )
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.get(f"/api/cases/{case_id}/applications/{application_id}/download-url")
-
-    assert response.status_code == status.HTTP_409_CONFLICT
-    mock_applications_storage.get_download_url.assert_not_awaited()

@@ -61,7 +61,8 @@ In unit tests, you should only test:
   deliveries. A use case that only passes data between an endpoint and a repository is covered by integration tests only.
 - Repositories/Ports - only in special cases (sophisticated mapping logic that does not need a database). A repository
   that writes to or reads from the database is tested by integration tests against the real database, not with
-  a mocked session.
+  a mocked session. Clients of HTTP services (embeddings, extraction, LLM) are tested with `httpx2.MockTransport`,
+  which replaces the network, not the client.
 - Endpoints - only when verifying custom Pydantic validation logic.
 
 All external services should be mocked in unit tests, as well as other application parts as needed.
@@ -83,7 +84,7 @@ All external services should be mocked in unit tests, as well as other applicati
   Do not assert calls that are only implementation details (e.g. that the use case read the regulation, or which session
   it passed to a repository).
 - Read arguments of awaited calls by parameter name, with `get_awaited_argument()` and `get_awaited_arguments()` from
-  `../../core-service/tests/unit/mocks.py`, not by position (`call.args[-1]`), so that passing an argument by keyword
+  `../../core-service/tests/mocks.py`, not by position (`call.args[-1]`), so that passing an argument by keyword
   does not break the test.
 - Use `pytest.mark.parametrize` for tables such as "status → exception", instead of copying a test.
 - Do not test that an exception of a dependency is propagated, unless the use case reacts to it.
@@ -95,6 +96,8 @@ All external services should be mocked in unit tests, as well as other applicati
 Coverage of `core-service` is measured on unit and integration tests run together (`just cov`), for the whole `src`
 directory, so code tested only by integration tests (endpoints, repositories, simple use cases) also counts.
 The threshold (90%) is set in `../../core-service/coverage.toml` and checked by the CI `integration` job.
+`src` has no `__init__.py` files, so `include_namespace_packages` is enabled – otherwise files never imported by
+the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
 `just test` runs only the unit tests, without coverage, for fast feedback.
 
 ## Integration Tests
@@ -116,13 +119,18 @@ Please note that during these tests, storage and external services are running i
 - Do not mock services that can be recreated locally (PostgreSQL, text-transformator) — use `testcontainers`.
 - Other services (e.g., cloud storage, LLM conversations) should be mocked.
 - All integration tests should use shared container instances (due to their initialization time).
-- Each test should prepare its own test environment (e.g., insert data into the database) and clean up after itself.
+- Each test prepares its own data. The database is emptied before each test, so a test does not clean up after itself.
 - Insert test data with shared helpers (e.g. `insert_regulation` from
   `../../core-service/tests/integration/fixtures/regulations.py`), so that a change of the database schema affects
   a single place.
 - Tests must be fully independent of each other.
-- It’s recommended to use a try block with cleanup in `finally` to ensure container state consistency even on test failure.
-- **Before creating integration tests, carefully review the fixture documentation in `../../core-service/tests/integration/conftest.py`.**
+- Call endpoints with `client`, `user_client` or `admin_client`. Authentication is not mocked.
+- Assert the outcome visible outside the application: the response, the database state, the scheduled tasks
+  (`get_scheduled_task_names()`), and calls of external services, which are not checked by unit tests.
+  Do not repeat assertions of use case unit tests (e.g. that a scheduler was not called after an error).
+- Check the full shape of a response once per resource (it is the contract with the frontend). Other tests check only
+  the fields they are about, so that a new field in a response changes a single test.
+- **Before creating integration tests, carefully review the [fixture documentation](integration_fixtures.md).**
 
 When writing tests, use existing examples from the repository as a reference.
 

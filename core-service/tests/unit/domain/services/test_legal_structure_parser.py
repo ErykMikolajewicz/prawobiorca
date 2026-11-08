@@ -1,23 +1,13 @@
-import json
-from pathlib import Path
-
 import pytest
 
 from src.domain.services.legal_structure_parser import LegalStructureParser
 from src.domain.value_objects.legal_units import RegulationElement, UnitType, UsefulLabels
-
-DATA_DIR = Path(__file__).parents[3] / "data"
+from tests.fixtures.regulation_elements import load_regulation_elements
 
 ACT_FIXTURE = "ustawa-nauka_slice_30-31"
 STATUTE_FIXTURE = "pwr-regulamin_2025_slice_7-9"
 PROMOTION_DATABASE_FIXTURE = "ustawa-nauka_slice_209-210"
 MINISTERIAL_REGULATION_FIXTURE = "rozporzadzenie-studia_slice_11-12"
-
-
-def load_regulation_elements(regulation_name: str) -> list[RegulationElement]:
-    raw_elements = json.loads((DATA_DIR / f"{regulation_name}.json").read_text(encoding="utf-8"))
-
-    return [RegulationElement(label=element["label"], text=element["text"]) for element in raw_elements]
 
 
 def unit_text(unit) -> str:
