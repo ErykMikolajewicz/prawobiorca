@@ -106,6 +106,7 @@ def test_validate_field_values_returns_values_for_all_fields():
         ({**VALID_VALUES, "department": "W1"}, ["department"]),
         ({**VALID_VALUES, "deadline": "2026-06-30"}, ["deadline"]),
         ({**VALID_VALUES, "student_id": "", "semester": " "}, ["student_id", "semester"]),
+        ({**VALID_VALUES, "student_id": "12345", "semester": "four"}, ["student_id", "semester"]),
         ({**VALID_VALUES, "unknown": "value"}, ["unknown"]),
     ],
 )

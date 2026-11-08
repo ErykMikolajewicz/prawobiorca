@@ -46,3 +46,17 @@ def test_create_description_source_limits_size():
 
     assert len(description_source.headings) == MAX_DESCRIPTION_HEADINGS
     assert len(description_source.beginning) == MAX_DESCRIPTION_BEGINNING_CHARS
+
+
+def test_create_description_source_skips_sections_without_header():
+    sections = [
+        SectionContent(header=None, text="Wstęp"),
+        SectionContent(header="Rozdział 1 Przepisy ogólne > § 1 Zakres regulaminu", text="§ 1."),
+    ]
+
+    description_source = create_description_source("Regulamin", sections)
+
+    assert description_source.headings == [
+        RegulationHeading(text="Rozdział 1 Przepisy ogólne", level=0),
+        RegulationHeading(text="Zakres regulaminu", level=1),
+    ]

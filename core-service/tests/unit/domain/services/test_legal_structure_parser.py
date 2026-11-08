@@ -429,6 +429,85 @@ def test_article_labelled_as_header_is_content():
     ]
 
 
+def test_paragraph_labelled_as_header_with_subsection_is_content():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="§ 3. 1. Student ma prawo do:"),
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text="1) zdobywania wiedzy;"),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [unit.number for unit in units] == ["3"]
+    assert units[0].title is None
+    assert [element.text for element in units[0].elements] == ["1. Student ma prawo do:", "1) zdobywania wiedzy;"]
+
+
+def test_dash_glued_to_word_is_kept_on_page_without_spaced_dash():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="§ 1. Dokument zawiera złoże -nia."),
+        RegulationElement(label=UsefulLabels.TEXT, text="Wydział - jednostka uczelni."),
+        RegulationElement(label="page_footer", text="1"),
+        RegulationElement(label=UsefulLabels.TEXT, text="W razie braku -numeru albumu."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [element.text for element in units[0].elements] == [
+        "Dokument zawiera złożenia.",
+        "Wydział - jednostka uczelni.",
+        "W razie braku -numeru albumu.",
+    ]
+
+
+def test_division_header_closes_previous_unit():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 5. Przepis."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział 2"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Tekst bez numeru."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [element.text for element in units[0].elements] == ["Przepis."]
+    assert units[1].unit_type == UnitType.UNNUMBERED
+    assert units[1].path == ["Rozdział 2"]
+    assert [element.text for element in units[1].elements] == ["Tekst bez numeru."]
+
+
+def test_header_after_division_title_becomes_unit_title():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział 1"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Przepisy ogólne"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Słowniczek"),
+        RegulationElement(label=UsefulLabels.TEXT, text="§ 1. Ilekroć w regulaminie jest mowa o:"),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[0].title == "Słowniczek"
+    assert units[0].path == ["Rozdział 1 Przepisy ogólne"]
+
+
+@pytest.mark.parametrize(
+    "content_text",
+    ["§ 1. Regulamin określa zasady studiów.", "Regulamin określa zasady studiów."],
+    ids=("unit", "unnumbered content"),
+)
+def test_header_after_content_is_not_merged_into_untitled_division(content_text):
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział 1"),
+        RegulationElement(label=UsefulLabels.TEXT, text=content_text),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Słowniczek"),
+        RegulationElement(label=UsefulLabels.TEXT, text="§ 2. Ilekroć w regulaminie jest mowa o:"),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[-1].number == "2"
+    assert units[-1].title == "Słowniczek"
+    assert units[-1].path == ["Rozdział 1"]
+
+
 @pytest.mark.parametrize(
     "header_text",
     [

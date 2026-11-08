@@ -7,7 +7,8 @@ import pytest
 
 from src.domain.value_objects import regulations as regulations_module
 from src.domain.value_objects.legal_units import RegulationElement, UsefulLabels
-from src.domain.value_objects.regulations import RegulationAct
+from src.domain.value_objects.regulations import RegulationAct, Tokenizer
+from src.infrastructure.tokenizers.mmlw import MmlwTokenizer
 
 DATA_DIR = Path(__file__).parents[3] / "data"
 
@@ -35,6 +36,11 @@ class WordTokenizer:
         return len(text.split())
 
 
+class SpecialTokensWordTokenizer(WordTokenizer):
+    def count_tokens(self, text: str) -> int:
+        return super().count_tokens(text) + 2
+
+
 @pytest.fixture(autouse=True)
 def chunk_max_tokens():
     with patch.object(regulations_module, "CHUNK_MAX_TOKENS", CHUNK_MAX_TOKENS):
@@ -47,8 +53,8 @@ def load_regulation_elements(regulation_name: str) -> list[RegulationElement]:
     return [RegulationElement(label=element["label"], text=element["text"]) for element in raw_elements]
 
 
-def create_sections(elements: list[RegulationElement]) -> list:
-    collection = RegulationAct(elements, WordTokenizer()).get_sections_to_embed()
+def create_sections(elements: list[RegulationElement], tokenizer: Tokenizer | None = None) -> list:
+    collection = RegulationAct(elements, tokenizer or WordTokenizer()).get_sections_to_embed()
 
     return sorted(collection, key=lambda section: section.section_order)
 
@@ -216,6 +222,115 @@ def test_element_without_sentence_boundaries_is_split_by_tokens():
     assert len(section.chunks) > 1
     for chunk in section.chunks:
         assert len(chunk.text.split(" ")) <= CHUNK_MAX_TOKENS
+
+
+def test_element_split_by_tokens_keeps_whole_content():
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text="Art. 110. " + " ".join(["słowo"] * 200))]
+
+    section = create_sections(elements)[0]
+
+    assert " ".join(chunk.text for chunk in section.chunks) == section.text
+    assert [chunk.embed_title for chunk in section.chunks] == [
+        "Art. 110 (część 1/4)",
+        "Art. 110 (część 2/4)",
+        "Art. 110 (część 3/4)",
+        "Art. 110 (część 4/4)",
+    ]
+
+
+def test_element_filling_whole_content_budget_is_not_split():
+    title_tokens = 2
+    elements = [
+        RegulationElement(
+            label=UsefulLabels.TEXT, text="Art. 110. " + " ".join(["słowo"] * (CHUNK_MAX_TOKENS - title_tokens))
+        )
+    ]
+
+    section = create_sections(elements)[0]
+
+    assert len(section.chunks) == 1
+    assert section.chunks[0].embed_title == "Art. 110"
+
+
+def test_element_exceeding_content_budget_by_one_token_is_split():
+    title_tokens = 2
+    elements = [
+        RegulationElement(
+            label=UsefulLabels.TEXT, text="Art. 110. " + " ".join(["słowo"] * (CHUNK_MAX_TOKENS - title_tokens + 1))
+        )
+    ]
+
+    section = create_sections(elements)[0]
+
+    assert [len(chunk.text.split()) for chunk in section.chunks] == [30, 29]
+    assert " ".join(chunk.text for chunk in section.chunks) == section.text
+
+
+def test_element_split_by_tokens_does_not_count_special_tokens_per_word():
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text="Art. 110. " + " ".join(["słowo"] * 100))]
+
+    section = create_sections(elements, SpecialTokensWordTokenizer())[0]
+
+    assert [len(chunk.text.split()) for chunk in section.chunks] == [50, 50]
+
+
+def test_element_split_by_tokens_fills_chunks_with_real_tokenizer():
+    sentence = "Uczelnia prowadzi działalność dydaktyczną naukową i artystyczną zgodnie z przepisami ustawy"
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text="Art. 110. " + " ".join([sentence] * 12))]
+    tokenizer = MmlwTokenizer()
+
+    section = create_sections(elements, tokenizer)[0]
+
+    for chunk in section.chunks:
+        assert 0.9 * CHUNK_MAX_TOKENS <= tokenizer.count_tokens(chunk.embedding_text) <= CHUNK_MAX_TOKENS
+
+
+def test_chunks_of_subsection_without_points_cover_whole_elements():
+    paragraph = " ".join(["słowo"] * 20)
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text=f"Art. 110. 1. {paragraph}")]
+    elements.extend(RegulationElement(label=UsefulLabels.LIST_ITEM, text=paragraph) for _ in range(4))
+
+    section = create_sections(elements)[0]
+
+    assert [(chunk.span.start_element, chunk.span.end_element) for chunk in section.chunks] == [(0, 0), (1, 2), (3, 4)]
+    assert [chunk.embed_title for chunk in section.chunks] == [
+        "Art. 110 ust. 1 (część 1/3)",
+        "Art. 110 ust. 1 (część 2/3)",
+        "Art. 110 ust. 1 (część 3/3)",
+    ]
+
+
+def test_chunk_titles_of_unit_without_header_have_only_part_numbers():
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text=" ".join(["słowo"] * 100))]
+
+    section = create_sections(elements)[0]
+
+    assert [chunk.embed_title for chunk in section.chunks] == ["(część 1/2)", "(część 2/2)"]
+
+
+def test_chunk_titles_name_subsection_ranges():
+    elements = create_subsections(subsections_count=6, words_per_subsection=15)
+
+    section = create_sections(elements)[0]
+
+    assert [chunk.embed_title for chunk in section.chunks] == ["Art. 110 ust. 1-3", "Art. 110 ust. 4-6"]
+
+
+def test_subsection_split_by_sentences_keeps_subsection_in_chunk_titles():
+    sentence = " ".join(["słowo"] * 30)
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 110. 1. Studenci tworzą samorząd."),
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text=f"2. {sentence}. {sentence}. {sentence}."),
+    ]
+
+    section = create_sections(elements)[0]
+
+    assert [chunk.embed_title for chunk in section.chunks] == [
+        "Art. 110 ust. 1 (część 1/4)",
+        "Art. 110 ust. 2 (część 2/4)",
+        "Art. 110 ust. 2 (część 3/4)",
+        "Art. 110 ust. 2 (część 4/4)",
+    ]
 
 
 def test_too_long_breadcrumb_is_trimmed_only_in_chunk_title():

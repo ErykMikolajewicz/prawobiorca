@@ -2,6 +2,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
+from functools import cached_property
 from typing import Protocol
 from uuid import UUID
 
@@ -189,7 +190,7 @@ class RegulationAct:
         for element_index in indices:
             atoms.extend(self._split_long_element(elements[element_index], element_index, content_budget))
 
-        atoms_tokens = [self._tokenizer.count_tokens(atom.text) for atom in atoms]
+        atoms_tokens = [self._count_content_tokens(atom.text) for atom in atoms]
 
         return [ChunkPart([atoms[atom] for atom in group]) for group in self._pack_evenly(atoms_tokens, content_budget)]
 
@@ -217,7 +218,14 @@ class RegulationAct:
         return lead
 
     def _count_block_tokens(self, elements: list[LegalUnitElement], indices: list[int]) -> int:
-        return sum(self._tokenizer.count_tokens(elements[element_index].text) for element_index in indices)
+        return sum(self._count_content_tokens(elements[element_index].text) for element_index in indices)
+
+    def _count_content_tokens(self, text: str) -> int:
+        return self._tokenizer.count_tokens(text) - self._special_tokens
+
+    @cached_property
+    def _special_tokens(self) -> int:
+        return self._tokenizer.count_tokens("")
 
     @staticmethod
     def _create_element_atoms(elements: list[LegalUnitElement], indices: list[int]) -> list[ChunkAtom]:
@@ -258,7 +266,7 @@ class RegulationAct:
     def _split_long_element(
         self, element: LegalUnitElement, element_index: int, content_budget: int
     ) -> list[ChunkAtom]:
-        if self._tokenizer.count_tokens(element.text) <= content_budget:
+        if self._count_content_tokens(element.text) <= content_budget:
             return [ChunkAtom(element.text, element.subsection, element_index)]
 
         fragments = []
@@ -268,27 +276,13 @@ class RegulationAct:
         return [ChunkAtom(fragment, element.subsection, element_index) for fragment in fragments]
 
     def _split_by_tokens(self, text: str, content_budget: int) -> list[str]:
-        if self._tokenizer.count_tokens(text) <= content_budget:
+        if self._count_content_tokens(text) <= content_budget:
             return [text]
 
-        fragments = []
-        current_words = []
-        current_tokens = 0
-        for word in text.split(" "):
-            word_tokens = self._tokenizer.count_tokens(word)
+        words = text.split(" ")
+        words_tokens = [self._count_content_tokens(f" {word}") for word in words]
 
-            if current_words and current_tokens + word_tokens > content_budget:
-                fragments.append(" ".join(current_words))
-                current_words = []
-                current_tokens = 0
-
-            current_words.append(word)
-            current_tokens += word_tokens
-
-        if current_words:
-            fragments.append(" ".join(current_words))
-
-        return fragments
+        return [" ".join(words[word] for word in group) for group in self._pack_evenly(words_tokens, content_budget)]
 
     @staticmethod
     def _create_part_titles(title: str | None, parts: list[ChunkPart]) -> list[str | None]:
