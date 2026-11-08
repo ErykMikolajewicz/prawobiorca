@@ -5,6 +5,7 @@ import pytest
 from src.app.use_cases.cases import DeleteCase
 from src.domain.exceptions.cases import CaseNotFound
 from tests.consts import USER_ID
+from tests.unit.mocks import get_awaited_arguments
 
 CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
 
@@ -31,8 +32,7 @@ async def test_delete_case_removes_application_files(delete_case, mock_cases_rep
     await delete_case.execute(USER_ID, CASE_ID)
 
     mock_cases_repo.delete.assert_awaited_once()
-    removed_ids = [call.args[0] for call in mock_applications_storage.delete_application.await_args_list]
-    assert removed_ids == APPLICATION_IDS
+    assert get_awaited_arguments(mock_applications_storage.delete_application, "id_") == APPLICATION_IDS
 
 
 async def test_delete_case_ignores_storage_errors(delete_case, mock_applications_storage):

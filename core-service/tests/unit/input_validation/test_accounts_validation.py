@@ -1,4 +1,5 @@
 import pytest
+from fastapi import status
 
 
 @pytest.mark.parametrize(
@@ -16,4 +17,5 @@ async def test_create_account_weak_passwords(client, password, error_detail):
 
     response = await client.post("/api/accounts/register", json=payload)
 
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert error_detail in response.text

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
+from src.app.interfaces.application_templates import ApplicationTemplatesRepository
 from src.app.interfaces.applications import ApplicationsRepository
 from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
 from src.app.interfaces.regulations import RegulationsRepository
@@ -113,12 +113,6 @@ def mock_applications_repo():
 def mock_application_templates_repo():
     repo = create_autospec(ApplicationTemplatesRepository)
     return repo
-
-
-@pytest.fixture
-def mock_application_templates_storage():
-    storage = create_autospec(ApplicationTemplatesStorage)
-    return storage
 
 
 @pytest.fixture

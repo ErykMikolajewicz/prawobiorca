@@ -27,6 +27,7 @@ from src.domain.exceptions.application_templates import (
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
 )
+from src.domain.services.application_fields import create_default_fields
 from src.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDescriptionStatus,
@@ -38,6 +39,7 @@ from src.domain.value_objects.users import Caller
 from src.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
+from tests.unit.mocks import get_awaited_argument, get_awaited_arguments
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
 USER = Caller(user_id=USER_ID)
@@ -47,6 +49,17 @@ TEMPLATE_ID = UUID("7d2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a")
 STUDENT_ID_FIELD = ApplicationTemplateField(name="student_id", label="Numer albumu")
 
 TEMPLATE_TEXT = "Dziekan Wydziału\n{{ student_id }}"
+
+PUBLISHED_TEMPLATE = PublishedApplicationTemplate(
+    id=TEMPLATE_ID,
+    name="Wniosek o urlop",
+    description="Wniosek o urlop dziekański.",
+    fields=[
+        PublishedApplicationField(
+            name="student_id", label="Numer albumu", field_type=ApplicationFieldType.TEXT, required=True
+        )
+    ],
+)
 
 
 def create_template(
@@ -67,12 +80,16 @@ def create_template(
     )
 
 
+def create_published_template() -> ApplicationTemplateRepresentation:
+    return create_template(ApplicationTemplateStatus.PUBLISHED, description="Wniosek o urlop dziekański.")
+
+
 def store_template(application_templates_repository, template: ApplicationTemplateRepresentation | None) -> None:
     application_templates_repository.get.return_value = template
 
 
 def get_description_statuses(application_templates_repository) -> list[ApplicationTemplateDescriptionStatus]:
-    return [call.args[-1] for call in application_templates_repository.set_description_status.await_args_list]
+    return get_awaited_arguments(application_templates_repository.set_description_status, "status")
 
 
 @pytest.fixture
@@ -189,25 +206,10 @@ def get_template_download_url(mock_session_maker, application_templates_reposito
     )
 
 
-PUBLISHED_TEMPLATE = PublishedApplicationTemplate(
-    id=TEMPLATE_ID,
-    name="Wniosek o urlop",
-    description="Wniosek o urlop dziekański.",
-    fields=[
-        PublishedApplicationField(
-            name="student_id", label="Numer albumu", field_type=ApplicationFieldType.TEXT, required=True
-        )
-    ],
-)
-
-
-def create_published_template() -> ApplicationTemplateRepresentation:
-    return create_template(ApplicationTemplateStatus.PUBLISHED, description="Wniosek o urlop dziekański.")
-
-
 @pytest.mark.parametrize(
     ("query", "ai_assisted"),
-    [("urlop dziekański", False), ("urlop", True), ("  urlop", True)],
+    [(" urlop dziekański ", False), ("urlop", True)],
+    ids=("ai not requested", "not semantic query"),
 )
 async def test_search_published_application_templates_by_name(
     search_published_templates, application_templates_repository, mock_embedding_port, query, ai_assisted
@@ -217,7 +219,7 @@ async def test_search_published_application_templates_by_name(
     results = await search_published_templates.execute(USER, None, query, ai_assisted)
 
     assert results == [PUBLISHED_TEMPLATE]
-    assert application_templates_repository.fuzzy_search_templates.await_args.args[-1] == query.strip()
+    assert get_awaited_argument(application_templates_repository.fuzzy_search_templates, "query") == query.strip()
     mock_embedding_port.embed_queries.assert_not_awaited()
 
 
@@ -227,11 +229,13 @@ async def test_search_published_application_templates_ai_assisted(
     mock_embedding_port.embed_queries.return_value = [[0.1, 0.2]]
     application_templates_repository.hybrid_search_templates.return_value = [create_published_template()]
 
-    results = await search_published_templates.execute(USER, None, "urlop ", True)
+    results = await search_published_templates.execute(USER, None, " urlop dziekański ", True)
 
     assert results == [PUBLISHED_TEMPLATE]
-    mock_embedding_port.embed_queries.assert_awaited_once_with(["urlop"])
-    assert application_templates_repository.hybrid_search_templates.await_args.args[-2:] == ("urlop", [0.1, 0.2])
+    mock_embedding_port.embed_queries.assert_awaited_once_with(["urlop dziekański"])
+    hybrid_search_templates = application_templates_repository.hybrid_search_templates
+    assert get_awaited_argument(hybrid_search_templates, "query") == "urlop dziekański"
+    assert get_awaited_argument(hybrid_search_templates, "vector") == [0.1, 0.2]
 
 
 async def test_confirm_application_template_upload_creates_fields(
@@ -242,14 +246,14 @@ async def test_confirm_application_template_upload_creates_fields(
 ):
     store_template(application_templates_repository, create_template(ApplicationTemplateStatus.NOT_UPLOADED))
     mock_application_templates_storage.get_template.return_value = b"docx"
-    mock_application_template_inspector.get_variables.return_value = {"paragraphs", "current_date", "student_id"}
+    variables = {"paragraphs", "student_id"}
+    mock_application_template_inspector.get_variables.return_value = variables
 
     result = await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
 
     mock_application_template_inspector.get_variables.assert_awaited_once_with(b"docx")
-    assert application_templates_repository.confirm_upload.await_args.args[-1] == [
-        ApplicationTemplateField(name="student_id", label="student_id")
-    ]
+    confirm_upload = application_templates_repository.confirm_upload
+    assert get_awaited_argument(confirm_upload, "fields") == create_default_fields(variables)
     assert result == application_templates_repository.confirm_upload.return_value
 
 
@@ -295,14 +299,15 @@ async def test_update_application_template_saves_details(update_template, applic
 
     result = await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    assert application_templates_repository.update_details.await_args.args[-1] == ApplicationTemplateDetails(
+    update_details = application_templates_repository.update_details
+    assert get_awaited_argument(update_details, "details") == ApplicationTemplateDetails(
         name="Wniosek",
         instructions="Instrukcje",
         fields=fields,
         organization_id=ORGANIZATION_ID,
         suborganization_id=SUBORGANIZATION_ID,
     )
-    assert result == application_templates_repository.update_details.return_value
+    assert result == update_details.return_value
 
 
 @pytest.mark.parametrize(
@@ -319,7 +324,7 @@ async def test_update_application_template_description_vector(
 
     await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    vectors = [call.args[-1] for call in application_templates_repository.set_description_vector.await_args_list]
+    vectors = get_awaited_arguments(application_templates_repository.set_description_vector, "vector")
     assert vectors == expected_vectors
 
 
@@ -372,7 +377,8 @@ async def test_update_application_template_published_during_embedding(
 async def test_publish_application_template(publish_template, application_templates_repository):
     await publish_template.execute(ADMIN, TEMPLATE_ID)
 
-    assert application_templates_repository.set_status.await_args.args[-1] == ApplicationTemplateStatus.PUBLISHED
+    set_status = application_templates_repository.set_status
+    assert get_awaited_argument(set_status, "status") == ApplicationTemplateStatus.PUBLISHED
 
 
 @pytest.mark.parametrize(
@@ -399,7 +405,8 @@ async def test_unpublish_application_template(unpublish_template, application_te
 
     await unpublish_template.execute(ADMIN, TEMPLATE_ID)
 
-    assert application_templates_repository.set_status.await_args.args[-1] == ApplicationTemplateStatus.DRAFT
+    set_status = application_templates_repository.set_status
+    assert get_awaited_argument(set_status, "status") == ApplicationTemplateStatus.DRAFT
 
 
 @pytest.mark.parametrize(
@@ -475,14 +482,13 @@ async def test_generate_application_template_description_saves_description_with_
 
     await generate_template_description.execute(TEMPLATE_ID)
 
-    description_source = mock_application_template_description_writer.write.await_args.args[0]
+    description_source = get_awaited_argument(mock_application_template_description_writer.write, "description_source")
     assert description_source.name == "Wniosek o urlop"
     assert description_source.content == TEMPLATE_TEXT
     mock_embedding_port.embed_texts.assert_awaited_once_with(["Wniosek o urlop dziekański."])
-    assert application_templates_repository.set_generated_description.await_args.args[-2:] == (
-        "Wniosek o urlop dziekański.",
-        [0.1, 0.2],
-    )
+    set_generated_description = application_templates_repository.set_generated_description
+    assert get_awaited_argument(set_generated_description, "description") == "Wniosek o urlop dziekański."
+    assert get_awaited_argument(set_generated_description, "vector") == [0.1, 0.2]
 
 
 @pytest.mark.parametrize(
@@ -540,6 +546,10 @@ async def test_generate_application_template_description_of_removed_template(
     application_templates_repository.set_generated_description.side_effect = ApplicationTemplateNotFound
 
     await generate_template_description.execute(TEMPLATE_ID)
+
+    assert get_description_statuses(application_templates_repository) == [
+        ApplicationTemplateDescriptionStatus.IN_PROGRESS
+    ]
 
 
 async def test_generate_application_template_description_failure_of_removed_template(

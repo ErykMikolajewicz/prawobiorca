@@ -7,6 +7,7 @@ from src.domain.exceptions.users import UserExists
 from src.domain.services.security import verify_password
 from src.shared.exceptions import ObjectExists
 from tests.consts import STRONG_PASSWORD, VALID_USERNAME
+from tests.unit.mocks import get_awaited_argument
 
 LOGIN_DATA = LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD))
 
@@ -19,7 +20,7 @@ def create_account(mock_session_maker, mock_users_repo):
 async def test_create_account_stores_hashed_password(create_account, mock_users_repo):
     await create_account.execute(LOGIN_DATA)
 
-    user_data = mock_users_repo.add.await_args.args[-1]
+    user_data = get_awaited_argument(mock_users_repo.add, "create_data")
     assert user_data.username == VALID_USERNAME
     assert verify_password(SecretStr(STRONG_PASSWORD), user_data.hashed_password)
 

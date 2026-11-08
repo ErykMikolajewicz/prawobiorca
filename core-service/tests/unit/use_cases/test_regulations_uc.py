@@ -42,6 +42,7 @@ from src.shared.consts import (
 )
 from src.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID
+from tests.unit.mocks import get_awaited_argument, get_awaited_arguments
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
 
@@ -66,11 +67,11 @@ def store_regulation(regulations_repository, regulation: RegulationRepresentatio
 
 
 def get_preparation_statuses(regulations_repository) -> list[RegulationPreparationStatus]:
-    return [call.args[-1] for call in regulations_repository.set_preparation_status.await_args_list]
+    return get_awaited_arguments(regulations_repository.set_preparation_status, "status")
 
 
 def get_description_statuses(regulations_repository) -> list[RegulationDescriptionStatus]:
-    return [call.args[-1] for call in regulations_repository.set_description_status.await_args_list]
+    return get_awaited_arguments(regulations_repository.set_description_status, "status")
 
 
 @pytest.fixture
@@ -208,7 +209,7 @@ async def test_prepare_regulation_saves_sections(
     await prepare_regulation.execute(None, REGULATION_ID)
 
     mock_regulation_preparator.prepare_regulation.assert_awaited_once_with(b"content")
-    assert sections_repository.add_sections.await_args.args[-1] == sections
+    assert get_awaited_argument(sections_repository.add_sections, "sections") == sections
     assert get_preparation_statuses(regulations_repository) == [
         RegulationPreparationStatus.IN_PROGRESS,
         RegulationPreparationStatus.PREPARED,
@@ -382,17 +383,18 @@ async def test_generate_regulation_description_saves_description_with_vector(
     store_regulation(
         regulations_repository, create_regulation(description_status=RegulationDescriptionStatus.IN_PROGRESS)
     )
-    mock_regulation_description_writer.write.return_value = "Załatwianie typowych spraw przez studentów"
+    description = "Załatwianie typowych spraw przez studentów"
+    mock_regulation_description_writer.write.return_value = description
     mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
 
     await generate_regulation_description.execute(None, REGULATION_ID)
 
-    assert mock_regulation_description_writer.write.await_args.args[0].presentation_name == "Regulamin studiów"
-    mock_embedding_port.embed_texts.assert_awaited_once_with(["Załatwianie typowych spraw przez studentów"])
-    assert regulations_repository.set_generated_description.await_args.args[-2:] == (
-        "Załatwianie typowych spraw przez studentów",
-        [0.1, 0.2],
-    )
+    description_source = get_awaited_argument(mock_regulation_description_writer.write, "description_source")
+    assert description_source.presentation_name == "Regulamin studiów"
+    mock_embedding_port.embed_texts.assert_awaited_once_with([description])
+    set_generated_description = regulations_repository.set_generated_description
+    assert get_awaited_argument(set_generated_description, "description") == description
+    assert get_awaited_argument(set_generated_description, "vector") == [0.1, 0.2]
 
 
 @pytest.mark.parametrize(
@@ -434,6 +436,18 @@ async def test_generate_regulation_description_of_removed_regulation(
 
     await generate_regulation_description.execute(None, REGULATION_ID)
 
+    assert get_description_statuses(regulations_repository) == [RegulationDescriptionStatus.IN_PROGRESS]
+
+
+async def test_generate_regulation_description_failure_of_removed_regulation(
+    generate_regulation_description, regulations_repository, mock_regulation_description_writer
+):
+    regulations_repository.set_description_status.side_effect = [None, RegulationNotFound()]
+    mock_regulation_description_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_regulation_description.execute(None, REGULATION_ID)
+
 
 @pytest.mark.parametrize(
     ("delivery_attempt", "expected_failed", "expected_statuses"),
@@ -454,6 +468,18 @@ async def test_fail_regulation_description_generation(
 
     assert failed is expected_failed
     assert get_description_statuses(regulations_repository) == expected_statuses
+
+
+async def test_fail_regulation_description_generation_of_removed_regulation(
+    fail_regulation_description_generation, regulations_repository
+):
+    regulations_repository.set_description_status.side_effect = RegulationNotFound
+
+    failed = await fail_regulation_description_generation.execute(
+        None, REGULATION_ID, MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES + 1
+    )
+
+    assert failed is True
 
 
 async def test_regenerate_regulation_description_schedules_generation(
@@ -522,7 +548,8 @@ async def test_add_regulation_registers_regulation(
 
     upload_target = await add_regulation.execute(ADMIN, regulation_data)
 
-    assert regulations_repository.register_regulation.await_args.args[-1] == RegulationRegistrationData(
+    registration_data = get_awaited_argument(regulations_repository.register_regulation, "regulation_registration_data")
+    assert registration_data == RegulationRegistrationData(
         presentation_name="regulation.pdf",
         regulation_type=RegulationType.STATUTE,
         organization_id=ORGANIZATION_ID,

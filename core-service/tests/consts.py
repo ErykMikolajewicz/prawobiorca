@@ -12,7 +12,6 @@ ADMIN_USERNAME = "admin123"
 
 USER_ID = UUID("edcd61d8-5026-4f71-850d-b5e072601fb3")
 ADMIN_ID = UUID("1a12354a-0f96-4dad-aaf1-b777a5596381")
-UNKNOWN_USER_ID = UUID("3f0c1d2e-8a4b-4c6d-9e1f-7b2a5c8d3e40")
 
 SESSION_ID = UUID("6e5a5b3c-1f1b-4f6a-9a4e-2c9c6f0d9b21")
 
@@ -33,5 +32,3 @@ def build_access_token(user_id: UUID = USER_ID, session_id: UUID = SESSION_ID, i
 
 
 ACCESS_TOKEN = build_access_token()
-
-UNKNOWN_ACCESS_TOKEN = build_access_token(user_id=UNKNOWN_USER_ID)

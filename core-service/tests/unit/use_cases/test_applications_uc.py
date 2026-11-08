@@ -20,6 +20,7 @@ from src.domain.value_objects.applications import ApplicationGenerationStatus
 from src.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
+from tests.unit.mocks import get_awaited_argument, get_awaited_arguments
 
 TEMPLATE_ID = UUID("00000000-0000-0000-0000-0000000000aa")
 CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
@@ -62,7 +63,7 @@ def create_application(
 
 
 def get_generation_statuses(applications_repository) -> list[ApplicationGenerationStatus]:
-    return [call.args[-1] for call in applications_repository.set_generation_status.await_args_list]
+    return get_awaited_arguments(applications_repository.set_generation_status, "status")
 
 
 @pytest.fixture
@@ -142,11 +143,12 @@ async def test_add_application_schedules_generation_with_normalized_field_values
     application_id = await add_application.execute(USER_ID, CASE_ID, NEW_APPLICATION)
 
     assert application_id == APPLICATION_ID
-    assert applications_repository.add.await_args.args[-1] == "Wniosek o urlop"
-    assert mock_application_generation_scheduler.schedule_application_generation.await_args.args[-1] == (
-        NewApplication(
-            templateId=TEMPLATE_ID, description="Proszę o urlop dziekański.", fieldValues={"student_id": "123456"}
-        )
+    assert get_awaited_argument(applications_repository.add, "template_name") == "Wniosek o urlop"
+    scheduled_application = get_awaited_argument(
+        mock_application_generation_scheduler.schedule_application_generation, "new_application"
+    )
+    assert scheduled_application == NewApplication(
+        templateId=TEMPLATE_ID, description="Proszę o urlop dziekański.", fieldValues={"student_id": "123456"}
     )
 
 
@@ -192,7 +194,7 @@ async def test_generate_application_saves_generated_document(
     mock_application_writer.write.assert_awaited_once_with(NEW_APPLICATION, create_template(), [document])
     mock_application_renderer.render.assert_awaited_once_with(b"TEMPLATE", NEW_APPLICATION, "Szanowny Panie Dziekanie")
     mock_applications_storage.upload_application.assert_awaited_once_with(APPLICATION_ID, b"PK")
-    assert applications_repository.set_name.await_args.args[-1] == "Wniosek o urlop dziekański"
+    assert get_awaited_argument(applications_repository.set_name, "name") == "Wniosek o urlop dziekański"
     assert get_generation_statuses(applications_repository) == [
         ApplicationGenerationStatus.IN_PROGRESS,
         ApplicationGenerationStatus.GENERATED,
@@ -263,6 +265,17 @@ async def test_generate_application_removed_during_generation(
     await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_applications_storage.upload_application.assert_not_awaited()
+    assert get_generation_statuses(applications_repository) == [ApplicationGenerationStatus.IN_PROGRESS]
+
+
+async def test_generate_application_failure_of_removed_application(
+    generate_application, applications_repository, mock_application_writer
+):
+    applications_repository.set_generation_status.side_effect = [None, ApplicationNotFound()]
+    mock_application_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
 
 async def test_generate_application_upload_failure_marks_failed(
@@ -291,6 +304,16 @@ async def test_fail_application_generation(
 
     assert failed is expected_failed
     assert get_generation_statuses(applications_repository) == expected_statuses
+
+
+async def test_fail_application_generation_of_removed_application(fail_application_generation, applications_repository):
+    applications_repository.set_generation_status.side_effect = ApplicationNotFound
+
+    failed = await fail_application_generation.execute(
+        USER_ID, APPLICATION_ID, MAX_APPLICATION_GENERATION_DELIVERIES + 1
+    )
+
+    assert failed is True
 
 
 async def test_get_application_download_url(
