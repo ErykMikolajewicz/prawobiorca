@@ -1,7 +1,7 @@
 # Fixtures used in integration tests
 
-The fixtures are defined in `core-service/tests/integration/conftest.py`, and the shared ones in
-`core-service/tests/fixtures/` and `core-service/tests/integration/fixtures/`.
+The fixtures are defined in `apps/core/tests/integration/conftest.py`, and the shared ones in
+`apps/core/tests/fixtures/` and `apps/core/tests/integration/fixtures/`.
 
 ## Database connection
 

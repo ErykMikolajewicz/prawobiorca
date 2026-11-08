@@ -1,6 +1,6 @@
 export VIRTUAL_ENV := ""
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 dev:
     uv run scripts/dev.py
 
@@ -13,57 +13,57 @@ run-locally-down:
 run-e2e-env:
     uv run scripts/local/run_e2e.py
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 test:
     uv run pytest tests/unit
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 test-integration:
     uv run pytest tests/integration
 
-[working-directory: 'extraction-service']
+[working-directory: 'apps/extraction']
 test-extraction:
     uv run --group test pytest tests/integration
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 cov:
     uv run pytest tests/unit tests/integration --cov=src --cov-config=coverage.toml
 
 build-app:
-    podman image build --tag=prawobiorca-backend core-service
+    podman image build --tag=prawobiorca-backend apps/core
 
 build-extraction-service:
-    podman image build --tag=extraction-service extraction-service
+    podman image build --tag=extraction-service apps/extraction
 
 build-embedding-service:
-    podman image build --tag=embedding-service embedding-service
+    podman image build --tag=embedding-service apps/embedding
 
 build-frontend:
-    podman image build --tag=prawobiorca-frontend prawobiorca-frontend
+    podman image build --tag=prawobiorca-frontend apps/web
 
 build-images: build-app build-extraction-service build-embedding-service build-frontend
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 upgrade-db:
     uv run alembic upgrade head
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 seed:
     uv run scripts/seed_relational_db.py
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 init-regulations:
     uv run scripts/init_regulations.py
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 init-e2e-regulation:
     uv run scripts/init_e2e_regulation.py
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 export-openapi:
     uv run scripts/export_openapi.py
 
-[working-directory: 'prawobiorca-frontend']
+[working-directory: 'apps/web']
 generate-api-client:
     pnpm generate:api-client
 
@@ -71,14 +71,14 @@ api-types: export-openapi generate-api-client
 
 init-db: upgrade-db seed init-regulations
 
-[working-directory: 'core-service']
+[working-directory: 'apps/core']
 type-check-backend:
     uv run ty check
 
 type-check-scripts:
     uv run ty check
 
-[working-directory: 'extraction-service']
+[working-directory: 'apps/extraction']
 type-check-extraction:
     uv run --group dev --group test ty check
 
@@ -92,12 +92,12 @@ check-workflows:
     uv run actionlint
 
 check-containers:
-    uv run hadolint */Containerfile
+    uv run hadolint apps/*/Containerfile
 
 check-deployment:
     uv run --group deployment checkov --directory deploy/gcp
 
-[working-directory: 'prawobiorca-frontend']
+[working-directory: 'apps/web']
 check-frontend:
     pnpm check
     pnpm type-check
@@ -105,10 +105,10 @@ check-frontend:
 
 audit-backend:
     uv audit --frozen --preview-features audit-command --ignore-until-fixed PYSEC-2026-1325
-    uv audit --frozen --preview-features audit-command --directory core-service
-    uv audit --frozen --preview-features audit-command --directory extraction-service
+    uv audit --frozen --preview-features audit-command --directory apps/core
+    uv audit --frozen --preview-features audit-command --directory apps/extraction
 
-[working-directory: 'prawobiorca-frontend']
+[working-directory: 'apps/web']
 audit-frontend:
     pnpm audit --prod
     pnpm audit --dev --audit-level high

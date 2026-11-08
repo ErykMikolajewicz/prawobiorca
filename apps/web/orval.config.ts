@@ -3,7 +3,7 @@ import { defineConfig } from 'orval'
 export default defineConfig({
   prawobiorca: {
     input: {
-      target: '../core-service/openapi.json',
+      target: '../core/openapi.json',
       filters: {
         mode: 'exclude',
         tags: ['health check'],

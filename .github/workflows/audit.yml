@@ -9,8 +9,8 @@ on:
     paths:
       - "**/uv.lock"
       - "**/pyproject.toml"
-      - prawobiorca-frontend/package.json
-      - prawobiorca-frontend/pnpm-lock.yaml
+      - apps/web/package.json
+      - apps/web/pnpm-lock.yaml
       - justfile
       - scripts/check_licenses.py
       - .github/workflows/audit.yml

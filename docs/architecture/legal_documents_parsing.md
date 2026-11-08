@@ -166,10 +166,10 @@ always sum to 1 and the score stays on the cosine scale — it is shown to the u
 
 ## Extending the Parser
 
-New patterns belong in `../../core-service/src/domain/services/legal_structure_parser.py`, as module-level
+New patterns belong in `../../apps/core/src/domain/services/legal_structure_parser.py`, as module-level
 constants next to the existing ones. When adding a unit type, remember to:
 
 1. add its pattern and, for divisions, its rank in `DIVISION_RANKS`,
 2. decide how it interacts with the article-versus-paragraph rule in `_detect_unit_type`,
-3. cover it with a regression test in `../../core-service/tests/unit/domain/services/test_legal_structure_parser.py`,
-   preferably against a real extraction fixture from `../../core-service/tests/data`.
+3. cover it with a regression test in `../../apps/core/tests/unit/domain/services/test_legal_structure_parser.py`,
+   preferably against a real extraction fixture from `../../apps/core/tests/data`.

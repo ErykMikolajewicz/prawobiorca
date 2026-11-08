@@ -4,7 +4,15 @@
 
 **Prawobiorca** is a modern web application providing intelligent legal search and document management capabilities. The system supports AI-assisted (semantic vector search) retrieval of legal acts, as well as case management and document drafting for authenticated users.
 
-The whole application lives in a single repository: the Python backend services described below, and the Vue frontend (`prawobiorca-frontend`) documented in [Frontend](frontend.md).
+The whole application lives in a single repository: the Python backend services described below, and the Vue frontend (`apps/web`) documented in [Frontend](frontend.md).
+
+Repository layout:
+- `apps/` – deployable applications, each built into its own container image: `core` (main API and Taskiq worker), `extraction`, `embedding` and `web` (frontend).
+- `deploy/` – Kubernetes manifests for the local (Podman) and GCP environments.
+- `scripts/` – scripts for running the application locally and deploying it to the cloud.
+- `docs/` – this documentation.
+
+Code shared between applications, such as the generated API client, will be moved to `packages/` next to `apps/` once a second application needs it.
 
 The system is designed to run in two primary environments:
 - **Cloud (GCP / Google Cloud Platform)**: Utilizing containerized workloads with scale-to-zero capabilities for resource-heavy operations to optimize cost and resource allocation.
@@ -90,7 +98,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * Used by the `core-service` Taskiq worker to draft student applications (*wnioski*) rendered to DOCX and to generate general descriptions of regulations for vector search of acts — see [AI module](../ai.md).
   * **GCP**: no service is deployed — the worker calls the serverless **Vertex AI** OpenAI-compatible endpoint (`google/gemini-3.5-flash-lite`, billed per token) in the `eu` multi-region, so data stays within the EU with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
   * **On-Premise**: served directly by **OpenVINO Model Server (OVMS)** (`OpenVINO/Qwen3.6-35B-A3B-int4-ov`, a mixture-of-experts model with ~3B active parameters) — no custom application code. OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), and runs with `--target_device=AUTO` and `/dev/dri` passed through, so it uses the Intel iGPU when the host exposes one and falls back to CPU otherwise.
-  * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `core-service/scripts/dev.py`.
+  * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `apps/core/scripts/dev.py`.
 
 ### 2.5. `prawobiorca-frontend`
 * **Responsibilities**:
@@ -150,32 +158,32 @@ flowchart TB
 
 ### 4.1. Layers
 
-#### `../../core-service/src/domain`
+#### `../../apps/core/src/domain`
 The innermost core of the service containing **Enterprise Business Rules**. It has zero dependencies on outer layers or external frameworks.
 - **Entities**: Business models encapsulating identity and business state (e.g., `User`, `Case`, `Document`, `Chunk`).
 - **Value Objects**: Immutable data structures representing concepts without identity.
 - **Services**: Pure business algorithms and domain rules.
 - **Exceptions**: Domain-specific error definitions.
 
-#### `../../core-service/src/app` (or `../../core-service/src/app`)
+#### `../../apps/core/src/app` (or `../../apps/core/src/app`)
 Contains **Application Business Rules** and use case orchestrations.
 - **Use Cases**: Individual business workflows (e.g., `RegisterUser`, `ProcessUploadedDocument`, `SearchDocuments`).
 - **DTOs**: Data Transfer Objects defining input/output contracts.
 - **Ports & Interfaces**: Abstract contracts for repositories, vector embedders, and external APIs implemented by the Infrastructure layer.
 
-#### `../../core-service/src/infrastructure`
+#### `../../apps/core/src/infrastructure`
 Acts as adapters for external systems and technical tools, implementing ports defined in domain/application.
 - **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas.
 - **External Clients**: HTTP/gRPC clients communicating with external services (`embeddings-service`, `extraction-service`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
 
-#### `../../core-service/src/framework`
+#### `../../apps/core/src/framework`
 The outermost delivery mechanism and dependency injection root.
 - **API**: FastAPI routes, middleware, and request/response serialization.
 - **Workers**: Taskiq worker definitions and task registrations.
 - **Dependencies**: Dependency injection wiring combining infrastructure implementations with application use cases. Worker tasks get their use cases through `TaskiqDepends` from `framework/dependencies/workers.py`, so tests override them like FastAPI dependencies.
 
-#### `../../core-service/src/shared`
+#### `../../apps/core/src/shared`
 Cross-cutting concerns across layers (configuration settings, logging utilities, common base exceptions).
 
 ---

@@ -21,10 +21,10 @@ Plans include:
 
 The whole application lives in this repository:
 
-- `core-service/` - main API (FastAPI) and the Taskiq worker handling document processing.
-- `extraction-service/` - extracts structured text from PDFs.
-- `embedding-service/` - OpenVINO Model Server image with the embedding model baked in.
-- `prawobiorca-frontend/` - Vue 3 frontend application.
+- `apps/core/` - main API (FastAPI) and the Taskiq worker handling document processing.
+- `apps/extraction/` - extracts structured text from PDFs.
+- `apps/embedding/` - OpenVINO Model Server image with the embedding model baked in.
+- `apps/web/` - Vue 3 frontend application.
 - `deploy/` - Kubernetes manifests for the local (Podman) and GCP environments.
 - `scripts/` - helper scripts for running the app locally and deploying it to the cloud.
 - `docs/` - developer documentation.
@@ -39,10 +39,10 @@ The whole application lives in this repository:
 
 2. **Install the frontend dependencies** (requires Node `^24.15.0` and pnpm `11.24.0`, easiest through `corepack enable`):
     ```sh
-    cd prawobiorca-frontend
+    cd apps/web
     pnpm install
     ```
-    - See [prawobiorca-frontend/README.md](prawobiorca-frontend/README.md) for the frontend development commands.
+    - See [apps/web/README.md](apps/web/README.md) for the frontend development commands.
 
 3. **Set up the commit hook**:
     ```sh
@@ -105,11 +105,11 @@ Start the backend:
 ```sh
 just dev
 ```
-This launches the Postgres, RustFS, embedding, extraction and LLM containers, runs the migrations, and starts the Taskiq worker and the API on [http://localhost:8000](http://localhost:8000), both reloading on code changes. The configuration is read from `core-service/.env` (see `core-service/.env.example`).
+This launches the Postgres, RustFS, embedding, extraction and LLM containers, runs the migrations, and starts the Taskiq worker and the API on [http://localhost:8000](http://localhost:8000), both reloading on code changes. The configuration is read from `apps/core/.env` (see `apps/core/.env.example`).
 
 In a second terminal start the frontend:
 ```sh
-cd prawobiorca-frontend
+cd apps/web
 pnpm dev
 ```
 The Vite dev server runs on [http://localhost:5173](http://localhost:5173) and proxies `/api` to the backend.

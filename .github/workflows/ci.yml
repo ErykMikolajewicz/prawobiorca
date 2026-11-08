@@ -34,19 +34,19 @@ jobs:
               - ruff.toml
               - .github/workflows/ci.yml
             backend:
-              - core-service/**
+              - apps/core/**
               - pyproject.toml
               - uv.lock
               - justfile
               - .github/workflows/ci.yml
               - .github/actions/setup-backend/**
             extraction:
-              - extraction-service/**
+              - apps/extraction/**
               - justfile
               - .github/workflows/ci.yml
               - .github/actions/setup-backend/**
             frontend:
-              - prawobiorca-frontend/**
+              - apps/web/**
               - justfile
               - .github/workflows/ci.yml
               - .github/actions/setup-frontend/**
@@ -140,7 +140,7 @@ jobs:
       - uses: ./.github/actions/setup-backend
       - uses: ./.github/actions/setup-frontend
       - run: just api-types
-      - run: git diff --exit-code core-service/openapi.json prawobiorca-frontend/src/api/generated
+      - run: git diff --exit-code apps/core/openapi.json apps/web/src/api/generated
 
   workflows:
     needs: changes

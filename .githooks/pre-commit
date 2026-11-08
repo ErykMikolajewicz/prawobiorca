@@ -17,7 +17,7 @@ if changed '\.py$|ruff\.toml$|pyproject\.toml$'; then
   uv run complexipy .
 fi
 
-if changed '^core-service/'; then
+if changed '^apps/core/'; then
   just type-check-backend
 fi
 
@@ -25,17 +25,17 @@ if changed '^scripts/|^pyproject\.toml$'; then
   just type-check-scripts
 fi
 
-if changed '^extraction-service/'; then
+if changed '^apps/extraction/'; then
   just type-check-extraction
 fi
 
-if changed '^core-service/src/'; then
+if changed '^apps/core/src/'; then
   just api-types
-  git add core-service/openapi.json prawobiorca-frontend/src/api/generated
+  git add apps/core/openapi.json apps/web/src/api/generated
 fi
 
-if changed '^prawobiorca-frontend/'; then
-  (cd prawobiorca-frontend && pnpm format && pnpm exec run-s check:oxlint check:stylelint check:knip)
+if changed '^apps/web/'; then
+  (cd apps/web && pnpm format && pnpm exec run-s check:oxlint check:stylelint check:knip)
 fi
 
 if changed '^\.github/'; then

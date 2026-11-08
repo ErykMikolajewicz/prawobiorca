@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `prawobiorca-frontend/` directory of this repository, next to the Python services described in [General information](architecture.md).
+The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `apps/web/` directory of this repository, next to the Python services described in [General information](architecture.md).
 
 It talks to `core-service` exclusively over the HTTP REST API — it has no direct access to the database, the object storage, or any of the compute services.
 
@@ -21,13 +21,13 @@ It talks to `core-service` exclusively over the HTTP REST API — it has no dire
 * **Material Symbols** icons (`@iconify-vue/material-symbols`) and the **Inter** font (`@fontsource-variable/inter`).
 * **Vitest** for unit tests, **Playwright** for E2E tests, **oxlint** + **ESLint** (with type-aware rules) for linting, **stylelint** for CSS, **oxfmt** for formatting and **knip** for unused files, exports and dependencies (`src/api/generated/` is excluded in `knip.json`).
 
-Required toolchain versions are declared in `prawobiorca-frontend/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
+Required toolchain versions are declared in `apps/web/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
 
 ---
 
 ## 3. Project Structure
 
-All application code lives in `prawobiorca-frontend/src`:
+All application code lives in `apps/web/src`:
 
 * **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. The only hand-written helpers fetch a presigned URL and trigger the browser download: `cases.ts` for a generated application, `applicationTemplates.ts` for an application template.
 * **`pages/`** — route-level views (`MainPage`, `FeaturesPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`, `OrganizationsPage`).
@@ -39,7 +39,7 @@ All application code lives in `prawobiorca-frontend/src`:
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite), page title and description helper and global styles.
 * **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover.
 
-E2E tests live outside `src`, in `prawobiorca-frontend/e2e/`.
+E2E tests live outside `src`, in `apps/web/e2e/`.
 
 `src/main.ts` is the entry point: it wires Pinia, the router and Element Plus, registers the session-expiry handler and resolves the current session before mounting the app.
 
@@ -61,14 +61,14 @@ The organization and suborganization selected in the `organizations` store form 
 * `withCredentials` is enabled — access and refresh tokens are carried in cookies, never stored by the application itself.
 * A response interceptor retries a request once after refreshing the tokens when `core-service` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
 * When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page, and the request is rejected with `SessionExpiredError`, which `showApiError` ignores so the user sees a single message.
-* The API client is generated with `just api-types` (run from the repository root): it exports `core-service/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
+* The API client is generated with `just api-types` (run from the repository root): it exports `apps/core/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
 * In development, presigned storage URLs pointing at `VITE_DEV_STORAGE_ORIGIN` (set in the committed `.env.development`) are rewritten to `/storage`, which the Vite dev server proxies to object storage. The variable is not set in production builds, so URLs are used as returned by `core-service`.
 
 ---
 
 ## 6. Build and Deployment
 
-`prawobiorca-frontend/Containerfile` defines a two-stage build: the first stage installs dependencies with pnpm and runs `pnpm run build`, the second copies the resulting `dist/` into an **nginx:alpine** image listening on port `8000`. The bundled `nginx.conf` falls back to `index.html` for unknown paths, which is what the history-mode router requires.
+`apps/web/Containerfile` defines a two-stage build: the first stage installs dependencies with pnpm and runs `pnpm run build`, the second copies the resulting `dist/` into an **nginx:alpine** image listening on port `8000`. The bundled `nginx.conf` falls back to `index.html` for unknown paths, which is what the history-mode router requires.
 
 The image is built as `prawobiorca-frontend` by `just build-frontend` (and as part of `just build-images`).
 
@@ -81,7 +81,7 @@ In both deployment environments the frontend is served at the root path, behind 
 
 ## 7. Development Commands
 
-All commands are run from the `prawobiorca-frontend/` directory:
+All commands are run from the `apps/web/` directory:
 
 | Command | Purpose |
 | --- | --- |
@@ -94,7 +94,7 @@ All commands are run from the `prawobiorca-frontend/` directory:
 | `pnpm lint` | Run oxlint, ESLint and stylelint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
 | `pnpm check` | Run oxlint, ESLint, stylelint, oxfmt and knip without fixing; used by CI. |
-| `pnpm generate:api-client` | Generate `src/api/generated/` from `core-service/openapi.json` with Orval. |
+| `pnpm generate:api-client` | Generate `src/api/generated/` from `apps/core/openapi.json` with Orval. |
 
 A JetBrains IDE (PyCharm Professional, free for students under a non-commercial licence) with the Vue plugin is recommended, so that the whole repository — Python services and frontend — is handled by a single IDE. In VS Code, the [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) extension is required to make the TypeScript language service aware of `.vue` types.
 
