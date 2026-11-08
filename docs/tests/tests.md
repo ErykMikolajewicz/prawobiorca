@@ -116,13 +116,18 @@ Please note that during these tests, storage and external services are running i
 - Do not mock services that can be recreated locally (PostgreSQL, text-transformator) — use `testcontainers`.
 - Other services (e.g., cloud storage, LLM conversations) should be mocked.
 - All integration tests should use shared container instances (due to their initialization time).
-- Each test should prepare its own test environment (e.g., insert data into the database) and clean up after itself.
+- Each test prepares its own data. The database is emptied before each test, so a test does not clean up after itself.
 - Insert test data with shared helpers (e.g. `insert_regulation` from
   `../../core-service/tests/integration/fixtures/regulations.py`), so that a change of the database schema affects
   a single place.
 - Tests must be fully independent of each other.
-- It’s recommended to use a try block with cleanup in `finally` to ensure container state consistency even on test failure.
-- **Before creating integration tests, carefully review the fixture documentation in `../../core-service/tests/integration/conftest.py`.**
+- Call endpoints with `client`, `user_client` or `admin_client`. Authentication is not mocked.
+- Assert the outcome visible outside the application: the response, the database state, the scheduled tasks
+  (`get_scheduled_task_names()`), and calls of external services, which are not checked by unit tests.
+  Do not repeat assertions of use case unit tests (e.g. that a scheduler was not called after an error).
+- Check the full shape of a response once per resource (it is the contract with the frontend). Other tests check only
+  the fields they are about, so that a new field in a response changes a single test.
+- **Before creating integration tests, carefully review the [fixture documentation](integration_fixtures.md).**
 
 When writing tests, use existing examples from the repository as a reference.
 

@@ -1,38 +1,63 @@
 # Fixtures used in integration tests
 
-It was deemed that the approach used in the integration tests could raise legitimate questions; therefore, it was decided to add an additional explanatory section at the beginning.
+The fixtures are defined in `core-service/tests/integration/conftest.py`, and the shared ones in
+`core-service/tests/fixtures/` and `core-service/tests/integration/fixtures/`.
 
-## Service connections
+## Database connection
 
-In the tests, connections to asynchronous services are duplicated:
+A single PostgreSQL container and a single engine (`session_maker` fixture) are shared by the tests and the application.
 
-- First connection – used to override the connection in FastAPI.
+`asyncpg` connections are bound to the event loop in which they were created. This is not a problem here, because:
 
-- Second connection – used to initialize test data and, if necessary, restore the database to its initial state.
+- `pytest.ini` runs all tests and fixtures in one, session-scoped event loop,
+- the test client calls the application through `ASGITransport`, in the same event loop as the test.
 
-This solution results from issues with sharing an asynchronous connection between the tests and the FastAPI application.
-To my knowledge, asynchronous tests in the pytest framework are run in separate threads. As a result, problems arise from having different event loops in individual threads.
+The test inserts its data with `session_maker`, calls an endpoint, and then reads the database with `session_maker` again
+to check the result.
 
-Synchronous connections can be shared without any additional problems.
-Alternative solution
+## Database cleanup
 
-It would probably be possible to override FastAPI’s event loop with pytest’s event loop.
-However, it was decided that:
+The `clean_database` fixture empties all tables (`TRUNCATE ... CASCADE`, except `alembic_version`) before each test.
+Therefore:
 
-- it could lead to unexpected errors,
+- a test does not clean up after itself and does not need `try` / `finally` blocks,
+- each test starts with an empty database, also without the data inserted by migrations (e.g. the default organization),
+- tests cannot depend on each other.
 
-- it would require too much interference with the FastAPI framework.
+Transaction rollback is not used, because the application commits its own transactions, and a task is visible to
+the worker only after `NOTIFY` is committed.
 
-## Drawbacks of the current solution
+## Application dependencies
 
-The currently used solution is satisfactory, although it has two major drawbacks:
+The `override_dependencies` fixture is applied to every test. It connects the application to the test database
+and replaces external services:
 
-- Code duplication – in tests, two dependencies must be used instead of one.
+- object storage – `mock_regulations_storage`, `mock_applications_storage`, `mock_application_templates_storage`,
+- embedding service – `mock_texts_embedder`, which returns `QUERY_VECTOR` for queries and `DESCRIPTION_VECTOR` for texts
+  (`tests/integration/fixtures/ai_services.py`),
+- task broker – a real, not started `PostgresBroker`, so scheduled tasks are written to the `task_messages` table.
 
-- Lack of transaction sharing – between data initialization and application operations. This makes it impossible to clean up the database by rolling back the transaction at the end. It requires manual cleanup by the users.
+A test configures or inspects a mock by requesting its fixture. Scheduled tasks are read with `get_scheduled_task_names()`
+or `get_scheduled_tasks()` from `tests/integration/fixtures/tasks.py`.
 
-## Solution summary
+## Clients and users
 
-- The adopted approach, despite some drawbacks, allows for asynchronous integration testing with acceptable inconveniences.
+Authentication is not mocked – the clients send a real access token, signed with the application key:
 
-- There is also a slight benefit in terms of increased consistency in the testers’ approach, as they must manually ensure the proper state of all databases, since key-value does not support transactions anyway.
+- `client` – an anonymous caller,
+- `user_client` – a logged user (`USER_ID`); requests the `user` fixture, which stores the user in the database,
+- `admin_client` – a logged administrator (`ADMIN_ID`); requests the `admin` fixture.
+
+The `user` and `admin` fixtures can also be requested alone, when the test needs data of another user.
+
+## Test data
+
+Insert data with the helpers from `tests/integration/fixtures/` (`insert_regulation`, `insert_section`, `insert_case`,
+`insert_application`, `insert_application_template`, `insert_organization`, ...). They take an open session, so several
+rows can be inserted in one transaction:
+
+```python
+async with session_maker.begin() as session:
+    organization_id = await insert_organization(session)
+    regulation_id = await insert_regulation(session, None, organization_id=organization_id)
+```

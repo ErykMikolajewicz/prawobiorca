@@ -39,7 +39,7 @@ def create_sections_collection() -> SectionsCollection:
 
 
 @pytest.fixture
-async def regulation_id(session_maker, set_user, clean_user):
+async def regulation_id(session_maker, user):
     async with session_maker.begin() as session:
         return await insert_regulation(session, USER_ID)
 

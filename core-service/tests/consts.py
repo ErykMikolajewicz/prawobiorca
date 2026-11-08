@@ -32,3 +32,4 @@ def build_access_token(user_id: UUID = USER_ID, session_id: UUID = SESSION_ID, i
 
 
 ACCESS_TOKEN = build_access_token()
+ADMIN_ACCESS_TOKEN = build_access_token(ADMIN_ID, is_admin=True)

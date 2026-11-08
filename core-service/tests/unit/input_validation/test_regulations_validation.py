@@ -15,13 +15,7 @@ from tests.consts import ACCESS_TOKEN
     ],
     ids=("empty file name", "file name too long", "invalid regulation type"),
 )
-async def test_add_regulation_validation(
-    client,
-    override_get_regulations_storage,
-    override_authorize_admin_user,
-    file_name,
-    file_type,
-):
+async def test_add_regulation_validation(client, override_get_regulations_storage, file_name, file_type):
     regulation_data = {"scope": "PRIVATE", "name": file_name, "regulationType": file_type}
 
     cookies = {ACCESS_COOKIE_NAME: ACCESS_TOKEN}

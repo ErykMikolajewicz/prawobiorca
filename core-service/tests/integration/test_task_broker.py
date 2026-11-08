@@ -21,7 +21,7 @@ async def count_task_messages(session_maker) -> int:
         return await session.scalar(select(func.count()).select_from(task_messages_table))
 
 
-async def test_kicked_message_is_delivered_and_deleted_on_ack(task_broker, session_maker, clean_task_messages):
+async def test_kicked_message_is_delivered_and_deleted_on_ack(task_broker, session_maker):
     await task_broker.kick(make_broker_message(task_broker, "argument"))
 
     delivered = await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
@@ -35,7 +35,7 @@ async def test_kicked_message_is_delivered_and_deleted_on_ack(task_broker, sessi
     assert await count_task_messages(session_maker) == 0
 
 
-async def test_message_is_not_enqueued_on_rollback(task_broker, session_maker, clean_task_messages):
+async def test_message_is_not_enqueued_on_rollback(task_broker, session_maker):
     async with session_maker() as session:
         await insert_task_message(session, make_broker_message(task_broker))
         await session.rollback()
@@ -43,7 +43,7 @@ async def test_message_is_not_enqueued_on_rollback(task_broker, session_maker, c
     assert await count_task_messages(session_maker) == 0
 
 
-async def test_locked_message_is_not_delivered(task_broker, clean_task_messages):
+async def test_locked_message_is_not_delivered(task_broker):
     await task_broker.kick(make_broker_message(task_broker))
     await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
 
@@ -51,7 +51,7 @@ async def test_locked_message_is_not_delivered(task_broker, clean_task_messages)
         await asyncio.wait_for(anext(task_broker.listen()), 1)
 
 
-async def test_message_with_expired_lease_is_delivered_again(task_broker, session_maker, clean_task_messages):
+async def test_message_with_expired_lease_is_delivered_again(task_broker, session_maker):
     await task_broker.kick(make_broker_message(task_broker))
     await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
 

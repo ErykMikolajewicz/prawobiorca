@@ -1,27 +1,16 @@
 from fastapi import status
-from sqlalchemy import insert, select
+from sqlalchemy import select
 
-from src.infrastructure.relational_db.schemas.cases import case_documents_table, cases_table
-from src.shared.consts import ACCESS_COOKIE_NAME
-from tests.consts import ACCESS_TOKEN, ADMIN_ID, USER_ID
+from src.infrastructure.relational_db.schemas.cases import case_documents_table
+from tests.consts import ADMIN_ID, USER_ID
+from tests.integration.fixtures.cases import insert_case, insert_case_document
 
 
-async def test_add_case_document(
-    client, override_session_maker, session_maker, override_authorize_normal_user, set_user, clean_user
-):
+async def test_add_case_document(user_client, session_maker):
     async with session_maker.begin() as session:
-        statement = (
-            insert(cases_table)
-            .values(
-                {"user_id": USER_ID, "name": "Case with document"},
-            )
-            .returning(cases_table.c.id)
-        )
-        case_id = await session.scalar(statement)
+        case_id = await insert_case(session)
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.post(
+    response = await user_client.post(
         f"/api/cases/{case_id}/documents",
         json={
             "presentationName": "document.pdf",
@@ -35,12 +24,9 @@ async def test_add_case_document(
     assert response.status_code == status.HTTP_201_CREATED
 
     async with session_maker() as session:
-        statement = select(case_documents_table).where(case_documents_table.c.case_id == case_id)
-        result = await session.execute(statement)
-    case_document = result.one_or_none()
+        result = await session.execute(select(case_documents_table).where(case_documents_table.c.case_id == case_id))
+    case_document = result.one()
 
-    assert case_document is not None
-    assert case_document.case_id == case_id
     assert case_document.user_id == USER_ID
     assert case_document.presentation_name == "document.pdf"
     assert case_document.content == "Document content"
@@ -49,128 +35,55 @@ async def test_add_case_document(
     assert case_document.highlight == {"start_element": 0, "end_element": 0}
 
 
-async def test_delete_case_document(
-    client, override_session_maker, session_maker, override_authorize_normal_user, set_user, clean_user
-):
+async def test_delete_case_document(user_client, session_maker):
     async with session_maker.begin() as session:
-        create_case_stmt = (
-            insert(cases_table)
-            .values(
-                {"user_id": USER_ID, "name": "Case with document to delete"},
-            )
-            .returning(cases_table.c.id)
-        )
-        case_id = await session.scalar(create_case_stmt)
+        case_id = await insert_case(session)
+        document_id = await insert_case_document(session, case_id)
 
-        create_document_stmt = (
-            insert(case_documents_table)
-            .values(
-                {
-                    "case_id": case_id,
-                    "user_id": USER_ID,
-                    "presentation_name": "document-to-delete.pdf",
-                    "content": "Document content to delete",
-                }
-            )
-            .returning(case_documents_table.c.id)
-        )
-        document_id = await session.scalar(create_document_stmt)
-
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.delete(f"/api/cases/{case_id}/documents/{document_id}")
+    response = await user_client.delete(f"/api/cases/{case_id}/documents/{document_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     async with session_maker() as session:
-        statement = select(case_documents_table).where(case_documents_table.c.id == document_id)
-        result = await session.execute(statement)
-    deleted_document = result.one_or_none()
+        deleted_document = await session.scalar(
+            select(case_documents_table.c.id).where(case_documents_table.c.id == document_id)
+        )
 
     assert deleted_document is None
 
 
-async def test_get_case_documents(
-    client,
-    override_session_maker,
-    session_maker,
-    override_authorize_normal_user,
-    set_user,
-    clean_user,
-    set_admin_user,
-    clean_admin_user,
-):
+async def test_get_case_documents(user_client, session_maker, admin):
     async with session_maker.begin() as session:
-        create_cases_stmt = (
-            insert(cases_table)
-            .values(
-                [
-                    {"user_id": USER_ID, "name": "Case with documents"},
-                    {"user_id": USER_ID, "name": "Other user case"},
-                ]
-            )
-            .returning(cases_table.c.id)
+        case_id = await insert_case(session)
+        other_case_id = await insert_case(session, name="Other case")
+
+        first_document_id = await insert_case_document(
+            session, case_id, presentation_name="first-document.pdf", content="First content", header="Art. 1"
         )
-        target_case_id, other_case_id = (await session.scalars(create_cases_stmt)).all()
-
-        create_documents_stmt = (
-            insert(case_documents_table)
-            .values(
-                [
-                    {
-                        "case_id": target_case_id,
-                        "user_id": USER_ID,
-                        "presentation_name": "first-document.pdf",
-                        "content": "First document content",
-                        "header": "Art. 1",
-                    },
-                    {
-                        "case_id": target_case_id,
-                        "user_id": USER_ID,
-                        "presentation_name": "second-document.pdf",
-                        "content": "Second document content",
-                        "header": None,
-                    },
-                    {
-                        "case_id": other_case_id,
-                        "user_id": USER_ID,
-                        "presentation_name": "other-case-document.pdf",
-                        "content": "Other case document content",
-                        "header": None,
-                    },
-                    {
-                        "case_id": target_case_id,
-                        "user_id": ADMIN_ID,
-                        "presentation_name": "other-user-document.pdf",
-                        "content": "Other user document content",
-                        "header": None,
-                    },
-                ]
-            )
-            .returning(case_documents_table.c.id)
+        second_document_id = await insert_case_document(
+            session, case_id, presentation_name="second-document.pdf", content="Second content"
         )
-        first_document_id, second_document_id, _, _ = (await session.scalars(create_documents_stmt)).all()
+        await insert_case_document(session, other_case_id, presentation_name="other-case-document.pdf")
+        await insert_case_document(session, case_id, ADMIN_ID, presentation_name="other-user-document.pdf")
 
-    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
-
-    response = await client.get(f"/api/cases/{target_case_id}/documents")
+    response = await user_client.get(f"/api/cases/{case_id}/documents")
 
     assert response.status_code == status.HTTP_200_OK
     assert sorted(response.json(), key=lambda document: document["presentationName"]) == [
         {
             "id": str(first_document_id),
-            "caseId": str(target_case_id),
+            "caseId": str(case_id),
             "presentationName": "first-document.pdf",
-            "content": "First document content",
+            "content": "First content",
             "header": "Art. 1",
             "elements": [],
             "highlight": None,
         },
         {
             "id": str(second_document_id),
-            "caseId": str(target_case_id),
+            "caseId": str(case_id),
             "presentationName": "second-document.pdf",
-            "content": "Second document content",
+            "content": "Second content",
             "header": None,
             "elements": [],
             "highlight": None,
