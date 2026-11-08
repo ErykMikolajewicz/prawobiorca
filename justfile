@@ -87,6 +87,7 @@ type-check-extraction:
 check-backend: && type-check-backend type-check-scripts cov
     uv run ruff check .
     uv run ruff format --check
+    uv run complexipy .
 
 check-workflows:
     uv run zizmor --offline .github

@@ -151,9 +151,26 @@ else:
 
 ---
 
+## Code complexity
+Functions must stay easy to read, so their complexity is limited:
+
+- Python – cognitive complexity of a function is at most 15, checked by complexipy (`[tool.complexipy]` in the root
+  `pyproject.toml`). Ruff additionally checks cyclomatic complexity (`C90`), the number of branches (`PLR0912`)
+  and statements (`PLR0915`).
+- Frontend – cognitive complexity of a function is at most 15 (`sonarjs/cognitive-complexity` in ESLint), the template
+  depth is at most 8 and a `.vue` block has at most 150 lines. oxlint checks cyclomatic complexity, block nesting depth
+  and nested callbacks with the default limits.
+
+When a function exceeds a limit, split it into smaller functions instead of raising the limit.
+
+Claude Code checks every file it edits with the project hook `.claude/hooks/check_complexity.sh` (complexipy for
+Python, oxlint and ESLint for the frontend), so the agent gets the result right after the edit.
+
+---
+
 ## Commit hook
 Before every commit, only for the parts of the repository with staged changes:
-- Python files – lint and format the code with Ruff
+- Python files – lint and format the code with Ruff, check cognitive complexity with complexipy
 - `core-service/`, `extraction-service/`, `scripts/` – type-check with ty
 - `core-service/src/` – regenerate the API types with `just api-types`
 - `prawobiorca-frontend/` – format with oxfmt, check with oxlint, stylelint and knip

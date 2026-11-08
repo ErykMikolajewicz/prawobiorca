@@ -152,36 +152,36 @@ class LegalStructureParser:
     def _prepare_elements(self, elements: Iterable[RegulationElement]) -> list[RegulationElement]:
         prepared_elements = []
         for page in self._split_into_pages(elements):
-            page_elements = [
-                RegulationElement(label=element.label, text=self._normalize_text(element.text))
-                for element in page
-                if element.label not in NOISE_LABELS
-            ]
-            joins_hyphenated_words = any(SPACED_DASH in element.text for element in page_elements)
-
-            for element in page_elements:
-                text = HYPHENATION_PATTERN.sub("", element.text) if joins_hyphenated_words else element.text
-                if not text:
-                    continue
-
-                if element.label == UsefulLabels.SECTION_HEADER:
-                    text = HEADER_FOOTNOTE_MARKER_PATTERN.sub("", text)
-                    label = UsefulLabels.TEXT if self._opens_unit_content(text) else element.label
-                    prepared_elements.append(RegulationElement(label=label, text=text))
-                    continue
-
-                if (attachment_match := ATTACHMENT_MARKER_PATTERN.match(text)) is not None:
-                    prepared_elements.append(
-                        RegulationElement(label=UsefulLabels.SECTION_HEADER, text=attachment_match.group(1))
-                    )
-                    continue
-
-                prepared_elements.extend(
-                    RegulationElement(label=element.label, text=fragment)
-                    for fragment in GLUED_ARTICLE_PATTERN.split(text)
-                )
+            prepared_elements.extend(self._prepare_page(page))
 
         return prepared_elements
+
+    def _prepare_page(self, page: list[RegulationElement]) -> list[RegulationElement]:
+        page_elements = [
+            RegulationElement(label=element.label, text=self._normalize_text(element.text))
+            for element in page
+            if element.label not in NOISE_LABELS
+        ]
+        joins_hyphenated_words = any(SPACED_DASH in element.text for element in page_elements)
+
+        prepared_elements = []
+        for element in page_elements:
+            text = HYPHENATION_PATTERN.sub("", element.text) if joins_hyphenated_words else element.text
+            if text:
+                prepared_elements.extend(self._prepare_element(element.label, text))
+
+        return prepared_elements
+
+    def _prepare_element(self, label: str, text: str) -> list[RegulationElement]:
+        if label == UsefulLabels.SECTION_HEADER:
+            text = HEADER_FOOTNOTE_MARKER_PATTERN.sub("", text)
+            label = UsefulLabels.TEXT if self._opens_unit_content(text) else label
+            return [RegulationElement(label=label, text=text)]
+
+        if (attachment_match := ATTACHMENT_MARKER_PATTERN.match(text)) is not None:
+            return [RegulationElement(label=UsefulLabels.SECTION_HEADER, text=attachment_match.group(1))]
+
+        return [RegulationElement(label=label, text=fragment) for fragment in GLUED_ARTICLE_PATTERN.split(text)]
 
     @staticmethod
     def _opens_unit_content(text: str) -> bool:
@@ -237,28 +237,12 @@ class LegalStructureParser:
         current_unit = None
 
         for element in elements:
-            is_header = element.label == UsefulLabels.SECTION_HEADER
-
             if (unit_match := self._match_unit(element, unit_type)) is not None:
-                current_unit = LegalUnit(unit_type=unit_type, number=unit_match.group(1))
+                current_unit = self._open_unit(element, unit_match, unit_type, breadcrumbs)
                 units.append(current_unit)
-
-                text_before_number = element.text[: unit_match.start()].strip()
-                text_after_number = element.text[unit_match.end() :].strip()
-
-                if is_header and DIVISION_PATTERN.match(text_before_number) is not None:
-                    breadcrumbs.push_header(text_before_number)
-                    text_before_number = ""
-
-                if is_header:
-                    current_unit.title = f"{text_before_number} {text_after_number}".strip() or None
-                elif text_after_number:
-                    self._append_element(current_unit, text_after_number)
-
-                current_unit.title = breadcrumbs.resolve_unit_title(current_unit.title)
-                current_unit.path = breadcrumbs.path()
                 continue
 
+            is_header = element.label == UsefulLabels.SECTION_HEADER
             if is_header and not self._is_unit_like(element.text):
                 if breadcrumbs.push_header(element.text):
                     current_unit = None
@@ -272,6 +256,28 @@ class LegalStructureParser:
             breadcrumbs.mark_content()
 
         return [unit for unit in units if unit.elements or unit.title]
+
+    def _open_unit(
+        self, element: RegulationElement, unit_match: re.Match, unit_type: UnitType, breadcrumbs: _BreadcrumbTracker
+    ) -> LegalUnit:
+        unit = LegalUnit(unit_type=unit_type, number=unit_match.group(1))
+        is_header = element.label == UsefulLabels.SECTION_HEADER
+
+        text_before_number = element.text[: unit_match.start()].strip()
+        text_after_number = element.text[unit_match.end() :].strip()
+
+        if is_header and DIVISION_PATTERN.match(text_before_number) is not None:
+            breadcrumbs.push_header(text_before_number)
+            text_before_number = ""
+
+        if is_header:
+            unit.title = f"{text_before_number} {text_after_number}".strip() or None
+        elif text_after_number:
+            self._append_element(unit, text_after_number)
+
+        unit.title = breadcrumbs.resolve_unit_title(unit.title)
+        unit.path = breadcrumbs.path()
+        return unit
 
     @staticmethod
     def _match_unit(element: RegulationElement, unit_type: UnitType) -> re.Match | None:

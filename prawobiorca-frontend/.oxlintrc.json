@@ -10,6 +10,9 @@
     "perf": "error"
   },
   "rules": {
-    "vitest/require-mock-type-parameters": "off"
+    "vitest/require-mock-type-parameters": "off",
+    "eslint/complexity": "error",
+    "eslint/max-depth": "error",
+    "eslint/max-nested-callbacks": "error"
   }
 }
