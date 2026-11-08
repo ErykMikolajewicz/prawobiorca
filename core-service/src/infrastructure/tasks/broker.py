@@ -34,10 +34,13 @@ async def insert_task_message(session: AsyncSession, message: BrokerMessage) -> 
 
 
 class PostgresBroker(AsyncBroker):
-    def __init__(self, session_maker: DatabaseSessionMaker, listen_dsn: str):
+    def __init__(
+        self, session_maker: DatabaseSessionMaker, listen_dsn: str, heartbeat_seconds: float = TASK_HEARTBEAT_SECONDS
+    ):
         super().__init__()
         self.session_maker = session_maker
         self.listen_dsn = listen_dsn
+        self.heartbeat_seconds = heartbeat_seconds
         self._listen_connection: asyncpg.Connection | None = None
         self._heartbeat_task: asyncio.Task | None = None
         self._new_message_event = asyncio.Event()
@@ -126,7 +129,7 @@ class PostgresBroker(AsyncBroker):
 
     async def _extend_leases(self) -> None:
         while True:
-            await asyncio.sleep(TASK_HEARTBEAT_SECONDS)
+            await asyncio.sleep(self.heartbeat_seconds)
             if not self._in_progress_ids:
                 continue
 

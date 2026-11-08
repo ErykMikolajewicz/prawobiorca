@@ -5,6 +5,9 @@ import pytest
 from src.app.interfaces.application_templates import ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsStorage
 from src.app.interfaces.regulations import RegulationsStorage
+from src.app.ports.application_templates import ApplicationTemplateDescriptionWriter
+from src.app.ports.applications import ApplicationWriter
+from src.app.ports.regulations import RegulationDescriptionWriter, RegulationSplitter
 from src.app.ports.tasks import (
     ApplicationGenerationScheduler,
     ApplicationTemplateDescriptionGenerationScheduler,
@@ -55,3 +58,23 @@ def mock_application_generation_scheduler():
 @pytest.fixture
 def mock_application_template_description_generation_scheduler():
     return create_autospec(ApplicationTemplateDescriptionGenerationScheduler)
+
+
+@pytest.fixture
+def mock_regulation_splitter():
+    return create_autospec(RegulationSplitter)
+
+
+@pytest.fixture
+def mock_regulation_description_writer():
+    return create_autospec(RegulationDescriptionWriter)
+
+
+@pytest.fixture
+def mock_application_writer():
+    return create_autospec(ApplicationWriter)
+
+
+@pytest.fixture
+def mock_application_template_description_writer():
+    return create_autospec(ApplicationTemplateDescriptionWriter)

@@ -40,6 +40,26 @@ and replaces external services:
 A test configures or inspects a mock by requesting its fixture. Scheduled tasks are read with `get_scheduled_task_names()`
 or `get_scheduled_tasks()` from `tests/integration/fixtures/tasks.py`.
 
+## Worker tasks
+
+The same fixture overrides the dependencies of the Taskiq worker tasks (`broker.dependency_overrides`): the test
+database, object storage, `mock_texts_embedder`, and the remaining AI services – `mock_regulation_splitter`,
+`mock_regulation_description_writer`, `mock_application_writer` and `mock_application_template_description_writer`.
+
+`execute_task()` from `tests/integration/fixtures/tasks.py` runs a scheduled task like the worker does, with its real
+dependencies resolved by Taskiq. A test usually schedules the task with an endpoint, so the arguments written by
+the application are the ones read by the worker:
+
+```python
+response = await user_client.post(f"/api/regulations/{regulation_id}/confirm-upload")
+(task,) = await get_scheduled_tasks(session_maker)
+
+await execute_task(broker, task)
+```
+
+An error raised by the task is raised by `execute_task()`. The delivery attempt is passed with
+`delivery_attempt`, to test the limit of deliveries.
+
 ## Clients and users
 
 Authentication is not mocked – the clients send a real access token, signed with the application key:

@@ -1,8 +1,6 @@
-from io import BytesIO
 from unittest.mock import ANY
 from uuid import UUID
 
-from docx import Document
 from fastapi import status
 from sqlalchemy import delete, select
 
@@ -18,7 +16,7 @@ from src.infrastructure.relational_db.schemas.organizations import organizations
 from src.shared.consts import APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME
 from tests.consts import UNKNOWN_ID
 from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR, QUERY_VECTOR, UNRELATED_VECTOR
-from tests.integration.fixtures.application_templates import insert_application_template
+from tests.integration.fixtures.application_templates import create_docx_template, insert_application_template
 from tests.integration.fixtures.organizations import insert_organization, insert_suborganization
 from tests.integration.fixtures.tasks import get_scheduled_task_names
 
@@ -51,17 +49,6 @@ FIELDS_JSON = [
         "options": [],
     },
 ]
-
-
-def create_docx_template() -> bytes:
-    document = Document()
-    document.add_paragraph("{{ student_id }}, {{ department }}, {{ current_date }}")
-    document.add_paragraph("{%p for paragraph in paragraphs %}")
-    document.add_paragraph("{{ paragraph }}")
-    document.add_paragraph("{%p endfor %}")
-    buffer = BytesIO()
-    document.save(buffer)
-    return buffer.getvalue()
 
 
 async def get_template(session_maker, template_id):

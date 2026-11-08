@@ -13,7 +13,7 @@ from src.domain.value_objects.users import UserPrivileges
 from src.shared.consts import JWT_ALGORITHM
 from src.shared.settings.application import app_settings
 from tests.consts import REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
-from tests.unit.mocks import get_awaited_argument
+from tests.mocks import get_awaited_argument
 
 STORED_USER = User(id=USER_ID, username=VALID_USERNAME, hashed_password=hash_password(SecretStr(STRONG_PASSWORD)))
 

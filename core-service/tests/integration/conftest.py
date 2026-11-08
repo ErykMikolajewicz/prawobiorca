@@ -1,7 +1,7 @@
 """Common pytest fixtures for integration tests.
 
-These fixtures handle container initialization (PostgresSQL), connect the application to the test
-database and replace external services with mocks. Every test starts with empty tables, so it does not
+These fixtures handle container initialization (PostgresSQL), connect the application and the worker tasks
+to the test database and replace external services with mocks. Every test starts with empty tables, so it does not
 need to clean up after itself.
 """
 
@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
 
+from src.framework.dependencies import workers
 from src.framework.dependencies.ai_services import get_texts_embedder
 from src.framework.dependencies.application_templates import get_application_templates_storage
 from src.framework.dependencies.cases import get_applications_storage
@@ -83,8 +84,12 @@ def override_dependencies(
     mock_regulations_storage,
     mock_applications_storage,
     mock_application_templates_storage,
+    mock_regulation_splitter,
+    mock_regulation_description_writer,
+    mock_application_writer,
+    mock_application_template_description_writer,
 ) -> Generator[None]:
-    """Connect the application to the test database, and replace external services with mocks.
+    """Connect the application and the worker tasks to the test database, and replace external services with mocks.
 
     A test configures or inspects a mock by requesting its fixture, e.g. `mock_regulations_storage`.
     """
@@ -98,5 +103,19 @@ def override_dependencies(
             get_application_templates_storage: lambda: mock_application_templates_storage,
         }
     )
+    broker.dependency_overrides.update(
+        {
+            get_session_maker: lambda: session_maker,
+            workers.get_texts_embedder: lambda: mock_texts_embedder,
+            workers.get_regulation_splitter: lambda: mock_regulation_splitter,
+            workers.get_regulations_storage: lambda: mock_regulations_storage,
+            workers.get_applications_storage: lambda: mock_applications_storage,
+            workers.get_application_templates_storage: lambda: mock_application_templates_storage,
+            workers.get_regulation_description_writer: lambda: mock_regulation_description_writer,
+            workers.get_application_writer: lambda: mock_application_writer,
+            workers.get_application_template_description_writer: lambda: mock_application_template_description_writer,
+        }
+    )
     yield
     prawobiorca.dependency_overrides.clear()
+    broker.dependency_overrides.clear()

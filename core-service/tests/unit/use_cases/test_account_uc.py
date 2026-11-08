@@ -7,7 +7,7 @@ from src.domain.exceptions.users import UserExists
 from src.domain.services.security import verify_password
 from src.shared.exceptions import ObjectExists
 from tests.consts import STRONG_PASSWORD, VALID_USERNAME
-from tests.unit.mocks import get_awaited_argument
+from tests.mocks import get_awaited_argument
 
 LOGIN_DATA = LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD))
 

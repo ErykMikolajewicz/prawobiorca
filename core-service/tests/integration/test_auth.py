@@ -7,7 +7,8 @@ from src.domain.services.security import hash_refresh_token
 from src.infrastructure.relational_db.schemas.users import users_sessions_table
 from src.shared.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from src.shared.settings.application import app_settings
-from tests.consts import STRONG_PASSWORD, VALID_USERNAME
+from tests.consts import STRONG_PASSWORD, VALID_USERNAME, build_access_token
+from tests.fixtures.clients import create_client
 
 LOGIN_PAYLOAD = {"username": VALID_USERNAME, "password": STRONG_PASSWORD}
 
@@ -124,3 +125,10 @@ async def test_logout_deletes_session(client, session_maker, user):
 
     auth_response = await client.get("/api/auth/me")
     assert auth_response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+async def test_expired_access_token_is_rejected(user):
+    async with create_client(build_access_token(expires_in=-1)) as client:
+        response = await client.get("/api/auth/me")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED

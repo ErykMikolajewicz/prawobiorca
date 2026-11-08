@@ -25,6 +25,12 @@ async def test_get_cases_list(user_client, session_maker, admin):
     ]
 
 
+async def test_get_cases_list_unlogged(client):
+    response = await client.get("/api/cases")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_add_case(user_client, session_maker):
     response = await user_client.post("/api/cases", data={"caseName": "New case"})
 
@@ -57,3 +63,17 @@ async def test_delete_case_removes_its_applications(user_client, session_maker, 
 
     assert case is None
     assert application is None
+
+
+async def test_delete_other_user_case(user_client, session_maker, admin):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session, ADMIN_ID)
+
+    response = await user_client.delete(f"/api/cases/{case_id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    async with session_maker() as session:
+        case = await session.scalar(select(cases_table.c.id).where(cases_table.c.id == case_id))
+
+    assert case == case_id

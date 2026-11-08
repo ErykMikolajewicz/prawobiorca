@@ -61,7 +61,8 @@ In unit tests, you should only test:
   deliveries. A use case that only passes data between an endpoint and a repository is covered by integration tests only.
 - Repositories/Ports - only in special cases (sophisticated mapping logic that does not need a database). A repository
   that writes to or reads from the database is tested by integration tests against the real database, not with
-  a mocked session.
+  a mocked session. Clients of HTTP services (embeddings, extraction, LLM) are tested with `httpx2.MockTransport`,
+  which replaces the network, not the client.
 - Endpoints - only when verifying custom Pydantic validation logic.
 
 All external services should be mocked in unit tests, as well as other application parts as needed.
@@ -83,7 +84,7 @@ All external services should be mocked in unit tests, as well as other applicati
   Do not assert calls that are only implementation details (e.g. that the use case read the regulation, or which session
   it passed to a repository).
 - Read arguments of awaited calls by parameter name, with `get_awaited_argument()` and `get_awaited_arguments()` from
-  `../../core-service/tests/unit/mocks.py`, not by position (`call.args[-1]`), so that passing an argument by keyword
+  `../../core-service/tests/mocks.py`, not by position (`call.args[-1]`), so that passing an argument by keyword
   does not break the test.
 - Use `pytest.mark.parametrize` for tables such as "status → exception", instead of copying a test.
 - Do not test that an exception of a dependency is propagated, unless the use case reacts to it.
@@ -95,6 +96,8 @@ All external services should be mocked in unit tests, as well as other applicati
 Coverage of `core-service` is measured on unit and integration tests run together (`just cov`), for the whole `src`
 directory, so code tested only by integration tests (endpoints, repositories, simple use cases) also counts.
 The threshold (90%) is set in `../../core-service/coverage.toml` and checked by the CI `integration` job.
+`src` has no `__init__.py` files, so `include_namespace_packages` is enabled – otherwise files never imported by
+the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
 `just test` runs only the unit tests, without coverage, for fast feedback.
 
 ## Integration Tests

@@ -39,7 +39,7 @@ from src.domain.value_objects.users import Caller
 from src.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
-from tests.unit.mocks import get_awaited_argument, get_awaited_arguments
+from tests.mocks import get_awaited_argument, get_awaited_arguments
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
 USER = Caller(user_id=USER_ID)
@@ -105,10 +105,10 @@ def template_inspector(mock_application_template_inspector):
 
 
 @pytest.fixture
-def search_published_templates(mock_session_maker, mock_embedding_port, application_templates_repository):
+def search_published_templates(mock_session_maker, mock_texts_embedder, application_templates_repository):
     return SearchPublishedApplicationTemplates(
         session_maker=mock_session_maker,
-        embedding_port=mock_embedding_port,
+        embedding_port=mock_texts_embedder,
         application_templates_repo=application_templates_repository,
     )
 
@@ -129,11 +129,11 @@ def confirm_template_upload(
 
 
 @pytest.fixture
-def update_template(mock_session_maker, application_templates_repository, mock_embedding_port):
+def update_template(mock_session_maker, application_templates_repository, mock_texts_embedder):
     return UpdateApplicationTemplate(
         session_maker=mock_session_maker,
         application_templates_repo=application_templates_repository,
-        texts_embedder=mock_embedding_port,
+        texts_embedder=mock_texts_embedder,
     )
 
 
@@ -169,7 +169,7 @@ def generate_template_description(
     mock_application_templates_storage,
     template_inspector,
     mock_application_template_description_writer,
-    mock_embedding_port,
+    mock_texts_embedder,
 ):
     return GenerateApplicationTemplateDescription(
         session_maker=mock_session_maker,
@@ -177,7 +177,7 @@ def generate_template_description(
         application_templates_storage=mock_application_templates_storage,
         application_template_inspector=template_inspector,
         description_writer=mock_application_template_description_writer,
-        texts_embedder=mock_embedding_port,
+        texts_embedder=mock_texts_embedder,
     )
 
 
@@ -212,7 +212,7 @@ def get_template_download_url(mock_session_maker, application_templates_reposito
     ids=("ai not requested", "not semantic query"),
 )
 async def test_search_published_application_templates_by_name(
-    search_published_templates, application_templates_repository, mock_embedding_port, query, ai_assisted
+    search_published_templates, application_templates_repository, mock_texts_embedder, query, ai_assisted
 ):
     application_templates_repository.fuzzy_search_templates.return_value = [create_published_template()]
 
@@ -220,19 +220,19 @@ async def test_search_published_application_templates_by_name(
 
     assert results == [PUBLISHED_TEMPLATE]
     assert get_awaited_argument(application_templates_repository.fuzzy_search_templates, "query") == query.strip()
-    mock_embedding_port.embed_queries.assert_not_awaited()
+    mock_texts_embedder.embed_queries.assert_not_awaited()
 
 
 async def test_search_published_application_templates_ai_assisted(
-    search_published_templates, application_templates_repository, mock_embedding_port
+    search_published_templates, application_templates_repository, mock_texts_embedder
 ):
-    mock_embedding_port.embed_queries.return_value = [[0.1, 0.2]]
+    mock_texts_embedder.embed_queries.return_value = [[0.1, 0.2]]
     application_templates_repository.hybrid_search_templates.return_value = [create_published_template()]
 
     results = await search_published_templates.execute(USER, None, " urlop dziekański ", True)
 
     assert results == [PUBLISHED_TEMPLATE]
-    mock_embedding_port.embed_queries.assert_awaited_once_with(["urlop dziekański"])
+    mock_texts_embedder.embed_queries.assert_awaited_once_with(["urlop dziekański"])
     hybrid_search_templates = application_templates_repository.hybrid_search_templates
     assert get_awaited_argument(hybrid_search_templates, "query") == "urlop dziekański"
     assert get_awaited_argument(hybrid_search_templates, "vector") == [0.1, 0.2]
@@ -316,10 +316,10 @@ async def test_update_application_template_saves_details(update_template, applic
     ids=("changed", "unchanged", "removed", "empty", "blank"),
 )
 async def test_update_application_template_description_vector(
-    update_template, application_templates_repository, mock_embedding_port, description, expected_vectors
+    update_template, application_templates_repository, mock_texts_embedder, description, expected_vectors
 ):
     store_template(application_templates_repository, create_template(description="Opis."))
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
     details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description=description)
 
     await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
@@ -329,9 +329,9 @@ async def test_update_application_template_description_vector(
 
 
 async def test_update_application_template_not_saved_when_embedding_unavailable(
-    update_template, application_templates_repository, mock_embedding_port
+    update_template, application_templates_repository, mock_texts_embedder
 ):
-    mock_embedding_port.embed_texts.side_effect = ServiceUnavailable
+    mock_texts_embedder.embed_texts.side_effect = ServiceUnavailable
     details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description="Opis.")
 
     with pytest.raises(ServiceUnavailable):
@@ -359,13 +359,13 @@ async def test_update_application_template_rejected(update_template, application
 
 
 async def test_update_application_template_published_during_embedding(
-    update_template, application_templates_repository, mock_embedding_port
+    update_template, application_templates_repository, mock_texts_embedder
 ):
     application_templates_repository.get.side_effect = [
         create_template(ApplicationTemplateStatus.DRAFT),
         create_template(ApplicationTemplateStatus.PUBLISHED),
     ]
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
     details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description="Opis.")
 
     with pytest.raises(ApplicationTemplateInInvalidState):
@@ -475,17 +475,17 @@ async def test_generate_application_template_description_saves_description_with_
     generate_template_description,
     application_templates_repository,
     mock_application_template_description_writer,
-    mock_embedding_port,
+    mock_texts_embedder,
 ):
     mock_application_template_description_writer.write.return_value = "Wniosek o urlop dziekański."
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
 
     await generate_template_description.execute(TEMPLATE_ID)
 
     description_source = get_awaited_argument(mock_application_template_description_writer.write, "description_source")
     assert description_source.name == "Wniosek o urlop"
     assert description_source.content == TEMPLATE_TEXT
-    mock_embedding_port.embed_texts.assert_awaited_once_with(["Wniosek o urlop dziekański."])
+    mock_texts_embedder.embed_texts.assert_awaited_once_with(["Wniosek o urlop dziekański."])
     set_generated_description = application_templates_repository.set_generated_description
     assert get_awaited_argument(set_generated_description, "description") == "Wniosek o urlop dziekański."
     assert get_awaited_argument(set_generated_description, "vector") == [0.1, 0.2]

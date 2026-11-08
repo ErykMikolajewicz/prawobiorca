@@ -9,7 +9,7 @@ from src.domain.value_objects.application_templates import ApplicationTemplateFi
 from src.domain.value_objects.applications import ApplicationGenerationStatus
 from src.infrastructure.relational_db.schemas.applications import applications_table
 from src.shared.consts import APPLICATION_GENERATION_TASK_NAME
-from tests.consts import UNKNOWN_ID, USER_ID
+from tests.consts import ADMIN_ID, UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.application_templates import insert_application_template
 from tests.integration.fixtures.cases import insert_application, insert_case
 from tests.integration.fixtures.tasks import get_scheduled_tasks
@@ -161,6 +161,17 @@ async def test_generate_application_case_not_found(user_client, session_maker):
     response = await user_client.post(f"/api/cases/{UNKNOWN_ID}/applications", json=create_new_application(template_id))
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_generate_application_in_other_user_case(user_client, session_maker, admin):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session, ADMIN_ID)
+        template_id = await insert_template(session)
+
+    response = await user_client.post(f"/api/cases/{case_id}/applications", json=create_new_application(template_id))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert await get_scheduled_tasks(session_maker) == []
 
 
 async def test_generate_application_template_not_published(user_client, session_maker):

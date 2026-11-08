@@ -1,6 +1,7 @@
 from src.app.dtos.application_templates import ApplicationTemplateRepresentation
 from src.app.dtos.applications import NewApplication
 from src.app.dtos.cases import CaseDocument
+from src.domain.services.application_fields import get_ai_field_values
 from src.infrastructure.ai_services.llm_chat import LlmChat
 from src.infrastructure.ai_services.prompt_templates import prompts_env
 
@@ -18,9 +19,8 @@ class ApplicationWriter:
         system_prompt = prompts_env.get_template("application.md").render(
             instructions=template.instructions,
             application_fields=[
-                f"{field.label}: {new_application.field_values[field.name]}"
-                for field in template.fields
-                if field.pass_to_ai and new_application.field_values.get(field.name)
+                f"{label}: {value}"
+                for label, value in get_ai_field_values(template.fields, new_application.field_values)
             ],
             situation_description=new_application.description,
             pinned_articles=[f"{document.presentation_name}: {document.content}" for document in legal_basis],

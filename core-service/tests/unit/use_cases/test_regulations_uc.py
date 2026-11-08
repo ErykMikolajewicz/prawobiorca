@@ -42,7 +42,7 @@ from src.shared.consts import (
 )
 from src.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID
-from tests.unit.mocks import get_awaited_argument, get_awaited_arguments
+from tests.mocks import get_awaited_argument, get_awaited_arguments
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
 
@@ -75,10 +75,10 @@ def get_description_statuses(regulations_repository) -> list[RegulationDescripti
 
 
 @pytest.fixture
-def regulations_repository(mock_regulations_repository):
-    mock_regulations_repository.get_regulation_owner.return_value = RegulationOwner(user_id=None)
-    store_regulation(mock_regulations_repository, create_regulation())
-    return mock_regulations_repository
+def regulations_repository(mock_regulations_repo):
+    mock_regulations_repo.get_regulation_owner.return_value = RegulationOwner(user_id=None)
+    store_regulation(mock_regulations_repo, create_regulation())
+    return mock_regulations_repo
 
 
 @pytest.fixture
@@ -138,14 +138,14 @@ def generate_regulation_description(
     regulations_repository,
     sections_repository,
     mock_regulation_description_writer,
-    mock_embedding_port,
+    mock_texts_embedder,
 ):
     return GenerateRegulationDescription(
         session_maker=mock_session_maker,
         regulations_repository=regulations_repository,
         sections_repository=sections_repository,
         description_writer=mock_regulation_description_writer,
-        texts_embedder=mock_embedding_port,
+        texts_embedder=mock_texts_embedder,
     )
 
 
@@ -187,10 +187,10 @@ def delete_regulation(mock_session_maker, regulations_repository, sections_repos
 
 
 @pytest.fixture
-def search_regulation(mock_session_maker, mock_embedding_port, sections_repository, regulations_repository):
+def search_regulation(mock_session_maker, mock_texts_embedder, sections_repository, regulations_repository):
     return SearchRegulation(
         session_maker=mock_session_maker,
-        embedding_port=mock_embedding_port,
+        embedding_port=mock_texts_embedder,
         sections_repository=sections_repository,
         regulations_repository=regulations_repository,
     )
@@ -378,20 +378,20 @@ async def test_confirm_regulation_upload_without_content(
 
 
 async def test_generate_regulation_description_saves_description_with_vector(
-    generate_regulation_description, regulations_repository, mock_regulation_description_writer, mock_embedding_port
+    generate_regulation_description, regulations_repository, mock_regulation_description_writer, mock_texts_embedder
 ):
     store_regulation(
         regulations_repository, create_regulation(description_status=RegulationDescriptionStatus.IN_PROGRESS)
     )
     description = "Załatwianie typowych spraw przez studentów"
     mock_regulation_description_writer.write.return_value = description
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
 
     await generate_regulation_description.execute(None, REGULATION_ID)
 
     description_source = get_awaited_argument(mock_regulation_description_writer.write, "description_source")
     assert description_source.presentation_name == "Regulamin studiów"
-    mock_embedding_port.embed_texts.assert_awaited_once_with([description])
+    mock_texts_embedder.embed_texts.assert_awaited_once_with([description])
     set_generated_description = regulations_repository.set_generated_description
     assert get_awaited_argument(set_generated_description, "description") == description
     assert get_awaited_argument(set_generated_description, "vector") == [0.1, 0.2]

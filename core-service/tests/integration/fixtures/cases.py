@@ -37,13 +37,14 @@ async def insert_application(
     session: AsyncSession,
     case_id: UUID,
     generation_status: ApplicationGenerationStatus = ApplicationGenerationStatus.GENERATED,
+    user_id: UUID = USER_ID,
     **values: Any,
 ) -> UUID:
     result = await session.execute(
         insert(applications_table)
         .values(
             case_id=case_id,
-            user_id=USER_ID,
+            user_id=user_id,
             template_name="Wniosek o urlop",
             generation_status=generation_status,
             **values,

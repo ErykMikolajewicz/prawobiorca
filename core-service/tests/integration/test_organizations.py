@@ -5,8 +5,10 @@ from fastapi import status
 from sqlalchemy import select
 
 from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
+from src.infrastructure.relational_db.schemas.regulations import regulations_table
 from tests.consts import UNKNOWN_ID
 from tests.integration.fixtures.organizations import insert_organization, insert_suborganization
+from tests.integration.fixtures.regulations import insert_regulation
 
 
 async def test_get_organizations(client, session_maker):
@@ -172,10 +174,19 @@ async def test_delete_suborganization(admin_client, session_maker):
     async with session_maker.begin() as session:
         organization_id = await insert_organization(session)
         suborganization_id = await insert_suborganization(session, organization_id)
+        statute_id = await insert_regulation(session, None, "Statute.pdf", organization_id=organization_id)
+        await insert_regulation(
+            session, None, "Law rules.pdf", organization_id=organization_id, suborganization_id=suborganization_id
+        )
 
     response = await admin_client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    async with session_maker() as session:
+        remaining_ids = await session.scalars(select(regulations_table.c.id))
+
+    assert remaining_ids.all() == [statute_id]
 
     response = await admin_client.delete(f"/api/organizations/{organization_id}/suborganizations/{suborganization_id}")
 

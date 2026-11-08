@@ -35,6 +35,17 @@ async def test_add_case_document(user_client, session_maker):
     assert case_document.highlight == {"start_element": 0, "end_element": 0}
 
 
+async def test_add_document_to_other_user_case(user_client, session_maker, admin):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session, ADMIN_ID)
+
+    response = await user_client.post(
+        f"/api/cases/{case_id}/documents", json={"presentationName": "document.pdf", "content": "Document content"}
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
 async def test_delete_case_document(user_client, session_maker):
     async with session_maker.begin() as session:
         case_id = await insert_case(session)
@@ -50,6 +61,23 @@ async def test_delete_case_document(user_client, session_maker):
         )
 
     assert deleted_document is None
+
+
+async def test_delete_other_user_case_document(user_client, session_maker, admin):
+    async with session_maker.begin() as session:
+        case_id = await insert_case(session, ADMIN_ID)
+        document_id = await insert_case_document(session, case_id, ADMIN_ID)
+
+    response = await user_client.delete(f"/api/cases/{case_id}/documents/{document_id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    async with session_maker() as session:
+        document = await session.scalar(
+            select(case_documents_table.c.id).where(case_documents_table.c.id == document_id)
+        )
+
+    assert document == document_id
 
 
 async def test_get_case_documents(user_client, session_maker, admin):

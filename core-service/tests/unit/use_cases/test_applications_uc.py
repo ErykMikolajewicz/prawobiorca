@@ -20,7 +20,7 @@ from src.domain.value_objects.applications import ApplicationGenerationStatus
 from src.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
-from tests.unit.mocks import get_awaited_argument, get_awaited_arguments
+from tests.mocks import get_awaited_argument, get_awaited_arguments
 
 TEMPLATE_ID = UUID("00000000-0000-0000-0000-0000000000aa")
 CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")

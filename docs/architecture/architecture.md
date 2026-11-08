@@ -173,7 +173,7 @@ Acts as adapters for external systems and technical tools, implementing ports de
 The outermost delivery mechanism and dependency injection root.
 - **API**: FastAPI routes, middleware, and request/response serialization.
 - **Workers**: Taskiq worker definitions and task registrations.
-- **Dependencies**: Dependency injection wiring combining infrastructure implementations with application use cases.
+- **Dependencies**: Dependency injection wiring combining infrastructure implementations with application use cases. Worker tasks get their use cases through `TaskiqDepends` from `framework/dependencies/workers.py`, so tests override them like FastAPI dependencies.
 
 #### `../../core-service/src/shared`
 Cross-cutting concerns across layers (configuration settings, logging utilities, common base exceptions).

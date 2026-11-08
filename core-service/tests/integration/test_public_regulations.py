@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 from fastapi import status
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from src.app.dtos.regulations import RegulationUploadTarget
 from src.domain.value_objects.regulations import (
@@ -13,7 +13,6 @@ from src.domain.value_objects.regulations import (
     RegulationType,
 )
 from src.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
-from src.infrastructure.relational_db.schemas.organizations import suborganizations_table
 from src.infrastructure.relational_db.schemas.regulations import regulations_table
 from src.shared.consts import REGULATION_DESCRIPTION_GENERATION_TASK_NAME, VECTOR_LENGTH
 from tests.consts import UNKNOWN_ID, USER_ID
@@ -314,24 +313,6 @@ async def test_get_public_regulations_suborganization_without_organization(clien
     response = await client.get("/api/regulations", params={"suborganizationId": str(UNKNOWN_ID)})
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-
-async def test_delete_suborganization_deletes_its_regulations(session_maker):
-    async with session_maker.begin() as session:
-        organization_id = await insert_organization(session)
-        suborganization_id = await insert_suborganization(session, organization_id)
-        statute_id = await insert_regulation(session, None, "Statute.pdf", organization_id=organization_id)
-        await insert_regulation(
-            session, None, "Law rules.pdf", organization_id=organization_id, suborganization_id=suborganization_id
-        )
-
-    async with session_maker.begin() as session:
-        await session.execute(delete(suborganizations_table).where(suborganizations_table.c.id == suborganization_id))
-
-    async with session_maker() as session:
-        remaining_ids = await session.scalars(select(regulations_table.c.id))
-
-    assert remaining_ids.all() == [statute_id]
 
 
 async def test_update_public_regulation_as_normal_user(user_client, session_maker):
