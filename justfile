@@ -114,7 +114,10 @@ audit-frontend:
     pnpm audit --prod
     pnpm audit --dev --audit-level high
 
-audit: audit-backend audit-frontend
+audit-licenses:
+    uv run scripts/check_licenses.py
+
+audit: audit-backend audit-frontend audit-licenses
 
 release version:
     #!/usr/bin/env bash

@@ -120,6 +120,10 @@ The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-D
 - `asteval` – checkov pins a vulnerable version, so `override-dependencies` in `pyproject.toml` forces the fixed one.
 - `ecdsa` (`PYSEC-2026-1325`) – there is no fixed version, so `just audit-backend` ignores it with `--ignore-until-fixed` and reports it again once a fix is released. The vulnerability affects signing, while checkov only verifies signatures of external checks with it.
 
+The same workflow checks licenses of the runtime dependencies with `just audit-licenses` (`scripts/check_licenses.py`): Python packages of `core-service` and `extraction-service` without dependency groups, read with pip-licenses, and production packages of the frontend, read with `pnpm licenses list --prod`. The project is MIT licensed and runs as a web service, so the check fails on GPL, AGPL, SSPL and packages without a license. LGPL and MPL are allowed, and a dual license passes when any of its alternatives is allowed (`MIT OR GPL-3.0-or-later`). Packages with a license missing from their metadata are verified manually and listed in `ACCEPTED` in the script:
+
+- `taskiq-dependencies` – MIT in the `LICENSE` file, missing from the package metadata.
+
 ### 6.2 E2E (`e2e.yml`)
 
 Runs only in the release repository, on every push to `main` and as the first step of every release. It builds the backend and frontend images, deploys them with `just run-e2e-env` and runs the Playwright tests (see [Tests](tests/tests.md#e2e-tests)). On failure it prints the backend and nginx logs and uploads the Playwright report as an artifact.
