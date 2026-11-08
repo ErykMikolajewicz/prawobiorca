@@ -2,8 +2,8 @@
 
 The frontend layer of **Prawobiorca** --- a Vue 3 single-page application.
 
-It is part of the main Prawobiorca repository; see the root [README](../README.md) for the project overview and
-[Frontend documentation](../docs/architecture/frontend.md) for the stack, project structure and API integration.
+It is part of the main Prawobiorca repository; see the root [README](../../README.md) for the project overview and
+[Frontend documentation](../../docs/architecture/frontend.md) for the stack, project structure and API integration.
 
 ## Recommended IDE
 It is recommended to use a JetBrains IDE, preferably PyCharm, with frontend plugins.
@@ -15,7 +15,7 @@ TypeScript cannot handle type information for `.vue` imports by default, so we r
 
 ## Project Setup
 
-All commands below are run from this directory (`prawobiorca-frontend/`).
+All commands below are run from this directory (`apps/web/`).
 
 ```sh
 pnpm install

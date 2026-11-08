@@ -30,7 +30,7 @@ extend = "ruff.toml"
 
 [tool.complexipy]
 max-complexity-allowed = 15
-exclude = ["core-service/alembic/**"]
+exclude = ["apps/core/alembic/**"]
 
 [tool.ty.src]
 include = ["scripts"]

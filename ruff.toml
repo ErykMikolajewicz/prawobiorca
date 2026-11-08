@@ -2,11 +2,11 @@ line-length = 120
 target-version = "py314"
 
 exclude = [
-    "core-service/alembic",
+    "apps/core/alembic",
 ]
 
 # Roots used to tell first-party imports (src.*, tests.*, manifests) from third-party ones.
-src = ["core-service", "extraction-service", "scripts/local"]
+src = ["apps/core", "apps/extraction", "scripts/local"]
 
 [lint]
 select = [

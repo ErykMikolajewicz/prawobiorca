@@ -18,9 +18,9 @@ __pycache__/
 /logs/
 
 /scratch/
-/core-service/storage/
+/apps/core/storage/
 
-/core-service/scripts/prompts_benchmark/benchmark_results/*
+/apps/core/scripts/prompts_benchmark/benchmark_results/*
 .coverage
 
 /CLAUDE.md

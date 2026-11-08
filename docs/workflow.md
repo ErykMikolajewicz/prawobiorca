@@ -85,11 +85,11 @@ Pipelines are defined with GitHub Actions in `.github/workflows/`. The code live
 
 Runs in `WMS-DEV/prawobiorca` on every PR to `main` and every push to `main`:
 
-- **backend** – `just check-backend`: Ruff lint and format check, cognitive complexity check with complexipy, type checking of `core-service` and `scripts/` with ty (configured in `core-service/pyproject.toml` and the root `pyproject.toml`), unit tests.
-- **integration** – `just cov`: unit and integration tests run together with coverage of the whole `core-service/src` (fails below 90%, configured in `core-service/coverage.toml`). Integration tests include a check that the Alembic migrations match the SQLAlchemy schemas.
-- **extraction** – `just type-check-extraction`: type checking of `extraction-service` with ty. It is a separate job, because it installs the heavy service dependencies (docling, torch) and runs only when `extraction-service/` changes.
+- **backend** – `just check-backend`: Ruff lint and format check, cognitive complexity check with complexipy, type checking of `apps/core` and `scripts/` with ty (configured in `apps/core/pyproject.toml` and the root `pyproject.toml`), unit tests.
+- **integration** – `just cov`: unit and integration tests run together with coverage of the whole `apps/core/src` (fails below 90%, configured in `apps/core/coverage.toml`). Integration tests include a check that the Alembic migrations match the SQLAlchemy schemas.
+- **extraction** – `just type-check-extraction`: type checking of `apps/extraction` with ty. It is a separate job, because it installs the heavy service dependencies (docling, torch) and runs only when `apps/extraction/` changes.
 - **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest and coverage (thresholds in `vitest.config.ts`).
-- **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
+- **api-types** – regenerates `apps/core/openapi.json` and `apps/web/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
 - **workflows** – `just check-workflows`: security audit of `.github/` with zizmor (configured in `.github/zizmor.yml`) and workflow linting with actionlint.
 - **containers** – `just check-containers`: linting of every `Containerfile` with hadolint. Ignored rules are listed in `.hadolint.yaml`: `DL3008` (apt package versions are not pinned, as Debian removes old versions from its repositories), `DL3059` (consecutive `RUN` instructions are kept separate for layer caching) and `DL3066` (non-numeric user names).
 - **deployment** – `just check-deployment`: checks of the Kubernetes manifests in `deploy/gcp/` with checkov, installed in the separate `deployment` dependency group, as it pulls many packages. The manifests in `deploy/local/` are not checked, but they keep the same security settings as their GCP counterparts. Checks skipped in `.checkov.yaml`:
@@ -105,9 +105,9 @@ Every action in `.github/` is pinned to a full commit SHA, with its exact versio
 - `artipacked` in the `changes` job of `ci.yml` – `dorny/paths-filter` fetches the base commit with git on push events, so the checkout keeps its credentials.
 - `cache-poisoning` in `e2e.yml` – known and postponed.
 
-When the API contract changes, run `just api-types` and commit the generated files (the commit hook does it automatically for changes in `core-service/src/`).
+When the API contract changes, run `just api-types` and commit the generated files (the commit hook does it automatically for changes in `apps/core/src/`).
 
-The integration tests pull PostgreSQL with pgvector from `ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie` instead of Docker Hub, to avoid its unauthenticated pull rate limit. The image is a public copy of `pgvector/pgvector:0.8.4-pg18-trixie`, pushed manually; push a new tag and update `POSTGRES_IMAGE_VERSION` in `core-service/tests/integration/conftest.py` when changing the version:
+The integration tests pull PostgreSQL with pgvector from `ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie` instead of Docker Hub, to avoid its unauthenticated pull rate limit. The image is a public copy of `pgvector/pgvector:0.8.4-pg18-trixie`, pushed manually; push a new tag and update `POSTGRES_IMAGE_VERSION` in `apps/core/tests/integration/conftest.py` when changing the version:
 
 ```bash
 podman pull docker.io/pgvector/pgvector:0.8.4-pg18-trixie
@@ -120,7 +120,7 @@ The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-D
 - `asteval` – checkov pins a vulnerable version, so `override-dependencies` in `pyproject.toml` forces the fixed one.
 - `ecdsa` (`PYSEC-2026-1325`) – there is no fixed version, so `just audit-backend` ignores it with `--ignore-until-fixed` and reports it again once a fix is released. The vulnerability affects signing, while checkov only verifies signatures of external checks with it.
 
-The same workflow checks licenses of the runtime dependencies with `just audit-licenses` (`scripts/check_licenses.py`): Python packages of `core-service` and `extraction-service` without dependency groups, read with pip-licenses, and production packages of the frontend, read with `pnpm licenses list --prod`. The project is MIT licensed and runs as a web service, so the check fails on GPL, AGPL, SSPL and packages without a license. LGPL and MPL are allowed, and a dual license passes when any of its alternatives is allowed (`MIT OR GPL-3.0-or-later`). Packages with a license missing from their metadata are verified manually and listed in `ACCEPTED` in the script:
+The same workflow checks licenses of the runtime dependencies with `just audit-licenses` (`scripts/check_licenses.py`): Python packages of `apps/core` and `apps/extraction` without dependency groups, read with pip-licenses, and production packages of the frontend, read with `pnpm licenses list --prod`. The project is MIT licensed and runs as a web service, so the check fails on GPL, AGPL, SSPL and packages without a license. LGPL and MPL are allowed, and a dual license passes when any of its alternatives is allowed (`MIT OR GPL-3.0-or-later`). Packages with a license missing from their metadata are verified manually and listed in `ACCEPTED` in the script:
 
 - `taskiq-dependencies` – MIT in the `LICENSE` file, missing from the package metadata.
 
@@ -130,7 +130,7 @@ Runs only in the release repository, on every push to `main` and as the first st
 
 The result is not reported back to `WMS-DEV/prawobiorca`. The release repository is public, so its logs can be shared with developers by a link.
 
-The job pulls `embedding-service` from `ghcr.io/erykmikolajewicz/embedding-service:latest` instead of building it. The image is public and pushed manually; push it again whenever `embedding-service/Containerfile` changes:
+The job pulls `embedding-service` from `ghcr.io/erykmikolajewicz/embedding-service:latest` instead of building it. The image is public and pushed manually; push it again whenever `apps/embedding/Containerfile` changes:
 
 ```bash
 podman login ghcr.io -u ErykMikolajewicz

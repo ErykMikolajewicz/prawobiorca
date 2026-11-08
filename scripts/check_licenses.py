@@ -3,8 +3,8 @@ import re
 import subprocess
 import sys
 
-PYTHON_PROJECTS = ("core-service", "extraction-service")
-FRONTEND = "prawobiorca-frontend"
+PYTHON_PROJECTS = ("apps/core", "apps/extraction")
+FRONTEND = "apps/web"
 FORBIDDEN = re.compile(r"AGPL|Affero|(?<!L)GPL|GNU General Public|SSPL|Server Side Public", re.IGNORECASE)
 UNKNOWN = {"", "unknown"}
 ACCEPTED = {

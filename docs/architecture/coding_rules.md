@@ -72,8 +72,8 @@ and for explaining the operation of functions/classes with many parameters or be
 Use type hints in function signatures. For variables/class fields, do so when the type is not obvious or required
 for other reasons, such as Pydantic validation.
 
-Type hints in `core-service` are checked by ty (`just type-check-backend`), also in CI. Its configuration in
-`core-service/pyproject.toml` disables two groups of rules:
+Type hints in `apps/core` are checked by ty (`just type-check-backend`), also in CI. Its configuration in
+`apps/core/pyproject.toml` disables two groups of rules:
 
 - `invalid-argument-type` and `invalid-return-type` in `src/framework/dependencies/` and `src/framework/workers/`.
   Repositories accept the SQLAlchemy `AsyncSession`, while the ports declare the narrower `AsyncSession` protocol,
@@ -171,9 +171,9 @@ Python, oxlint and ESLint for the frontend), so the agent gets the result right 
 ## Commit hook
 Before every commit, only for the parts of the repository with staged changes:
 - Python files – lint and format the code with Ruff, check cognitive complexity with complexipy
-- `core-service/`, `extraction-service/`, `scripts/` – type-check with ty
-- `core-service/src/` – regenerate the API types with `just api-types`
-- `prawobiorca-frontend/` – format with oxfmt, check with oxlint, stylelint and knip
+- `apps/core/`, `apps/extraction/`, `scripts/` – type-check with ty
+- `apps/core/src/` – regenerate the API types with `just api-types`
+- `apps/web/` – format with oxfmt, check with oxlint, stylelint and knip
 - `.github/` – check the workflows with zizmor and actionlint
 - `Containerfile` – lint with hadolint
 - `deploy/gcp/` – check the Kubernetes manifests with checkov
