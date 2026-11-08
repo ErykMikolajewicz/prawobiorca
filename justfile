@@ -27,9 +27,7 @@ test-extraction:
 
 [working-directory: 'core-service']
 cov:
-    uv run coverage erase
-    uv run pytest tests/unit --cov=src --cov-config=coverage.toml
-    uv run coverage report -m --skip-covered --fail-under=90 --sort=Cover --rcfile=coverage.toml
+    uv run pytest tests/unit tests/integration --cov=src --cov-config=coverage.toml
 
 build-app:
     podman image build --tag=prawobiorca-backend core-service
@@ -84,9 +82,10 @@ type-check-scripts:
 type-check-extraction:
     uv run --group dev --group test ty check
 
-check-backend: && type-check-backend type-check-scripts cov
+check-backend: && type-check-backend type-check-scripts test
     uv run ruff check .
     uv run ruff format --check
+    uv run complexipy .
 
 check-workflows:
     uv run zizmor --offline .github
@@ -114,7 +113,10 @@ audit-frontend:
     pnpm audit --prod
     pnpm audit --dev --audit-level high
 
-audit: audit-backend audit-frontend
+audit-licenses:
+    uv run scripts/check_licenses.py
+
+audit: audit-backend audit-frontend audit-licenses
 
 release version:
     #!/usr/bin/env bash

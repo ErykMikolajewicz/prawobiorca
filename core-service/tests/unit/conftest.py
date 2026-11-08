@@ -5,14 +5,15 @@ import pytest
 from src.app.interfaces.application_templates import ApplicationTemplatesRepository, ApplicationTemplatesStorage
 from src.app.interfaces.applications import ApplicationsRepository
 from src.app.interfaces.cases import CaseDocumentsRepository, CasesRepository
-from src.app.interfaces.organizations import OrganizationsRepository, SuborganizationsRepository
 from src.app.interfaces.regulations import RegulationsRepository
 from src.app.interfaces.relational import AsyncSession, SessionMaker
 from src.app.interfaces.sections import SectionsRepository
 from src.app.interfaces.users import UsersRepository, UsersSessionsRepository
-from src.app.ports.application_templates import ApplicationTemplateInspector, ApplicationTemplateInstructionsProvider
+from src.app.ports.application_templates import ApplicationTemplateDescriptionWriter, ApplicationTemplateInspector
 from src.app.ports.applications import ApplicationRenderer, ApplicationWriter
+from src.app.ports.regulations import RegulationDescriptionWriter
 from src.app.ports.texts import TextsEmbedder
+from src.app.services.regulations import RegulationPreparator
 
 
 @pytest.fixture
@@ -61,6 +62,18 @@ def mock_embedding_port():
 
 
 @pytest.fixture
+def mock_regulation_preparator():
+    preparator = create_autospec(RegulationPreparator)
+    return preparator
+
+
+@pytest.fixture
+def mock_regulation_description_writer():
+    port = create_autospec(RegulationDescriptionWriter)
+    return port
+
+
+@pytest.fixture
 def mock_sections_repo():
     repo = create_autospec(SectionsRepository)
     return repo
@@ -75,18 +88,6 @@ def mock_cases_repo():
 @pytest.fixture
 def mock_case_documents_repo():
     repo = create_autospec(CaseDocumentsRepository)
-    return repo
-
-
-@pytest.fixture
-def mock_organizations_repo():
-    repo = create_autospec(OrganizationsRepository)
-    return repo
-
-
-@pytest.fixture
-def mock_suborganizations_repo():
-    repo = create_autospec(SuborganizationsRepository)
     return repo
 
 
@@ -127,6 +128,6 @@ def mock_application_template_inspector():
 
 
 @pytest.fixture
-def mock_application_template_instructions_provider():
-    port = create_autospec(ApplicationTemplateInstructionsProvider)
+def mock_application_template_description_writer():
+    port = create_autospec(ApplicationTemplateDescriptionWriter)
     return port

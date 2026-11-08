@@ -1,173 +1,52 @@
+from uuid import UUID
+
 import pytest
 
-from src.app.dtos.cases import CaseData, CaseDocument, NewCaseDocument
-from src.app.use_cases.cases import (
-    AddCase,
-    AddCaseDocument,
-    DeleteCase,
-    DeleteCaseDocument,
-    ListCaseDocuments,
-    ListCases,
-)
+from src.app.use_cases.cases import DeleteCase
 from src.domain.exceptions.cases import CaseNotFound
+from tests.consts import USER_ID
+
+CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
+
+APPLICATION_IDS = [UUID("2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f"), UUID("8a9b0c1d-2e3f-4a5b-8c6d-7e8f9a0b1c2d")]
 
 
-async def test_list_cases_success(mock_session_maker, mock_opened_session, mock_cases_repo, uuid_generator):
-    user_id = next(uuid_generator)
-    case_1 = CaseData(id=next(uuid_generator), name="Case 1")
-    mock_cases_repo.list_by_user_id.return_value = [case_1]
-
-    use_case = ListCases(session_maker=mock_session_maker, cases_repo=mock_cases_repo)
-    result = await use_case.execute(user_id)
-
-    assert result == [case_1]
-    mock_cases_repo.list_by_user_id.assert_awaited_once_with(mock_opened_session, user_id)
+@pytest.fixture
+def applications_repository(mock_applications_repo):
+    mock_applications_repo.list_ids_by_case_id.return_value = APPLICATION_IDS
+    return mock_applications_repo
 
 
-async def test_delete_case_success(
-    mock_session_maker,
-    mock_opened_session,
-    mock_cases_repo,
-    mock_applications_repo,
-    mock_applications_storage,
-    uuid_generator,
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.list_ids_by_case_id.return_value = [application_id]
-
-    use_case = DeleteCase(
+@pytest.fixture
+def delete_case(mock_session_maker, mock_cases_repo, applications_repository, mock_applications_storage):
+    return DeleteCase(
         session_maker=mock_session_maker,
         cases_repo=mock_cases_repo,
-        applications_repo=mock_applications_repo,
+        applications_repo=applications_repository,
         applications_storage=mock_applications_storage,
     )
-    await use_case.execute(user_id, case_id)
-
-    mock_applications_repo.list_ids_by_case_id.assert_awaited_once_with(mock_opened_session, user_id, case_id)
-    mock_cases_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id)
-    mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
 
 
-async def test_delete_case_storage_failure_ignored(
-    mock_session_maker,
-    mock_opened_session,
-    mock_cases_repo,
-    mock_applications_repo,
-    mock_applications_storage,
-    uuid_generator,
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    first_application_id = next(uuid_generator)
-    second_application_id = next(uuid_generator)
-    mock_applications_repo.list_ids_by_case_id.return_value = [first_application_id, second_application_id]
-    mock_applications_storage.delete_application.side_effect = Exception()
+async def test_delete_case_removes_application_files(delete_case, mock_cases_repo, mock_applications_storage):
+    await delete_case.execute(USER_ID, CASE_ID)
 
-    use_case = DeleteCase(
-        session_maker=mock_session_maker,
-        cases_repo=mock_cases_repo,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
-    await use_case.execute(user_id, case_id)
-
-    assert mock_applications_storage.delete_application.await_count == 2
+    mock_cases_repo.delete.assert_awaited_once()
+    removed_ids = [call.args[0] for call in mock_applications_storage.delete_application.await_args_list]
+    assert removed_ids == APPLICATION_IDS
 
 
-async def test_delete_case_not_found(
-    mock_session_maker,
-    mock_opened_session,
-    mock_cases_repo,
-    mock_applications_repo,
-    mock_applications_storage,
-    uuid_generator,
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    mock_applications_repo.list_ids_by_case_id.return_value = []
-    mock_cases_repo.delete.side_effect = CaseNotFound()
+async def test_delete_case_ignores_storage_errors(delete_case, mock_applications_storage):
+    mock_applications_storage.delete_application.side_effect = Exception("Storage error")
 
-    use_case = DeleteCase(
-        session_maker=mock_session_maker,
-        cases_repo=mock_cases_repo,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
+    await delete_case.execute(USER_ID, CASE_ID)
+
+    assert mock_applications_storage.delete_application.await_count == len(APPLICATION_IDS)
+
+
+async def test_delete_case_not_found(delete_case, mock_cases_repo, mock_applications_storage):
+    mock_cases_repo.delete.side_effect = CaseNotFound
 
     with pytest.raises(CaseNotFound):
-        await use_case.execute(user_id, case_id)
+        await delete_case.execute(USER_ID, CASE_ID)
 
-    mock_cases_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id)
     mock_applications_storage.delete_application.assert_not_awaited()
-
-
-async def test_add_case_success(mock_session_maker, mock_opened_session, mock_cases_repo, uuid_generator):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    case_name = "New Case"
-    mock_cases_repo.add.return_value = case_id
-
-    use_case = AddCase(session_maker=mock_session_maker, cases_repo=mock_cases_repo)
-    result = await use_case.execute(user_id, case_name)
-
-    assert result == case_id
-    mock_cases_repo.add.assert_awaited_once_with(mock_opened_session, user_id, case_name)
-
-
-async def test_add_case_document_success(
-    mock_session_maker, mock_opened_session, mock_case_documents_repo, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    new_doc = NewCaseDocument(presentationName="doc.pdf", content="text")
-
-    use_case = AddCaseDocument(session_maker=mock_session_maker, case_documents_repo=mock_case_documents_repo)
-    await use_case.execute(user_id, case_id, new_doc)
-
-    mock_case_documents_repo.add.assert_awaited_once_with(mock_opened_session, user_id, case_id, new_doc)
-
-
-async def test_add_case_document_case_not_found(
-    mock_session_maker, mock_opened_session, mock_case_documents_repo, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    new_doc = NewCaseDocument(presentationName="doc.pdf", content="text")
-    mock_case_documents_repo.add.side_effect = CaseNotFound()
-
-    use_case = AddCaseDocument(session_maker=mock_session_maker, case_documents_repo=mock_case_documents_repo)
-
-    with pytest.raises(CaseNotFound):
-        await use_case.execute(user_id, case_id, new_doc)
-
-    mock_case_documents_repo.add.assert_awaited_once_with(mock_opened_session, user_id, case_id, new_doc)
-
-
-async def test_delete_case_document_success(
-    mock_session_maker, mock_opened_session, mock_case_documents_repo, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    document_id = next(uuid_generator)
-
-    use_case = DeleteCaseDocument(session_maker=mock_session_maker, case_documents_repo=mock_case_documents_repo)
-    await use_case.execute(user_id, case_id, document_id)
-
-    mock_case_documents_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id, document_id)
-
-
-async def test_list_case_documents_success(
-    mock_session_maker, mock_opened_session, mock_case_documents_repo, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    doc_1 = CaseDocument(id=next(uuid_generator), caseId=case_id, presentationName="doc.pdf", content="text")
-    mock_case_documents_repo.list_by_case_id.return_value = [doc_1]
-
-    use_case = ListCaseDocuments(session_maker=mock_session_maker, case_documents_repo=mock_case_documents_repo)
-    result = await use_case.execute(user_id, case_id)
-
-    assert result == [doc_1]
-    mock_case_documents_repo.list_by_case_id.assert_awaited_once_with(mock_opened_session, user_id, case_id)

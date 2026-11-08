@@ -2,7 +2,7 @@ from unittest.mock import ANY
 from uuid import UUID, uuid4
 
 from fastapi import status
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, select
 
 from src.app.dtos.regulations import RegulationUploadTarget
 from src.domain.value_objects.regulations import (
@@ -15,6 +15,7 @@ from src.infrastructure.relational_db.schemas.regulations import regulations_tab
 from src.main import prawobiorca
 from src.shared.consts import ACCESS_COOKIE_NAME, VECTOR_LENGTH
 from tests.consts import ACCESS_TOKEN, ADMIN_ID, USER_ID
+from tests.integration.fixtures.regulations import insert_regulation
 
 
 async def test_add_user_regulation(
@@ -66,14 +67,8 @@ async def test_get_user_regulation(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="user-regulation.pdf",
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, USER_ID, "user-regulation.pdf", regulation_type=RegulationType.ACT
         )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -94,6 +89,29 @@ async def test_get_user_regulation(
     }
 
 
+async def test_get_user_regulation_download_url(
+    client,
+    override_session_maker,
+    session_maker,
+    override_get_regulations_storage,
+    mock_regulations_storage,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, USER_ID, "user-regulation.pdf")
+    mock_regulations_storage.get_download_url.return_value = "http://storage.local/bucket/regulation"
+
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.get(f"/api/regulations/{regulation_id}/download-url")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "http://storage.local/bucket/regulation"
+    mock_regulations_storage.get_download_url.assert_awaited_once_with(regulation_id)
+
+
 async def test_update_user_regulation(
     client,
     override_session_maker,
@@ -103,14 +121,8 @@ async def test_update_user_regulation(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="user-regulation.pdf",
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, USER_ID, "user-regulation.pdf", regulation_type=RegulationType.ACT
         )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -167,15 +179,7 @@ async def test_delete_user_regulation(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="do_usuniecia.pdf",
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
-        )
+        regulation_id = await insert_regulation(session, USER_ID, "do_usuniecia.pdf")
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
@@ -205,15 +209,7 @@ async def test_confirm_user_regulation_upload(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="uploaded_but_unconfirmed.pdf",
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
-        )
+        regulation_id = await insert_regulation(session, USER_ID, "uploaded_but_unconfirmed.pdf")
 
     mock_regulations_storage.check_regulation_exists.return_value = True
 
@@ -247,15 +243,8 @@ async def test_confirm_user_regulation_upload_already_prepared(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="already_prepared.pdf",
-                preparation_status=RegulationPreparationStatus.PREPARED,
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, USER_ID, "already_prepared.pdf", preparation_status=RegulationPreparationStatus.PREPARED
         )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -286,15 +275,7 @@ async def test_confirm_user_regulation_upload_storage_missing(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="missing_in_storage.pdf",
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
-        )
+        regulation_id = await insert_regulation(session, USER_ID, "missing_in_storage.pdf")
 
     mock_regulations_storage.check_regulation_exists.return_value = False
 
@@ -326,15 +307,8 @@ async def test_retry_user_regulation_preparation(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="to_prepare.pdf",
-                preparation_status=RegulationPreparationStatus.FAILED,
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, USER_ID, "to_prepare.pdf", preparation_status=RegulationPreparationStatus.FAILED
         )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -366,15 +340,8 @@ async def test_retry_user_regulation_preparation_already_prepared(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=USER_ID,
-                presentation_name="already_prepared_for_prep.pdf",
-                preparation_status=RegulationPreparationStatus.PREPARED,
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, USER_ID, "already_prepared_for_prep.pdf", preparation_status=RegulationPreparationStatus.PREPARED
         )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
@@ -394,12 +361,8 @@ async def test_get_private_regulations(
     clean_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(user_id=USER_ID, presentation_name="user-regulation.pdf")
-            .returning(regulations_table.c.id)
-        )
-        await session.execute(insert(regulations_table).values(user_id=None, presentation_name="public.pdf"))
+        regulation_id = await insert_regulation(session, USER_ID, "user-regulation.pdf")
+        public_regulation_id = await insert_regulation(session, None, "public.pdf")
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
@@ -410,9 +373,7 @@ async def test_get_private_regulations(
         assert [regulation["id"] for regulation in response.json()] == [str(regulation_id)]
     finally:
         async with session_maker.begin() as session:
-            await session.execute(
-                delete(regulations_table).where(regulations_table.c.presentation_name == "public.pdf")
-            )
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == public_regulation_id))
 
 
 async def test_get_private_regulations_unlogged(client, override_session_maker):
@@ -439,16 +400,10 @@ async def test_search_private_regulations(
     query_vector = [1.0] * VECTOR_LENGTH
 
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(user_id=USER_ID, presentation_name="user-regulation.pdf", description_vector=query_vector)
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, USER_ID, "user-regulation.pdf", description_vector=query_vector
         )
-        await session.execute(
-            insert(regulations_table).values(
-                user_id=None, presentation_name="public.pdf", description_vector=query_vector
-            )
-        )
+        public_regulation_id = await insert_regulation(session, None, "public.pdf", description_vector=query_vector)
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
@@ -462,9 +417,7 @@ async def test_search_private_regulations(
     finally:
         prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
         async with session_maker.begin() as session:
-            await session.execute(
-                delete(regulations_table).where(regulations_table.c.presentation_name == "public.pdf")
-            )
+            await session.execute(delete(regulations_table).where(regulations_table.c.id == public_regulation_id))
 
 
 async def test_search_private_regulations_unlogged(client, override_session_maker):
@@ -489,11 +442,7 @@ async def test_get_other_user_private_regulation(
     clean_admin_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(user_id=ADMIN_ID, presentation_name="admin-private.pdf")
-            .returning(regulations_table.c.id)
-        )
+        regulation_id = await insert_regulation(session, ADMIN_ID, "admin-private.pdf")
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
@@ -513,11 +462,7 @@ async def test_delete_other_user_private_regulation_as_admin(
     clean_admin_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(user_id=ADMIN_ID, presentation_name="other-user-private.pdf")
-            .returning(regulations_table.c.id)
-        )
+        regulation_id = await insert_regulation(session, ADMIN_ID, "other-user-private.pdf")
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
@@ -556,5 +501,22 @@ async def test_add_public_regulation_as_normal_user(
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
     response = await client.post("/api/regulations", json={"scope": "PUBLIC", "name": "public.pdf"})
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_add_private_regulation_with_description_generation_as_normal_user(
+    client,
+    override_session_maker,
+    override_get_regulations_storage,
+    override_authorize_normal_user,
+    set_user,
+    clean_user,
+):
+    client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
+
+    response = await client.post(
+        "/api/regulations", json={"scope": "PRIVATE", "name": "user-regulation.pdf", "generateDescription": True}
+    )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN

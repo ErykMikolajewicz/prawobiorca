@@ -157,6 +157,11 @@ Dependencies are required during the development process, writing tests, or debu
 
 ---
 
+### complexipy
+Calculates the cognitive complexity of Python functions. Used to keep functions readable, see [Coding Rules](coding_rules.md#code-complexity).
+
+---
+
 ### granian\[reload\]
 An extension of [Granian](#granian) that enables automatic reload when code changes. Used during debugging when running the application via a bash script.
 

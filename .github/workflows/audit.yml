@@ -12,6 +12,7 @@ on:
       - prawobiorca-frontend/package.json
       - prawobiorca-frontend/pnpm-lock.yaml
       - justfile
+      - scripts/check_licenses.py
       - .github/workflows/audit.yml
 
 jobs:
@@ -38,3 +39,16 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-frontend
       - run: just audit-frontend
+
+  licenses:
+    if: github.repository_id == '1120768327'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-frontend
+      - run: just audit-licenses

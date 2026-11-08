@@ -14,6 +14,7 @@ dependencies = [
     "actionlint-py==1.7.12.*",
     "ty==0.0.99",
     "hadolint-py==2.15.1.*",
+    "complexipy==8.3.*",
 ]
 
 [dependency-groups]
@@ -26,6 +27,10 @@ override-dependencies = ["asteval>=1.0.9"]
 
 [tool.ruff]
 extend = "ruff.toml"
+
+[tool.complexipy]
+max-complexity-allowed = 15
+exclude = ["core-service/alembic/**"]
 
 [tool.ty.src]
 include = ["scripts"]

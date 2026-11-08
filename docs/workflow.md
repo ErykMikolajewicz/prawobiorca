@@ -85,8 +85,8 @@ Pipelines are defined with GitHub Actions in `.github/workflows/`. The code live
 
 Runs in `WMS-DEV/prawobiorca` on every PR to `main` and every push to `main`:
 
-- **backend** – `just check-backend`: Ruff lint and format check, type checking of `core-service` and `scripts/` with ty (configured in `core-service/pyproject.toml` and the root `pyproject.toml`), unit tests with coverage (fails below 90%).
-- **integration** – integration tests (`just test-integration`), including a check that the Alembic migrations match the SQLAlchemy schemas.
+- **backend** – `just check-backend`: Ruff lint and format check, cognitive complexity check with complexipy, type checking of `core-service` and `scripts/` with ty (configured in `core-service/pyproject.toml` and the root `pyproject.toml`), unit tests.
+- **integration** – `just cov`: unit and integration tests run together with coverage of the whole `core-service/src` (fails below 90%, configured in `core-service/coverage.toml`). Integration tests include a check that the Alembic migrations match the SQLAlchemy schemas.
 - **extraction** – `just type-check-extraction`: type checking of `extraction-service` with ty. It is a separate job, because it installs the heavy service dependencies (docling, torch) and runs only when `extraction-service/` changes.
 - **frontend** – `just check-frontend`: `pnpm check`, `pnpm type-check` and unit tests with Vitest and coverage (thresholds in `vitest.config.ts`).
 - **api-types** – regenerates `core-service/openapi.json` and `prawobiorca-frontend/src/api/generated/` with `just api-types` and fails if they differ from the committed files.
@@ -119,6 +119,10 @@ The `audit.yml` workflow checks dependencies for known vulnerabilities in `WMS-D
 
 - `asteval` – checkov pins a vulnerable version, so `override-dependencies` in `pyproject.toml` forces the fixed one.
 - `ecdsa` (`PYSEC-2026-1325`) – there is no fixed version, so `just audit-backend` ignores it with `--ignore-until-fixed` and reports it again once a fix is released. The vulnerability affects signing, while checkov only verifies signatures of external checks with it.
+
+The same workflow checks licenses of the runtime dependencies with `just audit-licenses` (`scripts/check_licenses.py`): Python packages of `core-service` and `extraction-service` without dependency groups, read with pip-licenses, and production packages of the frontend, read with `pnpm licenses list --prod`. The project is MIT licensed and runs as a web service, so the check fails on GPL, AGPL, SSPL and packages without a license. LGPL and MPL are allowed, and a dual license passes when any of its alternatives is allowed (`MIT OR GPL-3.0-or-later`). Packages with a license missing from their metadata are verified manually and listed in `ACCEPTED` in the script:
+
+- `taskiq-dependencies` – MIT in the `LICENSE` file, missing from the package metadata.
 
 ### 6.2 E2E (`e2e.yml`)
 

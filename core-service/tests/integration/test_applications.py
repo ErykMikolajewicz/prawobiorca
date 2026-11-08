@@ -14,7 +14,7 @@ from src.infrastructure.relational_db.schemas.applications import applications_t
 from src.infrastructure.relational_db.schemas.cases import cases_table
 from src.main import prawobiorca
 from src.shared.consts import ACCESS_COOKIE_NAME, APPLICATION_GENERATION_TASK_NAME
-from tests.consts import ACCESS_TOKEN, USER_ID
+from tests.consts import ACCESS_TOKEN, UNKNOWN_ID, USER_ID
 
 LISTEN_TIMEOUT = 3
 
@@ -141,13 +141,12 @@ async def test_get_application_download_url_not_found(
     mock_applications_storage,
     set_user,
     clean_user,
-    uuid_generator,
 ):
     case_id = await insert_case(session_maker)
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.get(f"/api/cases/{case_id}/applications/{next(uuid_generator)}/download-url")
+    response = await client.get(f"/api/cases/{case_id}/applications/{UNKNOWN_ID}/download-url")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     mock_applications_storage.get_download_url.assert_not_awaited()
@@ -189,13 +188,12 @@ async def test_delete_application_not_found(
     mock_applications_storage,
     set_user,
     clean_user,
-    uuid_generator,
 ):
     case_id = await insert_case(session_maker)
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.delete(f"/api/cases/{case_id}/applications/{next(uuid_generator)}")
+    response = await client.delete(f"/api/cases/{case_id}/applications/{UNKNOWN_ID}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     mock_applications_storage.delete_application.assert_not_awaited()
@@ -326,15 +324,12 @@ async def test_generate_application_case_not_found(
     mock_application_generation_scheduler,
     set_user,
     clean_user,
-    uuid_generator,
 ):
     template_id = await insert_template(session_maker)
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
-    response = await client.post(
-        f"/api/cases/{next(uuid_generator)}/applications", json=create_new_application(template_id)
-    )
+    response = await client.post(f"/api/cases/{UNKNOWN_ID}/applications", json=create_new_application(template_id))
     await delete_template(session_maker, template_id)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND

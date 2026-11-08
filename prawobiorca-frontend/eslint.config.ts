@@ -3,6 +3,7 @@ import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescri
 import pluginVue from 'eslint-plugin-vue'
 import pluginVitest from '@vitest/eslint-plugin'
 import pluginOxlint from 'eslint-plugin-oxlint'
+import pluginSonarjs from 'eslint-plugin-sonarjs'
 
 export default defineConfigWithVueTs(
   {
@@ -16,7 +17,11 @@ export default defineConfigWithVueTs(
   vueTsConfigs.strictTypeChecked,
 
   {
+    plugins: { sonarjs: pluginSonarjs },
     rules: {
+      'sonarjs/cognitive-complexity': ['error', 15],
+      'vue/max-template-depth': ['error', { maxDepth: 8 }],
+      'vue/max-lines-per-block': ['error', { template: 150, script: 150 }],
       'vue/max-attributes-per-line': 'off',
       'vue/singleline-html-element-content-newline': 'off',
       'vue/html-indent': 'off',

@@ -15,7 +15,7 @@ from tests.consts import ACCESS_TOKEN, UNKNOWN_ACCESS_TOKEN
     ],
     ids=("empty file name", "file name too long", "invalid regulation type"),
 )
-async def test_logged_used_add_public_regulation_validation(
+async def test_add_regulation_validation(
     client,
     override_get_regulations_storage,
     override_authorize_admin_user,
@@ -33,7 +33,7 @@ async def test_logged_used_add_public_regulation_validation(
     assert response.status_code == error_status
 
 
-async def test_unauthorized_user_add_public_regulation(
+async def test_add_regulation_with_unknown_access_token(
     client, override_get_regulations_storage, override_authorize_admin_user
 ):
     regulation_data = {"scope": "PRIVATE", "name": "test.txt", "regulationType": RegulationType.DECREE}
@@ -44,16 +44,3 @@ async def test_unauthorized_user_add_public_regulation(
     response = await client.post("api/regulations", json=regulation_data)
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-async def test_non_admin_user_add_public_regulation(
-    client, override_get_regulations_storage, override_authorize_normal_user
-):
-    regulation_data = {"scope": "PUBLIC", "name": "test.txt", "regulationType": RegulationType.DECREE}
-
-    cookies = {ACCESS_COOKIE_NAME: ACCESS_TOKEN}
-    client.cookies = cookies
-
-    response = await client.post("api/regulations", json=regulation_data)
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN

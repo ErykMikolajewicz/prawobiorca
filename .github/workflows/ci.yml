@@ -99,7 +99,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-backend
-      - run: just test-integration
+      - run: just cov
 
   extraction:
     needs: changes

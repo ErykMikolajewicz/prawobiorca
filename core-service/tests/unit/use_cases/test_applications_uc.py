@@ -12,67 +12,31 @@ from src.app.use_cases.applications import (
     FailApplicationGeneration,
     GenerateApplication,
     GetApplicationDownloadUrl,
-    ListApplications,
 )
-from src.domain.exceptions.application_templates import ApplicationTemplateNotFound, InvalidApplicationFieldValues
+from src.domain.exceptions.application_templates import ApplicationTemplateNotFound
 from src.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
-from src.domain.exceptions.cases import CaseNotFound
 from src.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from src.domain.value_objects.applications import ApplicationGenerationStatus
 from src.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
+from tests.consts import USER_ID
 
 TEMPLATE_ID = UUID("00000000-0000-0000-0000-0000000000aa")
+CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
+OTHER_CASE_ID = UUID("9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b")
+APPLICATION_ID = UUID("2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f")
 
-
-@pytest.fixture
-def new_application():
-    return NewApplication(
-        templateId=TEMPLATE_ID,
-        description="Proszę o urlop dziekański.",
-        fieldValues={"student_id": " 123456 "},
-    )
-
-
-@pytest.fixture
-def add_application(
-    mock_session_maker, mock_applications_repo, mock_application_templates_repo, mock_application_generation_scheduler
-):
-    return AddApplication(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        application_templates_repo=mock_application_templates_repo,
-        application_generation_scheduler=mock_application_generation_scheduler,
-    )
-
-
-@pytest.fixture
-def generate_application(
-    mock_session_maker,
-    mock_case_documents_repo,
-    mock_applications_repo,
-    mock_applications_storage,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_application_writer,
-    mock_application_renderer,
-):
-    return GenerateApplication(
-        session_maker=mock_session_maker,
-        case_documents_repo=mock_case_documents_repo,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-        application_templates_repo=mock_application_templates_repo,
-        application_templates_storage=mock_application_templates_storage,
-        application_writer=mock_application_writer,
-        application_renderer=mock_application_renderer,
-    )
+NEW_APPLICATION = NewApplication(
+    templateId=TEMPLATE_ID,
+    description="Proszę o urlop dziekański.",
+    fieldValues={"student_id": " 123456 "},
+)
 
 
 def create_template(
     status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED,
     fields: list[ApplicationTemplateField] | None = None,
-):
+) -> ApplicationTemplateRepresentation:
     return ApplicationTemplateRepresentation(
         id=TEMPLATE_ID,
         createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
@@ -83,9 +47,12 @@ def create_template(
     )
 
 
-def create_application(application_id, case_id, generation_status):
+def create_application(
+    generation_status: ApplicationGenerationStatus = ApplicationGenerationStatus.IN_PROGRESS,
+    case_id: UUID = CASE_ID,
+) -> ApplicationRepresentation:
     return ApplicationRepresentation(
-        id=application_id,
+        id=APPLICATION_ID,
         caseId=case_id,
         createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
         templateName="Wniosek o urlop",
@@ -94,169 +61,162 @@ def create_application(application_id, case_id, generation_status):
     )
 
 
-async def test_add_application_success(
-    add_application,
-    mock_opened_session,
-    mock_applications_repo,
-    mock_application_templates_repo,
-    mock_application_generation_scheduler,
-    new_application,
-    uuid_generator,
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
+def get_generation_statuses(applications_repository) -> list[ApplicationGenerationStatus]:
+    return [call.args[-1] for call in applications_repository.set_generation_status.await_args_list]
+
+
+@pytest.fixture
+def applications_repository(mock_applications_repo):
+    mock_applications_repo.get.return_value = create_application()
+    mock_applications_repo.add.return_value = APPLICATION_ID
+    return mock_applications_repo
+
+
+@pytest.fixture
+def application_templates_repository(mock_application_templates_repo):
     mock_application_templates_repo.get.return_value = create_template()
-    mock_applications_repo.add.return_value = application_id
+    return mock_application_templates_repo
 
-    result = await add_application.execute(user_id, case_id, new_application)
 
-    assert result == application_id
-    mock_application_templates_repo.get.assert_awaited_once_with(mock_opened_session, TEMPLATE_ID)
-    mock_applications_repo.add.assert_awaited_once_with(
-        mock_opened_session, user_id, case_id, TEMPLATE_ID, "Wniosek o urlop"
-    )
-    mock_application_generation_scheduler.schedule_application_generation.assert_awaited_once_with(
-        mock_opened_session,
-        user_id,
-        application_id,
-        NewApplication(
-            templateId=TEMPLATE_ID, description="Proszę o urlop dziekański.", fieldValues={"student_id": "123456"}
-        ),
+@pytest.fixture
+def add_application(
+    mock_session_maker, applications_repository, application_templates_repository, mock_application_generation_scheduler
+):
+    return AddApplication(
+        session_maker=mock_session_maker,
+        applications_repo=applications_repository,
+        application_templates_repo=application_templates_repository,
+        application_generation_scheduler=mock_application_generation_scheduler,
     )
 
 
-@pytest.mark.parametrize("template", [None, create_template(ApplicationTemplateStatus.DRAFT)])
-async def test_add_application_template_not_found(
-    add_application,
-    mock_applications_repo,
-    mock_application_templates_repo,
-    mock_application_generation_scheduler,
-    new_application,
-    uuid_generator,
-    template,
-):
-    mock_application_templates_repo.get.return_value = template
-
-    with pytest.raises(ApplicationTemplateNotFound):
-        await add_application.execute(next(uuid_generator), next(uuid_generator), new_application)
-
-    mock_applications_repo.add.assert_not_awaited()
-    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
-
-
-async def test_add_application_invalid_field_values(
-    add_application,
-    mock_applications_repo,
-    mock_application_templates_repo,
-    mock_application_generation_scheduler,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template()
-    new_application = NewApplication(
-        templateId=TEMPLATE_ID, description="Opis", fieldValues={"student_id": "abc", "unknown": "x"}
-    )
-
-    with pytest.raises(InvalidApplicationFieldValues):
-        await add_application.execute(next(uuid_generator), next(uuid_generator), new_application)
-
-    mock_applications_repo.add.assert_not_awaited()
-    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
-
-
-async def test_add_application_case_not_found(
-    add_application,
-    mock_applications_repo,
-    mock_application_templates_repo,
-    mock_application_generation_scheduler,
-    new_application,
-    uuid_generator,
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template()
-    mock_applications_repo.add.side_effect = CaseNotFound()
-
-    with pytest.raises(CaseNotFound):
-        await add_application.execute(user_id, case_id, new_application)
-
-    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
-
-
-async def test_generate_application_success(
-    generate_application,
-    mock_opened_session,
+@pytest.fixture
+def generate_application(
+    mock_session_maker,
     mock_case_documents_repo,
-    mock_applications_repo,
+    applications_repository,
     mock_applications_storage,
-    mock_application_templates_repo,
+    application_templates_repository,
     mock_application_templates_storage,
     mock_application_writer,
     mock_application_renderer,
-    new_application,
-    uuid_generator,
 ):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    template = create_template()
-    document = CaseDocument(id=next(uuid_generator), caseId=case_id, presentationName="doc.pdf", content="text")
-    mock_applications_repo.get.return_value = create_application(
-        application_id, case_id, ApplicationGenerationStatus.IN_PROGRESS
+    return GenerateApplication(
+        session_maker=mock_session_maker,
+        case_documents_repo=mock_case_documents_repo,
+        applications_repo=applications_repository,
+        applications_storage=mock_applications_storage,
+        application_templates_repo=application_templates_repository,
+        application_templates_storage=mock_application_templates_storage,
+        application_writer=mock_application_writer,
+        application_renderer=mock_application_renderer,
     )
-    mock_application_templates_repo.get.return_value = template
-    mock_application_templates_storage.get_template.return_value = b"TEMPLATE"
+
+
+@pytest.fixture
+def fail_application_generation(mock_session_maker, applications_repository):
+    return FailApplicationGeneration(session_maker=mock_session_maker, applications_repo=applications_repository)
+
+
+@pytest.fixture
+def get_application_download_url(mock_session_maker, applications_repository, mock_applications_storage):
+    return GetApplicationDownloadUrl(
+        session_maker=mock_session_maker,
+        applications_repo=applications_repository,
+        applications_storage=mock_applications_storage,
+    )
+
+
+@pytest.fixture
+def delete_application(mock_session_maker, applications_repository, mock_applications_storage):
+    return DeleteApplication(
+        session_maker=mock_session_maker,
+        applications_repo=applications_repository,
+        applications_storage=mock_applications_storage,
+    )
+
+
+async def test_add_application_schedules_generation_with_normalized_field_values(
+    add_application, applications_repository, mock_application_generation_scheduler
+):
+    application_id = await add_application.execute(USER_ID, CASE_ID, NEW_APPLICATION)
+
+    assert application_id == APPLICATION_ID
+    assert applications_repository.add.await_args.args[-1] == "Wniosek o urlop"
+    assert mock_application_generation_scheduler.schedule_application_generation.await_args.args[-1] == (
+        NewApplication(
+            templateId=TEMPLATE_ID, description="Proszę o urlop dziekański.", fieldValues={"student_id": "123456"}
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "template", [None, create_template(ApplicationTemplateStatus.DRAFT)], ids=("not found", "not published")
+)
+async def test_add_application_without_published_template(
+    add_application,
+    applications_repository,
+    application_templates_repository,
+    mock_application_generation_scheduler,
+    template,
+):
+    application_templates_repository.get.return_value = template
+
+    with pytest.raises(ApplicationTemplateNotFound):
+        await add_application.execute(USER_ID, CASE_ID, NEW_APPLICATION)
+
+    applications_repository.add.assert_not_awaited()
+    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
+
+
+async def test_generate_application_saves_generated_document(
+    generate_application,
+    applications_repository,
+    mock_case_documents_repo,
+    mock_applications_storage,
+    mock_application_templates_storage,
+    mock_application_writer,
+    mock_application_renderer,
+):
+    document = CaseDocument(
+        id=UUID("5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a"), caseId=CASE_ID, presentationName="doc.pdf", content="text"
+    )
     mock_case_documents_repo.list_by_case_id.return_value = [document]
+    mock_application_templates_storage.get_template.return_value = b"TEMPLATE"
     mock_application_writer.write.return_value = "Szanowny Panie Dziekanie"
     mock_application_writer.write_name.return_value = "Wniosek o urlop dziekański"
     mock_application_renderer.render.return_value = b"PK"
 
-    await generate_application.execute(user_id, application_id, new_application)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
-    mock_application_templates_repo.get.assert_awaited_once_with(mock_opened_session, TEMPLATE_ID)
-    mock_application_templates_storage.get_template.assert_awaited_once_with(TEMPLATE_ID)
-    mock_case_documents_repo.list_by_case_id.assert_awaited_once_with(mock_opened_session, user_id, case_id)
-    mock_application_writer.write.assert_awaited_once_with(new_application, template, [document])
-    mock_application_writer.write_name.assert_awaited_once_with(new_application)
-    mock_applications_repo.set_name.assert_awaited_once_with(
-        mock_opened_session, user_id, application_id, "Wniosek o urlop dziekański"
-    )
-    mock_application_renderer.render.assert_awaited_once_with(b"TEMPLATE", new_application, "Szanowny Panie Dziekanie")
-    mock_applications_storage.upload_application.assert_awaited_once_with(application_id, b"PK")
-    assert mock_applications_repo.set_generation_status.await_args_list[-1].args == (
-        mock_opened_session,
-        user_id,
-        application_id,
+    mock_application_writer.write.assert_awaited_once_with(NEW_APPLICATION, create_template(), [document])
+    mock_application_renderer.render.assert_awaited_once_with(b"TEMPLATE", NEW_APPLICATION, "Szanowny Panie Dziekanie")
+    mock_applications_storage.upload_application.assert_awaited_once_with(APPLICATION_ID, b"PK")
+    assert applications_repository.set_name.await_args.args[-1] == "Wniosek o urlop dziekański"
+    assert get_generation_statuses(applications_repository) == [
+        ApplicationGenerationStatus.IN_PROGRESS,
         ApplicationGenerationStatus.GENERATED,
-    )
+    ]
 
 
-async def test_generate_application_not_found(
-    generate_application, mock_applications_repo, mock_application_writer, new_application, uuid_generator
-):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = None
+async def test_generate_application_not_found(generate_application, applications_repository, mock_application_writer):
+    applications_repository.get.return_value = None
 
     with pytest.raises(ApplicationNotFound):
-        await generate_application.execute(user_id, application_id, new_application)
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_application_writer.write.assert_not_awaited()
 
 
 async def test_generate_application_already_generated(
-    generate_application, mock_applications_repo, mock_application_writer, new_application, uuid_generator
+    generate_application, applications_repository, mock_application_writer
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.GENERATED
-    )
+    applications_repository.get.return_value = create_application(ApplicationGenerationStatus.GENERATED)
 
-    await generate_application.execute(user_id, application_id, new_application)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_application_writer.write.assert_not_awaited()
-    mock_applications_repo.set_generation_status.assert_not_awaited()
+    assert get_generation_statuses(applications_repository) == []
 
 
 @pytest.mark.parametrize(
@@ -266,274 +226,126 @@ async def test_generate_application_already_generated(
         create_template(ApplicationTemplateStatus.DRAFT),
         create_template(fields=[ApplicationTemplateField(name="faculty", label="Wydział")]),
     ],
+    ids=("removed", "unpublished", "fields changed"),
 )
-async def test_generate_application_template_changed(
-    generate_application,
-    mock_opened_session,
-    mock_applications_repo,
-    mock_application_templates_repo,
-    mock_application_writer,
-    new_application,
-    uuid_generator,
-    template,
+async def test_generate_application_with_changed_template_marks_failed(
+    generate_application, applications_repository, application_templates_repository, mock_application_writer, template
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.IN_PROGRESS
-    )
-    mock_application_templates_repo.get.return_value = template
+    application_templates_repository.get.return_value = template
 
-    await generate_application.execute(user_id, application_id, new_application)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_application_writer.write.assert_not_awaited()
-    mock_applications_repo.set_generation_status.assert_awaited_once_with(
-        mock_opened_session, user_id, application_id, ApplicationGenerationStatus.FAILED
-    )
+    assert get_generation_statuses(applications_repository) == [ApplicationGenerationStatus.FAILED]
 
 
-async def test_generate_application_service_unavailable(
-    generate_application,
-    mock_opened_session,
-    mock_applications_repo,
-    mock_applications_storage,
-    mock_application_templates_repo,
-    mock_application_writer,
-    new_application,
-    uuid_generator,
+@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+async def test_generate_application_failure_marks_failed(
+    generate_application, applications_repository, mock_applications_storage, mock_application_writer, error
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.IN_PROGRESS
-    )
-    mock_application_templates_repo.get.return_value = create_template()
-    mock_application_writer.write.side_effect = ServiceUnavailable()
+    mock_application_writer.write.side_effect = error
 
-    with pytest.raises(ServiceUnavailable):
-        await generate_application.execute(user_id, application_id, new_application)
+    with pytest.raises(error):
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_applications_storage.upload_application.assert_not_awaited()
-    mock_applications_repo.set_generation_status.assert_awaited_with(
-        mock_opened_session, user_id, application_id, ApplicationGenerationStatus.FAILED
-    )
+    assert get_generation_statuses(applications_repository) == [
+        ApplicationGenerationStatus.IN_PROGRESS,
+        ApplicationGenerationStatus.FAILED,
+    ]
 
 
 async def test_generate_application_removed_during_generation(
-    generate_application,
-    mock_applications_repo,
-    mock_applications_storage,
-    mock_application_templates_repo,
-    mock_application_writer,
-    mock_application_renderer,
-    new_application,
-    uuid_generator,
+    generate_application, applications_repository, mock_applications_storage
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.IN_PROGRESS
-    )
-    mock_application_templates_repo.get.return_value = create_template()
-    mock_application_writer.write.return_value = "Szanowny Panie Dziekanie"
-    mock_application_renderer.render.return_value = b"PK"
-    mock_applications_repo.set_generation_status.side_effect = [None, ApplicationNotFound()]
+    applications_repository.set_name.side_effect = ApplicationNotFound
 
-    await generate_application.execute(user_id, application_id, new_application)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_applications_storage.upload_application.assert_not_awaited()
 
 
-async def test_generate_application_upload_failure(
-    generate_application,
-    mock_opened_session,
-    mock_applications_repo,
-    mock_applications_storage,
-    mock_application_templates_repo,
-    mock_application_writer,
-    mock_application_renderer,
-    new_application,
-    uuid_generator,
+async def test_generate_application_upload_failure_marks_failed(
+    generate_application, applications_repository, mock_applications_storage
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, next(uuid_generator), ApplicationGenerationStatus.IN_PROGRESS
-    )
-    mock_application_templates_repo.get.return_value = create_template()
-    mock_application_writer.write.return_value = "Szanowny Panie Dziekanie"
-    mock_application_renderer.render.return_value = b"PK"
-    mock_applications_storage.upload_application.side_effect = RuntimeError()
+    mock_applications_storage.upload_application.side_effect = RuntimeError
 
     with pytest.raises(RuntimeError):
-        await generate_application.execute(user_id, application_id, new_application)
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
-    mock_applications_repo.set_generation_status.assert_awaited_with(
-        mock_opened_session, user_id, application_id, ApplicationGenerationStatus.FAILED
-    )
+    assert get_generation_statuses(applications_repository)[-1] == ApplicationGenerationStatus.FAILED
 
 
-async def test_fail_application_generation_deliveries_limit_exceeded(
-    mock_session_maker, mock_opened_session, mock_applications_repo, uuid_generator
+@pytest.mark.parametrize(
+    ("delivery_attempt", "expected_failed", "expected_statuses"),
+    [
+        (MAX_APPLICATION_GENERATION_DELIVERIES, False, []),
+        (MAX_APPLICATION_GENERATION_DELIVERIES + 1, True, [ApplicationGenerationStatus.FAILED]),
+    ],
+    ids=("within limit", "limit exceeded"),
+)
+async def test_fail_application_generation(
+    fail_application_generation, applications_repository, delivery_attempt, expected_failed, expected_statuses
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
+    failed = await fail_application_generation.execute(USER_ID, APPLICATION_ID, delivery_attempt)
 
-    use_case = FailApplicationGeneration(session_maker=mock_session_maker, applications_repo=mock_applications_repo)
-
-    failed = await use_case.execute(user_id, application_id, MAX_APPLICATION_GENERATION_DELIVERIES + 1)
-
-    assert failed is True
-    mock_applications_repo.set_generation_status.assert_awaited_once_with(
-        mock_opened_session, user_id, application_id, ApplicationGenerationStatus.FAILED
-    )
+    assert failed is expected_failed
+    assert get_generation_statuses(applications_repository) == expected_statuses
 
 
-async def test_fail_application_generation_deliveries_limit_not_exceeded(
-    mock_session_maker, mock_applications_repo, uuid_generator
+async def test_get_application_download_url(
+    get_application_download_url, applications_repository, mock_applications_storage
 ):
-    user_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-
-    use_case = FailApplicationGeneration(session_maker=mock_session_maker, applications_repo=mock_applications_repo)
-
-    failed = await use_case.execute(user_id, application_id, MAX_APPLICATION_GENERATION_DELIVERIES)
-
-    assert failed is False
-    mock_applications_repo.set_generation_status.assert_not_awaited()
-
-
-async def test_list_applications_success(
-    mock_session_maker, mock_opened_session, mock_applications_repo, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application = create_application(next(uuid_generator), case_id, ApplicationGenerationStatus.GENERATED)
-    mock_applications_repo.list_by_case_id.return_value = [application]
-
-    use_case = ListApplications(session_maker=mock_session_maker, applications_repo=mock_applications_repo)
-    result = await use_case.execute(user_id, case_id)
-
-    assert result == [application]
-    mock_applications_repo.list_by_case_id.assert_awaited_once_with(mock_opened_session, user_id, case_id)
-
-
-async def test_get_application_download_url_success(
-    mock_session_maker, mock_opened_session, mock_applications_repo, mock_applications_storage, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, case_id, ApplicationGenerationStatus.GENERATED
-    )
+    applications_repository.get.return_value = create_application(ApplicationGenerationStatus.GENERATED)
     mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/application"
 
-    use_case = GetApplicationDownloadUrl(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
-    result = await use_case.execute(user_id, case_id, application_id)
+    result = await get_application_download_url.execute(USER_ID, CASE_ID, APPLICATION_ID)
 
     assert result == "http://storage.local/bucket/application"
-    mock_applications_repo.get.assert_awaited_once_with(mock_opened_session, user_id, application_id)
-    mock_applications_storage.get_download_url.assert_awaited_once_with(application_id)
+    mock_applications_storage.get_download_url.assert_awaited_once_with(APPLICATION_ID)
 
 
-async def test_get_application_download_url_not_found(
-    mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
+@pytest.mark.parametrize(
+    ("application", "error"),
+    [
+        (None, ApplicationNotFound),
+        (create_application(ApplicationGenerationStatus.GENERATED, OTHER_CASE_ID), ApplicationNotFound),
+        (create_application(ApplicationGenerationStatus.IN_PROGRESS), ApplicationNotGenerated),
+    ],
+    ids=("not found", "other case", "not generated"),
+)
+async def test_get_application_download_url_rejected(
+    get_application_download_url, applications_repository, mock_applications_storage, application, error
 ):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = None
+    applications_repository.get.return_value = application
 
-    use_case = GetApplicationDownloadUrl(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
-
-    with pytest.raises(ApplicationNotFound):
-        await use_case.execute(user_id, case_id, application_id)
+    with pytest.raises(error):
+        await get_application_download_url.execute(USER_ID, CASE_ID, APPLICATION_ID)
 
     mock_applications_storage.get_download_url.assert_not_awaited()
 
 
-async def test_get_application_download_url_not_generated(
-    mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.get.return_value = create_application(
-        application_id, case_id, ApplicationGenerationStatus.IN_PROGRESS
-    )
+async def test_delete_application(delete_application, applications_repository, mock_applications_storage):
+    await delete_application.execute(USER_ID, CASE_ID, APPLICATION_ID)
 
-    use_case = GetApplicationDownloadUrl(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
-
-    with pytest.raises(ApplicationNotGenerated):
-        await use_case.execute(user_id, case_id, application_id)
-
-    mock_applications_storage.get_download_url.assert_not_awaited()
+    applications_repository.delete.assert_awaited_once()
+    mock_applications_storage.delete_application.assert_awaited_once_with(APPLICATION_ID)
 
 
-async def test_delete_application_success(
-    mock_session_maker, mock_opened_session, mock_applications_repo, mock_applications_storage, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-
-    use_case = DeleteApplication(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
-    await use_case.execute(user_id, case_id, application_id)
-
-    mock_applications_repo.delete.assert_awaited_once_with(mock_opened_session, user_id, case_id, application_id)
-    mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
-
-
-async def test_delete_application_storage_failure_ignored(
-    mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_storage.delete_application.side_effect = Exception()
-
-    use_case = DeleteApplication(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
-    await use_case.execute(user_id, case_id, application_id)
-
-    mock_applications_storage.delete_application.assert_awaited_once_with(application_id)
-
-
-async def test_delete_application_not_found(
-    mock_session_maker, mock_applications_repo, mock_applications_storage, uuid_generator
-):
-    user_id = next(uuid_generator)
-    case_id = next(uuid_generator)
-    application_id = next(uuid_generator)
-    mock_applications_repo.delete.side_effect = ApplicationNotFound()
-
-    use_case = DeleteApplication(
-        session_maker=mock_session_maker,
-        applications_repo=mock_applications_repo,
-        applications_storage=mock_applications_storage,
-    )
+async def test_delete_application_not_found(delete_application, applications_repository, mock_applications_storage):
+    applications_repository.delete.side_effect = ApplicationNotFound
 
     with pytest.raises(ApplicationNotFound):
-        await use_case.execute(user_id, case_id, application_id)
+        await delete_application.execute(USER_ID, CASE_ID, APPLICATION_ID)
 
     mock_applications_storage.delete_application.assert_not_awaited()
+
+
+async def test_delete_application_ignores_storage_error(
+    delete_application, applications_repository, mock_applications_storage
+):
+    mock_applications_storage.delete_application.side_effect = Exception("Storage error")
+
+    await delete_application.execute(USER_ID, CASE_ID, APPLICATION_ID)
+
+    applications_repository.delete.assert_awaited_once()

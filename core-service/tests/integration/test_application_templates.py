@@ -781,6 +781,12 @@ async def test_search_published_application_templates_empty_query(
         prawobiorca.dependency_overrides.pop(get_texts_embedder, None)
 
 
+async def test_search_published_application_templates_unlogged(client, override_session_maker):
+    response = await client.get("/api/application-templates/published/search", params={"query": "urlop"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_regenerate_application_template_description(
     client,
     override_session_maker,

@@ -50,13 +50,47 @@ STRONG_PASSWORD = "StrongPassword12;"
 
 Unit tests are created by the developer responsible for implementing a given functionality (e.g., based on a Jira story).
 
+Unit tests check behavior, not implementation: a refactoring that keeps the behavior should not require changes in tests.
+
 In unit tests, you should only test:
-- Use cases within the application layer.
-- Domain services and entities/value objects (provided they exhibit internal behaviors or logic)
+- Domain services and entities/value objects (provided they exhibit internal behaviors or logic). Business rules – access
+  policies, status transitions, validation – belong here and are tested through their public API, with real objects and
+  without mocks. Prefer moving a rule from a use case to the domain over testing it through the use case.
+- Use cases within the application layer – only their own orchestration logic: branches depending on the state (e.g. which
+  preparation status allows an operation), reactions to errors (e.g. marking a regulation as failed) and limits of task
+  deliveries. A use case that only passes data between an endpoint and a repository is covered by integration tests only.
 - Repositories/Ports - only in special cases (sophisticated mapping logic).
 - Endpoints - only when verifying custom Pydantic validation logic.
 
 All external services should be mocked in unit tests, as well as other application parts as needed.
+
+### One Place for Each Rule
+
+- Access policies (`domain/services/*_access.py`) are tested by domain unit tests. Integration tests check only that an
+  endpoint applies the policy (`401`, `403`, `404`), and use case unit tests do not repeat these checks.
+- Status transitions and error handling of a use case are tested by use case unit tests. Integration tests check the
+  success scenario and the mapping of errors to HTTP status codes, not every combination of states.
+
+### Writing Use Case Tests
+
+- Create the use case in a fixture, so that a new dependency changes a single place.
+- Set the default state (e.g. the stored regulation) in a fixture; a test overrides only what it checks.
+- Build DTOs and value objects from real classes, with helper functions with default values (e.g. `create_regulation()`),
+  not with `MagicMock()` – a mock accepts any attribute, so a renamed field does not fail the test.
+- Assert the outcome: the returned value, the raised exception, the statuses saved by a repository, the scheduled task.
+  Do not assert calls that are only implementation details (e.g. that the use case read the regulation, or which session
+  it passed to a repository).
+- Use `pytest.mark.parametrize` for tables such as "status → exception", instead of copying a test.
+- Do not test that an exception of a dependency is propagated, unless the use case reacts to it.
+
+`../../core-service/tests/unit/use_cases/test_regulations_uc.py` is the reference example.
+
+## Coverage
+
+Coverage of `core-service` is measured on unit and integration tests run together (`just cov`), for the whole `src`
+directory, so code tested only by integration tests (endpoints, repositories, simple use cases) also counts.
+The threshold (90%) is set in `../../core-service/coverage.toml` and checked by the CI `integration` job.
+`just test` runs only the unit tests, without coverage, for fast feedback.
 
 ## Integration Tests
 
@@ -78,6 +112,9 @@ Please note that during these tests, storage and external services are running i
 - Other services (e.g., cloud storage, LLM conversations) should be mocked.
 - All integration tests should use shared container instances (due to their initialization time).
 - Each test should prepare its own test environment (e.g., insert data into the database) and clean up after itself.
+- Insert test data with shared helpers (e.g. `insert_regulation` from
+  `../../core-service/tests/integration/fixtures/regulations.py`), so that a change of the database schema affects
+  a single place.
 - Tests must be fully independent of each other.
 - It’s recommended to use a try block with cleanup in `finally` to ensure container state consistency even on test failure.
 - **Before creating integration tests, carefully review the fixture documentation in `../../core-service/tests/integration/conftest.py`.**

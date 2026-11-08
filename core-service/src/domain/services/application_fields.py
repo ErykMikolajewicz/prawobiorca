@@ -30,21 +30,30 @@ def validate_fields_config(field_names: set[str], fields: list[ApplicationTempla
         raise InvalidApplicationFieldsConfig("Fields must match template variables!")
 
     for field in fields:
-        if field.pattern is not None:
-            if field.field_type != ApplicationFieldType.TEXT:
-                raise InvalidApplicationFieldsConfig(f"Pattern allowed only for text field: {field.name}!")
-            try:
-                re.compile(field.pattern)
-            except re.error:
-                raise InvalidApplicationFieldsConfig(f"Invalid pattern for field: {field.name}!")
+        _validate_field_config(field)
 
-        if field.field_type == ApplicationFieldType.SELECT and not field.options:
-            raise InvalidApplicationFieldsConfig(f"Options required for select field: {field.name}!")
-        if field.field_type != ApplicationFieldType.SELECT and field.options:
-            raise InvalidApplicationFieldsConfig(f"Options allowed only for select field: {field.name}!")
 
-        if field.default_value is not None and not _is_value_valid(field, field.default_value):
-            raise InvalidApplicationFieldsConfig(f"Invalid default value for field: {field.name}!")
+def _validate_field_config(field: ApplicationTemplateField) -> None:
+    if field.pattern is not None:
+        _validate_pattern(field, field.pattern)
+
+    is_select = field.field_type == ApplicationFieldType.SELECT
+    if is_select and not field.options:
+        raise InvalidApplicationFieldsConfig(f"Options required for select field: {field.name}!")
+    if not is_select and field.options:
+        raise InvalidApplicationFieldsConfig(f"Options allowed only for select field: {field.name}!")
+
+    if field.default_value is not None and not _is_value_valid(field, field.default_value):
+        raise InvalidApplicationFieldsConfig(f"Invalid default value for field: {field.name}!")
+
+
+def _validate_pattern(field: ApplicationTemplateField, pattern: str) -> None:
+    if field.field_type != ApplicationFieldType.TEXT:
+        raise InvalidApplicationFieldsConfig(f"Pattern allowed only for text field: {field.name}!")
+    try:
+        re.compile(pattern)
+    except re.error:
+        raise InvalidApplicationFieldsConfig(f"Invalid pattern for field: {field.name}!")
 
 
 def validate_field_values(fields: list[ApplicationTemplateField], values: dict[str, str]) -> dict[str, str]:
