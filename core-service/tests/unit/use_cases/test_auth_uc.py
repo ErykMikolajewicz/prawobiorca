@@ -13,6 +13,7 @@ from src.domain.value_objects.users import UserPrivileges
 from src.shared.consts import JWT_ALGORITHM
 from src.shared.settings.application import app_settings
 from tests.consts import REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
+from tests.unit.mocks import get_awaited_argument
 
 STORED_USER = User(id=USER_ID, username=VALID_USERNAME, hashed_password=hash_password(SecretStr(STRONG_PASSWORD)))
 
@@ -63,9 +64,8 @@ async def test_log_user_creates_session(log_user, sessions_repository):
 
     claims = decode(tokens.access_token)
     assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, True)
-    session_args = sessions_repository.create_session.await_args.args
-    assert hash_refresh_token(tokens.refresh_token) in session_args
-    assert tokens.refresh_token not in session_args
+    stored_hash = get_awaited_argument(sessions_repository.create_session, "refresh_token_hash")
+    assert stored_hash == hash_refresh_token(tokens.refresh_token)
 
 
 @pytest.mark.parametrize(
@@ -93,9 +93,9 @@ async def test_refresh_tokens_rotates_session(refresh_tokens, users_repository, 
     claims = decode(tokens.access_token)
     assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, False)
     assert tokens.refresh_token != REFRESH_TOKEN
-    rotation_args = sessions_repository.rotate_session.await_args.args
-    assert hash_refresh_token(REFRESH_TOKEN) in rotation_args
-    assert hash_refresh_token(tokens.refresh_token) in rotation_args
+    rotate_session = sessions_repository.rotate_session
+    assert get_awaited_argument(rotate_session, "old_refresh_token_hash") == hash_refresh_token(REFRESH_TOKEN)
+    assert get_awaited_argument(rotate_session, "new_refresh_token_hash") == hash_refresh_token(tokens.refresh_token)
 
 
 @pytest.mark.parametrize(
@@ -114,16 +114,15 @@ async def test_refresh_tokens_rejected(refresh_tokens, users_repository, session
 async def test_logout_user_by_session_id(logout_user, sessions_repository):
     await logout_user.execute(SESSION_ID, REFRESH_TOKEN)
 
-    assert sessions_repository.delete_session.await_args.args[-1] == SESSION_ID
+    assert get_awaited_argument(sessions_repository.delete_session, "session_id") == SESSION_ID
     sessions_repository.delete_session_by_refresh_token_hash.assert_not_awaited()
 
 
 async def test_logout_user_by_refresh_token(logout_user, sessions_repository):
     await logout_user.execute(None, REFRESH_TOKEN)
 
-    assert sessions_repository.delete_session_by_refresh_token_hash.await_args.args[-1] == hash_refresh_token(
-        REFRESH_TOKEN
-    )
+    delete_session_by_hash = sessions_repository.delete_session_by_refresh_token_hash
+    assert get_awaited_argument(delete_session_by_hash, "refresh_token_hash") == hash_refresh_token(REFRESH_TOKEN)
     sessions_repository.delete_session.assert_not_awaited()
 
 

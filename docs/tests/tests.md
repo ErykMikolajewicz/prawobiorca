@@ -59,7 +59,9 @@ In unit tests, you should only test:
 - Use cases within the application layer – only their own orchestration logic: branches depending on the state (e.g. which
   preparation status allows an operation), reactions to errors (e.g. marking a regulation as failed) and limits of task
   deliveries. A use case that only passes data between an endpoint and a repository is covered by integration tests only.
-- Repositories/Ports - only in special cases (sophisticated mapping logic).
+- Repositories/Ports - only in special cases (sophisticated mapping logic that does not need a database). A repository
+  that writes to or reads from the database is tested by integration tests against the real database, not with
+  a mocked session.
 - Endpoints - only when verifying custom Pydantic validation logic.
 
 All external services should be mocked in unit tests, as well as other application parts as needed.
@@ -80,6 +82,9 @@ All external services should be mocked in unit tests, as well as other applicati
 - Assert the outcome: the returned value, the raised exception, the statuses saved by a repository, the scheduled task.
   Do not assert calls that are only implementation details (e.g. that the use case read the regulation, or which session
   it passed to a repository).
+- Read arguments of awaited calls by parameter name, with `get_awaited_argument()` and `get_awaited_arguments()` from
+  `../../core-service/tests/unit/mocks.py`, not by position (`call.args[-1]`), so that passing an argument by keyword
+  does not break the test.
 - Use `pytest.mark.parametrize` for tables such as "status → exception", instead of copying a test.
 - Do not test that an exception of a dependency is propagated, unless the use case reacts to it.
 
