@@ -12,14 +12,16 @@ USER prawobiorca_app
 
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
-RUN uv sync --locked --compile-bytecode --no-cache --no-default-groups
+RUN uv sync --locked --no-install-project --compile-bytecode --no-cache --no-default-groups
 
 ENV PATH="/prawobiorca/.venv/bin:$PATH"
 
 COPY src src
+RUN uv sync --locked --no-editable --compile-bytecode --no-cache --no-default-groups
+
 COPY alembic.ini alembic.ini
 COPY alembic alembic
 
 EXPOSE 8000
 
-CMD ["granian", "--port", "8000", "--host", "0.0.0.0", "--interface", "asgi", "src.main:prawobiorca"]
+CMD ["granian", "--port", "8000", "--host", "0.0.0.0", "--interface", "asgi", "core_service.main:prawobiorca"]

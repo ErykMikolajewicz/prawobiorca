@@ -1,7 +1,7 @@
 from fastapi import status
 from sqlalchemy import select
 
-from src.infrastructure.relational_db.schemas.users import users_table
+from core_service.infrastructure.relational_db.schemas.users import users_table
 from tests.consts import STRONG_PASSWORD, VALID_USERNAME
 
 

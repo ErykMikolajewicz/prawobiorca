@@ -158,32 +158,32 @@ flowchart TB
 
 ### 4.1. Layers
 
-#### `../../apps/core/src/domain`
+#### `../../apps/core/src/core_service/domain`
 The innermost core of the service containing **Enterprise Business Rules**. It has zero dependencies on outer layers or external frameworks.
 - **Entities**: Business models encapsulating identity and business state (e.g., `User`, `Case`, `Document`, `Chunk`).
 - **Value Objects**: Immutable data structures representing concepts without identity.
 - **Services**: Pure business algorithms and domain rules.
 - **Exceptions**: Domain-specific error definitions.
 
-#### `../../apps/core/src/app` (or `../../apps/core/src/app`)
+#### `../../apps/core/src/core_service/application`
 Contains **Application Business Rules** and use case orchestrations.
 - **Use Cases**: Individual business workflows (e.g., `RegisterUser`, `ProcessUploadedDocument`, `SearchDocuments`).
 - **DTOs**: Data Transfer Objects defining input/output contracts.
 - **Ports & Interfaces**: Abstract contracts for repositories, vector embedders, and external APIs implemented by the Infrastructure layer.
 
-#### `../../apps/core/src/infrastructure`
+#### `../../apps/core/src/core_service/infrastructure`
 Acts as adapters for external systems and technical tools, implementing ports defined in domain/application.
 - **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas.
 - **External Clients**: HTTP/gRPC clients communicating with external services (`embeddings-service`, `extraction-service`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
 
-#### `../../apps/core/src/framework`
+#### `../../apps/core/src/core_service/framework`
 The outermost delivery mechanism and dependency injection root.
 - **API**: FastAPI routes, middleware, and request/response serialization.
 - **Workers**: Taskiq worker definitions and task registrations.
 - **Dependencies**: Dependency injection wiring combining infrastructure implementations with application use cases. Worker tasks get their use cases through `TaskiqDepends` from `framework/dependencies/workers.py`, so tests override them like FastAPI dependencies.
 
-#### `../../apps/core/src/shared`
+#### `../../apps/core/src/core_service/shared`
 Cross-cutting concerns across layers (configuration settings, logging utilities, common base exceptions).
 
 ---
@@ -191,8 +191,8 @@ Cross-cutting concerns across layers (configuration settings, logging utilities,
 ## 5. Import Rules
 
 To preserve architectural boundaries:
-- **`domain`** must NOT import from `app`, `infrastructure`, or `framework`.
-- **`app`** can import from `domain`, but must NOT import from `infrastructure` or `framework`.
-- **`infrastructure`** can import from `app` (interfaces, DTOs) and `domain`. It must NOT import from `framework`.
-- **`framework`** is the assembly root and can import from `app`, `domain`, and `infrastructure` to wire dependencies.
+- **`domain`** must NOT import from `application`, `infrastructure`, or `framework`.
+- **`application`** can import from `domain`, but must NOT import from `infrastructure` or `framework`.
+- **`infrastructure`** can import from `application` (interfaces, DTOs) and `domain`. It must NOT import from `framework`.
+- **`framework`** is the assembly root and can import from `application`, `domain`, and `infrastructure` to wire dependencies.
 - **`shared`** can be imported by any layer, but should not depend on domain or infrastructure specifics.

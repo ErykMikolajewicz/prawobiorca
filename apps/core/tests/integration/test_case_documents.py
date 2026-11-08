@@ -1,7 +1,7 @@
 from fastapi import status
 from sqlalchemy import select
 
-from src.infrastructure.relational_db.schemas.cases import case_documents_table
+from core_service.infrastructure.relational_db.schemas.cases import case_documents_table
 from tests.consts import ADMIN_ID, USER_ID
 from tests.integration.fixtures.cases import insert_case, insert_case_document
 

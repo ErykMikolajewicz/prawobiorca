@@ -1,10 +1,7 @@
 import json
-import sys
 from pathlib import Path
 
-sys.path.append("")
-
-from src.main import prawobiorca
+from core_service.main import prawobiorca
 
 
 def export_openapi():

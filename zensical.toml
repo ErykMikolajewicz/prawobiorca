@@ -22,7 +22,7 @@ nav = [
 
 [project.plugins.search]
 [project.plugins.mkdocstrings.handlers.python]
-paths = ["app", "tests"]
+paths = ["apps/core/src", "apps/core"]
 
 
 [project.theme.classic]

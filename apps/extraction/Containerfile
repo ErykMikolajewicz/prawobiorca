@@ -21,16 +21,17 @@ USER extraction_service
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
 
-RUN uv sync --locked --compile-bytecode --no-cache --no-default-groups
+RUN uv sync --locked --no-install-project --compile-bytecode --no-cache --no-default-groups
 
 RUN .venv/bin/docling-tools models download layout tableformer rapidocr -o /extraction-service/models
 
 ENV DOCLING_ARTIFACTS_PATH=/extraction-service/models
 
 COPY src src
+RUN uv sync --locked --no-editable --compile-bytecode --no-cache --no-default-groups
 
 EXPOSE 8080
 
 ENV PATH="/extraction-service/.venv/bin:$PATH"
 
-ENTRYPOINT ["granian", "--port", "8080", "--host", "0.0.0.0", "--interface", "asgi", "src.main:app"]
+ENTRYPOINT ["granian", "--port", "8080", "--host", "0.0.0.0", "--interface", "asgi", "extraction_service.main:app"]

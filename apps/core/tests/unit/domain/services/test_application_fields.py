@@ -1,17 +1,17 @@
 import pytest
 
-from src.domain.exceptions.application_templates import (
+from core_service.domain.exceptions.application_templates import (
     InvalidApplicationFieldsConfig,
     InvalidApplicationFieldValues,
     InvalidApplicationTemplate,
 )
-from src.domain.services.application_fields import (
+from core_service.domain.services.application_fields import (
     create_default_fields,
     get_ai_field_values,
     validate_field_values,
     validate_fields_config,
 )
-from src.domain.value_objects.application_templates import ApplicationFieldType, ApplicationTemplateField
+from core_service.domain.value_objects.application_templates import ApplicationFieldType, ApplicationTemplateField
 
 
 def test_create_default_fields_skips_reserved_variables():

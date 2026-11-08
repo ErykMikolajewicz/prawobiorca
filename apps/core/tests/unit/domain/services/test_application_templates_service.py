@@ -1,7 +1,7 @@
 import pytest
 
-from src.domain.services.application_templates import is_ready_to_publish, is_semantic_search_query
-from src.domain.value_objects.application_templates import ApplicationTemplateStatus
+from core_service.domain.services.application_templates import is_ready_to_publish, is_semantic_search_query
+from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 
 
 @pytest.mark.parametrize(

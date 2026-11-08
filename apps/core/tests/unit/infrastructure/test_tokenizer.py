@@ -1,4 +1,4 @@
-from src.infrastructure.tokenizers.mmlw import MmlwTokenizer
+from core_service.infrastructure.tokenizers.mmlw import MmlwTokenizer
 
 SENTENCE = "Art. 1. Ustawa określa zasady działania uczelni. "
 

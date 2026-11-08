@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
+from core_service.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
 
 
 async def insert_organization(

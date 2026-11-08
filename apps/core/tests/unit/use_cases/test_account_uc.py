@@ -1,11 +1,11 @@
 import pytest
 from pydantic import SecretStr
 
-from src.app.dtos.account import LoginData
-from src.app.use_cases.account import CreateAccount
-from src.domain.exceptions.users import UserExists
-from src.domain.services.security import verify_password
-from src.shared.exceptions import ObjectExists
+from core_service.application.dtos.account import LoginData
+from core_service.application.use_cases.account import CreateAccount
+from core_service.domain.exceptions.users import UserExists
+from core_service.domain.services.security import verify_password
+from core_service.shared.exceptions import ObjectExists
 from tests.consts import STRONG_PASSWORD, VALID_USERNAME
 from tests.mocks import get_awaited_argument
 

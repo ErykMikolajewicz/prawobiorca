@@ -5,9 +5,9 @@ from uuid import UUID
 import pytest
 from docx import Document
 
-from src.app.dtos.applications import NewApplication
-from src.domain.services.application_fields import DATE_FORMAT
-from src.infrastructure.docx.docx_renderer import APPLICATION_TIMEZONE, DocxApplicationRenderer
+from core_service.application.dtos.applications import NewApplication
+from core_service.domain.services.application_fields import DATE_FORMAT
+from core_service.infrastructure.docx.docx_renderer import APPLICATION_TIMEZONE, DocxApplicationRenderer
 
 TEMPLATE_ID = UUID("6f7a8b9c-0d1e-4f2a-8b3c-4d5e6f7a8b9c")
 

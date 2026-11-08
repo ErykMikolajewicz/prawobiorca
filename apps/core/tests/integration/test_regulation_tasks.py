@@ -1,10 +1,10 @@
 from fastapi import status
 from sqlalchemy import select
 
-from src.domain.value_objects.regulations import RegulationDescriptionStatus, RegulationPreparationStatus
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
-from src.infrastructure.tasks.regulations import PostgresRegulationPreparationScheduler
-from src.shared.consts import (
+from core_service.domain.value_objects.regulations import RegulationDescriptionStatus, RegulationPreparationStatus
+from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.tasks.regulations import PostgresRegulationPreparationScheduler
+from core_service.shared.consts import (
     MAX_REGULATION_PREPARATION_DELIVERIES,
     REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
     REGULATION_PREPARATION_TASK_NAME,

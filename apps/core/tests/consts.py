@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from src.domain.services.security import create_access_token
-from src.domain.value_objects.auth import AccessTokenClaims
-from src.shared.consts import JWT_ALGORITHM
-from src.shared.settings.application import app_settings
+from core_service.domain.services.security import create_access_token
+from core_service.domain.value_objects.auth import AccessTokenClaims
+from core_service.shared.consts import JWT_ALGORITHM
+from core_service.shared.settings.application import app_settings
 
 STRONG_PASSWORD = "StrongPassword12;"
 

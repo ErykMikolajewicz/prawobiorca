@@ -5,8 +5,8 @@ exclude = [
     "apps/core/alembic",
 ]
 
-# Roots used to tell first-party imports (src.*, tests.*, manifests) from third-party ones.
-src = ["apps/core", "apps/extraction", "scripts/local"]
+# Roots used to tell first-party imports (core_service.*, extraction_service.*, tests.*, manifests) from third-party ones.
+src = ["apps/core/src", "apps/core", "apps/extraction/src", "apps/extraction", "scripts/local"]
 
 [lint]
 select = [

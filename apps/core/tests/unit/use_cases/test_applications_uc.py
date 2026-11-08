@@ -3,22 +3,22 @@ from uuid import UUID
 
 import pytest
 
-from src.app.dtos.application_templates import ApplicationTemplateRepresentation
-from src.app.dtos.applications import ApplicationRepresentation, NewApplication
-from src.app.dtos.cases import CaseDocument
-from src.app.use_cases.applications import (
+from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
+from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
+from core_service.application.dtos.cases import CaseDocument
+from core_service.application.use_cases.applications import (
     AddApplication,
     DeleteApplication,
     FailApplicationGeneration,
     GenerateApplication,
     GetApplicationDownloadUrl,
 )
-from src.domain.exceptions.application_templates import ApplicationTemplateNotFound
-from src.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
-from src.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
-from src.domain.value_objects.applications import ApplicationGenerationStatus
-from src.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
-from src.shared.exceptions import ServiceUnavailable
+from core_service.domain.exceptions.application_templates import ApplicationTemplateNotFound
+from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
+from core_service.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
+from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
+from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments
 

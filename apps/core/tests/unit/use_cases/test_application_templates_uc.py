@@ -3,13 +3,13 @@ from uuid import UUID
 
 import pytest
 
-from src.app.dtos.application_templates import (
+from core_service.application.dtos.application_templates import (
     ApplicationTemplateDetailsData,
     ApplicationTemplateRepresentation,
     PublishedApplicationField,
     PublishedApplicationTemplate,
 )
-from src.app.use_cases.application_templates import (
+from core_service.application.use_cases.application_templates import (
     ConfirmApplicationTemplateUpload,
     DeleteApplicationTemplate,
     FailApplicationTemplateDescriptionGeneration,
@@ -21,23 +21,23 @@ from src.app.use_cases.application_templates import (
     UnpublishApplicationTemplate,
     UpdateApplicationTemplate,
 )
-from src.domain.exceptions.application_templates import (
+from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
     ApplicationTemplateDescriptionGenerationInProgress,
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
 )
-from src.domain.services.application_fields import create_default_fields
-from src.domain.value_objects.application_templates import (
+from core_service.domain.services.application_fields import create_default_fields
+from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDescriptionStatus,
     ApplicationTemplateDetails,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
-from src.domain.value_objects.users import Caller
-from src.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
-from src.shared.exceptions import ServiceUnavailable
+from core_service.domain.value_objects.users import Caller
+from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
+from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments
 

@@ -3,8 +3,8 @@ from io import BytesIO
 import pytest
 from docx import Document
 
-from src.domain.exceptions.application_templates import InvalidApplicationTemplate
-from src.infrastructure.docx.template_inspector import DocxTemplateInspector
+from core_service.domain.exceptions.application_templates import InvalidApplicationTemplate
+from core_service.infrastructure.docx.template_inspector import DocxTemplateInspector
 
 
 def create_docx() -> bytes:

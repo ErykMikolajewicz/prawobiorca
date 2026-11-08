@@ -3,15 +3,15 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pydantic import SecretStr
 
-from src.app.dtos.account import LoginData
-from src.app.use_cases.auth import LogoutUser, LogUser, RefreshTokens
-from src.domain.entities.user import User
-from src.domain.exceptions.users import InvalidRefreshToken, UserCantLog
-from src.domain.services.security import decode_access_token, hash_password, hash_refresh_token
-from src.domain.value_objects.auth import UserSession
-from src.domain.value_objects.users import UserPrivileges
-from src.shared.consts import JWT_ALGORITHM
-from src.shared.settings.application import app_settings
+from core_service.application.dtos.account import LoginData
+from core_service.application.use_cases.auth import LogoutUser, LogUser, RefreshTokens
+from core_service.domain.entities.user import User
+from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
+from core_service.domain.services.security import decode_access_token, hash_password, hash_refresh_token
+from core_service.domain.value_objects.auth import UserSession
+from core_service.domain.value_objects.users import UserPrivileges
+from core_service.shared.consts import JWT_ALGORITHM
+from core_service.shared.settings.application import app_settings
 from tests.consts import REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
 from tests.mocks import get_awaited_argument
 
@@ -38,7 +38,9 @@ def sessions_repository(mock_sessions_repo):
 
 @pytest.fixture
 def mock_prevent_timing_attack():
-    with patch("src.app.use_cases.auth.prevent_timing_attack", new_callable=AsyncMock) as prevent_timing_attack:
+    with patch(
+        "core_service.application.use_cases.auth.prevent_timing_attack", new_callable=AsyncMock
+    ) as prevent_timing_attack:
         yield prevent_timing_attack
 
 

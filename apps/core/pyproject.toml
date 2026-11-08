@@ -3,7 +3,6 @@ name = "core-service"
 version = "0.1.0"
 description = "Law acts search engine with AI features."
 license = "MIT"
-readme = "README.md"
 requires-python = "==3.14.*"
 dependencies = [
     "aiobotocore==3.10.*",
@@ -28,6 +27,10 @@ dependencies = [
     "tokenizers==0.23.*",
 ]
 
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
 [dependency-groups]
 dev = [
     "granian[reload]==2.8.*",
@@ -46,7 +49,7 @@ test = [
 default-groups = ["dev", "test"]
 
 [[tool.ty.overrides]]
-include = ["src/framework/dependencies/**", "src/framework/workers/**"]
+include = ["src/core_service/framework/dependencies/**", "src/core_service/framework/workers/**"]
 
 [tool.ty.overrides.rules]
 invalid-argument-type = "ignore"

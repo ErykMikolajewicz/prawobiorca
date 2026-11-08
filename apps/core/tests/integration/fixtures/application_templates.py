@@ -6,8 +6,8 @@ from docx import Document
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.value_objects.application_templates import ApplicationTemplateStatus
-from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
+from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
+from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
 
 
 async def insert_application_template(

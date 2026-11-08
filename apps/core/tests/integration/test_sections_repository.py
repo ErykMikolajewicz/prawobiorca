@@ -1,11 +1,14 @@
 import pytest
 from sqlalchemy import select
 
-from src.domain.value_objects.legal_units import LegalUnitElement
-from src.domain.value_objects.sections import ChunkSpan, RegulationSection, SectionChunk, SectionsCollection
-from src.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
-from src.infrastructure.relational_db.schemas.sections import regulations_chunks_table, regulations_sections_table
-from src.shared.consts import VECTOR_LENGTH
+from core_service.domain.value_objects.legal_units import LegalUnitElement
+from core_service.domain.value_objects.sections import ChunkSpan, RegulationSection, SectionChunk, SectionsCollection
+from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
+from core_service.infrastructure.relational_db.schemas.sections import (
+    regulations_chunks_table,
+    regulations_sections_table,
+)
+from core_service.shared.consts import VECTOR_LENGTH
 from tests.consts import USER_ID
 from tests.integration.fixtures.regulations import insert_regulation
 

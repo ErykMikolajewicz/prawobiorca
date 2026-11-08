@@ -1,9 +1,9 @@
-from src.domain.services.application_template_description import (
+from core_service.domain.services.application_template_description import (
     MAX_DESCRIPTION_CONTENT_CHARS,
     MAX_DESCRIPTION_INSTRUCTIONS_CHARS,
     create_description_source,
 )
-from src.domain.value_objects.application_templates import (
+from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateDescriptionSource,
     ApplicationTemplateField,
 )

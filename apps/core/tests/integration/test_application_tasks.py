@@ -5,14 +5,14 @@ from docx import Document
 from fastapi import status
 from sqlalchemy import select
 
-from src.domain.value_objects.application_templates import (
+from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
-from src.domain.value_objects.applications import ApplicationGenerationStatus
-from src.infrastructure.relational_db.schemas.application_templates import application_templates_table
-from src.infrastructure.relational_db.schemas.applications import applications_table
+from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
+from core_service.infrastructure.relational_db.schemas.applications import applications_table
 from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR
 from tests.integration.fixtures.application_templates import create_docx_template, insert_application_template
 from tests.integration.fixtures.cases import insert_case, insert_case_document

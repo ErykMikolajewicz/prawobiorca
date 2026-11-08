@@ -4,8 +4,11 @@ from uuid import UUID
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
-from src.infrastructure.relational_db.schemas.sections import regulations_chunks_table, regulations_sections_table
+from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.relational_db.schemas.sections import (
+    regulations_chunks_table,
+    regulations_sections_table,
+)
 
 
 async def insert_regulation(

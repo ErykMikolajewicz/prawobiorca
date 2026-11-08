@@ -4,8 +4,8 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy import select
 
-from src.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
-from src.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
+from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
 from tests.consts import UNKNOWN_ID
 from tests.integration.fixtures.organizations import insert_organization, insert_suborganization
 from tests.integration.fixtures.regulations import insert_regulation

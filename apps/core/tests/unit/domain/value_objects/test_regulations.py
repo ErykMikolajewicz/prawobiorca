@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from src.domain.value_objects import regulations as regulations_module
-from src.domain.value_objects.legal_units import RegulationElement, UsefulLabels
-from src.domain.value_objects.regulations import RegulationAct, Tokenizer
-from src.infrastructure.tokenizers.mmlw import MmlwTokenizer
+from core_service.domain.value_objects import regulations as regulations_module
+from core_service.domain.value_objects.legal_units import RegulationElement, UsefulLabels
+from core_service.domain.value_objects.regulations import RegulationAct, Tokenizer
+from core_service.infrastructure.tokenizers.mmlw import MmlwTokenizer
 
 DATA_DIR = Path(__file__).parents[3] / "data"
 

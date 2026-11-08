@@ -139,7 +139,7 @@ Distributed task queue used to run heavy, long-running document preparation (ext
 
 Alternative: **Celery** — the most established Python task queue, but it is not async-native and requires more configuration to work well with an asyncio-based codebase.
 
-The broker is not a library: it is a small PostgreSQL broker in `apps/core/src/infrastructure/tasks/broker.py`, so the queue lives in the existing database and no separate service is needed (see [Architecture](architecture.md#32-asynchronous-job-processing-with-taskiq)). The ready-made PostgreSQL brokers (`taskiq-pg`, `taskiq-postgres`) were rejected because they pick messages up only on `NOTIFY`: a message sent while no worker is listening, or one claimed by a worker that crashed, is never delivered again. Redis (`taskiq-redis`) was used before, but it added a separate stateful service, and its list-based broker lost the task being processed when the worker crashed.
+The broker is not a library: it is a small PostgreSQL broker in `apps/core/src/core_service/infrastructure/tasks/broker.py`, so the queue lives in the existing database and no separate service is needed (see [Architecture](architecture.md#32-asynchronous-job-processing-with-taskiq)). The ready-made PostgreSQL brokers (`taskiq-pg`, `taskiq-postgres`) were rejected because they pick messages up only on `NOTIFY`: a message sent while no worker is listening, or one claimed by a worker that crashed, is never delivered again. Redis (`taskiq-redis`) was used before, but it added a separate stateful service, and its list-based broker lost the task being processed when the worker crashed.
 
 ## Storage Dependencies
 

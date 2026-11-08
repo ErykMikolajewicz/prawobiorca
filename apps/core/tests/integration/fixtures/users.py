@@ -2,8 +2,8 @@ import pytest
 from pydantic import SecretStr
 from sqlalchemy import insert
 
-from src.domain.services.security import hash_password
-from src.infrastructure.relational_db.schemas.users import users_table
+from core_service.domain.services.security import hash_password
+from core_service.infrastructure.relational_db.schemas.users import users_table
 from tests.consts import ADMIN_ID, ADMIN_USERNAME, STRONG_PASSWORD, USER_ID, VALID_USERNAME
 
 
