@@ -16,9 +16,12 @@ UNKNOWN_USER_ID = UUID("3f0c1d2e-8a4b-4c6d-9e1f-7b2a5c8d3e40")
 
 SESSION_ID = UUID("6e5a5b3c-1f1b-4f6a-9a4e-2c9c6f0d9b21")
 
-REFRESH_TOKEN = "O8KwTwMvXTSn3VdWl6iZlNqmw39UvFRvIbeHfo-mykY"
+ORGANIZATION_ID = UUID("1b4a1b7a-dbd6-4be4-a52e-80fdd9ddbfb0")
+SUBORGANIZATION_ID = UUID("a3f54f36-9653-4ccf-b9f4-81bf885d02ee")
 
-UNKNOWN_REFRESH_TOKEN = "kGG09w8Igs09xBw7ki-oZ-F_kPQC0Hs9tbCyWaKm8fs"
+UNKNOWN_ID = UUID("8f7a6b5c-4d3e-4f1a-9b8c-7d6e5f4a3b2c")
+
+REFRESH_TOKEN = "O8KwTwMvXTSn3VdWl6iZlNqmw39UvFRvIbeHfo-mykY"
 
 
 def build_access_token(user_id: UUID = USER_ID, session_id: UUID = SESSION_ID, is_admin: bool = False) -> str:

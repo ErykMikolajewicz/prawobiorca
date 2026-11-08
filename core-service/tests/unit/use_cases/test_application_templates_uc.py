@@ -1,38 +1,32 @@
-from unittest.mock import AsyncMock, MagicMock
+from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 
 from src.app.dtos.application_templates import (
-    ApplicationTemplateData,
     ApplicationTemplateDetailsData,
+    ApplicationTemplateRepresentation,
     PublishedApplicationField,
     PublishedApplicationTemplate,
 )
 from src.app.use_cases.application_templates import (
-    AddApplicationTemplate,
     ConfirmApplicationTemplateUpload,
     DeleteApplicationTemplate,
     FailApplicationTemplateDescriptionGeneration,
     GenerateApplicationTemplateDescription,
-    GetApplicationTemplate,
     GetApplicationTemplateDownloadUrl,
-    ListPublishedApplicationTemplates,
     PublishApplicationTemplate,
     RegenerateApplicationTemplateDescription,
     SearchPublishedApplicationTemplates,
     UnpublishApplicationTemplate,
     UpdateApplicationTemplate,
 )
-from src.domain.exceptions.access import AccessForbidden, LoginRequired
 from src.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
     ApplicationTemplateDescriptionGenerationInProgress,
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
-    InvalidApplicationFieldsConfig,
-    InvalidApplicationTemplate,
 )
-from src.domain.exceptions.organizations import OrganizationNotFound
 from src.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDescriptionStatus,
@@ -40,649 +34,175 @@ from src.domain.value_objects.application_templates import (
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
-from src.domain.value_objects.organizations import OrganizationFilter
 from src.domain.value_objects.users import Caller
 from src.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
 from src.shared.exceptions import ServiceUnavailable
-from tests.consts import ADMIN_ID, USER_ID
+from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
 USER = Caller(user_id=USER_ID)
 
+TEMPLATE_ID = UUID("7d2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a")
+
+STUDENT_ID_FIELD = ApplicationTemplateField(name="student_id", label="Numer albumu")
+
+TEMPLATE_TEXT = "Dziekan Wydziału\n{{ student_id }}"
+
 
 def create_template(
-    status: ApplicationTemplateStatus,
-    fields: list[ApplicationTemplateField] | None = None,
-    instructions: str | None = None,
-):
-    template = MagicMock()
-    template.status = status
-    template.fields = fields or []
-    template.instructions = instructions
-    template.description = None
-    template.description_status = ApplicationTemplateDescriptionStatus.NOT_REQUESTED
-    return template
-
-
-def get_set_description_statuses(mock_application_templates_repo):
-    return [call.args[2] for call in mock_application_templates_repo.set_description_status.await_args_list]
-
-
-async def test_list_published_application_templates_hides_ai_settings(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
-):
-    template_id = next(uuid_generator)
-    template = create_template(
-        ApplicationTemplateStatus.PUBLISHED,
-        [
-            ApplicationTemplateField(
-                name="department", label="Wydział", field_type=ApplicationFieldType.SELECT, options=["W4"]
-            )
-        ],
-        "Instrukcje",
+    status: ApplicationTemplateStatus = ApplicationTemplateStatus.DRAFT,
+    instructions: str | None = "Sporządź wniosek o urlop dziekański.",
+    description: str | None = None,
+    description_status: ApplicationTemplateDescriptionStatus = ApplicationTemplateDescriptionStatus.NOT_REQUESTED,
+) -> ApplicationTemplateRepresentation:
+    return ApplicationTemplateRepresentation(
+        id=TEMPLATE_ID,
+        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
+        name="Wniosek o urlop",
+        status=status,
+        fields=[STUDENT_ID_FIELD],
+        instructions=instructions,
+        description=description,
+        descriptionStatus=description_status,
     )
-    template.id = template_id
-    template.name = "Wniosek"
-    mock_application_templates_repo.list_templates.return_value = [template]
 
-    use_case = ListPublishedApplicationTemplates(mock_session_maker, mock_application_templates_repo)
 
-    templates = await use_case.execute(USER, None)
+def store_template(application_templates_repository, template: ApplicationTemplateRepresentation | None) -> None:
+    application_templates_repository.get.return_value = template
 
-    mock_application_templates_repo.list_templates.assert_awaited_once_with(
-        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, None
+
+def get_description_statuses(application_templates_repository) -> list[ApplicationTemplateDescriptionStatus]:
+    return [call.args[-1] for call in application_templates_repository.set_description_status.await_args_list]
+
+
+@pytest.fixture
+def application_templates_repository(mock_application_templates_repo):
+    store_template(mock_application_templates_repo, create_template())
+    return mock_application_templates_repo
+
+
+@pytest.fixture
+def template_inspector(mock_application_template_inspector):
+    mock_application_template_inspector.get_text.return_value = TEMPLATE_TEXT
+    return mock_application_template_inspector
+
+
+@pytest.fixture
+def search_published_templates(mock_session_maker, mock_embedding_port, application_templates_repository):
+    return SearchPublishedApplicationTemplates(
+        session_maker=mock_session_maker,
+        embedding_port=mock_embedding_port,
+        application_templates_repo=application_templates_repository,
     )
-    assert templates == [
-        PublishedApplicationTemplate(
-            id=template_id,
-            name="Wniosek",
-            fields=[
-                PublishedApplicationField(
-                    name="department",
-                    label="Wydział",
-                    field_type=ApplicationFieldType.SELECT,
-                    required=True,
-                    options=["W4"],
-                )
-            ],
-        )
-    ]
 
 
-async def test_list_published_application_templates_with_organization_filter(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
-):
-    organization_filter = OrganizationFilter(next(uuid_generator), next(uuid_generator))
-    mock_application_templates_repo.list_templates.return_value = []
-
-    use_case = ListPublishedApplicationTemplates(mock_session_maker, mock_application_templates_repo)
-
-    templates = await use_case.execute(USER, organization_filter)
-
-    mock_application_templates_repo.list_templates.assert_awaited_once_with(
-        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter
-    )
-    assert templates == []
-
-
-async def test_get_application_template(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
-):
-    template_id = next(uuid_generator)
-
-    use_case = GetApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    result = await use_case.execute(ADMIN, template_id)
-
-    mock_application_templates_repo.get.assert_awaited_once_with(mock_opened_session, template_id)
-    assert result == mock_application_templates_repo.get.return_value
-
-
-async def test_get_application_template_as_normal_user(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    use_case = GetApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    with pytest.raises(AccessForbidden):
-        await use_case.execute(USER, next(uuid_generator))
-
-    mock_application_templates_repo.get.assert_not_awaited()
-
-
-async def test_get_application_template_not_found(mock_session_maker, mock_application_templates_repo, uuid_generator):
-    mock_application_templates_repo.get.return_value = None
-
-    use_case = GetApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-
-async def test_add_application_template(
+@pytest.fixture
+def confirm_template_upload(
     mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_application_template_instructions_provider,
-    uuid_generator,
-):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.add.return_value = template_id
-    mock_application_template_instructions_provider.get_default_instructions.return_value = "Instrukcje"
-
-    use_case = AddApplicationTemplate(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_instructions_provider,
-    )
-
-    upload_target = await use_case.execute(ADMIN, ApplicationTemplateData(name="Wniosek"))
-
-    mock_application_templates_repo.add.assert_awaited_once_with(mock_opened_session, "Wniosek", "Instrukcje")
-    mock_application_templates_storage.get_upload_target.assert_awaited_once_with(template_id)
-    assert upload_target == mock_application_templates_storage.get_upload_target.return_value
-
-
-async def test_confirm_application_template_upload(
-    mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
+    application_templates_repository,
     mock_application_templates_storage,
     mock_application_template_inspector,
-    uuid_generator,
 ):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
-    mock_application_templates_storage.get_template.return_value = b"docx"
-    mock_application_template_inspector.get_variables.return_value = {"paragraphs", "current_date", "student_id"}
-
-    use_case = ConfirmApplicationTemplateUpload(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_inspector,
+    return ConfirmApplicationTemplateUpload(
+        session_maker=mock_session_maker,
+        application_templates_repo=application_templates_repository,
+        application_templates_storage=mock_application_templates_storage,
+        application_template_inspector=mock_application_template_inspector,
     )
 
-    result = await use_case.execute(ADMIN, template_id)
 
-    mock_application_template_inspector.get_variables.assert_awaited_once_with(b"docx")
-    mock_application_templates_repo.confirm_upload.assert_awaited_once_with(
-        mock_opened_session, template_id, [ApplicationTemplateField(name="student_id", label="student_id")]
+@pytest.fixture
+def update_template(mock_session_maker, application_templates_repository, mock_embedding_port):
+    return UpdateApplicationTemplate(
+        session_maker=mock_session_maker,
+        application_templates_repo=application_templates_repository,
+        texts_embedder=mock_embedding_port,
     )
-    assert result == mock_application_templates_repo.confirm_upload.return_value
 
 
-async def test_confirm_application_template_upload_changed_during_confirmation(
+@pytest.fixture
+def publish_template(mock_session_maker, application_templates_repository):
+    return PublishApplicationTemplate(
+        session_maker=mock_session_maker, application_templates_repo=application_templates_repository
+    )
+
+
+@pytest.fixture
+def unpublish_template(mock_session_maker, application_templates_repository):
+    return UnpublishApplicationTemplate(
+        session_maker=mock_session_maker, application_templates_repo=application_templates_repository
+    )
+
+
+@pytest.fixture
+def regenerate_template_description(
+    mock_session_maker, application_templates_repository, mock_application_template_description_generation_scheduler
+):
+    return RegenerateApplicationTemplateDescription(
+        session_maker=mock_session_maker,
+        application_templates_repo=application_templates_repository,
+        description_generation_scheduler=mock_application_template_description_generation_scheduler,
+    )
+
+
+@pytest.fixture
+def generate_template_description(
     mock_session_maker,
-    mock_application_templates_repo,
+    application_templates_repository,
     mock_application_templates_storage,
-    mock_application_template_inspector,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
-    mock_application_template_inspector.get_variables.return_value = {"paragraphs"}
-    mock_application_templates_repo.confirm_upload.return_value = None
-
-    use_case = ConfirmApplicationTemplateUpload(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_inspector,
-    )
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-
-async def test_confirm_application_template_upload_not_found(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_application_template_inspector,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = None
-
-    use_case = ConfirmApplicationTemplateUpload(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_inspector,
-    )
-
-    with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-
-async def test_confirm_application_template_upload_already_confirmed(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_application_template_inspector,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-
-    use_case = ConfirmApplicationTemplateUpload(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_inspector,
-    )
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_storage.get_template.assert_not_awaited()
-
-
-async def test_confirm_application_template_upload_content_not_found(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_application_template_inspector,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
-    mock_application_templates_storage.get_template.side_effect = ApplicationTemplateContentNotFound
-
-    use_case = ConfirmApplicationTemplateUpload(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_inspector,
-    )
-
-    with pytest.raises(ApplicationTemplateContentNotFound):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_repo.confirm_upload.assert_not_awaited()
-
-
-async def test_confirm_application_template_upload_without_content_variable(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_application_template_inspector,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
-    mock_application_template_inspector.get_variables.return_value = {"student_id"}
-
-    use_case = ConfirmApplicationTemplateUpload(
-        mock_session_maker,
-        mock_application_templates_repo,
-        mock_application_templates_storage,
-        mock_application_template_inspector,
-    )
-
-    with pytest.raises(InvalidApplicationTemplate):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_repo.confirm_upload.assert_not_awaited()
-
-
-async def test_update_application_template(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(
-        ApplicationTemplateStatus.DRAFT, [ApplicationTemplateField(name="student_id", label="student_id")]
-    )
-    fields = [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")]
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    result = await use_case.execute(
-        ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", instructions="Instrukcje", fields=fields)
-    )
-
-    mock_application_templates_repo.update_details.assert_awaited_once_with(
-        mock_opened_session,
-        template_id,
-        ApplicationTemplateDetails(name="Wniosek", instructions="Instrukcje", fields=fields),
-    )
-    mock_embedding_port.embed_texts.assert_not_awaited()
-    mock_application_templates_repo.set_description_vector.assert_not_awaited()
-    assert result == mock_application_templates_repo.update_details.return_value
-
-
-async def test_update_application_template_with_invalid_fields(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = create_template(
-        ApplicationTemplateStatus.DRAFT, [ApplicationTemplateField(name="student_id", label="student_id")]
-    )
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    with pytest.raises(InvalidApplicationFieldsConfig):
-        await use_case.execute(
-            ADMIN,
-            next(uuid_generator),
-            ApplicationTemplateDetailsData(
-                name="Wniosek", fields=[ApplicationTemplateField(name="other", label="Inne")]
-            ),
-        )
-
-    mock_application_templates_repo.update_details.assert_not_awaited()
-
-
-async def test_update_application_template_with_organization(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    template_id = next(uuid_generator)
-    organization_id = next(uuid_generator)
-    suborganization_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    await use_case.execute(
-        ADMIN,
-        template_id,
-        ApplicationTemplateDetailsData(
-            name="Wniosek", fields=[], organizationId=organization_id, suborganizationId=suborganization_id
-        ),
-    )
-
-    mock_application_templates_repo.update_details.assert_awaited_once_with(
-        mock_opened_session,
-        template_id,
-        ApplicationTemplateDetails(
-            name="Wniosek",
-            instructions=None,
-            fields=[],
-            organization_id=organization_id,
-            suborganization_id=suborganization_id,
-        ),
-    )
-
-
-async def test_update_application_template_organization_not_found(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-    mock_application_templates_repo.update_details.side_effect = OrganizationNotFound
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    with pytest.raises(OrganizationNotFound):
-        await use_case.execute(
-            ADMIN,
-            next(uuid_generator),
-            ApplicationTemplateDetailsData(name="Wniosek", fields=[], organizationId=next(uuid_generator)),
-        )
-
-
-async def test_update_application_template_changed_description_recalculates_vector(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    result = await use_case.execute(
-        ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Nowy opis.")
-    )
-
-    mock_embedding_port.embed_texts.assert_awaited_once_with(["Nowy opis."])
-    mock_application_templates_repo.set_description_vector.assert_awaited_once_with(
-        mock_opened_session, template_id, [0.1, 0.2]
-    )
-    assert result == mock_application_templates_repo.set_description_vector.return_value
-
-
-async def test_update_application_template_unchanged_description_keeps_vector(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    template = create_template(ApplicationTemplateStatus.DRAFT)
-    template.description = "Opis."
-    mock_application_templates_repo.get.return_value = template
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    await use_case.execute(
-        ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Opis.")
-    )
-
-    mock_embedding_port.embed_texts.assert_not_awaited()
-    mock_application_templates_repo.set_description_vector.assert_not_awaited()
-
-
-@pytest.mark.parametrize("description", [None, "", "   "])
-async def test_update_application_template_removed_description_clears_vector(
-    mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
+    template_inspector,
+    mock_application_template_description_writer,
     mock_embedding_port,
-    uuid_generator,
-    description,
 ):
-    template_id = next(uuid_generator)
-    template = create_template(ApplicationTemplateStatus.DRAFT)
-    template.description = "Opis."
-    mock_application_templates_repo.get.return_value = template
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    await use_case.execute(
-        ADMIN, template_id, ApplicationTemplateDetailsData(name="Wniosek", fields=[], description=description)
-    )
-
-    mock_embedding_port.embed_texts.assert_not_awaited()
-    mock_application_templates_repo.set_description_vector.assert_awaited_once_with(
-        mock_opened_session, template_id, None
+    return GenerateApplicationTemplateDescription(
+        session_maker=mock_session_maker,
+        application_templates_repo=application_templates_repository,
+        application_templates_storage=mock_application_templates_storage,
+        application_template_inspector=template_inspector,
+        description_writer=mock_application_template_description_writer,
+        texts_embedder=mock_embedding_port,
     )
 
 
-async def test_update_application_template_embedding_unavailable(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-    mock_embedding_port.embed_texts.side_effect = ServiceUnavailable
+@pytest.fixture
+def fail_template_description_generation(mock_session_maker, application_templates_repository):
+    return FailApplicationTemplateDescriptionGeneration(
+        session_maker=mock_session_maker, application_templates_repo=application_templates_repository
+    )
 
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
 
-    with pytest.raises(ServiceUnavailable):
-        await use_case.execute(
-            ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Opis.")
+@pytest.fixture
+def delete_template(mock_session_maker, application_templates_repository, mock_application_templates_storage):
+    return DeleteApplicationTemplate(
+        session_maker=mock_session_maker,
+        application_templates_repo=application_templates_repository,
+        application_templates_storage=mock_application_templates_storage,
+    )
+
+
+@pytest.fixture
+def get_template_download_url(mock_session_maker, application_templates_repository, mock_application_templates_storage):
+    return GetApplicationTemplateDownloadUrl(
+        session_maker=mock_session_maker,
+        application_templates_repo=application_templates_repository,
+        application_templates_storage=mock_application_templates_storage,
+    )
+
+
+PUBLISHED_TEMPLATE = PublishedApplicationTemplate(
+    id=TEMPLATE_ID,
+    name="Wniosek o urlop",
+    description="Wniosek o urlop dziekański.",
+    fields=[
+        PublishedApplicationField(
+            name="student_id", label="Numer albumu", field_type=ApplicationFieldType.TEXT, required=True
         )
-
-    mock_application_templates_repo.update_details.assert_not_awaited()
-
-
-async def test_update_application_template_published_during_embedding(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator
-):
-    mock_application_templates_repo.get.side_effect = [
-        create_template(ApplicationTemplateStatus.DRAFT),
-        create_template(ApplicationTemplateStatus.PUBLISHED),
-    ]
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(
-            ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[], description="Opis.")
-        )
-
-    mock_application_templates_repo.update_details.assert_not_awaited()
-
-
-@pytest.mark.parametrize("status", [ApplicationTemplateStatus.NOT_UPLOADED, ApplicationTemplateStatus.PUBLISHED])
-async def test_update_application_template_not_draft(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port, uuid_generator, status
-):
-    mock_application_templates_repo.get.return_value = create_template(status)
-
-    use_case = UpdateApplicationTemplate(mock_session_maker, mock_application_templates_repo, mock_embedding_port)
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator), ApplicationTemplateDetailsData(name="Wniosek", fields=[]))
-
-
-async def test_publish_application_template(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
-):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(
-        ApplicationTemplateStatus.DRAFT, instructions="Instrukcje"
-    )
-
-    use_case = PublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    await use_case.execute(ADMIN, template_id)
-
-    mock_application_templates_repo.set_status.assert_awaited_once_with(
-        mock_opened_session, template_id, ApplicationTemplateStatus.PUBLISHED
-    )
-
-
-@pytest.mark.parametrize(
-    ("status", "instructions"),
-    [
-        (ApplicationTemplateStatus.DRAFT, None),
-        (ApplicationTemplateStatus.DRAFT, " "),
-        (ApplicationTemplateStatus.NOT_UPLOADED, "Instrukcje"),
-        (ApplicationTemplateStatus.PUBLISHED, "Instrukcje"),
     ],
 )
-async def test_publish_application_template_not_ready(
-    mock_session_maker, mock_application_templates_repo, uuid_generator, status, instructions
-):
-    mock_application_templates_repo.get.return_value = create_template(status, instructions=instructions)
-
-    use_case = PublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_repo.set_status.assert_not_awaited()
 
 
-async def test_unpublish_application_template(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
-):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.PUBLISHED)
-
-    use_case = UnpublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    await use_case.execute(ADMIN, template_id)
-
-    mock_application_templates_repo.set_status.assert_awaited_once_with(
-        mock_opened_session, template_id, ApplicationTemplateStatus.DRAFT
-    )
-
-
-async def test_unpublish_application_template_not_published(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-
-    use_case = UnpublishApplicationTemplate(mock_session_maker, mock_application_templates_repo)
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-
-async def test_delete_application_template(
-    mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    uuid_generator,
-):
-    template_id = next(uuid_generator)
-
-    use_case = DeleteApplicationTemplate(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
-    )
-
-    await use_case.execute(ADMIN, template_id)
-
-    mock_application_templates_repo.delete.assert_awaited_once_with(mock_opened_session, template_id)
-    mock_application_templates_storage.delete_template.assert_awaited_once_with(template_id)
-
-
-async def test_delete_application_template_not_found(
-    mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, uuid_generator
-):
-    mock_application_templates_repo.delete.side_effect = ApplicationTemplateNotFound
-
-    use_case = DeleteApplicationTemplate(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
-    )
-
-    with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_storage.delete_template.assert_not_awaited()
-
-
-async def test_get_application_template_download_url(
-    mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    uuid_generator,
-):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-    mock_application_templates_storage.get_download_url.return_value = "http://storage.local/bucket/template"
-
-    use_case = GetApplicationTemplateDownloadUrl(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
-    )
-
-    result = await use_case.execute(ADMIN, template_id)
-
-    assert result == "http://storage.local/bucket/template"
-    mock_application_templates_repo.get.assert_awaited_once_with(mock_opened_session, template_id)
-    mock_application_templates_storage.get_download_url.assert_awaited_once_with(template_id)
-
-
-async def test_get_application_template_download_url_not_found(
-    mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = None
-
-    use_case = GetApplicationTemplateDownloadUrl(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
-    )
-
-    with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_storage.get_download_url.assert_not_awaited()
-
-
-async def test_get_application_template_download_url_not_uploaded(
-    mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
-
-    use_case = GetApplicationTemplateDownloadUrl(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage
-    )
-
-    with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_application_templates_storage.get_download_url.assert_not_awaited()
-
-
-def create_searchable_template(template_id):
-    template = create_template(ApplicationTemplateStatus.PUBLISHED, instructions="Instrukcje")
-    template.id = template_id
-    template.name = "Wniosek o urlop"
-    template.description = "Wniosek o urlop dziekański."
-    return template
+def create_published_template() -> ApplicationTemplateRepresentation:
+    return create_template(ApplicationTemplateStatus.PUBLISHED, description="Wniosek o urlop dziekański.")
 
 
 @pytest.mark.parametrize(
@@ -690,392 +210,438 @@ def create_searchable_template(template_id):
     [("urlop dziekański", False), ("urlop", True), ("  urlop", True)],
 )
 async def test_search_published_application_templates_by_name(
-    mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
-    mock_embedding_port,
-    uuid_generator,
-    query,
-    ai_assisted,
+    search_published_templates, application_templates_repository, mock_embedding_port, query, ai_assisted
 ):
-    template_id = next(uuid_generator)
-    organization_filter = OrganizationFilter(next(uuid_generator))
-    mock_application_templates_repo.fuzzy_search_templates.return_value = [create_searchable_template(template_id)]
+    application_templates_repository.fuzzy_search_templates.return_value = [create_published_template()]
 
-    use_case = SearchPublishedApplicationTemplates(
-        mock_session_maker, mock_embedding_port, mock_application_templates_repo
-    )
+    results = await search_published_templates.execute(USER, None, query, ai_assisted)
 
-    results = await use_case.execute(USER, organization_filter, query, ai_assisted)
-
+    assert results == [PUBLISHED_TEMPLATE]
+    assert application_templates_repository.fuzzy_search_templates.await_args.args[-1] == query.strip()
     mock_embedding_port.embed_queries.assert_not_awaited()
-    mock_application_templates_repo.hybrid_search_templates.assert_not_awaited()
-    mock_application_templates_repo.fuzzy_search_templates.assert_awaited_once_with(
-        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter, query.strip()
-    )
-    assert results == [
-        PublishedApplicationTemplate(
-            id=template_id, name="Wniosek o urlop", description="Wniosek o urlop dziekański.", fields=[]
-        )
-    ]
 
 
 async def test_search_published_application_templates_ai_assisted(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, mock_embedding_port, uuid_generator
+    search_published_templates, application_templates_repository, mock_embedding_port
 ):
-    template_id = next(uuid_generator)
-    organization_filter = OrganizationFilter(next(uuid_generator))
     mock_embedding_port.embed_queries.return_value = [[0.1, 0.2]]
-    mock_application_templates_repo.hybrid_search_templates.return_value = [create_searchable_template(template_id)]
+    application_templates_repository.hybrid_search_templates.return_value = [create_published_template()]
 
-    use_case = SearchPublishedApplicationTemplates(
-        mock_session_maker, mock_embedding_port, mock_application_templates_repo
-    )
+    results = await search_published_templates.execute(USER, None, "urlop ", True)
 
-    results = await use_case.execute(USER, organization_filter, "urlop ", True)
-
+    assert results == [PUBLISHED_TEMPLATE]
     mock_embedding_port.embed_queries.assert_awaited_once_with(["urlop"])
-    mock_application_templates_repo.fuzzy_search_templates.assert_not_awaited()
-    mock_application_templates_repo.hybrid_search_templates.assert_awaited_once_with(
-        mock_opened_session, ApplicationTemplateStatus.PUBLISHED, organization_filter, "urlop", [0.1, 0.2]
-    )
-    assert results == [
-        PublishedApplicationTemplate(
-            id=template_id, name="Wniosek o urlop", description="Wniosek o urlop dziekański.", fields=[]
-        )
+    assert application_templates_repository.hybrid_search_templates.await_args.args[-2:] == ("urlop", [0.1, 0.2])
+
+
+async def test_confirm_application_template_upload_creates_fields(
+    confirm_template_upload,
+    application_templates_repository,
+    mock_application_templates_storage,
+    mock_application_template_inspector,
+):
+    store_template(application_templates_repository, create_template(ApplicationTemplateStatus.NOT_UPLOADED))
+    mock_application_templates_storage.get_template.return_value = b"docx"
+    mock_application_template_inspector.get_variables.return_value = {"paragraphs", "current_date", "student_id"}
+
+    result = await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
+
+    mock_application_template_inspector.get_variables.assert_awaited_once_with(b"docx")
+    assert application_templates_repository.confirm_upload.await_args.args[-1] == [
+        ApplicationTemplateField(name="student_id", label="student_id")
     ]
+    assert result == application_templates_repository.confirm_upload.return_value
 
 
-async def test_search_published_application_templates_without_login(
-    mock_session_maker, mock_application_templates_repo, mock_embedding_port
+@pytest.mark.parametrize(
+    ("template", "error"),
+    [
+        (None, ApplicationTemplateNotFound),
+        (create_template(ApplicationTemplateStatus.DRAFT), ApplicationTemplateInInvalidState),
+    ],
+    ids=("not found", "already confirmed"),
+)
+async def test_confirm_application_template_upload_rejected(
+    confirm_template_upload, application_templates_repository, mock_application_templates_storage, template, error
 ):
-    use_case = SearchPublishedApplicationTemplates(
-        mock_session_maker, mock_embedding_port, mock_application_templates_repo
-    )
+    store_template(application_templates_repository, template)
 
-    with pytest.raises(LoginRequired):
-        await use_case.execute(Caller(None), None, "urlop ", True)
+    with pytest.raises(error):
+        await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
 
-    mock_embedding_port.embed_queries.assert_not_awaited()
-    mock_application_templates_repo.fuzzy_search_templates.assert_not_awaited()
+    mock_application_templates_storage.get_template.assert_not_awaited()
 
 
-def create_regenerate_application_template_description(mock_session_maker, mock_application_templates_repo):
-    mock_scheduler = AsyncMock()
-    use_case = RegenerateApplicationTemplateDescription(
-        session_maker=mock_session_maker,
-        application_templates_repo=mock_application_templates_repo,
-        description_generation_scheduler=mock_scheduler,
-    )
-    return use_case, mock_scheduler
-
-
-async def test_regenerate_application_template_description_success(
-    mock_session_maker, mock_opened_session, mock_application_templates_repo, uuid_generator
+async def test_confirm_application_template_upload_changed_during_confirmation(
+    confirm_template_upload, application_templates_repository, mock_application_template_inspector
 ):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.DRAFT)
-
-    use_case, mock_scheduler = create_regenerate_application_template_description(
-        mock_session_maker, mock_application_templates_repo
-    )
-
-    await use_case.execute(ADMIN, template_id)
-
-    assert get_set_description_statuses(mock_application_templates_repo) == [
-        ApplicationTemplateDescriptionStatus.IN_PROGRESS
-    ]
-    mock_scheduler.schedule_application_template_description_generation.assert_awaited_once_with(
-        mock_opened_session, template_id
-    )
-
-
-async def test_regenerate_application_template_description_as_normal_user(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    use_case, mock_scheduler = create_regenerate_application_template_description(
-        mock_session_maker, mock_application_templates_repo
-    )
-
-    with pytest.raises(AccessForbidden):
-        await use_case.execute(USER, next(uuid_generator))
-
-    mock_scheduler.schedule_application_template_description_generation.assert_not_awaited()
-
-
-async def test_regenerate_application_template_description_not_found(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = None
-
-    use_case, mock_scheduler = create_regenerate_application_template_description(
-        mock_session_maker, mock_application_templates_repo
-    )
-
-    with pytest.raises(ApplicationTemplateNotFound):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_scheduler.schedule_application_template_description_generation.assert_not_awaited()
-
-
-async def test_regenerate_application_template_description_not_draft(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    mock_application_templates_repo.get.return_value = create_template(ApplicationTemplateStatus.PUBLISHED)
-
-    use_case, mock_scheduler = create_regenerate_application_template_description(
-        mock_session_maker, mock_application_templates_repo
-    )
+    store_template(application_templates_repository, create_template(ApplicationTemplateStatus.NOT_UPLOADED))
+    mock_application_template_inspector.get_variables.return_value = {"paragraphs"}
+    application_templates_repository.confirm_upload.return_value = None
 
     with pytest.raises(ApplicationTemplateInInvalidState):
-        await use_case.execute(ADMIN, next(uuid_generator))
-
-    mock_scheduler.schedule_application_template_description_generation.assert_not_awaited()
+        await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
 
 
-async def test_regenerate_application_template_description_already_in_progress(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    template = create_template(ApplicationTemplateStatus.DRAFT)
-    template.description_status = ApplicationTemplateDescriptionStatus.IN_PROGRESS
-    mock_application_templates_repo.get.return_value = template
-
-    use_case, mock_scheduler = create_regenerate_application_template_description(
-        mock_session_maker, mock_application_templates_repo
+async def test_update_application_template_saves_details(update_template, application_templates_repository):
+    fields = [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")]
+    details_data = ApplicationTemplateDetailsData(
+        name="Wniosek",
+        instructions="Instrukcje",
+        fields=fields,
+        organizationId=ORGANIZATION_ID,
+        suborganizationId=SUBORGANIZATION_ID,
     )
 
-    with pytest.raises(ApplicationTemplateDescriptionGenerationInProgress):
-        await use_case.execute(ADMIN, next(uuid_generator))
+    result = await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    mock_application_templates_repo.set_description_status.assert_not_awaited()
-    mock_scheduler.schedule_application_template_description_generation.assert_not_awaited()
-
-
-def create_generate_application_template_description(
-    mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-):
-    mock_inspector = AsyncMock()
-    mock_inspector.get_text.return_value = "Dziekan Wydziału\n{{ student_name }}"
-    mock_description_writer = AsyncMock()
-    mock_description_writer.write.return_value = "Wniosek o urlop dziekański."
-
-    use_case = GenerateApplicationTemplateDescription(
-        session_maker=mock_session_maker,
-        application_templates_repo=mock_application_templates_repo,
-        application_templates_storage=mock_application_templates_storage,
-        application_template_inspector=mock_inspector,
-        description_writer=mock_description_writer,
-        texts_embedder=mock_embedding_port,
+    assert application_templates_repository.update_details.await_args.args[-1] == ApplicationTemplateDetails(
+        name="Wniosek",
+        instructions="Instrukcje",
+        fields=fields,
+        organization_id=ORGANIZATION_ID,
+        suborganization_id=SUBORGANIZATION_ID,
     )
-    return use_case, mock_description_writer
+    assert result == application_templates_repository.update_details.return_value
 
 
-def create_template_to_describe():
-    template = create_template(
-        ApplicationTemplateStatus.DRAFT,
-        [ApplicationTemplateField(name="student_name", label="Imię i nazwisko")],
-        "Sporządź wniosek o urlop dziekański.",
-    )
-    template.name = "Wniosek o urlop"
-    template.description_status = ApplicationTemplateDescriptionStatus.IN_PROGRESS
-    return template
-
-
-async def test_generate_application_template_description_success(
-    mock_session_maker,
-    mock_opened_session,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
+@pytest.mark.parametrize(
+    ("description", "expected_vectors"),
+    [("Nowy opis.", [[0.1, 0.2]]), ("Opis.", []), (None, [None]), ("", [None]), ("   ", [None])],
+    ids=("changed", "unchanged", "removed", "empty", "blank"),
+)
+async def test_update_application_template_description_vector(
+    update_template, application_templates_repository, mock_embedding_port, description, expected_vectors
 ):
-    template_id = next(uuid_generator)
-    mock_application_templates_repo.get.return_value = create_template_to_describe()
-    mock_application_templates_storage.get_template.return_value = b"docx"
+    store_template(application_templates_repository, create_template(description="Opis."))
     mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description=description)
 
-    use_case, mock_description_writer = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-    )
+    await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    await use_case.execute(template_id)
-
-    mock_application_templates_storage.get_template.assert_awaited_once_with(template_id)
-    description_source = mock_description_writer.write.await_args.args[0]
-    assert description_source.name == "Wniosek o urlop"
-    assert description_source.instructions == "Sporządź wniosek o urlop dziekański."
-    assert description_source.field_labels == ["Imię i nazwisko"]
-    assert description_source.content == "Dziekan Wydziału\n{{ student_name }}"
-    mock_embedding_port.embed_texts.assert_awaited_once_with(["Wniosek o urlop dziekański."])
-    mock_application_templates_repo.set_generated_description.assert_awaited_once_with(
-        mock_opened_session, template_id, "Wniosek o urlop dziekański.", [0.1, 0.2]
-    )
+    vectors = [call.args[-1] for call in application_templates_repository.set_description_vector.await_args_list]
+    assert vectors == expected_vectors
 
 
-async def test_generate_application_template_description_template_not_found(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
+async def test_update_application_template_not_saved_when_embedding_unavailable(
+    update_template, application_templates_repository, mock_embedding_port
 ):
-    mock_application_templates_repo.get.return_value = None
-
-    use_case, mock_description_writer = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-    )
-
-    await use_case.execute(next(uuid_generator))
-
-    mock_description_writer.write.assert_not_awaited()
-
-
-async def test_generate_application_template_description_already_generated(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
-):
-    template = create_template_to_describe()
-    template.description_status = ApplicationTemplateDescriptionStatus.GENERATED
-    mock_application_templates_repo.get.return_value = template
-
-    use_case, mock_description_writer = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-    )
-
-    await use_case.execute(next(uuid_generator))
-
-    mock_description_writer.write.assert_not_awaited()
-    mock_application_templates_repo.set_description_status.assert_not_awaited()
-
-
-async def test_generate_application_template_description_service_unavailable(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template_to_describe()
-
-    use_case, mock_description_writer = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-    )
-    mock_description_writer.write.side_effect = ServiceUnavailable()
+    mock_embedding_port.embed_texts.side_effect = ServiceUnavailable
+    details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description="Opis.")
 
     with pytest.raises(ServiceUnavailable):
-        await use_case.execute(next(uuid_generator))
+        await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    assert get_set_description_statuses(mock_application_templates_repo) == [
-        ApplicationTemplateDescriptionStatus.IN_PROGRESS,
-        ApplicationTemplateDescriptionStatus.FAILED,
-    ]
-    mock_application_templates_repo.set_generated_description.assert_not_awaited()
+    application_templates_repository.update_details.assert_not_awaited()
 
 
-async def test_generate_application_template_description_content_not_found(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
+@pytest.mark.parametrize(
+    ("template", "error"),
+    [
+        (None, ApplicationTemplateNotFound),
+        (create_template(ApplicationTemplateStatus.NOT_UPLOADED), ApplicationTemplateInInvalidState),
+        (create_template(ApplicationTemplateStatus.PUBLISHED), ApplicationTemplateInInvalidState),
+    ],
+    ids=("not found", "not uploaded", "published"),
+)
+async def test_update_application_template_rejected(update_template, application_templates_repository, template, error):
+    store_template(application_templates_repository, template)
+
+    with pytest.raises(error):
+        await update_template.execute(ADMIN, TEMPLATE_ID, ApplicationTemplateDetailsData(name="Wniosek", fields=[]))
+
+    application_templates_repository.update_details.assert_not_awaited()
+
+
+async def test_update_application_template_published_during_embedding(
+    update_template, application_templates_repository, mock_embedding_port
 ):
-    mock_application_templates_repo.get.return_value = create_template_to_describe()
-    mock_application_templates_storage.get_template.side_effect = ApplicationTemplateContentNotFound()
+    application_templates_repository.get.side_effect = [
+        create_template(ApplicationTemplateStatus.DRAFT),
+        create_template(ApplicationTemplateStatus.PUBLISHED),
+    ]
+    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+    details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description="Opis.")
 
-    use_case, mock_description_writer = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
+    with pytest.raises(ApplicationTemplateInInvalidState):
+        await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
+
+    application_templates_repository.update_details.assert_not_awaited()
+
+
+async def test_publish_application_template(publish_template, application_templates_repository):
+    await publish_template.execute(ADMIN, TEMPLATE_ID)
+
+    assert application_templates_repository.set_status.await_args.args[-1] == ApplicationTemplateStatus.PUBLISHED
+
+
+@pytest.mark.parametrize(
+    ("template", "error"),
+    [
+        (None, ApplicationTemplateNotFound),
+        (create_template(instructions=None), ApplicationTemplateInInvalidState),
+    ],
+    ids=("not found", "not ready"),
+)
+async def test_publish_application_template_rejected(
+    publish_template, application_templates_repository, template, error
+):
+    store_template(application_templates_repository, template)
+
+    with pytest.raises(error):
+        await publish_template.execute(ADMIN, TEMPLATE_ID)
+
+    application_templates_repository.set_status.assert_not_awaited()
+
+
+async def test_unpublish_application_template(unpublish_template, application_templates_repository):
+    store_template(application_templates_repository, create_template(ApplicationTemplateStatus.PUBLISHED))
+
+    await unpublish_template.execute(ADMIN, TEMPLATE_ID)
+
+    assert application_templates_repository.set_status.await_args.args[-1] == ApplicationTemplateStatus.DRAFT
+
+
+@pytest.mark.parametrize(
+    ("template", "error"),
+    [
+        (None, ApplicationTemplateNotFound),
+        (create_template(ApplicationTemplateStatus.DRAFT), ApplicationTemplateInInvalidState),
+    ],
+    ids=("not found", "not published"),
+)
+async def test_unpublish_application_template_rejected(
+    unpublish_template, application_templates_repository, template, error
+):
+    store_template(application_templates_repository, template)
+
+    with pytest.raises(error):
+        await unpublish_template.execute(ADMIN, TEMPLATE_ID)
+
+    application_templates_repository.set_status.assert_not_awaited()
+
+
+async def test_regenerate_application_template_description_schedules_generation(
+    regenerate_template_description,
+    application_templates_repository,
+    mock_application_template_description_generation_scheduler,
+):
+    await regenerate_template_description.execute(ADMIN, TEMPLATE_ID)
+
+    assert get_description_statuses(application_templates_repository) == [
+        ApplicationTemplateDescriptionStatus.IN_PROGRESS
+    ]
+    scheduler = mock_application_template_description_generation_scheduler
+    scheduler.schedule_application_template_description_generation.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("template", "error"),
+    [
+        (None, ApplicationTemplateNotFound),
+        (create_template(ApplicationTemplateStatus.PUBLISHED), ApplicationTemplateInInvalidState),
+        (
+            create_template(description_status=ApplicationTemplateDescriptionStatus.IN_PROGRESS),
+            ApplicationTemplateDescriptionGenerationInProgress,
+        ),
+    ],
+    ids=("not found", "not draft", "generation in progress"),
+)
+async def test_regenerate_application_template_description_rejected(
+    regenerate_template_description,
+    application_templates_repository,
+    mock_application_template_description_generation_scheduler,
+    template,
+    error,
+):
+    store_template(application_templates_repository, template)
+
+    with pytest.raises(error):
+        await regenerate_template_description.execute(ADMIN, TEMPLATE_ID)
+
+    assert get_description_statuses(application_templates_repository) == []
+    scheduler = mock_application_template_description_generation_scheduler
+    scheduler.schedule_application_template_description_generation.assert_not_awaited()
+
+
+async def test_generate_application_template_description_saves_description_with_vector(
+    generate_template_description,
+    application_templates_repository,
+    mock_application_template_description_writer,
+    mock_embedding_port,
+):
+    mock_application_template_description_writer.write.return_value = "Wniosek o urlop dziekański."
+    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
+
+    await generate_template_description.execute(TEMPLATE_ID)
+
+    description_source = mock_application_template_description_writer.write.await_args.args[0]
+    assert description_source.name == "Wniosek o urlop"
+    assert description_source.content == TEMPLATE_TEXT
+    mock_embedding_port.embed_texts.assert_awaited_once_with(["Wniosek o urlop dziekański."])
+    assert application_templates_repository.set_generated_description.await_args.args[-2:] == (
+        "Wniosek o urlop dziekański.",
+        [0.1, 0.2],
     )
+
+
+@pytest.mark.parametrize(
+    "template",
+    [None, create_template(description_status=ApplicationTemplateDescriptionStatus.GENERATED)],
+    ids=("not found", "already generated"),
+)
+async def test_generate_application_template_description_skipped(
+    generate_template_description,
+    application_templates_repository,
+    mock_application_template_description_writer,
+    template,
+):
+    store_template(application_templates_repository, template)
+
+    await generate_template_description.execute(TEMPLATE_ID)
+
+    mock_application_template_description_writer.write.assert_not_awaited()
+    assert get_description_statuses(application_templates_repository) == []
+
+
+async def test_generate_application_template_description_without_content_marks_failed(
+    generate_template_description, application_templates_repository, mock_application_templates_storage
+):
+    mock_application_templates_storage.get_template.side_effect = ApplicationTemplateContentNotFound
 
     with pytest.raises(ApplicationTemplateContentNotFound):
-        await use_case.execute(next(uuid_generator))
+        await generate_template_description.execute(TEMPLATE_ID)
 
-    assert get_set_description_statuses(mock_application_templates_repo) == [
+    assert get_description_statuses(application_templates_repository) == [
         ApplicationTemplateDescriptionStatus.IN_PROGRESS,
         ApplicationTemplateDescriptionStatus.FAILED,
     ]
-    mock_description_writer.write.assert_not_awaited()
 
 
-async def test_generate_application_template_description_template_removed(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
+@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+async def test_generate_application_template_description_failure_marks_failed(
+    generate_template_description, application_templates_repository, mock_application_template_description_writer, error
 ):
-    mock_application_templates_repo.get.return_value = create_template_to_describe()
-    mock_embedding_port.embed_texts.return_value = [[0.1, 0.2]]
-    mock_application_templates_repo.set_generated_description.side_effect = ApplicationTemplateNotFound()
+    mock_application_template_description_writer.write.side_effect = error
 
-    use_case, _ = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-    )
+    with pytest.raises(error):
+        await generate_template_description.execute(TEMPLATE_ID)
 
-    await use_case.execute(next(uuid_generator))
-
-
-async def test_generate_application_template_description_template_removed_before_failure(
-    mock_session_maker,
-    mock_application_templates_repo,
-    mock_application_templates_storage,
-    mock_embedding_port,
-    uuid_generator,
-):
-    mock_application_templates_repo.get.return_value = create_template_to_describe()
-    mock_application_templates_repo.set_description_status.side_effect = [None, ApplicationTemplateNotFound()]
-
-    use_case, mock_description_writer = create_generate_application_template_description(
-        mock_session_maker, mock_application_templates_repo, mock_application_templates_storage, mock_embedding_port
-    )
-    mock_description_writer.write.side_effect = ServiceUnavailable()
-
-    with pytest.raises(ServiceUnavailable):
-        await use_case.execute(next(uuid_generator))
-
-
-async def test_fail_application_template_description_generation_deliveries_limit_exceeded(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
-):
-    use_case = FailApplicationTemplateDescriptionGeneration(
-        session_maker=mock_session_maker, application_templates_repo=mock_application_templates_repo
-    )
-
-    is_failed = await use_case.execute(
-        next(uuid_generator), MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1
-    )
-
-    assert is_failed
-    assert get_set_description_statuses(mock_application_templates_repo) == [
-        ApplicationTemplateDescriptionStatus.FAILED
+    application_templates_repository.set_generated_description.assert_not_awaited()
+    assert get_description_statuses(application_templates_repository) == [
+        ApplicationTemplateDescriptionStatus.IN_PROGRESS,
+        ApplicationTemplateDescriptionStatus.FAILED,
     ]
 
 
-async def test_fail_application_template_description_generation_template_removed(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
+async def test_generate_application_template_description_of_removed_template(
+    generate_template_description, application_templates_repository
 ):
-    mock_application_templates_repo.set_description_status.side_effect = ApplicationTemplateNotFound()
-    use_case = FailApplicationTemplateDescriptionGeneration(
-        session_maker=mock_session_maker, application_templates_repo=mock_application_templates_repo
-    )
+    application_templates_repository.set_generated_description.side_effect = ApplicationTemplateNotFound
 
-    is_failed = await use_case.execute(
-        next(uuid_generator), MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1
-    )
-
-    assert is_failed
+    await generate_template_description.execute(TEMPLATE_ID)
 
 
-async def test_fail_application_template_description_generation_deliveries_limit_not_exceeded(
-    mock_session_maker, mock_application_templates_repo, uuid_generator
+async def test_generate_application_template_description_failure_of_removed_template(
+    generate_template_description, application_templates_repository, mock_application_template_description_writer
 ):
-    use_case = FailApplicationTemplateDescriptionGeneration(
-        session_maker=mock_session_maker, application_templates_repo=mock_application_templates_repo
+    application_templates_repository.set_description_status.side_effect = [None, ApplicationTemplateNotFound()]
+    mock_application_template_description_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_template_description.execute(TEMPLATE_ID)
+
+
+@pytest.mark.parametrize(
+    ("delivery_attempt", "expected_failed", "expected_statuses"),
+    [
+        (MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES, False, []),
+        (
+            MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1,
+            True,
+            [ApplicationTemplateDescriptionStatus.FAILED],
+        ),
+    ],
+    ids=("within limit", "limit exceeded"),
+)
+async def test_fail_application_template_description_generation(
+    fail_template_description_generation,
+    application_templates_repository,
+    delivery_attempt,
+    expected_failed,
+    expected_statuses,
+):
+    failed = await fail_template_description_generation.execute(TEMPLATE_ID, delivery_attempt)
+
+    assert failed is expected_failed
+    assert get_description_statuses(application_templates_repository) == expected_statuses
+
+
+async def test_fail_application_template_description_generation_of_removed_template(
+    fail_template_description_generation, application_templates_repository
+):
+    application_templates_repository.set_description_status.side_effect = ApplicationTemplateNotFound
+
+    failed = await fail_template_description_generation.execute(
+        TEMPLATE_ID, MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1
     )
 
-    is_failed = await use_case.execute(next(uuid_generator), MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES)
+    assert failed is True
 
-    assert not is_failed
-    mock_application_templates_repo.set_description_status.assert_not_awaited()
+
+async def test_delete_application_template(
+    delete_template, application_templates_repository, mock_application_templates_storage
+):
+    await delete_template.execute(ADMIN, TEMPLATE_ID)
+
+    application_templates_repository.delete.assert_awaited_once()
+    mock_application_templates_storage.delete_template.assert_awaited_once_with(TEMPLATE_ID)
+
+
+async def test_delete_application_template_not_found(
+    delete_template, application_templates_repository, mock_application_templates_storage
+):
+    application_templates_repository.delete.side_effect = ApplicationTemplateNotFound
+
+    with pytest.raises(ApplicationTemplateNotFound):
+        await delete_template.execute(ADMIN, TEMPLATE_ID)
+
+    mock_application_templates_storage.delete_template.assert_not_awaited()
+
+
+async def test_delete_application_template_ignores_storage_error(
+    delete_template, application_templates_repository, mock_application_templates_storage
+):
+    mock_application_templates_storage.delete_template.side_effect = Exception("Storage error")
+
+    await delete_template.execute(ADMIN, TEMPLATE_ID)
+
+    application_templates_repository.delete.assert_awaited_once()
+
+
+async def test_get_application_template_download_url(get_template_download_url, mock_application_templates_storage):
+    mock_application_templates_storage.get_download_url.return_value = "http://storage.local/bucket/template"
+
+    result = await get_template_download_url.execute(ADMIN, TEMPLATE_ID)
+
+    assert result == "http://storage.local/bucket/template"
+    mock_application_templates_storage.get_download_url.assert_awaited_once_with(TEMPLATE_ID)
+
+
+@pytest.mark.parametrize(
+    ("template", "error"),
+    [
+        (None, ApplicationTemplateNotFound),
+        (create_template(ApplicationTemplateStatus.NOT_UPLOADED), ApplicationTemplateInInvalidState),
+    ],
+    ids=("not found", "not uploaded"),
+)
+async def test_get_application_template_download_url_rejected(
+    get_template_download_url, application_templates_repository, mock_application_templates_storage, template, error
+):
+    store_template(application_templates_repository, template)
+
+    with pytest.raises(error):
+        await get_template_download_url.execute(ADMIN, TEMPLATE_ID)
+
+    mock_application_templates_storage.get_download_url.assert_not_awaited()

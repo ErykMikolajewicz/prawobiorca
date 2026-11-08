@@ -1,5 +1,5 @@
 [tool.coverage.report]
-omit = [
-    "src/framework/**",
-    "src/infrastructure/**"
-]
+fail_under = 90
+show_missing = true
+skip_covered = true
+sort = "Cover"

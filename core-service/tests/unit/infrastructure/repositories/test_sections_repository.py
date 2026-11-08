@@ -32,17 +32,22 @@ def create_sections_collection() -> SectionsCollection:
     )
 
 
+SECTIONS_INSERT = 0
+CHUNKS_INSERT = 1
+
+
+def get_inserted_values(session: AsyncMock, insert_index: int, column: str) -> list:
+    statement = session.execute.await_args_list[insert_index].args[0]
+    parameters = statement.compile().params
+    return [value for key, value in parameters.items() if key.startswith(column)]
+
+
 async def test_add_sections_saves_sections_order():
     session = AsyncMock()
 
     await RegulationsSectionsRepository.add_sections(session, uuid4(), uuid4(), create_sections_collection())
 
-    sections_stmt = session.execute.await_args_list[0].args[0]
-    inserted_values = sections_stmt.compile().params
-
-    sections_orders = sorted(value for key, value in inserted_values.items() if key.startswith("section_order"))
-
-    assert sections_orders == [0, 1]
+    assert sorted(get_inserted_values(session, SECTIONS_INSERT, "section_order")) == [0, 1]
 
 
 async def test_add_sections_saves_chunks_with_their_section():
@@ -51,15 +56,13 @@ async def test_add_sections_saves_chunks_with_their_section():
 
     await RegulationsSectionsRepository.add_sections(session, uuid4(), uuid4(), sections)
 
-    chunks_stmt = session.execute.await_args_list[1].args[0]
-    inserted_values = chunks_stmt.compile().params
-
-    section_ids = [value for key, value in inserted_values.items() if key.startswith("section_id")]
-    chunk_indexes = [value for key, value in inserted_values.items() if key.startswith("chunk_index")]
-
     first_section, second_section = sections
-    assert section_ids == [first_section.id, first_section.id, second_section.id]
-    assert chunk_indexes == [0, 1, 0]
+    assert get_inserted_values(session, CHUNKS_INSERT, "section_id") == [
+        first_section.id,
+        first_section.id,
+        second_section.id,
+    ]
+    assert get_inserted_values(session, CHUNKS_INSERT, "chunk_index") == [0, 1, 0]
 
 
 async def test_add_sections_saves_elements_as_dicts():
@@ -67,12 +70,7 @@ async def test_add_sections_saves_elements_as_dicts():
 
     await RegulationsSectionsRepository.add_sections(session, uuid4(), uuid4(), create_sections_collection())
 
-    sections_stmt = session.execute.await_args_list[0].args[0]
-    inserted_values = sections_stmt.compile().params
-
-    elements = [value for key, value in inserted_values.items() if key.startswith("elements")]
-
-    assert elements == [
+    assert get_inserted_values(session, SECTIONS_INSERT, "elements") == [
         [{"text": "Content 1", "subsection": "1"}, {"text": "Content 2", "subsection": "2"}],
         [],
     ]

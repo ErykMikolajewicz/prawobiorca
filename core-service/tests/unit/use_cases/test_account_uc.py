@@ -1,46 +1,31 @@
-from unittest.mock import patch
-
 import pytest
 from pydantic import SecretStr
 
-from src.app.dtos.user import CreateUserData
-from src.app.use_cases.account import CreateAccount, LoginData, ObjectExists
+from src.app.dtos.account import LoginData
+from src.app.use_cases.account import CreateAccount
 from src.domain.exceptions.users import UserExists
+from src.domain.services.security import verify_password
+from src.shared.exceptions import ObjectExists
 from tests.consts import STRONG_PASSWORD, VALID_USERNAME
 
-
-async def test_create_account_success(mock_session_maker, mock_opened_session, mock_users_repo):
-    login_data = LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD))
-
-    with patch("src.app.use_cases.account.hash_password") as mock_hash:
-        hash_value = b"hashed_secret"
-        mock_hash.return_value = hash_value
-
-        use_case = CreateAccount(session_maker=mock_session_maker, users_repo=mock_users_repo)
-
-        await use_case.execute(login_data)
-
-        mock_session_maker.begin.assert_called_once()
-
-        create_data = CreateUserData(username=login_data.username, hashed_password=hash_value)
-        mock_users_repo.add.assert_awaited_once_with(mock_opened_session, create_data)
+LOGIN_DATA = LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD))
 
 
-async def test_create_account_user_exists(mock_session_maker, mock_opened_session, mock_users_repo):
-    login_data = LoginData(username="existinguser", password=SecretStr(STRONG_PASSWORD))
+@pytest.fixture
+def create_account(mock_session_maker, mock_users_repo):
+    return CreateAccount(session_maker=mock_session_maker, users_repo=mock_users_repo)
 
+
+async def test_create_account_stores_hashed_password(create_account, mock_users_repo):
+    await create_account.execute(LOGIN_DATA)
+
+    user_data = mock_users_repo.add.await_args.args[-1]
+    assert user_data.username == VALID_USERNAME
+    assert verify_password(SecretStr(STRONG_PASSWORD), user_data.hashed_password)
+
+
+async def test_create_account_with_taken_username(create_account, mock_users_repo):
     mock_users_repo.add.side_effect = ObjectExists("User exists")
 
-    with patch("src.app.use_cases.account.hash_password") as mock_hash:
-        hash_value = b"hashed_secret"
-        mock_hash.return_value = hash_value
-
-        use_case = CreateAccount(session_maker=mock_session_maker, users_repo=mock_users_repo)
-
-        with pytest.raises(UserExists):
-            await use_case.execute(login_data)
-
-        mock_users_repo.add.assert_awaited_once()
-
-        create_data = CreateUserData(username=login_data.username, hashed_password=hash_value)
-        mock_users_repo.add.assert_awaited_once_with(mock_opened_session, create_data)
+    with pytest.raises(UserExists):
+        await create_account.execute(LOGIN_DATA)

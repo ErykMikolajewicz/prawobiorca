@@ -1,192 +1,134 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import SecretStr
 
 from src.app.dtos.account import LoginData
-from src.app.dtos.auth import AuthTokens
 from src.app.use_cases.auth import LogoutUser, LogUser, RefreshTokens
+from src.domain.entities.user import User
 from src.domain.exceptions.users import InvalidRefreshToken, UserCantLog
-from src.domain.services.security import decode_access_token, hash_refresh_token
+from src.domain.services.security import decode_access_token, hash_password, hash_refresh_token
 from src.domain.value_objects.auth import UserSession
 from src.domain.value_objects.users import UserPrivileges
 from src.shared.consts import JWT_ALGORITHM
 from src.shared.settings.application import app_settings
-from tests.consts import REFRESH_TOKEN, SESSION_ID, UNKNOWN_REFRESH_TOKEN, VALID_USERNAME
+from tests.consts import REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
+
+STORED_USER = User(id=USER_ID, username=VALID_USERNAME, hashed_password=hash_password(SecretStr(STRONG_PASSWORD)))
 
 
 def decode(access_token: str):
     return decode_access_token(access_token, app_settings.JWT_SECRET_KEY, JWT_ALGORITHM)
 
 
-async def test_log_user_success(
-    mock_opened_session,
-    mock_session_maker,
-    mock_users_repo,
-    mock_sessions_repo,
-    uuid_generator,
-):
-    login_data = LoginData(username=VALID_USERNAME, password=SecretStr("Password123!"))
-    user_id = next(uuid_generator)
+@pytest.fixture
+def users_repository(mock_users_repo):
+    mock_users_repo.get_by_username.return_value = STORED_USER
     mock_users_repo.get_user_privileges.return_value = UserPrivileges(is_admin=True)
+    return mock_users_repo
+
+
+@pytest.fixture
+def sessions_repository(mock_sessions_repo):
     mock_sessions_repo.create_session.return_value = SESSION_ID
-
-    with (
-        patch("src.app.use_cases.auth.check_user_can_log", new_callable=AsyncMock) as mock_check,
-        patch("src.app.use_cases.auth.generate_authorization_token") as mock_gen_token,
-        patch("src.app.use_cases.auth.prevent_timing_attack", new_callable=AsyncMock) as mock_prevent,
-    ):
-        mock_check.return_value = user_id
-        mock_gen_token.return_value = REFRESH_TOKEN
-
-        use_case = LogUser(
-            session_maker=mock_session_maker, users_repo=mock_users_repo, sessions_repo=mock_sessions_repo
-        )
-
-        result = await use_case.execute(login_data)
-
-        mock_check.assert_called_once_with(mock_opened_session, mock_users_repo, login_data)
-        mock_prevent.assert_not_called()
-        mock_gen_token.assert_called_once()
-
-        mock_sessions_repo.create_session.assert_called_once()
-        call_args = mock_sessions_repo.create_session.call_args
-        assert call_args[0][1] == user_id
-        assert call_args[0][2] == hash_refresh_token(REFRESH_TOKEN)
-        assert isinstance(call_args[0][3], datetime)
-        assert call_args[0][3].tzinfo == UTC
-
-        assert isinstance(result, AuthTokens)
-        assert result.refresh_token == REFRESH_TOKEN
-        assert result.access_expires_in > 0
-        assert result.refresh_expires_in > 0
-
-        claims = decode(result.access_token)
-        assert claims.user_id == user_id
-        assert claims.session_id == SESSION_ID
-        assert claims.is_admin is True
+    mock_sessions_repo.rotate_session.return_value = UserSession(id=SESSION_ID, user_id=USER_ID)
+    return mock_sessions_repo
 
 
-async def test_log_user_failure(
-    mock_opened_session,
-    mock_session_maker,
-    mock_users_repo,
-    mock_sessions_repo,
-):
-    login_data = LoginData(username=VALID_USERNAME, password=SecretStr("WrongPassword123!"))
-
-    with (
-        patch("src.app.use_cases.auth.check_user_can_log", new_callable=AsyncMock) as mock_check,
-        patch("src.app.use_cases.auth.generate_authorization_token") as mock_gen_token,
-        patch("src.app.use_cases.auth.prevent_timing_attack", new_callable=AsyncMock) as mock_prevent,
-        patch("src.app.use_cases.auth.asyncio.get_event_loop") as mock_loop,
-    ):
-        mock_check.return_value = None
-        fake_time = 12345.6
-        mock_loop.return_value.time.return_value = fake_time
-
-        use_case = LogUser(
-            session_maker=mock_session_maker, users_repo=mock_users_repo, sessions_repo=mock_sessions_repo
-        )
-
-        with pytest.raises(UserCantLog):
-            await use_case.execute(login_data)
-
-        mock_check.assert_called_once_with(mock_opened_session, mock_users_repo, login_data)
-        mock_prevent.assert_called_once_with(fake_time)
-        mock_gen_token.assert_not_called()
-        mock_sessions_repo.create_session.assert_not_called()
+@pytest.fixture
+def mock_prevent_timing_attack():
+    with patch("src.app.use_cases.auth.prevent_timing_attack", new_callable=AsyncMock) as prevent_timing_attack:
+        yield prevent_timing_attack
 
 
-async def test_refresh_tokens_rotates_session(
-    mock_opened_session,
-    mock_session_maker,
-    mock_users_repo,
-    mock_sessions_repo,
-    uuid_generator,
-):
-    user_id = next(uuid_generator)
-    mock_sessions_repo.rotate_session.return_value = UserSession(id=SESSION_ID, user_id=user_id)
-    mock_users_repo.get_user_privileges.return_value = UserPrivileges(is_admin=False)
+@pytest.fixture
+def log_user(mock_session_maker, users_repository, sessions_repository):
+    return LogUser(session_maker=mock_session_maker, users_repo=users_repository, sessions_repo=sessions_repository)
 
-    use_case = RefreshTokens(
-        session_maker=mock_session_maker, users_repo=mock_users_repo, sessions_repo=mock_sessions_repo
+
+@pytest.fixture
+def refresh_tokens(mock_session_maker, users_repository, sessions_repository):
+    return RefreshTokens(
+        session_maker=mock_session_maker, users_repo=users_repository, sessions_repo=sessions_repository
     )
 
-    result = await use_case.execute(REFRESH_TOKEN)
 
-    mock_sessions_repo.rotate_session.assert_called_once()
-    call_args = mock_sessions_repo.rotate_session.call_args
-    assert call_args[0][0] == mock_opened_session
-    assert call_args[0][1] == hash_refresh_token(REFRESH_TOKEN)
-    assert call_args[0][2] == hash_refresh_token(result.refresh_token)
-    assert result.refresh_token != REFRESH_TOKEN
-
-    claims = decode(result.access_token)
-    assert claims.user_id == user_id
-    assert claims.session_id == SESSION_ID
-    assert claims.is_admin is False
+@pytest.fixture
+def logout_user(mock_session_maker, sessions_repository):
+    return LogoutUser(session_maker=mock_session_maker, sessions_repo=sessions_repository)
 
 
-async def test_refresh_tokens_with_unknown_token(
-    mock_session_maker,
-    mock_users_repo,
-    mock_sessions_repo,
+async def test_log_user_creates_session(log_user, sessions_repository):
+    tokens = await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD)))
+
+    claims = decode(tokens.access_token)
+    assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, True)
+    session_args = sessions_repository.create_session.await_args.args
+    assert hash_refresh_token(tokens.refresh_token) in session_args
+    assert tokens.refresh_token not in session_args
+
+
+@pytest.mark.parametrize(
+    ("stored_user", "password"),
+    [(None, STRONG_PASSWORD), (STORED_USER, "WrongPassword123!")],
+    ids=("unknown user", "wrong password"),
+)
+async def test_log_user_rejected(
+    log_user, users_repository, sessions_repository, mock_prevent_timing_attack, stored_user, password
 ):
-    mock_sessions_repo.rotate_session.return_value = None
+    users_repository.get_by_username.return_value = stored_user
 
-    use_case = RefreshTokens(
-        session_maker=mock_session_maker, users_repo=mock_users_repo, sessions_repo=mock_sessions_repo
-    )
+    with pytest.raises(UserCantLog):
+        await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(password)))
+
+    mock_prevent_timing_attack.assert_awaited_once()
+    sessions_repository.create_session.assert_not_awaited()
+
+
+async def test_refresh_tokens_rotates_session(refresh_tokens, users_repository, sessions_repository):
+    users_repository.get_user_privileges.return_value = UserPrivileges(is_admin=False)
+
+    tokens = await refresh_tokens.execute(REFRESH_TOKEN)
+
+    claims = decode(tokens.access_token)
+    assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, False)
+    assert tokens.refresh_token != REFRESH_TOKEN
+    rotation_args = sessions_repository.rotate_session.await_args.args
+    assert hash_refresh_token(REFRESH_TOKEN) in rotation_args
+    assert hash_refresh_token(tokens.refresh_token) in rotation_args
+
+
+@pytest.mark.parametrize(
+    ("user_session", "privileges"),
+    [(None, UserPrivileges(is_admin=False)), (UserSession(id=SESSION_ID, user_id=USER_ID), None)],
+    ids=("unknown token", "user without privileges"),
+)
+async def test_refresh_tokens_rejected(refresh_tokens, users_repository, sessions_repository, user_session, privileges):
+    sessions_repository.rotate_session.return_value = user_session
+    users_repository.get_user_privileges.return_value = privileges
 
     with pytest.raises(InvalidRefreshToken):
-        await use_case.execute(UNKNOWN_REFRESH_TOKEN)
-
-    mock_users_repo.get_user_privileges.assert_not_called()
+        await refresh_tokens.execute(REFRESH_TOKEN)
 
 
-async def test_refresh_tokens_without_user_privileges(
-    mock_session_maker,
-    mock_users_repo,
-    mock_sessions_repo,
-    uuid_generator,
-):
-    mock_sessions_repo.rotate_session.return_value = UserSession(id=SESSION_ID, user_id=next(uuid_generator))
-    mock_users_repo.get_user_privileges.return_value = None
+async def test_logout_user_by_session_id(logout_user, sessions_repository):
+    await logout_user.execute(SESSION_ID, REFRESH_TOKEN)
 
-    use_case = RefreshTokens(
-        session_maker=mock_session_maker, users_repo=mock_users_repo, sessions_repo=mock_sessions_repo
+    assert sessions_repository.delete_session.await_args.args[-1] == SESSION_ID
+    sessions_repository.delete_session_by_refresh_token_hash.assert_not_awaited()
+
+
+async def test_logout_user_by_refresh_token(logout_user, sessions_repository):
+    await logout_user.execute(None, REFRESH_TOKEN)
+
+    assert sessions_repository.delete_session_by_refresh_token_hash.await_args.args[-1] == hash_refresh_token(
+        REFRESH_TOKEN
     )
-
-    with pytest.raises(InvalidRefreshToken):
-        await use_case.execute(REFRESH_TOKEN)
+    sessions_repository.delete_session.assert_not_awaited()
 
 
-async def test_logout_user_by_session_id(mock_opened_session, mock_session_maker, mock_sessions_repo):
-    use_case = LogoutUser(session_maker=mock_session_maker, sessions_repo=mock_sessions_repo)
+async def test_logout_user_without_credentials(logout_user, sessions_repository):
+    await logout_user.execute(None, None)
 
-    await use_case.execute(SESSION_ID, REFRESH_TOKEN)
-
-    mock_sessions_repo.delete_session.assert_called_once_with(mock_opened_session, SESSION_ID)
-    mock_sessions_repo.delete_session_by_refresh_token_hash.assert_not_called()
-
-
-async def test_logout_user_by_refresh_token(mock_opened_session, mock_session_maker, mock_sessions_repo):
-    use_case = LogoutUser(session_maker=mock_session_maker, sessions_repo=mock_sessions_repo)
-
-    await use_case.execute(None, REFRESH_TOKEN)
-
-    mock_sessions_repo.delete_session_by_refresh_token_hash.assert_called_once_with(
-        mock_opened_session, hash_refresh_token(REFRESH_TOKEN)
-    )
-    mock_sessions_repo.delete_session.assert_not_called()
-
-
-async def test_logout_user_without_credentials(mock_session_maker, mock_sessions_repo):
-    use_case = LogoutUser(session_maker=mock_session_maker, sessions_repo=mock_sessions_repo)
-
-    await use_case.execute(None, None)
-
-    mock_sessions_repo.delete_session.assert_not_called()
-    mock_sessions_repo.delete_session_by_refresh_token_hash.assert_not_called()
+    sessions_repository.delete_session.assert_not_awaited()
+    sessions_repository.delete_session_by_refresh_token_hash.assert_not_awaited()

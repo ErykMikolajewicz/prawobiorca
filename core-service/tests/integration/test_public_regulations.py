@@ -23,41 +23,30 @@ from src.infrastructure.relational_db.schemas.sections import (
 from src.main import prawobiorca
 from src.shared.consts import ACCESS_COOKIE_NAME, VECTOR_LENGTH
 from tests.consts import ACCESS_TOKEN, USER_ID
+from tests.integration.fixtures.regulations import insert_regulation
 
 
 async def test_get_public_regulations(client, override_session_maker, session_maker, set_user, clean_user):
     async with session_maker.begin() as session:
-        statement = (
-            insert(regulations_table)
-            .values(
-                [
-                    {
-                        "user_id": None,
-                        "presentation_name": "Public act.pdf",
-                        "preparation_status": RegulationPreparationStatus.PREPARED,
-                        "regulation_type": RegulationType.ACT,
-                    },
-                    {
-                        "user_id": None,
-                        "presentation_name": "Public decree.pdf",
-                        "preparation_status": RegulationPreparationStatus.NOT_STARTED,
-                        "regulation_type": RegulationType.DECREE,
-                    },
-                    {
-                        "user_id": USER_ID,
-                        "presentation_name": "Private act.pdf",
-                        "preparation_status": RegulationPreparationStatus.PREPARED,
-                        "regulation_type": RegulationType.ACT,
-                    },
-                ]
-            )
-            .returning(regulations_table.c.id)
+        public_act_id = await insert_regulation(
+            session,
+            None,
+            "Public act.pdf",
+            preparation_status=RegulationPreparationStatus.PREPARED,
+            regulation_type=RegulationType.ACT,
+        )
+        public_decree_id = await insert_regulation(
+            session, None, "Public decree.pdf", regulation_type=RegulationType.DECREE
+        )
+        private_act_id = await insert_regulation(
+            session,
+            USER_ID,
+            "Private act.pdf",
+            preparation_status=RegulationPreparationStatus.PREPARED,
+            regulation_type=RegulationType.ACT,
         )
 
-        result = await session.scalars(statement)
-
-    regulations_ids = result.all()
-    public_act_id, _public_decree_id, _private_act_id = regulations_ids
+    regulations_ids = [public_act_id, public_decree_id, private_act_id]
 
     try:
         response = await client.get("/api/regulations", params={"documentType": RegulationType.ACT})
@@ -84,7 +73,13 @@ async def test_get_public_regulations(client, override_session_maker, session_ma
 
 async def test_get_public_regulation(client, override_session_maker, session_maker, set_user, clean_user):
     async with session_maker.begin() as session:
-        public_regulation_id = await insert_regulation(session, None, "Public act.pdf")
+        public_regulation_id = await insert_regulation(
+            session,
+            None,
+            "Public act.pdf",
+            preparation_status=RegulationPreparationStatus.PREPARED,
+            regulation_type=RegulationType.ACT,
+        )
         private_regulation_id = await insert_regulation(session, USER_ID, "Private act.pdf")
 
     try:
@@ -125,21 +120,6 @@ class StubTextsEmbedder:
 QUERY_VECTOR = [1.0] * VECTOR_LENGTH
 UNRELATED_VECTOR = [1.0, *[0.0] * (VECTOR_LENGTH - 1)]
 UNRELATED_SIMILARITY = 1 / math.sqrt(VECTOR_LENGTH)
-
-
-async def insert_regulation(session, user_id, presentation_name):
-    return await session.scalar(
-        insert(regulations_table)
-        .values(
-            {
-                "user_id": user_id,
-                "presentation_name": presentation_name,
-                "preparation_status": RegulationPreparationStatus.PREPARED,
-                "regulation_type": RegulationType.ACT,
-            }
-        )
-        .returning(regulations_table.c.id)
-    )
 
 
 async def insert_section(session, regulation_id, user_id, unit_number, text, section_order, chunk_vectors):
@@ -332,46 +312,30 @@ async def test_search_public_regulations_by_description(
     half_related_vector = [1.0] * (VECTOR_LENGTH // 2) + [0.0] * (VECTOR_LENGTH // 2)
 
     async with session_maker.begin() as session:
-        regulations_ids = await session.scalars(
-            insert(regulations_table)
-            .values(
-                [
-                    {
-                        "user_id": None,
-                        "presentation_name": "Matching act.pdf",
-                        "regulation_type": RegulationType.ACT,
-                        "description_vector": QUERY_VECTOR,
-                    },
-                    {
-                        "user_id": None,
-                        "presentation_name": "Half matching decree.pdf",
-                        "regulation_type": RegulationType.DECREE,
-                        "description_vector": half_related_vector,
-                    },
-                    {
-                        "user_id": None,
-                        "presentation_name": "Unrelated act.pdf",
-                        "regulation_type": RegulationType.ACT,
-                        "description_vector": UNRELATED_VECTOR,
-                    },
-                    {
-                        "user_id": None,
-                        "presentation_name": "Act without description.pdf",
-                        "regulation_type": RegulationType.ACT,
-                        "description_vector": None,
-                    },
-                    {
-                        "user_id": USER_ID,
-                        "presentation_name": "Private matching act.pdf",
-                        "regulation_type": RegulationType.ACT,
-                        "description_vector": QUERY_VECTOR,
-                    },
-                ]
-            )
-            .returning(regulations_table.c.id)
+        matching_id = await insert_regulation(
+            session, None, "Matching act.pdf", regulation_type=RegulationType.ACT, description_vector=QUERY_VECTOR
         )
-    regulations_ids = regulations_ids.all()
-    matching_id, half_matching_id, *_ = regulations_ids
+        half_matching_id = await insert_regulation(
+            session,
+            None,
+            "Half matching decree.pdf",
+            regulation_type=RegulationType.DECREE,
+            description_vector=half_related_vector,
+        )
+        unrelated_id = await insert_regulation(
+            session, None, "Unrelated act.pdf", regulation_type=RegulationType.ACT, description_vector=UNRELATED_VECTOR
+        )
+        without_description_id = await insert_regulation(
+            session, None, "Act without description.pdf", regulation_type=RegulationType.ACT
+        )
+        private_matching_id = await insert_regulation(
+            session,
+            USER_ID,
+            "Private matching act.pdf",
+            regulation_type=RegulationType.ACT,
+            description_vector=QUERY_VECTOR,
+        )
+    regulations_ids = [matching_id, half_matching_id, unrelated_id, without_description_id, private_matching_id]
 
     try:
         response = await client.get("/api/regulations/search", params={"query": "zapytanie", "threshold": 0.5})
@@ -459,15 +423,7 @@ async def test_confirm_public_regulation_upload_as_admin(
     mock_regulation_preparation_scheduler,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=None,
-                presentation_name="public_confirm.pdf",
-                regulation_type=RegulationType.ACT,
-            )
-            .returning(regulations_table.c.id)
-        )
+        regulation_id = await insert_regulation(session, None, "public_confirm.pdf", regulation_type=RegulationType.ACT)
 
     mock_regulations_storage.check_regulation_exists.return_value = True
 
@@ -501,7 +457,13 @@ async def test_update_public_regulation_as_admin(
     override_authorize_admin_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await insert_regulation(session, None, "Public act.pdf")
+        regulation_id = await insert_regulation(
+            session,
+            None,
+            "Public act.pdf",
+            preparation_status=RegulationPreparationStatus.PREPARED,
+            regulation_type=RegulationType.ACT,
+        )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
 
@@ -564,22 +526,6 @@ async def insert_suborganization(session, organization_id, name):
     )
 
 
-async def insert_organization_regulation(session, presentation_name, organization_id, suborganization_id):
-    return await session.scalar(
-        insert(regulations_table)
-        .values(
-            {
-                "user_id": None,
-                "presentation_name": presentation_name,
-                "preparation_status": RegulationPreparationStatus.PREPARED,
-                "organization_id": organization_id,
-                "suborganization_id": suborganization_id,
-            }
-        )
-        .returning(regulations_table.c.id)
-    )
-
-
 async def test_get_public_regulations_filtered_by_organization(client, override_session_maker, session_maker):
     async with session_maker.begin() as session:
         organization_id = await insert_organization(session, "UWr")
@@ -587,11 +533,23 @@ async def test_get_public_regulations_filtered_by_organization(client, override_
         suborganization_id = await insert_suborganization(session, organization_id, "Wydział Prawa")
         other_suborganization_id = await insert_suborganization(session, organization_id, "Wydział Chemii")
 
-        general_id = await insert_organization_regulation(session, "General act.pdf", None, None)
-        await insert_organization_regulation(session, "Statute.pdf", organization_id, None)
-        await insert_organization_regulation(session, "Law rules.pdf", organization_id, suborganization_id)
-        await insert_organization_regulation(session, "Chemistry rules.pdf", organization_id, other_suborganization_id)
-        await insert_organization_regulation(session, "Other statute.pdf", other_organization_id, None)
+        general_id = await insert_regulation(session, None, "General act.pdf")
+        await insert_regulation(session, None, "Statute.pdf", organization_id=organization_id)
+        await insert_regulation(
+            session,
+            None,
+            "Law rules.pdf",
+            organization_id=organization_id,
+            suborganization_id=suborganization_id,
+        )
+        await insert_regulation(
+            session,
+            None,
+            "Chemistry rules.pdf",
+            organization_id=organization_id,
+            suborganization_id=other_suborganization_id,
+        )
+        await insert_regulation(session, None, "Other statute.pdf", organization_id=other_organization_id)
 
     try:
         response = await client.get("/api/regulations")
@@ -727,9 +685,13 @@ async def test_delete_suborganization_deletes_its_regulations(client, override_s
     async with session_maker.begin() as session:
         organization_id = await insert_organization(session, "UWr")
         suborganization_id = await insert_suborganization(session, organization_id, "Wydział Prawa")
-        statute_id = await insert_organization_regulation(session, "Statute.pdf", organization_id, None)
-        faculty_rules_id = await insert_organization_regulation(
-            session, "Law rules.pdf", organization_id, suborganization_id
+        statute_id = await insert_regulation(session, None, "Statute.pdf", organization_id=organization_id)
+        faculty_rules_id = await insert_regulation(
+            session,
+            None,
+            "Law rules.pdf",
+            organization_id=organization_id,
+            suborganization_id=suborganization_id,
         )
 
     try:
@@ -791,7 +753,9 @@ async def test_regenerate_public_regulation_description_as_admin(
     mock_regulation_description_generation_scheduler,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await insert_regulation(session, None, "Public act.pdf")
+        regulation_id = await insert_regulation(
+            session, None, "Public act.pdf", preparation_status=RegulationPreparationStatus.PREPARED
+        )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
     scheduler = mock_regulation_description_generation_scheduler
@@ -838,15 +802,8 @@ async def test_update_public_regulation_description_clears_description_vector(
     override_authorize_admin_user,
 ):
     async with session_maker.begin() as session:
-        regulation_id = await session.scalar(
-            insert(regulations_table)
-            .values(
-                user_id=None,
-                presentation_name="Public act.pdf",
-                description="Opis",
-                description_vector=UNRELATED_VECTOR,
-            )
-            .returning(regulations_table.c.id)
+        regulation_id = await insert_regulation(
+            session, None, "Public act.pdf", description="Opis", description_vector=UNRELATED_VECTOR
         )
 
     client.cookies.set(ACCESS_COOKIE_NAME, ACCESS_TOKEN)
