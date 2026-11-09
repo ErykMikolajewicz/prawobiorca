@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: extraction-service
+  name: extraction
   labels:
     app: prawobiorca
-    component: extraction-service
+    component: extraction
 spec:
   containers:
-    - name: extraction-service
-      image: localhost/extraction-service:latest
+    - name: extraction
+      image: localhost/prawobiorca/extraction:latest
       ports:
         - containerPort: 8080
           hostPort: 8082

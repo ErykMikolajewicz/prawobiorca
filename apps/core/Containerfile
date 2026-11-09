@@ -4,8 +4,8 @@ RUN pip install --no-cache-dir uv==0.13.*
 
 RUN useradd -r -u 10001 prawobiorca_app
 
-WORKDIR /prawobiorca
-RUN chown prawobiorca_app /prawobiorca
+WORKDIR /core
+RUN chown prawobiorca_app /core
 
 
 USER prawobiorca_app
@@ -14,7 +14,7 @@ COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
 RUN uv sync --locked --no-install-project --compile-bytecode --no-cache --no-default-groups
 
-ENV PATH="/prawobiorca/.venv/bin:$PATH"
+ENV PATH="/core/.venv/bin:$PATH"
 
 COPY src src
 RUN uv sync --locked --no-editable --compile-bytecode --no-cache --no-default-groups

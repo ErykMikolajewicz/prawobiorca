@@ -98,14 +98,14 @@ def main():
     )
 
     run_container_if_not_running(
-        "embedding-service",
-        "-p 127.0.0.1:8081:8080 embedding-service"
+        "embedding",
+        "-p 127.0.0.1:8081:8080 prawobiorca/embedding"
         " --model_path=/models/mmlw-retrieval-roberta-large-v2 --model_name=mmlw-retrieval-roberta-large-v2"
         " --task=embeddings --pooling=CLS --target_device=CPU --rest_port=8080",
     )
-    run_container_if_not_running("extraction-service", "-p 127.0.0.1:8082:8080 extraction-service")
+    run_container_if_not_running("extraction", "-p 127.0.0.1:8082:8080 prawobiorca/extraction")
     run_container_if_not_running(
-        "llm-service",
+        "llm",
         "-p 127.0.0.1:8083:8080 --device /dev/dri"
         " --group-add $(stat -c '%g' /dev/dri/render* | head -n1) -v llm-model:/models"
         " docker.io/openvino/model_server:2026.4.0-gpu"

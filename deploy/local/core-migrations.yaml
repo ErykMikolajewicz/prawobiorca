@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: prawobiorca-migrations
+  name: core-migrations
   labels:
     app: prawobiorca
-    component: prawobiorca-migrations
+    component: core-migrations
 spec:
   automountServiceAccountToken: false
   restartPolicy: Never
@@ -15,8 +15,8 @@ spec:
     seccompProfile:
       type: RuntimeDefault
   containers:
-    - name: prawobiorca-migrations
-      image: localhost/prawobiorca-backend:latest
+    - name: core-migrations
+      image: localhost/prawobiorca/core:latest
       command: ["alembic", "upgrade", "head"]
       securityContext:
         allowPrivilegeEscalation: false
@@ -25,7 +25,7 @@ spec:
           drop: ["ALL"]
       envFrom:
         - configMapRef:
-            name: prawobiorca-backend-config
+            name: core-config
       env:
         - name: RELATIONAL_DB_PASSWORD
           valueFrom:

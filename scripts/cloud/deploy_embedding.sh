@@ -3,14 +3,14 @@ set -euo pipefail
 
 PROJECT_ID="prawobiorca"
 LOCATION="europe-central2"
-IMAGE="${LOCATION}-docker.pkg.dev/${PROJECT_ID}/prawobiorca-repo/embedding-service:latest"
+IMAGE="${LOCATION}-docker.pkg.dev/${PROJECT_ID}/prawobiorca-repo/embedding:latest"
 
-echo "Deploying embedding-service..."
-gcloud run deploy embedding-service \
+echo "Deploying embedding..."
+gcloud run deploy embedding \
   --project="${PROJECT_ID}" \
   --region="${LOCATION}" \
   --image="${IMAGE}" \
-  --service-account="embedding-service-runner@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --service-account="embedding-runner@${PROJECT_ID}.iam.gserviceaccount.com" \
   --args='^|^--model_path=/models/mmlw-retrieval-roberta-large-v2|--model_name=mmlw-retrieval-roberta-large-v2|--task=embeddings|--pooling=CLS|--target_device=CPU|--plugin_config={"INFERENCE_NUM_THREADS":2}|--rest_port=8080' \
   --port=8080 \
   --cpu=2 \
@@ -25,7 +25,7 @@ gcloud run deploy embedding-service \
   --allow-unauthenticated
 
 echo "Deployment completed."
-gcloud run services describe embedding-service \
+gcloud run services describe embedding \
   --project="${PROJECT_ID}" \
   --region="${LOCATION}" \
   --format="value(urls[0])"

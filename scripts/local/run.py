@@ -6,12 +6,12 @@ from manifests import MANIFESTS, MIGRATIONS
 
 IGNORED_DIRS = {".venv", "__pycache__"}
 POSTGRES_CONTAINER = "postgres-postgres"
-MIGRATIONS_CONTAINER = "prawobiorca-migrations-prawobiorca-migrations"
+MIGRATIONS_CONTAINER = "core-migrations-core-migrations"
 POSTGRES_READY_TIMEOUT = 60
 
 IMAGES = (
     (
-        "prawobiorca-backend",
+        "prawobiorca/core",
         "apps/core",
         (
             "apps/core/Containerfile",
@@ -22,10 +22,10 @@ IMAGES = (
             "apps/core/alembic.ini",
         ),
     ),
-    ("extraction-service", "apps/extraction", ("apps/extraction",)),
-    ("embedding-service", "apps/embedding", ("apps/embedding/Containerfile",)),
+    ("prawobiorca/extraction", "apps/extraction", ("apps/extraction",)),
+    ("prawobiorca/embedding", "apps/embedding", ("apps/embedding/Containerfile",)),
     (
-        "prawobiorca-frontend",
+        "prawobiorca/web",
         "apps/web",
         (
             "apps/web/Containerfile",

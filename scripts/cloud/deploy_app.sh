@@ -14,26 +14,26 @@ echo "Waiting for database..."
 kubectl rollout status deployment/postgres --timeout=180s
 
 echo "Running migrations..."
-kubectl delete job prawobiorca-migrations --ignore-not-found
-kubectl apply -f deploy/gcp/prawobiorca-migrations.yaml
-kubectl wait --for=condition=complete job/prawobiorca-migrations --timeout=300s
+kubectl delete job core-migrations --ignore-not-found
+kubectl apply -f deploy/gcp/core-migrations.yaml
+kubectl wait --for=condition=complete job/core-migrations --timeout=300s
 
-echo "Applying backend..."
-kubectl apply -f deploy/gcp/prawobiorca-backend.yaml
+echo "Applying core..."
+kubectl apply -f deploy/gcp/core.yaml
 
-echo "Waiting for backend..."
-kubectl rollout status deployment/prawobiorca-backend --timeout=180s
+echo "Waiting for core..."
+kubectl rollout status deployment/core --timeout=180s
 
 echo "Applying worker..."
-kubectl apply -f deploy/gcp/prawobiorca-worker.yaml
+kubectl apply -f deploy/gcp/core-worker.yaml
 
 echo "Waiting for worker..."
-kubectl rollout status deployment/prawobiorca-worker --timeout=180s
+kubectl rollout status deployment/core-worker --timeout=180s
 
-echo "Applying frontend..."
-kubectl apply -f deploy/gcp/prawobiorca-frontend.yaml
+echo "Applying web..."
+kubectl apply -f deploy/gcp/web.yaml
 
-echo "Waiting for frontend..."
-kubectl rollout status deployment/prawobiorca-frontend --timeout=180s
+echo "Waiting for web..."
+kubectl rollout status deployment/web --timeout=180s
 
 echo "Deployment completed."

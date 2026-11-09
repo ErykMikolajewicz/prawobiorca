@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: prawobiorca-frontend
+  name: web
   labels:
     app: prawobiorca
-    component: prawobiorca-frontend
+    component: web
 spec:
   automountServiceAccountToken: false
   securityContext:
@@ -14,8 +14,8 @@ spec:
     seccompProfile:
       type: RuntimeDefault
   containers:
-    - name: prawobiorca-frontend
-      image: localhost/prawobiorca-frontend:latest
+    - name: web
+      image: localhost/prawobiorca/web:latest
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true

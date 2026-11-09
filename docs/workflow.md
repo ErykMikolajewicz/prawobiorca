@@ -130,12 +130,12 @@ Runs only in the release repository, on every push to `main` and as the first st
 
 The result is not reported back to `WMS-DEV/prawobiorca`. The release repository is public, so its logs can be shared with developers by a link.
 
-The job pulls `embedding-service` from `ghcr.io/erykmikolajewicz/embedding-service:latest` instead of building it. The image is public and pushed manually; push it again whenever `apps/embedding/Containerfile` changes:
+The job pulls `embedding` from `ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest` instead of building it. The image is public and pushed manually; push it again whenever `apps/embedding/Containerfile` changes:
 
 ```bash
 podman login ghcr.io -u ErykMikolajewicz
-podman tag localhost/embedding-service:latest ghcr.io/erykmikolajewicz/embedding-service:latest
-podman push ghcr.io/erykmikolajewicz/embedding-service:latest
+podman tag localhost/prawobiorca/embedding:latest ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
+podman push ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
 ```
 
 ### 6.3 CD (`cd.yml`)
@@ -151,7 +151,7 @@ The recipe fails if `main` differs between the repositories, which means the mir
 - Runs the E2E tests on the released commit.
 - Waits for approval in the `production` environment of the release repository.
 - Builds both images and pushes them to Artifact Registry, tagged with the commit SHA and `latest`.
-- Runs the migrations job, then rolls out `prawobiorca-backend`, `prawobiorca-worker` and `prawobiorca-frontend`.
+- Runs the migrations job, then rolls out `core`, `core-worker` and `web`.
 
 The `production` environment accepts only `v*` tags and requires the approval of the repository owner. This approval is the protection against an unwanted deployment, because `MIRROR_TOKEN` is readable by the administrators of `WMS-DEV/prawobiorca` and allows creating releases, but not approving deployments.
 
@@ -165,7 +165,7 @@ The migrations job of an older image fails if the database already has a newer m
 
 GitHub authenticates to GCP with Workload Identity Federation, limited to the `production` environment and configured once by `scripts/cloud/github_cicd_init.sh`.
 
-Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction-service`, `embedding-service`, `embedding-batch-service`) by their own scripts in `scripts/cloud/`.
+Other components are not deployed by CD: the rest of the cluster (configuration, PostgreSQL) is applied by `scripts/cloud/deploy_app.sh`, and the Cloud Run services (`extraction`, `embedding`, `embedding-batch`) by their own scripts in `scripts/cloud/`.
 
 ### 6.4 Mirror (`mirror.yml`)
 

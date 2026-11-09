@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prawobiorca-frontend
+  name: web
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: prawobiorca
-      component: prawobiorca-frontend
+      component: web
   template:
     metadata:
       labels:
         app: prawobiorca
-        component: prawobiorca-frontend
+        component: web
     spec:
       nodeSelector:
         cloud.google.com/gke-spot: "true"
@@ -24,8 +24,8 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: prawobiorca-frontend
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/prawobiorca-frontend:latest
+        - name: web
+          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/web:latest
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -62,12 +62,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: prawobiorca-frontend
+  name: web
 spec:
   type: NodePort
   selector:
     app: prawobiorca
-    component: prawobiorca-frontend
+    component: web
   ports:
     - port: 8000
       targetPort: 8000

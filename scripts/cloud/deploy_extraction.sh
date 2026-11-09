@@ -3,14 +3,14 @@ set -euo pipefail
 
 PROJECT_ID="prawobiorca"
 LOCATION="europe-central2"
-IMAGE="${LOCATION}-docker.pkg.dev/${PROJECT_ID}/prawobiorca-repo/extraction-service:latest"
+IMAGE="${LOCATION}-docker.pkg.dev/${PROJECT_ID}/prawobiorca-repo/extraction:latest"
 
-echo "Deploying extraction-service..."
-gcloud run deploy extraction-service \
+echo "Deploying extraction..."
+gcloud run deploy extraction \
   --project="${PROJECT_ID}" \
   --region="${LOCATION}" \
   --image="${IMAGE}" \
-  --service-account="extraction-service-runner@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --service-account="extraction-runner@${PROJECT_ID}.iam.gserviceaccount.com" \
   --port=8080 \
   --cpu=4 \
   --memory=4Gi \
@@ -23,7 +23,7 @@ gcloud run deploy extraction-service \
   --allow-unauthenticated
 
 echo "Deployment completed."
-gcloud run services describe extraction-service \
+gcloud run services describe extraction \
   --project="${PROJECT_ID}" \
   --region="${LOCATION}" \
   --format="value(urls[0])"

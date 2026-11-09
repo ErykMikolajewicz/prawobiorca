@@ -4,7 +4,7 @@
 
 The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `apps/web/` directory of this repository, next to the Python services described in [General information](architecture.md).
 
-It talks to `core-service` exclusively over the HTTP REST API — it has no direct access to the database, the object storage, or any of the compute services.
+It talks to `core` exclusively over the HTTP REST API — it has no direct access to the database, the object storage, or any of the compute services.
 
 ---
 
@@ -29,7 +29,7 @@ Required toolchain versions are declared in `apps/web/package.json`: Node `^24.1
 
 All application code lives in `apps/web/src`:
 
-* **`api/`** — the shared axios instance and the API client generated from the `core-service` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. The only hand-written helpers fetch a presigned URL and trigger the browser download: `cases.ts` for a generated application, `applicationTemplates.ts` for an application template.
+* **`api/`** — the shared axios instance and the API client generated from the `core` contract: `generated/endpoints/` holds one function per endpoint, grouped by tag, and `generated/model/` the request/response types. The only hand-written helpers fetch a presigned URL and trigger the browser download: `cases.ts` for a generated application, `applicationTemplates.ts` for an application template.
 * **`pages/`** — route-level views (`MainPage`, `FeaturesPage`, `SearchPage`, `CasePage`, `LoginPage`, `RegisterPage`, and for the administrator `ApplicationTemplatesPage`, `ApplicationTemplatePage`, `OrganizationsPage`).
 * **`components/`** — reusable components organised by **Atomic Design**: `atoms/` (badges, buttons, template field inputs), `molecules/` (cards, dialogs, selectors), `organisms/` (sidebar, footer, forms, lists) and `templates/` (`AppLayout`, the sidebar–content–footer page layout).
 * **`composables/`** — reusable stateful logic (dark mode, sidebar collapse state, regulation lists with description search and sorting, regulation search, regulation upload flow, regulation details editing, application template upload flow, application template editing with description generation, published application templates with name and AI-assisted search, case documents, case applications, status polling of background tasks – regulations, generated applications and application template descriptions).
@@ -57,12 +57,12 @@ The organization and suborganization selected in the `organizations` store form 
 
 ## 5. API Integration
 
-* The shared axios instance (`src/api/axios.ts`) has no `baseURL` — the paths in the contract already carry the `/api` prefix, under which the API is served on the same origin in every environment (the Vite dev server proxies it to `core-service`).
+* The shared axios instance (`src/api/axios.ts`) has no `baseURL` — the paths in the contract already carry the `/api` prefix, under which the API is served on the same origin in every environment (the Vite dev server proxies it to `core`).
 * `withCredentials` is enabled — access and refresh tokens are carried in cookies, never stored by the application itself.
-* A response interceptor retries a request once after refreshing the tokens when `core-service` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
+* A response interceptor retries a request once after refreshing the tokens when `core` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
 * When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page, and the request is rejected with `SessionExpiredError`, which `showApiError` ignores so the user sees a single message.
 * The API client is generated with `just api-types` (run from the repository root): it exports `apps/core/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
-* In development, presigned storage URLs pointing at `VITE_DEV_STORAGE_ORIGIN` (set in the committed `.env.development`) are rewritten to `/storage`, which the Vite dev server proxies to object storage. The variable is not set in production builds, so URLs are used as returned by `core-service`.
+* In development, presigned storage URLs pointing at `VITE_DEV_STORAGE_ORIGIN` (set in the committed `.env.development`) are rewritten to `/storage`, which the Vite dev server proxies to object storage. The variable is not set in production builds, so URLs are used as returned by `core`.
 
 ---
 
@@ -70,12 +70,12 @@ The organization and suborganization selected in the `organizations` store form 
 
 `apps/web/Containerfile` defines a two-stage build: the first stage installs dependencies with pnpm and runs `pnpm run build`, the second copies the resulting `dist/` into an **nginx:alpine** image listening on port `8000`. The bundled `nginx.conf` falls back to `index.html` for unknown paths, which is what the history-mode router requires.
 
-The image is built as `prawobiorca-frontend` by `just build-frontend` (and as part of `just build-images`).
+The image is built as `prawobiorca/web` by `just build-web` (and as part of `just build-images`).
 
 In both deployment environments the frontend is served at the root path, behind the same entry point as the API:
 
-* **On-Premise**: `deploy/local/prawobiorca-frontend.yaml`, routed by the nginx ingress defined in `deploy/local/nginx-config.yaml` — `/` goes to the frontend, `/api` to `core-service`.
-* **Cloud (GCP)**: `deploy/gcp/prawobiorca-frontend.yaml`, routed by `deploy/gcp/ingress.yaml`.
+* **On-Premise**: `deploy/local/web.yaml`, routed by the nginx ingress defined in `deploy/local/nginx-config.yaml` — `/` goes to the frontend, `/api` to `core`.
+* **Cloud (GCP)**: `deploy/gcp/web.yaml`, routed by `deploy/gcp/ingress.yaml`.
 
 ---
 

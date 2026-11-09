@@ -20,6 +20,7 @@ regulations_sections_table = sqla.Table(
         ["regulation_id", "user_id"], ["regulations.id", "regulations.user_id"], ondelete="CASCADE"
     ),
     sqla.Index("ix_regulations_sections_regulation_id_user_id", "regulation_id", "user_id"),
+    sqla.UniqueConstraint("regulation_id", "section_order", name="uq_regulations_sections_regulation_id_section_order"),
 )
 
 regulations_chunks_table = sqla.Table(

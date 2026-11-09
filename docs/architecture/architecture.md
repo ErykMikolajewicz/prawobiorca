@@ -28,12 +28,12 @@ The architecture follows a **Monolith** pattern for core business logic, paired 
 flowchart TD
     Browser["Browser"]
     Ingress["nginx / Ingress"]
-    Frontend["prawobiorca-frontend<br/>(Vue SPA served by nginx)"]
-    Core["core-service<br/>(Auth, Cases, Files, Search Engine)"]
+    Frontend["web<br/>(Vue SPA served by nginx)"]
+    Core["core<br/>(Auth, Cases, Files, Search Engine)"]
     Worker["Taskiq Worker<br/>(File Preparator / Chunking / Indexing,<br/>Application Generation)"]
-    Embeddings["embeddings-service<br/>(OpenVINO Model Server)"]
-    Extraction["extraction-service"]
-    LLM["llm-service"]
+    Embeddings["embedding<br/>(OpenVINO Model Server)"]
+    Extraction["extraction"]
+    LLM["llm"]
     DB[("PostgreSQL + pgvector<br/>(Metadata, Chunks, Task Queue)")]
     Storage[("Object Storage<br/>RustFS (on-premise) / GCS (cloud)")]
 
@@ -52,26 +52,26 @@ flowchart TD
     Worker -->|"Reads / writes file bytes"| Storage
 ```
 
-### 2.1. `core-service` (Main API & Taskiq Worker)
+### 2.1. `core` (Main API & Taskiq Worker)
 Hosts the core domain logic, user-facing endpoints, and background document indexing within a single modular codebase:
 * **Core API (FastAPI)**:
   * User authentication, authorization, and profile management.
   * Case (*Sprawy*) management and document metadata handling (filenames, upload status, permissions).
-  * Storage orchestration: generates presigned upload/download URLs (S3 presigned POST/GET) so the browser transfers file bytes directly with object storage — `core-service` never proxies the bytes itself. The Taskiq worker separately reads the raw bytes back from storage for processing.
-  * Fast synchronous search execution: requests single query embeddings from `embeddings-service` and performs vector similarity search against PostgreSQL (`pgvector`).
+  * Storage orchestration: generates presigned upload/download URLs (S3 presigned POST/GET) so the browser transfers file bytes directly with object storage — `core` never proxies the bytes itself. The Taskiq worker separately reads the raw bytes back from storage for processing.
+  * Fast synchronous search execution: requests single query embeddings from `embedding` and performs vector similarity search against PostgreSQL (`pgvector`).
   * Dispatches asynchronous file processing tasks using **Taskiq**, automatically upon upload confirmation — no separate request is needed to start indexing. The task is written to PostgreSQL in the same transaction that marks the document as in progress.
   * Dispatches application (*wniosek*) generation tasks the same way: the application is saved with the `IN_PROGRESS` status and the task is written in the same transaction; the endpoint returns immediately and the frontend polls the status.
 * **File Preparator (Taskiq Worker)**:
   * Consumes document preparation jobs from the PostgreSQL task queue.
-  * Coordinates document processing pipeline: sends file to `extraction-service`, chunks structured text, requests batch embeddings from `embeddings-service`, and persists vector embeddings into PostgreSQL.
-  * Chunking follows the editorial structure of the act (article / paragraph, with its chapter breadcrumb) recovered from the text itself, not the layout labels returned by `extraction-service` — see [Legal documents parsing](legal_documents_parsing.md).
+  * Coordinates document processing pipeline: sends file to `extraction`, chunks structured text, requests batch embeddings from `embedding`, and persists vector embeddings into PostgreSQL.
+  * Chunking follows the editorial structure of the act (article / paragraph, with its chapter breadcrumb) recovered from the text itself, not the layout labels returned by `extraction` — see [Legal documents parsing](legal_documents_parsing.md).
   * Updates document processing status in PostgreSQL directly without inter-service RPC overhead.
-  * Retries a document up to 3 times when `extraction-service` or `embeddings-service` is unavailable; after the last attempt the document is marked as failed and can be retried on demand. A document whose processing crashed the worker 3 times is marked as failed as well.
+  * Retries a document up to 3 times when `extraction` or `embedding` is unavailable; after the last attempt the document is marked as failed and can be retried on demand. A document whose processing crashed the worker 3 times is marked as failed as well.
 * **Application Generator (Taskiq Worker)**:
-  * Drafts the application text with `llm-service`, renders it to DOCX, stores the file in object storage and marks the application as generated — see [AI module](../ai.md).
-  * Retries when `llm-service` is unavailable; after the delivery limit the application is marked as failed.
+  * Drafts the application text with `llm`, renders it to DOCX, stores the file in object storage and marks the application as generated — see [AI module](../ai.md).
+  * Retries when `llm` is unavailable; after the delivery limit the application is marked as failed.
 
-### 2.2. `embeddings-service`
+### 2.2. `embedding`
 * **Responsibilities**:
   * Dedicated, stateless service generating dense vector embeddings for text chunks and search queries with the Polish retrieval model `sdadas/mmlw-retrieval-roberta-large-v2` (int8), served directly by **OpenVINO Model Server (OVMS)** — no custom application code — via the OpenAI-compatible `/v3/embeddings` endpoint.
 * **Characteristics**:
@@ -79,41 +79,41 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * **Independent Scaling**: Can be scaled independently (e.g., on GPU or high-CPU compute instances) based on search traffic and document ingestion volume.
   * **Fast cold start**: the OpenVINO int8 export of the model is baked into the image at build time, so no model download or conversion happens at startup and no volume is needed; it runs on CPU in every environment.
   * A single endpoint accepts both single texts and batches.
-  * **Scale-to-0 on GCP**: search queries from `core-service` are embedded by `embedding-service` on **Cloud Run** (2 CPU, 2 inference threads), deployed by `scripts/cloud/deploy_embedding_service.sh` with `--ingress=internal`. It scales to zero, so the first search after a period of inactivity waits roughly 10–20 s for the cold start.
-  * **Separate batch instance on GCP**: the Taskiq worker embeds document chunks through `embedding-batch-service`, a second instance of the same image on **Cloud Run** (8 CPU, 8 inference threads), so batch ingestion never competes with user queries. It scales to zero and is billed only while a request is being handled; the only caller is the worker, so the cold start is absorbed by a background job. Deployed by `scripts/cloud/deploy_embedding_batch_service.sh` with `--ingress=internal`; the worker overrides `EMBEDDING_SERVICE_URL` (and `EMBEDDING_SERVICE_BATCH_SIZE`) in its own deployment.
+  * **Scale-to-0 on GCP**: search queries from `core` are embedded by `embedding` on **Cloud Run** (2 CPU, 2 inference threads), deployed by `scripts/cloud/deploy_embedding.sh` with `--ingress=internal`. It scales to zero, so the first search after a period of inactivity waits roughly 10–20 s for the cold start.
+  * **Separate batch instance on GCP**: the Taskiq worker embeds document chunks through `embedding-batch`, a second instance of the same image on **Cloud Run** (8 CPU, 8 inference threads), so batch ingestion never competes with user queries. It scales to zero and is billed only while a request is being handled; the only caller is the worker, so the cold start is absorbed by a background job. Deployed by `scripts/cloud/deploy_embedding_batch.sh` with `--ingress=internal`; the worker overrides `EMBEDDING_SERVICE_URL` (and `EMBEDDING_SERVICE_BATCH_SIZE`) in its own deployment.
 
-### 2.3. `extraction-service`
+### 2.3. `extraction`
 * **Responsibilities**:
   * Document layout analysis, and text extraction (PDFs) into structured JSON format, using Docling.
 * **Characteristics**:
   * Completely stateless service.
-  * **Scale-to-0 on GCP**: runs on **Cloud Run** rather than in the GKE cluster, so it scales to zero natively and is billed only while a request is being handled. Deployed by `scripts/cloud/deploy_extraction_service.sh` with `--ingress=internal`, which limits callers to the VPC; the Taskiq worker reaches it over HTTPS at the service URL in `EXTRACTION_SERVICE_URL`. The only caller is the worker, so the cold start is absorbed by a background job rather than by a user request.
+  * **Scale-to-0 on GCP**: runs on **Cloud Run** rather than in the GKE cluster, so it scales to zero natively and is billed only while a request is being handled. Deployed by `scripts/cloud/deploy_extraction.sh` with `--ingress=internal`, which limits callers to the VPC; the Taskiq worker reaches it over HTTPS at the service URL in `EXTRACTION_SERVICE_URL`. The only caller is the worker, so the cold start is absorbed by a background job rather than by a user request.
   * **Fast cold start**: the image uses CPU-only PyTorch and has the Docling models (layout, TableFormer, RapidOCR) baked in, so no model download happens at startup; models are loaded eagerly before the service reports healthy. On Cloud Run a cold start costs roughly 30 s on top of the request.
   * Runs as a dedicated container in On-Premise deployments (single replica, no scale-to-0).
 
-### 2.4. `llm-service`
+### 2.4. `llm`
 * **Responsibilities**:
   * LLM inference (Gemini 3.5 Flash-Lite on GCP, Qwen 3.6 35B A3B on-premise) exposed through an OpenAI-compatible chat completions API.
 * **Characteristics**:
-  * Used by the `core-service` Taskiq worker to draft student applications (*wnioski*) rendered to DOCX and to generate general descriptions of regulations for vector search of acts — see [AI module](../ai.md).
+  * Used by the `core` Taskiq worker to draft student applications (*wnioski*) rendered to DOCX and to generate general descriptions of regulations for vector search of acts — see [AI module](../ai.md).
   * **GCP**: no service is deployed — the worker calls the serverless **Vertex AI** OpenAI-compatible endpoint (`google/gemini-3.5-flash-lite`, billed per token) in the `eu` multi-region, so data stays within the EU with an OAuth access token of its Workload Identity (`LLM_SERVICE_USE_GOOGLE_AUTH=true`).
   * **On-Premise**: served directly by **OpenVINO Model Server (OVMS)** (`OpenVINO/Qwen3.6-35B-A3B-int4-ov`, a mixture-of-experts model with ~3B active parameters) — no custom application code. OVMS pulls the model from Hugging Face straight into a persistent volume on first start (cached across restarts after that), and runs with `--target_device=AUTO` and `/dev/dri` passed through, so it uses the Intel iGPU when the host exposes one and falls back to CPU otherwise.
   * **Local development**: OVMS with the lighter Qwen 3.5-9B, started by `apps/core/scripts/dev.py`.
 
-### 2.5. `prawobiorca-frontend`
+### 2.5. `web`
 * **Responsibilities**:
   * Single-page application (Vue 3 + TypeScript) delivering the whole user interface: search, authentication, case and document management, and for the administrator application templates and organizations.
 * **Characteristics**:
   * Built with Vite into static assets and served by **nginx** from its own container; no server-side rendering and no application server.
-  * Communicates only with `core-service` over the HTTP REST API, under the `/api` prefix of the shared ingress — it never reaches the database or the compute services directly.
-  * Stateless from the deployment point of view: the session lives in cookies issued by `core-service`.
+  * Communicates only with `core` over the HTTP REST API, under the `/api` prefix of the shared ingress — it never reaches the database or the compute services directly.
+  * Stateless from the deployment point of view: the session lives in cookies issued by `core`.
   * See [Frontend](frontend.md) for the stack, project structure and development commands.
 
 ---
 
 ## 3. Key Architectural Decisions & Patterns
 
-### 3.1. Monolith for Core Business (`core-service`)
+### 3.1. Monolith for Core Business (`core`)
 * **Simplicity & Velocity**: Simple monolith, but with clean architecture, possibly to modularize, if team growth.
 * **Architecture**: Use cases and domain entities for documents, cases, with separate layers for framework, and infrastructure (e.g. db connection).
 
@@ -141,7 +141,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
 
 ---
 
-## 4. More about core-service architecture
+## 4. More about core architecture
 
 Each Python service in the repository follows **Clean Architecture** principles, enforcing strict inward-pointing dependency rules. The frontend is not bound by these rules — its structure is described in [Frontend](frontend.md).
 
@@ -174,7 +174,7 @@ Contains **Application Business Rules** and use case orchestrations.
 #### `../../apps/core/src/core_service/infrastructure`
 Acts as adapters for external systems and technical tools, implementing ports defined in `application/ports`. Adapter classes are named with the technology they use (e.g. `S3RegulationsStorage`, `LlmApplicationWriter`, `HttpTextsEmbedder`), so they never share a name with the port they implement.
 - **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas. Entities and representations are plain dataclasses mapped imperatively onto the same tables (`map_imperatively` in `relational_db/schemas`), so the domain does not import SQLAlchemy; `save` flushes the changed entity and returns the fresh representation where the use case needs it. Adapter methods keep the port signature, typed with the port `AsyncSession` (`application/ports/relational.py`), and narrow it to the SQLAlchemy session with `sqla_session` (`infrastructure/relational_db/session.py`) as the first statement, so `ty` checks that every adapter satisfies its port.
-- **External Clients**: HTTP/gRPC clients communicating with external services (`embeddings-service`, `extraction-service`).
+- **External Clients**: HTTP/gRPC clients communicating with external services (`embedding`, `extraction`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
 
 #### `../../apps/core/src/core_service/framework`

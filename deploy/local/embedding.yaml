@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: embedding-service
+  name: embedding
   labels:
     app: prawobiorca
-    component: embedding-service
+    component: embedding
 spec:
   containers:
-    - name: embedding-service
-      image: localhost/embedding-service:latest
+    - name: embedding
+      image: localhost/prawobiorca/embedding:latest
       args:
         - --model_path=/models/mmlw-retrieval-roberta-large-v2
         - --model_name=mmlw-retrieval-roberta-large-v2

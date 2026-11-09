@@ -1,21 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prawobiorca-worker
-  annotations:
-    checkov.io/skip1: CKV_K8S_8=The worker has no HTTP endpoint to probe
-    checkov.io/skip2: CKV_K8S_9=The worker does not receive traffic
+  name: core
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: prawobiorca
-      component: prawobiorca-worker
+      component: core
   template:
     metadata:
       labels:
         app: prawobiorca
-        component: prawobiorca-worker
+        component: core
     spec:
       nodeSelector:
         cloud.google.com/gke-spot: "true"
@@ -28,33 +25,41 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: prawobiorca-worker
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/prawobiorca-backend:latest
-          command: ["taskiq", "worker", "core_service.framework.workers.regulations:broker", "core_service.framework.workers.applications"]
+        - name: core
+          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/core:latest
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          ports:
+            - containerPort: 8000
           resources:
             requests:
               cpu: "100m"
-              memory: "384Mi"
+              memory: "256Mi"
             limits:
-              cpu: "1"
-              memory: "1Gi"
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
           volumeMounts:
             - name: secrets-store
               mountPath: "/mnt/secrets-store"
               readOnly: true
           envFrom:
             - configMapRef:
-                name: prawobiorca-backend-config
-          env:
-            - name: EMBEDDING_SERVICE_URL
-              value: "https://embedding-batch-service-296630821006.europe-central2.run.app"
-            - name: EMBEDDING_SERVICE_BATCH_SIZE
-              value: "32"
+                name: core-config
       volumes:
         - name: secrets-store
           csi:
@@ -62,3 +67,17 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: prawobiorca-secrets
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+spec:
+  type: NodePort
+  selector:
+    app: prawobiorca
+    component: core
+  ports:
+    - port: 8000
+      targetPort: 8000

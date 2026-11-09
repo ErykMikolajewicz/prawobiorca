@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir uv==0.13.*
 
 RUN useradd -m extraction_service
 
-WORKDIR /extraction-service
-RUN chown extraction_service /extraction-service
+WORKDIR /extraction
+RUN chown extraction_service /extraction
 
 USER extraction_service
 
@@ -23,15 +23,15 @@ COPY uv.lock uv.lock
 
 RUN uv sync --locked --no-install-project --compile-bytecode --no-cache --no-default-groups
 
-RUN .venv/bin/docling-tools models download layout tableformer rapidocr -o /extraction-service/models
+RUN .venv/bin/docling-tools models download layout tableformer rapidocr -o /extraction/models
 
-ENV DOCLING_ARTIFACTS_PATH=/extraction-service/models
+ENV DOCLING_ARTIFACTS_PATH=/extraction/models
 
 COPY src src
 RUN uv sync --locked --no-editable --compile-bytecode --no-cache --no-default-groups
 
 EXPOSE 8080
 
-ENV PATH="/extraction-service/.venv/bin:$PATH"
+ENV PATH="/extraction/.venv/bin:$PATH"
 
 ENTRYPOINT ["granian", "--port", "8080", "--host", "0.0.0.0", "--interface", "asgi", "extraction_service.main:app"]

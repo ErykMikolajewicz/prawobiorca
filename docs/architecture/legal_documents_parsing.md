@@ -8,16 +8,16 @@ chunking logic does not rely on the layout labels produced by the extraction ser
 ## Pipeline Overview
 
 ```text
-PDF ──► extraction-service (Docling) ──► [{label, text}, ...] ──► LegalStructureParser ──► [LegalUnit, ...]
+PDF ──► extraction (Docling) ──► [{label, text}, ...] ──► LegalStructureParser ──► [LegalUnit, ...]
                                                                                               │
                                                                            RegulationAct chunking
                                                                                               ▼
                                                                      [RegulationSection, ...] ──► chunk embeddings
 ```
 
-`extraction-service` stays deliberately dumb: it runs layout analysis and returns a flat list of text
+`extraction` stays deliberately dumb: it runs layout analysis and returns a flat list of text
 elements with their layout labels (`section_header`, `list_item`, `text`, `page_header`, ...). All knowledge
-about legal structure lives in the `core-service` domain layer.
+about legal structure lives in the `core` domain layer.
 
 ---
 
