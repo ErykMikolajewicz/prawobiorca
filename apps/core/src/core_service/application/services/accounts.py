@@ -4,8 +4,8 @@ from uuid import UUID
 from fastapi.concurrency import run_in_threadpool
 
 from core_service.application.dtos.account import LoginData
-from core_service.application.interfaces.relational import AsyncSession
-from core_service.application.interfaces.users import UsersRepository
+from core_service.application.ports.relational import AsyncSession
+from core_service.application.ports.users import UsersRepository
 from core_service.domain.services.security import verify_password
 
 logger = logging.getLogger(__name__)

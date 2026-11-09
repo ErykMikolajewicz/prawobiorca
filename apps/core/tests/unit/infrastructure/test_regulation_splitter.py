@@ -2,14 +2,14 @@ import pytest
 from httpx2 import AsyncClient, MockTransport, Response
 
 from core_service.domain.value_objects.legal_units import RegulationElement, UsefulLabels
-from core_service.infrastructure.ai_services.regulation_splitter import RegulationSplitter
+from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
 from core_service.shared.exceptions import ServiceUnavailable
 
 EXTRACTION_SERVICE_URL = "http://extraction.local"
 
 
-def create_splitter(handler) -> RegulationSplitter:
-    return RegulationSplitter(AsyncClient(transport=MockTransport(handler)), EXTRACTION_SERVICE_URL)
+def create_splitter(handler) -> HttpRegulationSplitter:
+    return HttpRegulationSplitter(AsyncClient(transport=MockTransport(handler)), EXTRACTION_SERVICE_URL)
 
 
 async def test_split_sends_regulation_file_and_returns_its_elements():

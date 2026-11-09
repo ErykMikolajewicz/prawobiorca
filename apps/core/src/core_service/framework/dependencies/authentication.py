@@ -3,8 +3,8 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.users import UsersRepository, UsersSessionsRepository
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
 from core_service.application.use_cases.auth import AuthTokensConfig, LogoutUser, LogUser, RefreshTokens
 from core_service.domain.exceptions.users import InvalidAccessToken
 from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token

@@ -10,16 +10,14 @@ from core_service.application.dtos.application_templates import (
     PublishedApplicationField,
     PublishedApplicationTemplate,
 )
-from core_service.application.interfaces.application_templates import (
-    ApplicationTemplatesRepository,
-    ApplicationTemplatesStorage,
-)
-from core_service.application.interfaces.relational import AsyncSession, SessionMaker
 from core_service.application.ports.application_templates import (
     ApplicationTemplateDescriptionWriter,
     ApplicationTemplateInspector,
     ApplicationTemplateInstructionsProvider,
+    ApplicationTemplatesRepository,
+    ApplicationTemplatesStorage,
 )
+from core_service.application.ports.relational import AsyncSession, SessionMaker
 from core_service.application.ports.tasks import ApplicationTemplateDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.domain.exceptions.application_templates import (

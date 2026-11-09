@@ -6,7 +6,7 @@ from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.prompt_templates import prompts_env
 
 
-class ApplicationWriter:
+class LlmApplicationWriter:
     def __init__(self, llm_chat: LlmChat):
         self._llm_chat = llm_chat
 

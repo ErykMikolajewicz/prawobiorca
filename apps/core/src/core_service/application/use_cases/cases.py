@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from core_service.application.dtos.cases import CaseData, CaseDocument, NewCaseDocument
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.cases import CaseDocumentsRepository, CasesRepository
-from core_service.application.interfaces.relational import SessionMaker
+from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
+from core_service.application.ports.cases import CaseDocumentsRepository, CasesRepository
+from core_service.application.ports.relational import SessionMaker
 from core_service.domain.exceptions.cases import CaseNotFound
 from core_service.domain.services.case_access import resolve_case_owner
 from core_service.domain.value_objects.users import Caller

@@ -10,10 +10,13 @@ from core_service.application.dtos.regulations import (
     RegulationUploadTarget,
 )
 from core_service.application.dtos.search import SearchParams, SearchResult
-from core_service.application.interfaces.regulations import RegulationsRepository, RegulationsStorage
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.sections import SectionsRepository
-from core_service.application.ports.regulations import RegulationDescriptionWriter
+from core_service.application.ports.regulations import (
+    RegulationDescriptionWriter,
+    RegulationsRepository,
+    RegulationsStorage,
+)
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import (
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,

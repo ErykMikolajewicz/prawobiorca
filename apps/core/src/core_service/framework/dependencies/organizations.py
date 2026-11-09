@@ -4,8 +4,8 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Query, status
 
 import core_service.infrastructure.relational_db.repositories.organizations as sqla_repos
-from core_service.application.interfaces.organizations import OrganizationsRepository, SuborganizationsRepository
-from core_service.application.interfaces.relational import SessionMaker
+from core_service.application.ports.organizations import OrganizationsRepository, SuborganizationsRepository
+from core_service.application.ports.relational import SessionMaker
 from core_service.application.use_cases.organizations import (
     AddOrganization,
     AddSuborganization,

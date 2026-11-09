@@ -2,9 +2,9 @@ from typing import Annotated, Any
 
 from fastapi import Depends
 
-from core_service.application.interfaces.application_templates import ApplicationTemplatesRepository
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.relational import SessionMaker
+from core_service.application.ports.application_templates import ApplicationTemplatesRepository
+from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
+from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationGenerationScheduler
 from core_service.application.use_cases.applications import (
     AddApplication,

@@ -11,8 +11,8 @@ from sqlalchemy import insert
 from core_service.application.services.embedding import SectionsEmbedder
 from core_service.application.services.regulations import RegulationPreparator
 from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
-from core_service.infrastructure.ai_services.regulation_splitter import RegulationSplitter
-from core_service.infrastructure.ai_services.text_embedder import TextsEmbedder
+from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
+from core_service.infrastructure.ai_services.text_embedder import HttpTextsEmbedder
 from core_service.infrastructure.object_storage.repository import S3RegulationsStorage
 from core_service.infrastructure.relational_db.connection import async_session_maker
 from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
@@ -62,11 +62,11 @@ async def init_regulations():
             signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
             max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
         )
-        texts_embedder = TextsEmbedder(
+        texts_embedder = HttpTextsEmbedder(
             client=client,
             embedding_service_url=embedding_service_settings.URL,
         )
-        regulation_splitter = RegulationSplitter(
+        regulation_splitter = HttpRegulationSplitter(
             client=client,
             extraction_service_url=extraction_service_settings.URL,
         )

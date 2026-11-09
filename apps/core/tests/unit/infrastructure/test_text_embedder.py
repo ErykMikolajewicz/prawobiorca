@@ -4,14 +4,14 @@ import pytest
 from httpx2 import AsyncClient, ConnectError, MockTransport, Response
 
 from core_service.domain.value_objects.sections import SectionChunk
-from core_service.infrastructure.ai_services.text_embedder import EMBEDDING_MODEL_NAME, TextsEmbedder
+from core_service.infrastructure.ai_services.text_embedder import EMBEDDING_MODEL_NAME, HttpTextsEmbedder
 from core_service.shared.exceptions import ServiceUnavailable
 
 EMBEDDING_SERVICE_URL = "http://embedding.local"
 
 
-def create_embedder(handler) -> TextsEmbedder:
-    return TextsEmbedder(AsyncClient(transport=MockTransport(handler)), EMBEDDING_SERVICE_URL)
+def create_embedder(handler) -> HttpTextsEmbedder:
+    return HttpTextsEmbedder(AsyncClient(transport=MockTransport(handler)), EMBEDDING_SERVICE_URL)
 
 
 def respond_with_vectors(requests: list):

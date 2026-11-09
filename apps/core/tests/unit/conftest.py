@@ -2,16 +2,17 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from core_service.application.interfaces.application_templates import ApplicationTemplatesRepository
-from core_service.application.interfaces.applications import ApplicationsRepository
-from core_service.application.interfaces.cases import CaseDocumentsRepository, CasesRepository
-from core_service.application.interfaces.regulations import RegulationsRepository
-from core_service.application.interfaces.relational import AsyncSession, SessionMaker
-from core_service.application.interfaces.sections import SectionsRepository
-from core_service.application.interfaces.users import UsersRepository, UsersSessionsRepository
-from core_service.application.ports.application_templates import ApplicationTemplateInspector
-from core_service.application.ports.applications import ApplicationRenderer
+from core_service.application.ports.application_templates import (
+    ApplicationTemplateInspector,
+    ApplicationTemplatesRepository,
+)
+from core_service.application.ports.applications import ApplicationRenderer, ApplicationsRepository
+from core_service.application.ports.cases import CaseDocumentsRepository, CasesRepository
+from core_service.application.ports.regulations import RegulationsRepository
+from core_service.application.ports.relational import AsyncSession, SessionMaker
+from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.texts import TextsEmbedder
+from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
 from core_service.application.services.regulations import RegulationPreparator
 
 

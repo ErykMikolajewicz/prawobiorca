@@ -169,10 +169,10 @@ The innermost core of the service containing **Enterprise Business Rules**. It h
 Contains **Application Business Rules** and use case orchestrations.
 - **Use Cases**: Individual business workflows (e.g., `RegisterUser`, `ProcessUploadedDocument`, `SearchDocuments`).
 - **DTOs**: Data Transfer Objects defining input/output contracts.
-- **Ports & Interfaces**: Abstract contracts for repositories, vector embedders, and external APIs implemented by the Infrastructure layer.
+- **Ports** (`application/ports`): Abstract contracts (`typing.Protocol`) for repositories, object storage, task scheduling, LLM writers, embedders and other external APIs, implemented by the Infrastructure layer.
 
 #### `../../apps/core/src/core_service/infrastructure`
-Acts as adapters for external systems and technical tools, implementing ports defined in domain/application.
+Acts as adapters for external systems and technical tools, implementing ports defined in `application/ports`. Adapter classes are named with the technology they use (e.g. `S3RegulationsStorage`, `LlmApplicationWriter`, `HttpTextsEmbedder`), so they never share a name with the port they implement.
 - **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas.
 - **External Clients**: HTTP/gRPC clients communicating with external services (`embeddings-service`, `extraction-service`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
@@ -195,7 +195,7 @@ Constants are not kept in `shared`: each lives in the layer that owns it, next t
 To preserve architectural boundaries:
 - **`domain`** must NOT import from `application`, `infrastructure`, or `framework`.
 - **`application`** can import from `domain`, but must NOT import from `infrastructure` or `framework`.
-- **`infrastructure`** can import from `application` (interfaces, DTOs) and `domain`. It must NOT import from `framework`.
+- **`infrastructure`** can import from `application` (ports, DTOs) and `domain`. It must NOT import from `framework`.
 - **`framework`** is the assembly root and can import from `application`, `domain`, and `infrastructure` to wire dependencies.
 - **`shared`** can be imported by any layer, but should not depend on domain or infrastructure specifics.
 

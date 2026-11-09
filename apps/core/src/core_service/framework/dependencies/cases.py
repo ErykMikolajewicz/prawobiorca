@@ -3,9 +3,9 @@ from typing import Annotated, Any
 from fastapi import Depends
 
 import core_service.infrastructure.relational_db.repositories.cases as sqla_repos
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.cases import CaseDocumentsRepository, CasesRepository
-from core_service.application.interfaces.relational import SessionMaker
+from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
+from core_service.application.ports.cases import CaseDocumentsRepository, CasesRepository
+from core_service.application.ports.relational import SessionMaker
 from core_service.application.use_cases.cases import (
     AddCase,
     AddCaseDocument,

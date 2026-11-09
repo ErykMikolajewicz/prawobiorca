@@ -2,7 +2,7 @@ from typing import Protocol
 from uuid import UUID
 
 from core_service.application.dtos.search import SearchParams, SearchResult
-from core_service.application.interfaces.relational import AsyncSession
+from core_service.application.ports.relational import AsyncSession
 from core_service.domain.value_objects.regulations import SectionContent
 from core_service.domain.value_objects.sections import SectionsCollection
 

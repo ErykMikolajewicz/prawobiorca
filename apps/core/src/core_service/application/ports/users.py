@@ -3,7 +3,7 @@ from typing import Protocol
 from uuid import UUID
 
 from core_service.application.dtos.user import CreateUserData
-from core_service.application.interfaces.relational import AsyncSession
+from core_service.application.ports.relational import AsyncSession
 from core_service.domain.entities.user import User
 from core_service.domain.value_objects.auth import UserSession
 from core_service.domain.value_objects.users import UserPrivileges

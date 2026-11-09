@@ -5,14 +5,18 @@ from uuid import UUID
 
 from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
-from core_service.application.interfaces.application_templates import (
+from core_service.application.ports.application_templates import (
     ApplicationTemplatesRepository,
     ApplicationTemplatesStorage,
 )
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.cases import CaseDocumentsRepository
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.ports.applications import ApplicationRenderer, ApplicationWriter
+from core_service.application.ports.applications import (
+    ApplicationRenderer,
+    ApplicationsRepository,
+    ApplicationsStorage,
+    ApplicationWriter,
+)
+from core_service.application.ports.cases import CaseDocumentsRepository
+from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationGenerationScheduler
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateNotFound,

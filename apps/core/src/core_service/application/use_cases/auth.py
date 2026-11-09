@@ -8,8 +8,8 @@ from pydantic import SecretStr
 
 from core_service.application.dtos.account import LoginData
 from core_service.application.dtos.auth import AuthTokens
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.users import UsersRepository, UsersSessionsRepository
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
 from core_service.application.services.accounts import check_user_can_log
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
 from core_service.domain.services.security import (

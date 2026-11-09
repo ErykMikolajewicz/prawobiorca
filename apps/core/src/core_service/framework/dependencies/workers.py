@@ -4,21 +4,27 @@ from httpx2 import AsyncClient
 from openai import AsyncOpenAI
 from taskiq import Context, TaskiqDepends, TaskiqState
 
-from core_service.application.interfaces.application_templates import (
-    ApplicationTemplatesRepository,
-    ApplicationTemplatesStorage,
-)
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.cases import CaseDocumentsRepository
-from core_service.application.interfaces.regulations import RegulationsRepository, RegulationsStorage
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.sections import SectionsRepository
 from core_service.application.ports.application_templates import (
     ApplicationTemplateDescriptionWriter,
     ApplicationTemplateInspector,
+    ApplicationTemplatesRepository,
+    ApplicationTemplatesStorage,
 )
-from core_service.application.ports.applications import ApplicationRenderer, ApplicationWriter
-from core_service.application.ports.regulations import RegulationDescriptionWriter, RegulationSplitter
+from core_service.application.ports.applications import (
+    ApplicationRenderer,
+    ApplicationsRepository,
+    ApplicationsStorage,
+    ApplicationWriter,
+)
+from core_service.application.ports.cases import CaseDocumentsRepository
+from core_service.application.ports.regulations import (
+    RegulationDescriptionWriter,
+    RegulationSplitter,
+    RegulationsRepository,
+    RegulationsStorage,
+)
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import RegulationDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.ports.tokenizer import Tokenizer
@@ -44,16 +50,16 @@ from core_service.framework.dependencies.regulations import get_regulation_repos
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.tokenizer import get_tokenizer
 from core_service.infrastructure.ai_services.application_template_description_writer import (
-    ApplicationTemplateDescriptionWriter as LlmApplicationTemplateDescriptionWriter,
+    LlmApplicationTemplateDescriptionWriter,
 )
-from core_service.infrastructure.ai_services.application_writer import ApplicationWriter as LlmApplicationWriter
+from core_service.infrastructure.ai_services.application_writer import LlmApplicationWriter
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter, LlmPricing
 from core_service.infrastructure.ai_services.regulation_description_writer import (
-    RegulationDescriptionWriter as LlmRegulationDescriptionWriter,
+    LlmRegulationDescriptionWriter,
 )
-from core_service.infrastructure.ai_services.regulation_splitter import RegulationSplitter as HttpRegulationSplitter
-from core_service.infrastructure.ai_services.text_embedder import TextsEmbedder as HttpTextsEmbedder
+from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
+from core_service.infrastructure.ai_services.text_embedder import HttpTextsEmbedder
 from core_service.infrastructure.docx.docx_renderer import DocxApplicationRenderer
 from core_service.infrastructure.object_storage.repository import (
     S3ApplicationsStorage,

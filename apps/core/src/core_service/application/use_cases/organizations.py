@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from core_service.application.dtos.organizations import NewOrganization, NewSuborganization, OrganizationData
-from core_service.application.interfaces.organizations import OrganizationsRepository, SuborganizationsRepository
-from core_service.application.interfaces.relational import SessionMaker
+from core_service.application.ports.organizations import OrganizationsRepository, SuborganizationsRepository
+from core_service.application.ports.relational import SessionMaker
 from core_service.domain.exceptions.organizations import OrganizationNotFound, SuborganizationNotFound
 from core_service.domain.services.organization_access import check_can_manage_organizations
 from core_service.domain.value_objects.users import Caller
