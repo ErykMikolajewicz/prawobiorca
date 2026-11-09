@@ -13,16 +13,19 @@ from taskiq import AckableMessage, AsyncBroker, BrokerMessage
 
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
-from core_service.shared.consts import (
-    DELIVERY_ATTEMPT_LABEL,
-    TASK_HEARTBEAT_SECONDS,
-    TASK_LEASE_SECONDS,
-    TASK_NOTIFY_CHANNEL,
-    TASK_POLL_INTERVAL_SECONDS,
-)
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
+
+TASK_NOTIFY_CHANNEL = "task_messages"
+
+TASK_LEASE_SECONDS = 120
+
+TASK_HEARTBEAT_SECONDS = 30
+
+TASK_POLL_INTERVAL_SECONDS = 10
+
+DELIVERY_ATTEMPT_LABEL = "delivery_attempt"
 
 
 async def insert_task_message(session: AsyncSession, message: BrokerMessage) -> None:

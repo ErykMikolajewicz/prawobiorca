@@ -2,8 +2,8 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.users import UsersRepository
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.users import UsersRepository
 from core_service.application.use_cases.account import CreateAccount
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.users import get_users_repository

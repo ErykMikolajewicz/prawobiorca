@@ -5,8 +5,7 @@ from sqlalchemy import func, select, update
 from taskiq import TaskiqMessage
 
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
-from core_service.infrastructure.tasks.broker import insert_task_message
-from core_service.shared.consts import DELIVERY_ATTEMPT_LABEL
+from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL, insert_task_message
 from tests.integration.fixtures.tasks import start_worker_broker
 
 LISTEN_TIMEOUT = 3

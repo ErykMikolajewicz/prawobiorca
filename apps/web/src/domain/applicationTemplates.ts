@@ -1,6 +1,5 @@
 import type {
   ApplicationFieldType,
-  ApplicationTemplateDescriptionStatus,
   ApplicationTemplateDetailsData,
   ApplicationTemplateFieldOutput,
   ApplicationTemplateStatus,
@@ -35,14 +34,6 @@ export const templateStatusOptions: Record<ApplicationTemplateStatus, TemplateSt
   NOT_UPLOADED: { label: 'Niewczytany', tagType: 'danger' },
   DRAFT: { label: 'Szkic', tagType: 'info' },
   PUBLISHED: { label: 'Opublikowany', tagType: 'success' },
-}
-
-export const templateDescriptionStatusOptions: Record<
-  Extract<ApplicationTemplateDescriptionStatus, 'IN_PROGRESS' | 'FAILED'>,
-  TemplateStatusOption
-> = {
-  IN_PROGRESS: { label: 'Generowanie opisu', tagType: 'warning' },
-  FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
 }
 
 export function toEditableField(field: ApplicationTemplateFieldOutput): EditableTemplateField {

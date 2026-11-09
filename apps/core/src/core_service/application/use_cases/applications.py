@@ -3,32 +3,48 @@ from dataclasses import dataclass, replace
 from typing import TypeGuard
 from uuid import UUID
 
-from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
-from core_service.application.interfaces.application_templates import (
+from core_service.application.ports.application_templates import (
     ApplicationTemplatesRepository,
     ApplicationTemplatesStorage,
 )
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.cases import CaseDocumentsRepository
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.ports.applications import ApplicationRenderer, ApplicationWriter
+from core_service.application.ports.applications import (
+    ApplicationRenderer,
+    ApplicationsRepository,
+    ApplicationsStorage,
+    ApplicationWriter,
+)
+from core_service.application.ports.cases import CaseDocumentsRepository
+from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationGenerationScheduler
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateNotFound,
     InvalidApplicationFieldValues,
 )
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from core_service.domain.exceptions.cases import CaseNotFound
-from core_service.domain.services.application_fields import validate_field_values
 from core_service.domain.services.case_access import resolve_case_owner
-from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
+
+MAX_APPLICATION_GENERATION_DELIVERIES = 3
+
+
+async def _fail_generation(
+    session_maker: SessionMaker, applications_repo: ApplicationsRepository, user_id: UUID, application_id: UUID
+) -> None:
+    async with session_maker.begin() as session:
+        application = await applications_repo.get_for_update(session, user_id, application_id)
+        if application is None:
+            logger.warning("Application removed during generation! application id: %s", application_id)
+            return
+
+        application.fail_generation()
+        await applications_repo.save(session, application)
 
 
 @dataclass
@@ -42,13 +58,13 @@ class AddApplication:
         user_id = resolve_case_owner(caller)
 
         async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get(session, new_application.template_id)
-            if template is None or template.status != ApplicationTemplateStatus.PUBLISHED:
+            template = await self.application_templates_repo.get_for_update(session, new_application.template_id)
+            if template is None or not template.is_published:
                 logger.warning("Published application template not found! template id: %s", new_application.template_id)
                 raise ApplicationTemplateNotFound
 
             try:
-                field_values = validate_field_values(template.fields, new_application.field_values)
+                field_values = template.validate_field_values(new_application.field_values)
             except InvalidApplicationFieldValues:
                 logger.warning("Invalid application field values! template id: %s", template.id)
                 raise
@@ -78,26 +94,24 @@ class GenerateApplication:
 
     async def execute(self, user_id: UUID, application_id: UUID, new_application: NewApplication) -> None:
         async with self.session_maker.begin() as session:
-            application = await self.applications_repo.get(session, user_id, application_id)
+            template = await self.application_templates_repo.get_for_update(session, new_application.template_id)
+            application = await self.applications_repo.get_for_update(session, user_id, application_id)
             if application is None:
                 logger.warning("Application to generate not found! application id: %s", application_id)
                 raise ApplicationNotFound
 
-            if application.generation_status == ApplicationGenerationStatus.GENERATED:
+            if application.is_generated:
                 logger.warning("Tried generate already generated application! application id: %s", application_id)
                 return
 
-            template = await self.application_templates_repo.get(session, new_application.template_id)
             if not self._is_template_valid(template, new_application):
                 logger.warning("Application template changed before generation! application id: %s", application_id)
-                await self.applications_repo.set_generation_status(
-                    session, user_id, application_id, ApplicationGenerationStatus.FAILED
-                )
+                application.fail_generation()
+                await self.applications_repo.save(session, application)
                 return
 
-            await self.applications_repo.set_generation_status(
-                session, user_id, application_id, ApplicationGenerationStatus.IN_PROGRESS
-            )
+            application.start_generation()
+            await self.applications_repo.save(session, application)
             legal_basis = await self.case_documents_repo.list_by_case_id(session, user_id, application.case_id)
 
         try:
@@ -107,49 +121,41 @@ class GenerateApplication:
             document = await self.application_renderer.render(template_content, new_application, content)
         except ServiceUnavailable:
             logger.error("Service to generate application not working!")
-            await self._set_failed(user_id, application_id)
+            await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
             raise
         except Exception as e:
             logger.error("Unexpected error during application generation! %s", e)
-            await self._set_failed(user_id, application_id)
+            await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
             raise
 
         try:
             async with self.session_maker.begin() as session:
-                await self.applications_repo.set_name(session, user_id, application_id, name)
-                await self.applications_repo.set_generation_status(
-                    session, user_id, application_id, ApplicationGenerationStatus.GENERATED
-                )
+                application = await self.applications_repo.get_for_update(session, user_id, application_id)
+                if application is None:
+                    logger.warning("Application removed during generation! application id: %s", application_id)
+                    return
+
+                application.complete_generation(name)
+                await self.applications_repo.save(session, application)
                 await self.applications_storage.upload_application(application_id, document)
-        except ApplicationNotFound:
-            logger.warning("Application removed during generation! application id: %s", application_id)
         except Exception as e:
             logger.error("Failed to save generated application! %s", e)
-            await self._set_failed(user_id, application_id)
+            await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
             raise
 
     @staticmethod
     def _is_template_valid(
-        template: ApplicationTemplateRepresentation | None, new_application: NewApplication
-    ) -> TypeGuard[ApplicationTemplateRepresentation]:
-        if template is None or template.status != ApplicationTemplateStatus.PUBLISHED:
+        template: ApplicationTemplate | None, new_application: NewApplication
+    ) -> TypeGuard[ApplicationTemplate]:
+        if template is None or not template.is_published:
             return False
 
         try:
-            validate_field_values(template.fields, new_application.field_values)
+            template.validate_field_values(new_application.field_values)
         except InvalidApplicationFieldValues:
             return False
 
         return True
-
-    async def _set_failed(self, user_id: UUID, application_id: UUID) -> None:
-        try:
-            async with self.session_maker.begin() as session:
-                await self.applications_repo.set_generation_status(
-                    session, user_id, application_id, ApplicationGenerationStatus.FAILED
-                )
-        except ApplicationNotFound:
-            logger.warning("Application removed during generation! application id: %s", application_id)
 
 
 @dataclass
@@ -162,13 +168,7 @@ class FailApplicationGeneration:
             return False
 
         logger.error("Application generation exceeded deliveries limit! application id: %s", application_id)
-        try:
-            async with self.session_maker.begin() as session:
-                await self.applications_repo.set_generation_status(
-                    session, user_id, application_id, ApplicationGenerationStatus.FAILED
-                )
-        except ApplicationNotFound:
-            logger.warning("Application removed during generation! application id: %s", application_id)
+        await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
         return True
 
 

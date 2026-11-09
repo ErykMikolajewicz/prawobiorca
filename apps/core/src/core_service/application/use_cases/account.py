@@ -5,8 +5,8 @@ from fastapi.concurrency import run_in_threadpool
 
 from core_service.application.dtos.account import LoginData
 from core_service.application.dtos.user import CreateUserData
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.users import UsersRepository
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.users import UsersRepository
 from core_service.domain.exceptions.users import UserExists
 from core_service.domain.services.security import hash_password
 from core_service.shared.exceptions import ObjectExists

@@ -1,20 +1,22 @@
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.application.dtos.applications import ApplicationRepresentation
+from core_service.application.ports.relational import AsyncSession
+from core_service.domain.entities.application import Application
 from core_service.domain.exceptions.applications import ApplicationNotFound
 from core_service.domain.exceptions.cases import CaseNotFound
-from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.infrastructure.relational_db.repositories.cases import check_case_exists
 from core_service.infrastructure.relational_db.schemas.applications import applications_table
+from core_service.infrastructure.relational_db.session import sqla_session
 
 
-class ApplicationsRepository:
+class SqlaApplicationsRepository:
     @staticmethod
     async def list_by_case_id(session: AsyncSession, user_id: UUID, case_id: UUID) -> list[ApplicationRepresentation]:
+        session = sqla_session(session)
         statement = (
             select(ApplicationRepresentation)
             .where(applications_table.c.case_id == case_id, applications_table.c.user_id == user_id)
@@ -26,6 +28,7 @@ class ApplicationsRepository:
 
     @staticmethod
     async def list_ids_by_case_id(session: AsyncSession, user_id: UUID, case_id: UUID) -> list[UUID]:
+        session = sqla_session(session)
         statement = select(applications_table.c.id).where(
             applications_table.c.case_id == case_id, applications_table.c.user_id == user_id
         )
@@ -35,6 +38,7 @@ class ApplicationsRepository:
 
     @staticmethod
     async def get(session: AsyncSession, user_id: UUID, application_id: UUID) -> ApplicationRepresentation | None:
+        session = sqla_session(session)
         statement = select(ApplicationRepresentation).where(
             applications_table.c.id == application_id, applications_table.c.user_id == user_id
         )
@@ -44,6 +48,7 @@ class ApplicationsRepository:
 
     @staticmethod
     async def add(session: AsyncSession, user_id: UUID, case_id: UUID, template_id: UUID, template_name: str) -> UUID:
+        session = sqla_session(session)
         await check_case_exists(session, user_id, case_id)
         statement = (
             insert(applications_table)
@@ -58,35 +63,26 @@ class ApplicationsRepository:
         return application_id
 
     @staticmethod
-    async def set_generation_status(
-        session: AsyncSession, user_id: UUID, application_id: UUID, status: ApplicationGenerationStatus
-    ) -> None:
+    async def get_for_update(session: AsyncSession, user_id: UUID, application_id: UUID) -> Application | None:
+        session = sqla_session(session)
         statement = (
-            update(applications_table)
+            select(Application)
             .where(applications_table.c.id == application_id, applications_table.c.user_id == user_id)
-            .values(generation_status=status)
-            .returning(applications_table.c.id)
+            .with_for_update()
         )
-        result = await session.execute(statement)
+        result = await session.scalars(statement)
 
-        if result.scalar_one_or_none() is None:
-            raise ApplicationNotFound
+        return result.one_or_none()
 
     @staticmethod
-    async def set_name(session: AsyncSession, user_id: UUID, application_id: UUID, name: str) -> None:
-        statement = (
-            update(applications_table)
-            .where(applications_table.c.id == application_id, applications_table.c.user_id == user_id)
-            .values(name=name)
-            .returning(applications_table.c.id)
-        )
-        result = await session.execute(statement)
-
-        if result.scalar_one_or_none() is None:
-            raise ApplicationNotFound
+    async def save(session: AsyncSession, application: Application) -> None:
+        session = sqla_session(session)
+        session.add(application)
+        await session.flush()
 
     @staticmethod
     async def delete(session: AsyncSession, user_id: UUID, case_id: UUID, application_id: UUID) -> None:
+        session = sqla_session(session)
         statement = (
             delete(applications_table)
             .where(

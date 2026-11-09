@@ -10,10 +10,6 @@ class ApplicationTemplateInInvalidState(Exception):
     pass
 
 
-class ApplicationTemplateDescriptionGenerationInProgress(Exception):
-    pass
-
-
 class InvalidApplicationTemplate(Exception):
     pass
 

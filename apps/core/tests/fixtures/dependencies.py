@@ -2,12 +2,16 @@ from unittest.mock import create_autospec
 
 import pytest
 
-from core_service.application.interfaces.application_templates import ApplicationTemplatesStorage
-from core_service.application.interfaces.applications import ApplicationsStorage
-from core_service.application.interfaces.regulations import RegulationsStorage
-from core_service.application.ports.application_templates import ApplicationTemplateDescriptionWriter
-from core_service.application.ports.applications import ApplicationWriter
-from core_service.application.ports.regulations import RegulationDescriptionWriter, RegulationSplitter
+from core_service.application.ports.application_templates import (
+    ApplicationTemplateDescriptionWriter,
+    ApplicationTemplatesStorage,
+)
+from core_service.application.ports.applications import ApplicationsStorage, ApplicationWriter
+from core_service.application.ports.regulations import (
+    RegulationDescriptionWriter,
+    RegulationSplitter,
+    RegulationsStorage,
+)
 from core_service.application.ports.tasks import (
     ApplicationGenerationScheduler,
     ApplicationTemplateDescriptionGenerationScheduler,

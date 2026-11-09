@@ -1,7 +1,5 @@
-import asyncio
 import time
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
 import jwt
@@ -15,12 +13,10 @@ from core_service.domain.services.security import (
     generate_authorization_token,
     hash_password,
     hash_refresh_token,
-    prevent_timing_attack,
     url_safe_authorization_token_length,
     verify_password,
 )
 from core_service.domain.value_objects.auth import AccessTokenClaims
-from core_service.shared.consts import SECURITY_MIN_RESPONSE_TIME
 from tests.consts import SESSION_ID, STRONG_PASSWORD, USER_ID
 
 SECRET = SecretStr("a" * 32)
@@ -86,25 +82,6 @@ def test_decode_access_token_without_required_claim(missing_claim):
 
     with pytest.raises(InvalidAccessToken):
         decode_access_token(access_token, SECRET, ALGORITHM)
-
-
-async def test_prevent_timing_attack_waits_for_remaining_time():
-    elapsed_time = 0.5
-    execution_start_time = asyncio.get_running_loop().time() - elapsed_time
-
-    with patch("core_service.domain.services.security.asyncio.sleep", new_callable=AsyncMock) as sleep:
-        await prevent_timing_attack(execution_start_time)
-
-    sleep.assert_awaited_once_with(pytest.approx(SECURITY_MIN_RESPONSE_TIME - elapsed_time, abs=0.1))
-
-
-async def test_prevent_timing_attack_does_not_wait_after_min_response_time():
-    execution_start_time = asyncio.get_running_loop().time() - SECURITY_MIN_RESPONSE_TIME - 1
-
-    with patch("core_service.domain.services.security.asyncio.sleep", new_callable=AsyncMock) as sleep:
-        await prevent_timing_attack(execution_start_time)
-
-    sleep.assert_awaited_once_with(0.0)
 
 
 def test_hash_refresh_token_is_deterministic():

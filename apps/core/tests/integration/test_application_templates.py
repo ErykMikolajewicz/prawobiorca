@@ -1,19 +1,22 @@
 from unittest.mock import ANY
 from uuid import UUID
 
+import pytest
 from fastapi import status
 from sqlalchemy import delete, select
 
 from core_service.application.dtos.application_templates import ApplicationTemplateUploadTarget
 from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
-    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
 from core_service.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
-from core_service.shared.consts import APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME
+from core_service.infrastructure.tasks.application_templates import (
+    APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME,
+)
 from tests.consts import UNKNOWN_ID
 from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR, QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.application_templates import create_docx_template, insert_application_template
@@ -228,13 +231,14 @@ async def test_update_application_template_with_invalid_fields(admin_client, ses
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
-async def test_update_application_template_with_not_existing_organization(admin_client, session_maker):
+@pytest.mark.parametrize("description", [None, "Wniosek o stypendium."], ids=("same description", "new description"))
+async def test_update_application_template_with_not_existing_organization(admin_client, session_maker, description):
     async with session_maker.begin() as session:
         template_id = await insert_application_template(session, fields=FIELDS)
 
     response = await admin_client.put(
         f"/api/application-templates/{template_id}",
-        json={"name": "Wniosek", "fields": FIELDS_JSON, "organizationId": str(UNKNOWN_ID)},
+        json={"name": "Wniosek", "fields": FIELDS_JSON, "organizationId": str(UNKNOWN_ID), "description": description},
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -464,7 +468,7 @@ async def test_regenerate_application_template_description(admin_client, session
     assert response.status_code == status.HTTP_202_ACCEPTED
     assert await get_scheduled_task_names(session_maker) == [APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME]
     template = await get_template(session_maker, template_id)
-    assert template.description_status == ApplicationTemplateDescriptionStatus.IN_PROGRESS
+    assert template.description_status == DescriptionStatus.IN_PROGRESS
 
     response = await admin_client.post(f"/api/application-templates/{template_id}/description-generation")
 

@@ -2,7 +2,7 @@
 import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRegulationDetails } from '@/composables/useRegulationDetails'
-import { descriptionStatusOptions } from '@/domain/regulations'
+import { descriptionStatusOptions } from '@/domain/descriptions'
 import { useAuthStore } from '@/stores/auth'
 import type { RegulationRepresentation } from '@/api/generated/model'
 

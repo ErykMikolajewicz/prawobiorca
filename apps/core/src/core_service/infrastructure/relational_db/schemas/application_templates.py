@@ -5,14 +5,16 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
 from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
+from core_service.domain.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH, MAX_FILENAME_LENGTH
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
-    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
+from core_service.domain.value_objects.descriptions import DescriptionStatus
+from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
-from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH, MAX_FILENAME_LENGTH, VECTOR_LENGTH
 
 
 class ApplicationTemplateFieldsType(sqla.types.TypeDecorator):
@@ -44,9 +46,9 @@ application_templates_table = sqla.Table(
     sqla.Column("description_vector", Vector(VECTOR_LENGTH), nullable=True),
     sqla.Column(
         "description_status",
-        sqla.Enum(ApplicationTemplateDescriptionStatus, name="applicationtemplatedescriptionstatus"),
+        sqla.Enum(DescriptionStatus, name="applicationtemplatedescriptionstatus"),
         nullable=False,
-        default=ApplicationTemplateDescriptionStatus.NOT_REQUESTED,
+        default=DescriptionStatus.NOT_REQUESTED,
     ),
     sqla.Column(
         "status",
@@ -71,4 +73,7 @@ application_templates_table = sqla.Table(
 
 mapper_registry.map_imperatively(
     ApplicationTemplateRepresentation, application_templates_table, exclude_properties=["description_vector"]
+)
+mapper_registry.map_imperatively(
+    ApplicationTemplate, application_templates_table, exclude_properties=["create_date", "description_vector"]
 )

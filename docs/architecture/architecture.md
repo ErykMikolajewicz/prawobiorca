@@ -160,20 +160,20 @@ flowchart TB
 
 #### `../../apps/core/src/core_service/domain`
 The innermost core of the service containing **Enterprise Business Rules**. It has zero dependencies on outer layers or external frameworks.
-- **Entities**: Business models encapsulating identity and business state (e.g., `User`, `Case`, `Document`, `Chunk`).
+- **Entities**: Business models with identity, state and the rules that change it: `Regulation` (preparation and description lifecycle), `ApplicationTemplate` (upload, draft, publication, field configuration and values), `Application` (generation lifecycle) and `User`. The AI description lifecycle shared by regulations and templates lives in the `Describable` mixin. An invalid transition raises a domain exception. Modules without business rules (cases, case documents, organizations) have no entities and work on DTOs directly.
 - **Value Objects**: Immutable data structures representing concepts without identity.
 - **Services**: Pure business algorithms and domain rules.
 - **Exceptions**: Domain-specific error definitions.
 
 #### `../../apps/core/src/core_service/application`
 Contains **Application Business Rules** and use case orchestrations.
-- **Use Cases**: Individual business workflows (e.g., `RegisterUser`, `ProcessUploadedDocument`, `SearchDocuments`).
+- **Use Cases**: Individual business workflows (e.g., `RegisterUser`, `ProcessUploadedDocument`, `SearchDocuments`). A use case that changes a resource with an entity loads it with `get_for_update` (`SELECT ... FOR UPDATE`, so concurrent requests see the state after the previous change), calls the entity method and stores it with `save`, all in one transaction. Reads (lists, details, search) skip the entity and get representations straight from the repository.
 - **DTOs**: Data Transfer Objects defining input/output contracts.
-- **Ports & Interfaces**: Abstract contracts for repositories, vector embedders, and external APIs implemented by the Infrastructure layer.
+- **Ports** (`application/ports`): Abstract contracts (`typing.Protocol`) for repositories, object storage, task scheduling, LLM writers, embedders and other external APIs, implemented by the Infrastructure layer.
 
 #### `../../apps/core/src/core_service/infrastructure`
-Acts as adapters for external systems and technical tools, implementing ports defined in domain/application.
-- **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas.
+Acts as adapters for external systems and technical tools, implementing ports defined in `application/ports`. Adapter classes are named with the technology they use (e.g. `S3RegulationsStorage`, `LlmApplicationWriter`, `HttpTextsEmbedder`), so they never share a name with the port they implement.
+- **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas. Entities and representations are plain dataclasses mapped imperatively onto the same tables (`map_imperatively` in `relational_db/schemas`), so the domain does not import SQLAlchemy; `save` flushes the changed entity and returns the fresh representation where the use case needs it. Adapter methods keep the port signature, typed with the port `AsyncSession` (`application/ports/relational.py`), and narrow it to the SQLAlchemy session with `sqla_session` (`infrastructure/relational_db/session.py`) as the first statement, so `ty` checks that every adapter satisfies its port.
 - **External Clients**: HTTP/gRPC clients communicating with external services (`embeddings-service`, `extraction-service`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
 
@@ -186,6 +186,8 @@ The outermost delivery mechanism and dependency injection root.
 #### `../../apps/core/src/core_service/shared`
 Cross-cutting concerns across layers (configuration settings, logging utilities, common base exceptions).
 
+Constants are not kept in `shared`: each lives in the layer that owns it, next to its only user when there is one (e.g. task names in `infrastructure/tasks`, delivery limits in the use cases), or in the layer's `consts.py` when several modules share it (`domain/consts.py` for field length limits, `infrastructure/consts.py`, `framework/consts.py` for cookies). Values that may change between deployments, such as LLM prices, belong to the settings.
+
 ---
 
 ## 5. Import Rules
@@ -193,6 +195,12 @@ Cross-cutting concerns across layers (configuration settings, logging utilities,
 To preserve architectural boundaries:
 - **`domain`** must NOT import from `application`, `infrastructure`, or `framework`.
 - **`application`** can import from `domain`, but must NOT import from `infrastructure` or `framework`.
-- **`infrastructure`** can import from `application` (interfaces, DTOs) and `domain`. It must NOT import from `framework`.
+- **`infrastructure`** can import from `application` (ports, DTOs) and `domain`. It must NOT import from `framework`.
 - **`framework`** is the assembly root and can import from `application`, `domain`, and `infrastructure` to wire dependencies.
 - **`shared`** can be imported by any layer, but should not depend on domain or infrastructure specifics.
+
+These rules are checked by [import-linter](https://import-linter.readthedocs.io/) (`[tool.importlinter]` in `apps/core/pyproject.toml`), run by `just check-backend` in CI and by the pre-commit hook:
+- **Layers**: `framework` > `infrastructure` > `application` > `domain` > `shared`; a layer may import only the layers below it.
+- **Framework independence**: `domain` and `application` must not import, even indirectly, technical libraries such as `fastapi`, `sqlalchemy`, `taskiq`, `httpx2`, `aiobotocore`, `jwt` or `bcrypt`. Pydantic is allowed. Known violations waiting for a fix are listed in `ignore_imports`.
+
+The packages have no `__init__.py` files (`core_service` is a namespace package, built with `namespace = true` of `uv_build`).

@@ -1,6 +1,6 @@
-import type { ApplicationTemplateDescriptionStatus } from './applicationTemplateDescriptionStatus'
 import type { ApplicationTemplateFieldOutput } from './applicationTemplateFieldOutput'
 import type { ApplicationTemplateStatus } from './applicationTemplateStatus'
+import type { DescriptionStatus } from './descriptionStatus'
 
 export interface ApplicationTemplateRepresentation {
   id: string
@@ -10,7 +10,7 @@ export interface ApplicationTemplateRepresentation {
   fields: ApplicationTemplateFieldOutput[]
   instructions: string | null
   description: string | null
-  descriptionStatus: ApplicationTemplateDescriptionStatus
+  descriptionStatus: DescriptionStatus
   organizationId: string | null
   suborganizationId: string | null
 }

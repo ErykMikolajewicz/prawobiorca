@@ -3,7 +3,7 @@ from unittest.mock import create_autospec
 import pytest
 
 from core_service.application.ports.texts import TextsEmbedder
-from core_service.shared.consts import VECTOR_LENGTH
+from core_service.infrastructure.consts import VECTOR_LENGTH
 
 QUERY_VECTOR = [1.0] * VECTOR_LENGTH
 DESCRIPTION_VECTOR = [0.0, 1.0, *[0.0] * (VECTOR_LENGTH - 2)]

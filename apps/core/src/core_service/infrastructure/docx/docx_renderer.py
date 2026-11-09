@@ -7,10 +7,10 @@ from docxtpl import DocxTemplate
 from jinja2.sandbox import SandboxedEnvironment
 
 from core_service.application.dtos.applications import NewApplication
-from core_service.domain.services.application_fields import DATE_FORMAT
 from core_service.domain.value_objects.application_templates import (
     CONTENT_TEMPLATE_VARIABLE,
     CURRENT_DATE_TEMPLATE_VARIABLE,
+    DATE_FORMAT,
 )
 
 APPLICATION_TIMEZONE = ZoneInfo("Europe/Warsaw")

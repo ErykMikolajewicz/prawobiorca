@@ -14,7 +14,7 @@ from core_service.application.services.embedding import SectionsEmbedder
 from core_service.application.services.regulations import RegulationPreparator
 from core_service.domain.value_objects.legal_units import RegulationElement
 from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
-from core_service.infrastructure.ai_services.text_embedder import TextsEmbedder
+from core_service.infrastructure.ai_services.text_embedder import HttpTextsEmbedder
 from core_service.infrastructure.relational_db.connection import async_session_maker
 from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
 
@@ -71,7 +71,7 @@ async def init_e2e_regulation():
         return
 
     async with httpx2.AsyncClient(timeout=900) as client:
-        texts_embedder = TextsEmbedder(
+        texts_embedder = HttpTextsEmbedder(
             client=client,
             embedding_service_url=embedding_service_settings.URL,
         )

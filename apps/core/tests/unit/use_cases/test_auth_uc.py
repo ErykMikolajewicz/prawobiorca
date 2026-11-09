@@ -7,19 +7,17 @@ from core_service.application.dtos.account import LoginData
 from core_service.application.use_cases.auth import LogoutUser, LogUser, RefreshTokens
 from core_service.domain.entities.user import User
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
-from core_service.domain.services.security import decode_access_token, hash_password, hash_refresh_token
+from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token, hash_password, hash_refresh_token
 from core_service.domain.value_objects.auth import UserSession
 from core_service.domain.value_objects.users import UserPrivileges
-from core_service.shared.consts import JWT_ALGORITHM
-from core_service.shared.settings.application import app_settings
-from tests.consts import REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
+from tests.consts import AUTH_TOKENS_CONFIG, REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
 from tests.mocks import get_awaited_argument
 
 STORED_USER = User(id=USER_ID, username=VALID_USERNAME, hashed_password=hash_password(SecretStr(STRONG_PASSWORD)))
 
 
 def decode(access_token: str):
-    return decode_access_token(access_token, app_settings.JWT_SECRET_KEY, JWT_ALGORITHM)
+    return decode_access_token(access_token, AUTH_TOKENS_CONFIG.jwt_secret_key, JWT_ALGORITHM)
 
 
 @pytest.fixture
@@ -46,13 +44,21 @@ def mock_prevent_timing_attack():
 
 @pytest.fixture
 def log_user(mock_session_maker, users_repository, sessions_repository):
-    return LogUser(session_maker=mock_session_maker, users_repo=users_repository, sessions_repo=sessions_repository)
+    return LogUser(
+        session_maker=mock_session_maker,
+        users_repo=users_repository,
+        sessions_repo=sessions_repository,
+        tokens_config=AUTH_TOKENS_CONFIG,
+    )
 
 
 @pytest.fixture
 def refresh_tokens(mock_session_maker, users_repository, sessions_repository):
     return RefreshTokens(
-        session_maker=mock_session_maker, users_repo=users_repository, sessions_repo=sessions_repository
+        session_maker=mock_session_maker,
+        users_repo=users_repository,
+        sessions_repo=sessions_repository,
+        tokens_config=AUTH_TOKENS_CONFIG,
     )
 
 

@@ -6,7 +6,7 @@ from core_service.domain.value_objects.legal_units import RegulationElement
 from core_service.shared.exceptions import ServiceUnavailable
 
 
-class RegulationSplitter:
+class HttpRegulationSplitter:
     def __init__(self, client: AsyncClient, extraction_service_url: str):
         self._client = client
         self._split_url = f"{extraction_service_url}/parse-regulation"

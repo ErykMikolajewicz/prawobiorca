@@ -1,10 +1,11 @@
 from typing import Annotated, Any
 
 from fastapi import Depends, Request
+from taskiq import AsyncBroker
 
-from core_service.application.interfaces.regulations import RegulationsRepository, RegulationsStorage
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.sections import SectionsRepository
+from core_service.application.ports.regulations import RegulationsRepository, RegulationsStorage
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import (
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,
@@ -32,6 +33,7 @@ from core_service.infrastructure.tasks.regulations import (
     PostgresRegulationDescriptionGenerationScheduler,
     PostgresRegulationPreparationScheduler,
 )
+from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_sections_repository() -> SectionsRepository:
@@ -50,25 +52,31 @@ def get_regulations_storage(
     client: Annotated[Any, Depends(get_file_storage_client)],
     presign_client: Annotated[Any, Depends(get_file_storage_presign_client)],
 ) -> RegulationsStorage:
-    return S3RegulationsStorage(client, presign_client)
+    return S3RegulationsStorage(
+        client,
+        presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
+    )
 
 
 def get_regulation_repository() -> RegulationsRepository:
     return RegulationsManagerRepository()
 
 
-def get_broker(request: Request) -> Any:
+def get_broker(request: Request) -> AsyncBroker:
     return request.app.state.broker
 
 
 def get_regulations_preparation_scheduler(
-    broker: Annotated[Any, Depends(get_broker)],
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> RegulationPreparationScheduler:
     return PostgresRegulationPreparationScheduler(broker)
 
 
 def get_regulation_description_generation_scheduler(
-    broker: Annotated[Any, Depends(get_broker)],
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> RegulationDescriptionGenerationScheduler:
     return PostgresRegulationDescriptionGenerationScheduler(broker)
 
@@ -101,8 +109,9 @@ def get_retry_regulation_preparation(
 def get_update_regulation(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+    texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
 ) -> UpdateRegulation:
-    return UpdateRegulation(session_maker, regulations_repository)
+    return UpdateRegulation(session_maker, regulations_repository, texts_embedder)
 
 
 def get_delete_regulation(

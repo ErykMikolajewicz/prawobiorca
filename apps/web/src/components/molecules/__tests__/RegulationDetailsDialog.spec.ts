@@ -10,7 +10,7 @@ import {
 } from '@/api/generated/endpoints/regulations/regulations'
 import { useAuthStore } from '@/stores/auth'
 import type {
-  RegulationDescriptionStatus,
+  DescriptionStatus,
   RegulationPreparationStatus,
   RegulationRepresentation,
 } from '@/api/generated/model'
@@ -32,7 +32,7 @@ vi.mock('element-plus', () => ({
 
 function createRegulation(
   preparationStatus: RegulationPreparationStatus,
-  descriptionStatus: RegulationDescriptionStatus = 'NOT_REQUESTED',
+  descriptionStatus: DescriptionStatus = 'NOT_REQUESTED',
 ): RegulationRepresentation {
   return {
     id: 'uuid-1',
@@ -50,7 +50,7 @@ function createRegulation(
 async function mountDialog(
   canManage: boolean,
   preparationStatus: RegulationPreparationStatus = 'PREPARED',
-  descriptionStatus: RegulationDescriptionStatus = 'NOT_REQUESTED',
+  descriptionStatus: DescriptionStatus = 'NOT_REQUESTED',
 ) {
   const wrapper = mount(RegulationDetailsDialog, {
     props: {

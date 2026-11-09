@@ -4,7 +4,7 @@ import { MdEditor, type ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { useApplicationTemplateEditor } from '@/composables/useApplicationTemplateEditor'
-import { templateDescriptionStatusOptions } from '@/domain/applicationTemplates'
+import { descriptionStatusOptions } from '@/domain/descriptions'
 import ApplicationTemplateStatusBadge from '@/components/atoms/ApplicationTemplateStatusBadge.vue'
 import ApplicationTemplateFieldEditor from '@/components/molecules/ApplicationTemplateFieldEditor.vue'
 import OrganizationScopeSelect from '@/components/molecules/OrganizationScopeSelect.vue'
@@ -63,7 +63,7 @@ const isEditable = computed(() => isDraft.value && !isDescriptionInProgress.valu
 const descriptionStatus = computed(() => {
   const status = props.template.descriptionStatus
   if (status === 'IN_PROGRESS' || status === 'FAILED') {
-    return templateDescriptionStatusOptions[status]
+    return descriptionStatusOptions[status]
   }
   return undefined
 })

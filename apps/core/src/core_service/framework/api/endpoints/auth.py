@@ -10,6 +10,7 @@ from core_service.application.use_cases.auth import LogoutUser, LogUser, Refresh
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
 from core_service.domain.value_objects.auth import AccessTokenClaims
 from core_service.domain.value_objects.users import Caller
+from core_service.framework.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from core_service.framework.dependencies.authentication import (
     get_access_token_claims,
     get_caller,
@@ -17,7 +18,6 @@ from core_service.framework.dependencies.authentication import (
     get_logout_user,
     get_refresh_tokens,
 )
-from core_service.shared.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from core_service.shared.settings.application import app_settings
 
 auth_router = APIRouter(tags=["auth"], prefix="/api")

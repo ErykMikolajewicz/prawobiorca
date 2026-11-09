@@ -1,23 +1,28 @@
-from typing import Any
-
 from httpx2 import AsyncClient
-from taskiq import Context, TaskiqDepends, TaskiqState
+from openai import AsyncOpenAI
+from taskiq import AsyncBroker, Context, TaskiqDepends, TaskiqState
 
-from core_service.application.interfaces.application_templates import (
-    ApplicationTemplatesRepository,
-    ApplicationTemplatesStorage,
-)
-from core_service.application.interfaces.applications import ApplicationsRepository, ApplicationsStorage
-from core_service.application.interfaces.cases import CaseDocumentsRepository
-from core_service.application.interfaces.regulations import RegulationsRepository, RegulationsStorage
-from core_service.application.interfaces.relational import SessionMaker
-from core_service.application.interfaces.sections import SectionsRepository
 from core_service.application.ports.application_templates import (
     ApplicationTemplateDescriptionWriter,
     ApplicationTemplateInspector,
+    ApplicationTemplatesRepository,
+    ApplicationTemplatesStorage,
 )
-from core_service.application.ports.applications import ApplicationRenderer, ApplicationWriter
-from core_service.application.ports.regulations import RegulationDescriptionWriter, RegulationSplitter
+from core_service.application.ports.applications import (
+    ApplicationRenderer,
+    ApplicationsRepository,
+    ApplicationsStorage,
+    ApplicationWriter,
+)
+from core_service.application.ports.cases import CaseDocumentsRepository
+from core_service.application.ports.regulations import (
+    RegulationDescriptionWriter,
+    RegulationSplitter,
+    RegulationsRepository,
+    RegulationsStorage,
+)
+from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import RegulationDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.ports.tokenizer import Tokenizer
@@ -43,23 +48,23 @@ from core_service.framework.dependencies.regulations import get_regulation_repos
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.tokenizer import get_tokenizer
 from core_service.infrastructure.ai_services.application_template_description_writer import (
-    ApplicationTemplateDescriptionWriter as LlmApplicationTemplateDescriptionWriter,
+    LlmApplicationTemplateDescriptionWriter,
 )
-from core_service.infrastructure.ai_services.application_writer import ApplicationWriter as LlmApplicationWriter
+from core_service.infrastructure.ai_services.application_writer import LlmApplicationWriter
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
-from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
-from core_service.infrastructure.ai_services.openai_client.connection import client as llm_client
+from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter, LlmPricing
 from core_service.infrastructure.ai_services.regulation_description_writer import (
-    RegulationDescriptionWriter as LlmRegulationDescriptionWriter,
+    LlmRegulationDescriptionWriter,
 )
-from core_service.infrastructure.ai_services.regulation_splitter import RegulationSplitter as HttpRegulationSplitter
-from core_service.infrastructure.ai_services.text_embedder import TextsEmbedder as HttpTextsEmbedder
+from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
+from core_service.infrastructure.ai_services.text_embedder import HttpTextsEmbedder
 from core_service.infrastructure.docx.docx_renderer import DocxApplicationRenderer
 from core_service.infrastructure.object_storage.repository import (
     S3ApplicationsStorage,
     S3ApplicationTemplatesStorage,
     S3RegulationsStorage,
 )
+from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
 from core_service.infrastructure.tasks.regulations import PostgresRegulationDescriptionGenerationScheduler
 from core_service.shared.settings.ai_services import (
@@ -67,10 +72,15 @@ from core_service.shared.settings.ai_services import (
     extraction_service_settings,
     llm_service_settings,
 )
+from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_ai_services_client(state: TaskiqState = TaskiqDepends()) -> AsyncClient:
     return state.ai_services_client
+
+
+def get_llm_client(state: TaskiqState = TaskiqDepends()) -> AsyncOpenAI:
+    return state.llm_client
 
 
 def get_texts_embedder(client: AsyncClient = TaskiqDepends(get_ai_services_client)) -> TextsEmbedder:
@@ -82,33 +92,60 @@ def get_regulation_splitter(client: AsyncClient = TaskiqDepends(get_ai_services_
 
 
 def get_regulations_storage(state: TaskiqState = TaskiqDepends()) -> RegulationsStorage:
-    return S3RegulationsStorage(state.file_storage_client, state.file_storage_presign_client)
+    return S3RegulationsStorage(
+        state.file_storage_client,
+        state.file_storage_presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
+    )
 
 
 def get_applications_storage(state: TaskiqState = TaskiqDepends()) -> ApplicationsStorage:
-    return S3ApplicationsStorage(state.file_storage_client, state.file_storage_presign_client)
+    return S3ApplicationsStorage(
+        state.file_storage_client,
+        state.file_storage_presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+    )
 
 
 def get_application_templates_storage(state: TaskiqState = TaskiqDepends()) -> ApplicationTemplatesStorage:
-    return S3ApplicationTemplatesStorage(state.file_storage_client, state.file_storage_presign_client)
+    return S3ApplicationTemplatesStorage(
+        state.file_storage_client,
+        state.file_storage_presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
+    )
 
 
-def get_broker(context: Context = TaskiqDepends()) -> Any:
+def get_broker(context: Context = TaskiqDepends()) -> AsyncBroker:
     return context.broker
 
 
 def get_regulation_description_generation_scheduler(
-    broker: Any = TaskiqDepends(get_broker),
+    broker: AsyncBroker = TaskiqDepends(get_broker),
 ) -> RegulationDescriptionGenerationScheduler:
     return PostgresRegulationDescriptionGenerationScheduler(broker)
 
 
-def get_llm_chat(session_maker: SessionMaker = TaskiqDepends(get_session_maker)) -> LlmChat:
+def get_llm_chat(
+    client: AsyncOpenAI = TaskiqDepends(get_llm_client),
+    session_maker: DatabaseSessionMaker = TaskiqDepends(get_session_maker),
+) -> LlmChat:
     cost_limiter = None
     if llm_service_settings.MONTHLY_COST_LIMIT_PLN is not None:
-        cost_limiter = LlmCostLimiter(session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN)
+        pricing = LlmPricing(
+            input_price_usd_per_million_tokens=llm_service_settings.INPUT_PRICE_USD_PER_MILLION_TOKENS,
+            output_price_usd_per_million_tokens=llm_service_settings.OUTPUT_PRICE_USD_PER_MILLION_TOKENS,
+            usd_to_pln_rate=llm_service_settings.USD_TO_PLN_RATE,
+        )
+        cost_limiter = LlmCostLimiter(
+            session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN, pricing
+        )
     return LlmChat(
-        client=llm_client,
+        client=client,
         model_name=llm_service_settings.MODEL_NAME,
         temperature=llm_service_settings.TEMPERATURE,
         top_p=llm_service_settings.TOP_P,

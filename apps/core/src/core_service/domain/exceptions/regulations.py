@@ -21,7 +21,3 @@ class RegulationNotFound(Exception):
 
 class RegulationContentNotFound(Exception):
     pass
-
-
-class RegulationDescriptionGenerationInProgress(Exception):
-    pass

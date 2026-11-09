@@ -3,7 +3,6 @@ from uuid import UUID
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.application.dtos.organizations import (
     NewOrganization,
@@ -11,13 +10,16 @@ from core_service.application.dtos.organizations import (
     OrganizationData,
     SuborganizationData,
 )
+from core_service.application.ports.relational import AsyncSession
 from core_service.domain.exceptions.organizations import OrganizationNotFound, SuborganizationNotFound
 from core_service.infrastructure.relational_db.schemas.organizations import organizations_table, suborganizations_table
+from core_service.infrastructure.relational_db.session import sqla_session
 
 
-class OrganizationsRepository:
+class SqlaOrganizationsRepository:
     @staticmethod
     async def list_all(session: AsyncSession) -> list[OrganizationData]:
+        session = sqla_session(session)
         organizations_statement = select(
             organizations_table.c.id, organizations_table.c.name, organizations_table.c.short_name
         ).order_by(organizations_table.c.create_date)
@@ -47,6 +49,7 @@ class OrganizationsRepository:
 
     @staticmethod
     async def add(session: AsyncSession, new_organization: NewOrganization) -> UUID:
+        session = sqla_session(session)
         statement = (
             insert(organizations_table).values(**new_organization.model_dump()).returning(organizations_table.c.id)
         )
@@ -56,6 +59,7 @@ class OrganizationsRepository:
 
     @staticmethod
     async def update(session: AsyncSession, organization_id: UUID, new_organization: NewOrganization) -> None:
+        session = sqla_session(session)
         statement = (
             update(organizations_table)
             .where(organizations_table.c.id == organization_id)
@@ -69,6 +73,7 @@ class OrganizationsRepository:
 
     @staticmethod
     async def delete(session: AsyncSession, organization_id: UUID) -> None:
+        session = sqla_session(session)
         statement = (
             delete(organizations_table)
             .where(organizations_table.c.id == organization_id)
@@ -80,9 +85,10 @@ class OrganizationsRepository:
             raise OrganizationNotFound
 
 
-class SuborganizationsRepository:
+class SqlaSuborganizationsRepository:
     @staticmethod
     async def add(session: AsyncSession, organization_id: UUID, new_suborganization: NewSuborganization) -> UUID:
+        session = sqla_session(session)
         statement = (
             insert(suborganizations_table)
             .values(organization_id=organization_id, **new_suborganization.model_dump())
@@ -99,6 +105,7 @@ class SuborganizationsRepository:
     async def update(
         session: AsyncSession, organization_id: UUID, suborganization_id: UUID, new_suborganization: NewSuborganization
     ) -> None:
+        session = sqla_session(session)
         statement = (
             update(suborganizations_table)
             .where(
@@ -115,6 +122,7 @@ class SuborganizationsRepository:
 
     @staticmethod
     async def delete(session: AsyncSession, organization_id: UUID, suborganization_id: UUID) -> None:
+        session = sqla_session(session)
         statement = (
             delete(suborganizations_table)
             .where(

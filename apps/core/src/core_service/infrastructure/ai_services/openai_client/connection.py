@@ -1,9 +1,14 @@
+from collections.abc import Awaitable, Callable
+
 from openai import AsyncOpenAI
 
 from core_service.infrastructure.ai_services.openai_client.google_auth import get_access_token
 from core_service.shared.settings.ai_services import llm_service_settings
 
-client = AsyncOpenAI(
-    base_url=llm_service_settings.URL,
-    api_key=get_access_token if llm_service_settings.USE_GOOGLE_AUTH else "unused",
-)
+
+async def init_llm_client() -> tuple[AsyncOpenAI, Callable[..., Awaitable[None]]]:
+    client = AsyncOpenAI(
+        base_url=llm_service_settings.URL,
+        api_key=get_access_token if llm_service_settings.USE_GOOGLE_AUTH else "unused",
+    )
+    return client, client.close

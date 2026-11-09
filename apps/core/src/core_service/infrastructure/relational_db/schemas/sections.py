@@ -2,8 +2,8 @@ import sqlalchemy as sqla
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
+from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import metadata
-from core_service.shared.consts import VECTOR_LENGTH
 
 regulations_sections_table = sqla.Table(
     "regulations_sections",

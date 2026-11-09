@@ -10,44 +10,54 @@ from core_service.application.dtos.application_templates import (
     PublishedApplicationField,
     PublishedApplicationTemplate,
 )
-from core_service.application.interfaces.application_templates import (
-    ApplicationTemplatesRepository,
-    ApplicationTemplatesStorage,
-)
-from core_service.application.interfaces.relational import AsyncSession, SessionMaker
 from core_service.application.ports.application_templates import (
     ApplicationTemplateDescriptionWriter,
     ApplicationTemplateInspector,
     ApplicationTemplateInstructionsProvider,
+    ApplicationTemplatesRepository,
+    ApplicationTemplatesStorage,
 )
+from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationTemplateDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
+from core_service.application.services.embedding import embed_description
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
-    ApplicationTemplateDescriptionGenerationInProgress,
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
     InvalidApplicationTemplate,
 )
+from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.organizations import OrganizationNotFound
-from core_service.domain.services.application_fields import create_default_fields, validate_fields_config
 from core_service.domain.services.application_template_access import (
     check_can_manage_application_templates,
     check_can_read_published_application_templates,
 )
-from core_service.domain.services.application_template_description import create_description_source
-from core_service.domain.services.application_templates import is_ready_to_publish, is_semantic_search_query
+from core_service.domain.services.application_templates import is_semantic_search_query
 from core_service.domain.value_objects.application_templates import (
-    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateDetails,
     ApplicationTemplateStatus,
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
+
+MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES = 3
+
+
+async def _fail_description_generation(
+    session_maker: SessionMaker, application_templates_repo: ApplicationTemplatesRepository, template_id: UUID
+) -> None:
+    async with session_maker.begin() as session:
+        template = await application_templates_repo.get_for_update(session, template_id)
+        if template is None:
+            logger.warning("Application template removed during description generation! template id: %s", template_id)
+            return
+
+        template.fail_description_generation()
+        await application_templates_repo.save(session, template)
 
 
 def _to_published_template(template: ApplicationTemplateRepresentation) -> PublishedApplicationTemplate:
@@ -175,15 +185,11 @@ class ConfirmApplicationTemplateUpload:
         check_can_manage_application_templates(caller)
 
         async with self.session_maker() as session:
-            template = await self.application_templates_repo.get(session, template_id)
+            template_representation = await self.application_templates_repo.get(session, template_id)
 
-        if template is None:
+        if template_representation is None:
             logger.warning("Application template to confirm upload not found! template id: %s", template_id)
             raise ApplicationTemplateNotFound
-
-        if template.status != ApplicationTemplateStatus.NOT_UPLOADED:
-            logger.warning("Application template upload already confirmed! template id: %s", template_id)
-            raise ApplicationTemplateInInvalidState
 
         try:
             content = await self.application_templates_storage.get_template(template_id)
@@ -193,19 +199,27 @@ class ConfirmApplicationTemplateUpload:
 
         try:
             variables = await self.application_template_inspector.get_variables(content)
-            fields = create_default_fields(variables)
         except InvalidApplicationTemplate:
             logger.warning("Invalid application template uploaded! template id: %s", template_id)
             raise
 
         async with self.session_maker.begin() as session:
-            confirmed_template = await self.application_templates_repo.confirm_upload(session, template_id, fields)
+            template = await self.application_templates_repo.get_for_update(session, template_id)
+            if template is None:
+                logger.warning("Application template removed during upload confirmation! template id: %s", template_id)
+                raise ApplicationTemplateNotFound
 
-        if confirmed_template is None:
-            logger.warning("Application template changed during upload confirmation! template id: %s", template_id)
-            raise ApplicationTemplateInInvalidState
+            try:
+                template.confirm_upload(variables)
+            except (ApplicationTemplateInInvalidState, InvalidApplicationTemplate) as error:
+                logger.warning(
+                    "Can't confirm application template upload! template id: %s, reason: %s",
+                    template_id,
+                    type(error).__name__,
+                )
+                raise
 
-        return confirmed_template
+            return await self.application_templates_repo.save(session, template)
 
 
 @dataclass
@@ -220,12 +234,11 @@ class UpdateApplicationTemplate:
         check_can_manage_application_templates(caller)
 
         async with self.session_maker() as session:
-            template = await self._get_draft(session, template_id)
+            template_representation = await self.application_templates_repo.get(session, template_id)
 
-        validate_fields_config({field.name for field in template.fields}, details_data.fields)
-
-        description_changed = details_data.description != template.description
-        description_vector = await self._embed_description(details_data.description) if description_changed else None
+        if template_representation is None:
+            logger.warning("Application template to update not found! template id: %s", template_id)
+            raise ApplicationTemplateNotFound
 
         details = ApplicationTemplateDetails(
             name=details_data.name,
@@ -236,40 +249,32 @@ class UpdateApplicationTemplate:
             suborganization_id=details_data.suborganization_id,
         )
 
+        description_changed = details.description != template_representation.description
+        description_vector = (
+            await embed_description(self.texts_embedder, details.description) if description_changed else None
+        )
+
         async with self.session_maker.begin() as session:
-            await self._get_draft(session, template_id)
+            template = await self.application_templates_repo.get_for_update(session, template_id)
+            if template is None:
+                logger.warning("Application template removed during update! template id: %s", template_id)
+                raise ApplicationTemplateNotFound
 
             try:
-                updated_template = await self.application_templates_repo.update_details(session, template_id, details)
+                template.update_details(details)
+            except ApplicationTemplateInInvalidState:
+                logger.warning("Tried to update not draft application template! template id: %s", template_id)
+                raise
+
+            try:
+                updated_template = await self.application_templates_repo.save(session, template)
             except OrganizationNotFound:
                 logger.warning("Organization for application template not found! template id: %s", template_id)
                 raise
 
             if description_changed:
-                return await self.application_templates_repo.set_description_vector(
-                    session, template_id, description_vector
-                )
-
+                await self.application_templates_repo.set_description_vector(session, template_id, description_vector)
             return updated_template
-
-    async def _get_draft(self, session: AsyncSession, template_id: UUID) -> ApplicationTemplateRepresentation:
-        template = await self.application_templates_repo.get(session, template_id)
-        if template is None:
-            logger.warning("Application template to update not found! template id: %s", template_id)
-            raise ApplicationTemplateNotFound
-
-        if template.status != ApplicationTemplateStatus.DRAFT:
-            logger.warning("Tried to update not draft application template! template id: %s", template_id)
-            raise ApplicationTemplateInInvalidState
-
-        return template
-
-    async def _embed_description(self, description: str | None) -> list[float] | None:
-        if description is None or not description.strip():
-            return None
-
-        vectors = await self.texts_embedder.embed_texts([description])
-        return vectors[0]
 
 
 @dataclass
@@ -281,18 +286,18 @@ class PublishApplicationTemplate:
         check_can_manage_application_templates(caller)
 
         async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get(session, template_id)
+            template = await self.application_templates_repo.get_for_update(session, template_id)
             if template is None:
                 logger.warning("Application template to publish not found! template id: %s", template_id)
                 raise ApplicationTemplateNotFound
 
-            if not is_ready_to_publish(template.status, template.instructions):
+            try:
+                template.publish()
+            except ApplicationTemplateInInvalidState:
                 logger.warning("Application template not ready to publish! template id: %s", template_id)
-                raise ApplicationTemplateInInvalidState
+                raise
 
-            return await self.application_templates_repo.set_status(
-                session, template_id, ApplicationTemplateStatus.PUBLISHED
-            )
+            return await self.application_templates_repo.save(session, template)
 
 
 @dataclass
@@ -304,18 +309,18 @@ class UnpublishApplicationTemplate:
         check_can_manage_application_templates(caller)
 
         async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get(session, template_id)
+            template = await self.application_templates_repo.get_for_update(session, template_id)
             if template is None:
                 logger.warning("Application template to unpublish not found! template id: %s", template_id)
                 raise ApplicationTemplateNotFound
 
-            if template.status != ApplicationTemplateStatus.PUBLISHED:
+            try:
+                template.unpublish()
+            except ApplicationTemplateInInvalidState:
                 logger.warning("Tried to unpublish not published application template! template id: %s", template_id)
-                raise ApplicationTemplateInInvalidState
+                raise
 
-            return await self.application_templates_repo.set_status(
-                session, template_id, ApplicationTemplateStatus.DRAFT
-            )
+            return await self.application_templates_repo.save(session, template)
 
 
 @dataclass
@@ -328,24 +333,22 @@ class RegenerateApplicationTemplateDescription:
         check_can_manage_application_templates(caller)
 
         async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get(session, template_id)
+            template = await self.application_templates_repo.get_for_update(session, template_id)
             if template is None:
                 logger.warning("Application template to generate description not found! template id: %s", template_id)
                 raise ApplicationTemplateNotFound
 
-            if template.status != ApplicationTemplateStatus.DRAFT:
+            try:
+                template.request_description()
+            except (ApplicationTemplateInInvalidState, DescriptionGenerationInProgress) as error:
                 logger.warning(
-                    "Tried to generate description of not draft application template! template id: %s", template_id
+                    "Can't generate application template description! template id: %s, reason: %s",
+                    template_id,
+                    type(error).__name__,
                 )
-                raise ApplicationTemplateInInvalidState
+                raise
 
-            if template.description_status == ApplicationTemplateDescriptionStatus.IN_PROGRESS:
-                logger.warning("Application template description generation in progress! template id: %s", template_id)
-                raise ApplicationTemplateDescriptionGenerationInProgress
-
-            await self.application_templates_repo.set_description_status(
-                session, template_id, ApplicationTemplateDescriptionStatus.IN_PROGRESS
-            )
+            await self.application_templates_repo.save(session, template)
             await self.description_generation_scheduler.schedule_application_template_description_generation(
                 session, template_id
             )
@@ -362,50 +365,43 @@ class GenerateApplicationTemplateDescription:
 
     async def execute(self, template_id: UUID) -> None:
         async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get(session, template_id)
+            template = await self.application_templates_repo.get_for_update(session, template_id)
             if template is None:
                 logger.warning("Application template to generate description not found! template id: %s", template_id)
                 return
 
-            if template.description_status == ApplicationTemplateDescriptionStatus.GENERATED:
+            if template.is_description_generated:
                 logger.warning("Application template description already generated! template id: %s", template_id)
                 return
 
-            await self.application_templates_repo.set_description_status(
-                session, template_id, ApplicationTemplateDescriptionStatus.IN_PROGRESS
-            )
+            template.start_description_generation()
+            await self.application_templates_repo.save(session, template)
 
         try:
             content = await self.application_templates_storage.get_template(template_id)
             text = await self.application_template_inspector.get_text(content)
-            description_source = create_description_source(template.name, template.instructions, template.fields, text)
-            description = await self.description_writer.write(description_source)
+            description = await self.description_writer.write(template.create_description_source(text))
             vectors = await self.texts_embedder.embed_texts([description])
         except ServiceUnavailable:
             logger.error("Service to generate application template description not working!")
-            await self._set_failed(template_id)
+            await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
             raise
         except Exception as e:
             logger.error("Unexpected error during application template description generation! %s", e)
-            await self._set_failed(template_id)
+            await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
             raise
 
-        try:
-            async with self.session_maker.begin() as session:
-                await self.application_templates_repo.set_generated_description(
-                    session, template_id, description, vectors[0]
+        async with self.session_maker.begin() as session:
+            template = await self.application_templates_repo.get_for_update(session, template_id)
+            if template is None:
+                logger.warning(
+                    "Application template removed during description generation! template id: %s", template_id
                 )
-        except ApplicationTemplateNotFound:
-            logger.warning("Application template removed during description generation! template id: %s", template_id)
+                return
 
-    async def _set_failed(self, template_id: UUID) -> None:
-        try:
-            async with self.session_maker.begin() as session:
-                await self.application_templates_repo.set_description_status(
-                    session, template_id, ApplicationTemplateDescriptionStatus.FAILED
-                )
-        except ApplicationTemplateNotFound:
-            logger.warning("Application template removed during description generation! template id: %s", template_id)
+            template.complete_description_generation(description)
+            await self.application_templates_repo.save(session, template)
+            await self.application_templates_repo.set_description_vector(session, template_id, vectors[0])
 
 
 @dataclass
@@ -420,13 +416,7 @@ class FailApplicationTemplateDescriptionGeneration:
         logger.error(
             "Application template description generation exceeded deliveries limit! template id: %s", template_id
         )
-        try:
-            async with self.session_maker.begin() as session:
-                await self.application_templates_repo.set_description_status(
-                    session, template_id, ApplicationTemplateDescriptionStatus.FAILED
-                )
-        except ApplicationTemplateNotFound:
-            logger.warning("Application template removed during description generation! template id: %s", template_id)
+        await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
         return True
 
 

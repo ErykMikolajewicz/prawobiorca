@@ -8,7 +8,7 @@ from core_service.shared.exceptions import ServiceUnavailable
 EMBEDDING_MODEL_NAME = "mmlw-retrieval-roberta-large-v2"
 
 
-class TextsEmbedder:
+class HttpTextsEmbedder:
     def __init__(self, client: AsyncClient, embedding_service_url: str):
         self._client = client
         self._embedding_url = f"{embedding_service_url}/v3/embeddings"

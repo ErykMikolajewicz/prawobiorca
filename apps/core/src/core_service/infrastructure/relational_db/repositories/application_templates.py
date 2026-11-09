@@ -2,24 +2,22 @@ from uuid import UUID
 
 from sqlalchemy import ColumnElement, Select, and_, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
+from core_service.application.ports.relational import AsyncSession
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import ApplicationTemplateNotFound
 from core_service.domain.exceptions.organizations import OrganizationNotFound
-from core_service.domain.value_objects.application_templates import (
-    ApplicationTemplateDescriptionStatus,
-    ApplicationTemplateDetails,
-    ApplicationTemplateField,
-    ApplicationTemplateStatus,
-)
+from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
-from core_service.shared.consts import (
-    HYBRID_TEMPLATE_SEARCH_LIMIT,
-    TEMPLATE_NAME_SCORE_WEIGHT,
-    TEMPLATE_NAME_SIMILARITY_THRESHOLD,
-)
+from core_service.infrastructure.relational_db.session import sqla_session
+
+TEMPLATE_NAME_SIMILARITY_THRESHOLD = 0.3
+
+TEMPLATE_NAME_SCORE_WEIGHT = 0.6
+
+HYBRID_TEMPLATE_SEARCH_LIMIT = 10
 
 
 def _filter_templates(
@@ -49,13 +47,14 @@ def _name_similarity(query: str) -> ColumnElement[float]:
     return func.word_similarity(func.unaccent(query), func.unaccent(application_templates_table.c.name))
 
 
-class ApplicationTemplatesRepository:
+class SqlaApplicationTemplatesRepository:
     @staticmethod
     async def list_templates(
         session: AsyncSession,
         status: ApplicationTemplateStatus | None = None,
         organization_filter: OrganizationFilter | None = None,
     ) -> list[ApplicationTemplateRepresentation]:
+        session = sqla_session(session)
         statement = _filter_templates(
             select(ApplicationTemplateRepresentation).order_by(application_templates_table.c.create_date),
             status,
@@ -73,6 +72,7 @@ class ApplicationTemplatesRepository:
         organization_filter: OrganizationFilter | None,
         query: str,
     ) -> list[ApplicationTemplateRepresentation]:
+        session = sqla_session(session)
         name_similarity = _name_similarity(query)
 
         statement = _filter_templates(select(ApplicationTemplateRepresentation), status, organization_filter)
@@ -92,6 +92,7 @@ class ApplicationTemplatesRepository:
         query: str,
         vector: list[float],
     ) -> list[ApplicationTemplateRepresentation]:
+        session = sqla_session(session)
         distance = application_templates_table.c.description_vector.cosine_distance(vector)
         description_similarity = func.coalesce(1 - distance, 0)
         score = (
@@ -110,6 +111,7 @@ class ApplicationTemplatesRepository:
 
     @staticmethod
     async def get(session: AsyncSession, id_: UUID) -> ApplicationTemplateRepresentation | None:
+        session = sqla_session(session)
         statement = select(ApplicationTemplateRepresentation).where(application_templates_table.c.id == id_)
         result = await session.scalars(statement)
         template = result.one_or_none()
@@ -117,6 +119,7 @@ class ApplicationTemplatesRepository:
 
     @staticmethod
     async def add(session: AsyncSession, name: str, instructions: str) -> UUID:
+        session = sqla_session(session)
         statement = (
             insert(application_templates_table)
             .values(name=name, instructions=instructions)
@@ -127,67 +130,48 @@ class ApplicationTemplatesRepository:
         return template_id
 
     @staticmethod
-    async def confirm_upload(
-        session: AsyncSession, id_: UUID, fields: list[ApplicationTemplateField]
-    ) -> ApplicationTemplateRepresentation | None:
-        statement = (
-            update(ApplicationTemplateRepresentation)
-            .where(
-                application_templates_table.c.id == id_,
-                application_templates_table.c.status == ApplicationTemplateStatus.NOT_UPLOADED,
-            )
-            .values(fields=fields, status=ApplicationTemplateStatus.DRAFT)
-            .returning(ApplicationTemplateRepresentation)
-        )
+    async def get_for_update(session: AsyncSession, id_: UUID) -> ApplicationTemplate | None:
+        session = sqla_session(session)
+        statement = select(ApplicationTemplate).where(application_templates_table.c.id == id_).with_for_update()
         result = await session.scalars(statement)
-        template = result.one_or_none()
-        return template
 
-    async def set_status(
-        self, session: AsyncSession, id_: UUID, status: ApplicationTemplateStatus
-    ) -> ApplicationTemplateRepresentation:
-        return await self._update(session, id_, status=status)
+        return result.one_or_none()
 
-    async def set_description_status(
-        self, session: AsyncSession, id_: UUID, status: ApplicationTemplateDescriptionStatus
-    ) -> ApplicationTemplateRepresentation:
-        return await self._update(session, id_, description_status=status)
-
-    async def set_generated_description(
-        self, session: AsyncSession, id_: UUID, description: str, vector: list[float]
-    ) -> ApplicationTemplateRepresentation:
-        return await self._update(
-            session,
-            id_,
-            description=description,
-            description_vector=vector,
-            description_status=ApplicationTemplateDescriptionStatus.GENERATED,
-        )
-
-    async def set_description_vector(
-        self, session: AsyncSession, id_: UUID, vector: list[float] | None
-    ) -> ApplicationTemplateRepresentation:
-        return await self._update(session, id_, description_vector=vector)
-
-    async def update_details(
-        self, session: AsyncSession, id_: UUID, details: ApplicationTemplateDetails
-    ) -> ApplicationTemplateRepresentation:
+    @staticmethod
+    async def save(session: AsyncSession, template: ApplicationTemplate) -> ApplicationTemplateRepresentation:
+        session = sqla_session(session)
+        session.add(template)
         try:
-            return await self._update(
-                session,
-                id_,
-                name=details.name,
-                instructions=details.instructions,
-                fields=details.fields,
-                description=details.description,
-                organization_id=details.organization_id,
-                suborganization_id=details.suborganization_id,
-            )
+            await session.flush()
         except IntegrityError:
             raise OrganizationNotFound
 
+        statement = (
+            select(ApplicationTemplateRepresentation)
+            .where(application_templates_table.c.id == template.id)
+            .execution_options(populate_existing=True)
+        )
+        result = await session.scalars(statement)
+
+        return result.one()
+
+    @staticmethod
+    async def set_description_vector(session: AsyncSession, id_: UUID, vector: list[float] | None) -> None:
+        session = sqla_session(session)
+        statement = (
+            update(application_templates_table)
+            .where(application_templates_table.c.id == id_)
+            .values(description_vector=vector)
+            .returning(application_templates_table.c.id)
+        )
+        result = await session.execute(statement)
+
+        if result.scalar_one_or_none() is None:
+            raise ApplicationTemplateNotFound
+
     @staticmethod
     async def delete(session: AsyncSession, id_: UUID) -> None:
+        session = sqla_session(session)
         statement = (
             delete(application_templates_table)
             .where(application_templates_table.c.id == id_)
@@ -197,19 +181,3 @@ class ApplicationTemplatesRepository:
 
         if result.scalar_one_or_none() is None:
             raise ApplicationTemplateNotFound
-
-    @staticmethod
-    async def _update(session: AsyncSession, id_: UUID, **values) -> ApplicationTemplateRepresentation:
-        statement = (
-            update(ApplicationTemplateRepresentation)
-            .where(application_templates_table.c.id == id_)
-            .values({application_templates_table.c[key]: value for key, value in values.items()})
-            .returning(ApplicationTemplateRepresentation)
-        )
-        result = await session.scalars(statement)
-
-        template = result.one_or_none()
-        if template is None:
-            raise ApplicationTemplateNotFound
-
-        return template

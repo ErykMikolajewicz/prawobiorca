@@ -16,12 +16,12 @@ from core_service.framework.dependencies.workers import (
     get_generate_application,
     get_generate_application_template_description,
 )
-from core_service.infrastructure.tasks.connection import broker
-from core_service.shared.consts import (
-    APPLICATION_GENERATION_TASK_NAME,
+from core_service.infrastructure.tasks.application_templates import (
     APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME,
-    DELIVERY_ATTEMPT_LABEL,
 )
+from core_service.infrastructure.tasks.applications import APPLICATION_GENERATION_TASK_NAME
+from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL
+from core_service.infrastructure.tasks.connection import broker
 
 
 @broker.task(task_name=APPLICATION_GENERATION_TASK_NAME)

@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
-from core_service.shared.consts import MAX_ORGANIZATION_NAME_LENGTH, MAX_ORGANIZATION_SHORT_NAME_LENGTH
+from core_service.domain.consts import MAX_ORGANIZATION_NAME_LENGTH, MAX_ORGANIZATION_SHORT_NAME_LENGTH
 
 
 class NewOrganization(BaseModel):

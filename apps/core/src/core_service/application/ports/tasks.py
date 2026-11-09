@@ -2,7 +2,7 @@ from typing import Protocol
 from uuid import UUID
 
 from core_service.application.dtos.applications import NewApplication
-from core_service.application.interfaces.relational import AsyncSession
+from core_service.application.ports.relational import AsyncSession
 
 
 class RegulationPreparationScheduler(Protocol):

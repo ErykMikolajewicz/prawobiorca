@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from core_service.domain.services.security import create_access_token
+from pydantic import SecretStr
+
+from core_service.application.use_cases.auth import AuthTokensConfig
+from core_service.domain.services.security import JWT_ALGORITHM, create_access_token
 from core_service.domain.value_objects.auth import AccessTokenClaims
-from core_service.shared.consts import JWT_ALGORITHM
-from core_service.shared.settings.application import app_settings
 
 STRONG_PASSWORD = "StrongPassword12;"
 
@@ -22,16 +23,22 @@ UNKNOWN_ID = UUID("8f7a6b5c-4d3e-4f1a-9b8c-7d6e5f4a3b2c")
 
 REFRESH_TOKEN = "O8KwTwMvXTSn3VdWl6iZlNqmw39UvFRvIbeHfo-mykY"
 
+AUTH_TOKENS_CONFIG = AuthTokensConfig(
+    jwt_secret_key=SecretStr("test-jwt-secret-key-with-32-chars"),
+    access_token_expiration_seconds=900,
+    refresh_token_expiration_seconds=1209600,
+)
+
 
 def build_access_token(
     user_id: UUID = USER_ID,
     session_id: UUID = SESSION_ID,
     is_admin: bool = False,
-    expires_in: int = app_settings.ACCESS_TOKEN_EXPIRATION_SECONDS,
+    expires_in: int = AUTH_TOKENS_CONFIG.access_token_expiration_seconds,
 ) -> str:
     claims = AccessTokenClaims(user_id=user_id, session_id=session_id, is_admin=is_admin)
 
-    return create_access_token(claims, app_settings.JWT_SECRET_KEY, JWT_ALGORITHM, expires_in)
+    return create_access_token(claims, AUTH_TOKENS_CONFIG.jwt_secret_key, JWT_ALGORITHM, expires_in)
 
 
 ACCESS_TOKEN = build_access_token()

@@ -4,10 +4,10 @@ from fastapi import status
 from sqlalchemy import select
 
 from core_service.domain.services.security import hash_refresh_token
+from core_service.framework.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from core_service.infrastructure.relational_db.schemas.users import users_sessions_table
-from core_service.shared.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from core_service.shared.settings.application import app_settings
-from tests.consts import STRONG_PASSWORD, VALID_USERNAME, build_access_token
+from tests.consts import AUTH_TOKENS_CONFIG, STRONG_PASSWORD, VALID_USERNAME, build_access_token
 from tests.fixtures.clients import create_client
 
 LOGIN_PAYLOAD = {"username": VALID_USERNAME, "password": STRONG_PASSWORD}
@@ -40,8 +40,8 @@ async def test_login_sets_both_cookies(client, session_maker, user):
     access_cookie = cookies[ACCESS_COOKIE_NAME]
     refresh_cookie = cookies[REFRESH_COOKIE_NAME]
 
-    assert int(access_cookie["max-age"]) == app_settings.ACCESS_TOKEN_EXPIRATION_SECONDS
-    assert int(refresh_cookie["max-age"]) == app_settings.REFRESH_TOKEN_EXPIRATION_SECONDS
+    assert int(access_cookie["max-age"]) == AUTH_TOKENS_CONFIG.access_token_expiration_seconds
+    assert int(refresh_cookie["max-age"]) == AUTH_TOKENS_CONFIG.refresh_token_expiration_seconds
     assert access_cookie["path"] == AUTH_COOKIE_PATH
     assert refresh_cookie["path"] == REFRESH_COOKIE_PATH
     assert access_cookie["httponly"]

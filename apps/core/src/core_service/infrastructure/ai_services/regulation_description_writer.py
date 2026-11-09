@@ -1,10 +1,10 @@
+from core_service.domain.consts import MAX_REGULATION_DESCRIPTION_LENGTH
 from core_service.domain.value_objects.regulations import RegulationDescriptionSource
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.prompt_templates import prompts_env
-from core_service.shared.consts import MAX_REGULATION_DESCRIPTION_LENGTH
 
 
-class RegulationDescriptionWriter:
+class LlmRegulationDescriptionWriter:
     def __init__(self, llm_chat: LlmChat):
         self._llm_chat = llm_chat
 

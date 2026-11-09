@@ -18,6 +18,7 @@ if changed '\.py$|ruff\.toml$|pyproject\.toml$'; then
 fi
 
 if changed '^apps/core/'; then
+  just lint-imports-backend
   just type-check-backend
 fi
 

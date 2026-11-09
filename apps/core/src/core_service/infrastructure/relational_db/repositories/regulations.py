@@ -1,24 +1,23 @@
 from dataclasses import asdict
 from uuid import UUID
 
-from sqlalchemy import Select, and_, case, delete, insert, or_, select, update
+from sqlalchemy import Select, and_, delete, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.application.dtos.regulations import RegulationRepresentation, RegulationSearchResult
+from core_service.application.ports.relational import AsyncSession
+from core_service.domain.entities.regulation import Regulation
 from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.exceptions.regulations import RegulationNotFound
 from core_service.domain.exceptions.users import UserNotFound
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.regulations import (
-    RegulationDescriptionStatus,
-    RegulationDetails,
     RegulationOwner,
-    RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
 )
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.relational_db.session import sqla_session
 
 
 def _filter_regulations(
@@ -55,6 +54,7 @@ class RegulationsManagerRepository:
         regulation_type: RegulationType | None,
         organization_filter: OrganizationFilter | None,
     ) -> list[RegulationRepresentation]:
+        session = sqla_session(session)
         statement = _filter_regulations(select(RegulationRepresentation), user_id, regulation_type, organization_filter)
 
         result = await session.scalars(statement)
@@ -71,6 +71,7 @@ class RegulationsManagerRepository:
         vector: list[float],
         threshold: float,
     ) -> list[RegulationSearchResult]:
+        session = sqla_session(session)
         distance = regulations_table.c.description_vector.cosine_distance(vector)
         score = (1 - distance).label("score")
 
@@ -90,6 +91,7 @@ class RegulationsManagerRepository:
     async def register_regulation(
         session: AsyncSession, user_id: UUID | None, regulation_registration_data: RegulationRegistrationData
     ) -> UUID:
+        session = sqla_session(session)
         statement = (
             insert(regulations_table)
             .values(user_id=user_id, **asdict(regulation_registration_data))
@@ -108,6 +110,7 @@ class RegulationsManagerRepository:
 
     @staticmethod
     async def unregister_regulation(session: AsyncSession, user_id: UUID | None, id_: UUID) -> None:
+        session = sqla_session(session)
         statement = (
             delete(regulations_table)
             .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
@@ -119,83 +122,53 @@ class RegulationsManagerRepository:
             raise RegulationNotFound
 
     @staticmethod
-    async def set_preparation_status(
-        session: AsyncSession, user_id: UUID | None, id_: UUID, status: RegulationPreparationStatus
-    ) -> None:
+    async def get_for_update(session: AsyncSession, user_id: UUID | None, id_: UUID) -> Regulation | None:
+        session = sqla_session(session)
         statement = (
-            update(regulations_table)
+            select(Regulation)
             .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
-            .values(preparation_status=status)
-            .returning(regulations_table.c.id)
-        )
-        result = await session.execute(statement)
-
-        if result.scalar_one_or_none() is None:
-            raise RegulationNotFound
-
-    @staticmethod
-    async def set_description_status(
-        session: AsyncSession, user_id: UUID | None, id_: UUID, status: RegulationDescriptionStatus
-    ) -> None:
-        statement = (
-            update(regulations_table)
-            .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
-            .values(description_status=status)
-            .returning(regulations_table.c.id)
-        )
-        result = await session.execute(statement)
-
-        if result.scalar_one_or_none() is None:
-            raise RegulationNotFound
-
-    @staticmethod
-    async def set_generated_description(
-        session: AsyncSession, user_id: UUID | None, id_: UUID, description: str, vector: list[float]
-    ) -> None:
-        statement = (
-            update(regulations_table)
-            .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
-            .values(
-                description=description,
-                description_vector=vector,
-                description_status=RegulationDescriptionStatus.GENERATED,
-            )
-            .returning(regulations_table.c.id)
-        )
-        result = await session.execute(statement)
-
-        if result.scalar_one_or_none() is None:
-            raise RegulationNotFound
-
-    @staticmethod
-    async def update_regulation_details(
-        session: AsyncSession, user_id: UUID | None, id_: UUID, regulation_details: RegulationDetails
-    ) -> RegulationRepresentation:
-        description_vector = case(
-            (
-                regulations_table.c.description.is_not_distinct_from(regulation_details.description),
-                regulations_table.c.description_vector,
-            ),
-            else_=None,
-        )
-        statement = (
-            update(RegulationRepresentation)
-            .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
-            .values(**asdict(regulation_details), description_vector=description_vector)
-            .returning(RegulationRepresentation)
+            .with_for_update()
         )
         result = await session.scalars(statement)
 
-        regulation_representation = result.one_or_none()
-        if regulation_representation is None:
-            raise RegulationNotFound
+        return result.one_or_none()
 
-        return regulation_representation
+    @staticmethod
+    async def save(session: AsyncSession, regulation: Regulation) -> RegulationRepresentation:
+        session = sqla_session(session)
+        session.add(regulation)
+        await session.flush()
+
+        statement = (
+            select(RegulationRepresentation)
+            .where(regulations_table.c.id == regulation.id)
+            .execution_options(populate_existing=True)
+        )
+        result = await session.scalars(statement)
+
+        return result.one()
+
+    @staticmethod
+    async def set_description_vector(
+        session: AsyncSession, user_id: UUID | None, id_: UUID, vector: list[float] | None
+    ) -> None:
+        session = sqla_session(session)
+        statement = (
+            update(regulations_table)
+            .where(regulations_table.c.user_id == user_id, regulations_table.c.id == id_)
+            .values(description_vector=vector)
+            .returning(regulations_table.c.id)
+        )
+        result = await session.execute(statement)
+
+        if result.scalar_one_or_none() is None:
+            raise RegulationNotFound
 
     @staticmethod
     async def get_regulation_representation(
         session: AsyncSession, user_id: UUID | None, id_: UUID
     ) -> RegulationRepresentation | None:
+        session = sqla_session(session)
         statement = select(RegulationRepresentation).where(
             regulations_table.c.user_id == user_id, regulations_table.c.id == id_
         )
@@ -207,6 +180,7 @@ class RegulationsManagerRepository:
 
     @staticmethod
     async def get_regulation_owner(session: AsyncSession, id_: UUID) -> RegulationOwner:
+        session = sqla_session(session)
         statement = select(regulations_table.c.user_id).where(regulations_table.c.id == id_)
         result = await session.execute(statement)
 

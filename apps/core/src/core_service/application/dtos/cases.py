@@ -5,7 +5,7 @@ from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
 from core_service.application.dtos.search import SearchResultElement, SearchResultHighlight
-from core_service.shared.consts import MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
+from core_service.domain.consts import MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
 
 
 @dataclass(config=ConfigDict(alias_generator=to_camel))

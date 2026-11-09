@@ -19,10 +19,12 @@ from testcontainers.community.postgres import PostgresContainer
 from core_service.framework.dependencies import workers
 from core_service.framework.dependencies.ai_services import get_texts_embedder
 from core_service.framework.dependencies.application_templates import get_application_templates_storage
+from core_service.framework.dependencies.authentication import get_auth_tokens_config
 from core_service.framework.dependencies.cases import get_applications_storage
 from core_service.framework.dependencies.regulations import get_broker, get_regulations_storage
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.main import prawobiorca
+from tests.consts import AUTH_TOKENS_CONFIG
 
 POSTGRES_IMAGE_VERSION = "ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie"
 
@@ -97,6 +99,7 @@ def override_dependencies(
         {
             get_session_maker: lambda: session_maker,
             get_broker: lambda: broker,
+            get_auth_tokens_config: lambda: AUTH_TOKENS_CONFIG,
             get_texts_embedder: lambda: mock_texts_embedder,
             get_regulations_storage: lambda: mock_regulations_storage,
             get_applications_storage: lambda: mock_applications_storage,

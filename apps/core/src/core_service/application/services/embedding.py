@@ -12,3 +12,11 @@ class SectionsEmbedder:
             batch_vectors = await self._texts_embedder.embed_chunks(batch)
             for chunk, vector in zip(batch, batch_vectors, strict=True):
                 chunk.vector = vector
+
+
+async def embed_description(texts_embedder: TextsEmbedder, description: str | None) -> list[float] | None:
+    if description is None or not description.strip():
+        return None
+
+    vectors = await texts_embedder.embed_texts([description])
+    return vectors[0]

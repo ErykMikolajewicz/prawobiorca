@@ -1,19 +1,20 @@
 from dataclasses import dataclass
-from typing import Any
 from uuid import UUID
 
 from pydantic import TypeAdapter
-from sqlalchemy.ext.asyncio import AsyncSession
-from taskiq import TaskiqMessage
+from taskiq import AsyncBroker, TaskiqMessage
 
 from core_service.application.dtos.applications import NewApplication
+from core_service.application.ports.relational import AsyncSession
+from core_service.infrastructure.relational_db.session import sqla_session
 from core_service.infrastructure.tasks.broker import insert_task_message
-from core_service.shared.consts import APPLICATION_GENERATION_TASK_NAME
+
+APPLICATION_GENERATION_TASK_NAME = "generate_application"
 
 
 @dataclass
 class PostgresApplicationGenerationScheduler:
-    broker: Any
+    broker: AsyncBroker
 
     async def schedule_application_generation(
         self, session: AsyncSession, user_id: UUID, application_id: UUID, new_application: NewApplication
@@ -30,4 +31,4 @@ class PostgresApplicationGenerationScheduler:
             ],
             kwargs={},
         )
-        await insert_task_message(session, self.broker.formatter.dumps(message))
+        await insert_task_message(sqla_session(session), self.broker.formatter.dumps(message))
