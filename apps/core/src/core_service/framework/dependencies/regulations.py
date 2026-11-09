@@ -1,6 +1,7 @@
 from typing import Annotated, Any
 
 from fastapi import Depends, Request
+from taskiq import AsyncBroker
 
 from core_service.application.ports.regulations import RegulationsRepository, RegulationsStorage
 from core_service.application.ports.relational import SessionMaker
@@ -64,18 +65,18 @@ def get_regulation_repository() -> RegulationsRepository:
     return RegulationsManagerRepository()
 
 
-def get_broker(request: Request) -> Any:
+def get_broker(request: Request) -> AsyncBroker:
     return request.app.state.broker
 
 
 def get_regulations_preparation_scheduler(
-    broker: Annotated[Any, Depends(get_broker)],
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> RegulationPreparationScheduler:
     return PostgresRegulationPreparationScheduler(broker)
 
 
 def get_regulation_description_generation_scheduler(
-    broker: Annotated[Any, Depends(get_broker)],
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> RegulationDescriptionGenerationScheduler:
     return PostgresRegulationDescriptionGenerationScheduler(broker)
 

@@ -19,7 +19,7 @@ Moduł odpowiada za generowanie oficjalnych pism i wniosków studenckich w forma
   - `ApplicationWriter` (`src/core_service/infrastructure/ai_services/application_writer.py`) – renderuje prompt Jinja2 (`src/core_service/infrastructure/ai_services/prompts/application.md`) z instrukcjami szablonu i danymi wniosku i generuje treść przez `LlmChat`; osobnym wywołaniem (`write_name`, prompt `src/core_service/infrastructure/ai_services/prompts/application_name.md`) generuje nazwę wniosku.
   - `LlmChat` (`src/core_service/infrastructure/ai_services/llm_chat.py`) – klient czatu przez API zgodne z OpenAI: na GCP Vertex AI Model-as-a-Service, on-premise i lokalnie kontener `llm-service` z OVMS (port 8083 na hoście / 8080 w klastrze).
   - `DocxApplicationRenderer` (`src/core_service/infrastructure/docx/docx_renderer.py`) – renderuje szablon DOCX pobrany z object storage (w `SandboxedEnvironment`) z wartościami pól, `current_date` i `paragraphs` (stałe `CURRENT_DATE_TEMPLATE_VARIABLE` i `CONTENT_TEMPLATE_VARIABLE`) i zwraca go jako `bytes`.
-  - `ApplicationsRepository` (`src/core_service/infrastructure/relational_db/repositories/applications.py`) – tabela `applications` (wniosek należy do sprawy, usuwany kaskadowo razem z nią).
+  - `SqlaApplicationsRepository` (`src/core_service/infrastructure/relational_db/repositories/applications.py`) – tabela `applications` (wniosek należy do sprawy, usuwany kaskadowo razem z nią).
   - `S3ApplicationsStorage` (`src/core_service/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `applications/{id}`.
 - **Konfiguracja:** Zmienne środowiskowe `LLM_SERVICE_*` (`src/core_service/shared/settings/ai_services.py`), wymagane jest tylko `LLM_SERVICE_URL` (bazowy URL API razem z `/v1`). Na GCP `LLM_SERVICE_USE_GOOGLE_AUTH=true` – klient uwierzytelnia się tokenem OAuth z Workload Identity (`src/core_service/infrastructure/ai_services/openai_client/google_auth.py`).
 
@@ -54,7 +54,7 @@ Szablonami zarządza administrator, a zalogowany użytkownik widzi tylko szablon
 - **Adaptery:**
   - `DocxTemplateInspector` (`src/core_service/infrastructure/docx/template_inspector.py`) – odczytuje zmienne szablonu DOCX (w `SandboxedEnvironment`) i jego tekst (akapity i komórki tabel) na potrzeby opisu.
   - `PromptsApplicationTemplateInstructionsProvider` (`src/core_service/infrastructure/ai_services/application_template_instructions.py`) – domyślne instrukcje dla AI.
-  - `ApplicationTemplatesRepository` (`src/core_service/infrastructure/relational_db/repositories/application_templates.py`) – tabela `application_templates`.
+  - `SqlaApplicationTemplatesRepository` (`src/core_service/infrastructure/relational_db/repositories/application_templates.py`) – tabela `application_templates`.
   - `S3ApplicationTemplatesStorage` (`src/core_service/infrastructure/object_storage/repository.py`) – pliki DOCX w object storage pod kluczem `application_templates/{id}`.
 
 ## 3. Pipeline generowania wniosku

@@ -1,8 +1,6 @@
-from typing import Any
-
 from httpx2 import AsyncClient
 from openai import AsyncOpenAI
-from taskiq import Context, TaskiqDepends, TaskiqState
+from taskiq import AsyncBroker, Context, TaskiqDepends, TaskiqState
 
 from core_service.application.ports.application_templates import (
     ApplicationTemplateDescriptionWriter,
@@ -66,6 +64,7 @@ from core_service.infrastructure.object_storage.repository import (
     S3ApplicationTemplatesStorage,
     S3RegulationsStorage,
 )
+from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
 from core_service.infrastructure.tasks.regulations import PostgresRegulationDescriptionGenerationScheduler
 from core_service.shared.settings.ai_services import (
@@ -121,19 +120,19 @@ def get_application_templates_storage(state: TaskiqState = TaskiqDepends()) -> A
     )
 
 
-def get_broker(context: Context = TaskiqDepends()) -> Any:
+def get_broker(context: Context = TaskiqDepends()) -> AsyncBroker:
     return context.broker
 
 
 def get_regulation_description_generation_scheduler(
-    broker: Any = TaskiqDepends(get_broker),
+    broker: AsyncBroker = TaskiqDepends(get_broker),
 ) -> RegulationDescriptionGenerationScheduler:
     return PostgresRegulationDescriptionGenerationScheduler(broker)
 
 
 def get_llm_chat(
     client: AsyncOpenAI = TaskiqDepends(get_llm_client),
-    session_maker: SessionMaker = TaskiqDepends(get_session_maker),
+    session_maker: DatabaseSessionMaker = TaskiqDepends(get_session_maker),
 ) -> LlmChat:
     cost_limiter = None
     if llm_service_settings.MONTHLY_COST_LIMIT_PLN is not None:

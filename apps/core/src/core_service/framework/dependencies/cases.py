@@ -2,7 +2,6 @@ from typing import Annotated, Any
 
 from fastapi import Depends
 
-import core_service.infrastructure.relational_db.repositories.cases as sqla_repos
 from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
 from core_service.application.ports.cases import CaseDocumentsRepository, CasesRepository
 from core_service.application.ports.relational import SessionMaker
@@ -17,18 +16,20 @@ from core_service.application.use_cases.cases import (
 from core_service.framework.dependencies.regulations import get_file_storage_client, get_file_storage_presign_client
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.infrastructure.object_storage.repository import S3ApplicationsStorage
-from core_service.infrastructure.relational_db.repositories.applications import (
-    ApplicationsRepository as SqlaApplicationsRepository,
+from core_service.infrastructure.relational_db.repositories.applications import SqlaApplicationsRepository
+from core_service.infrastructure.relational_db.repositories.cases import (
+    SqlaCaseDocumentsRepository,
+    SqlaCasesRepository,
 )
 from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_cases_repo() -> CasesRepository:
-    return sqla_repos.CasesRepository()
+    return SqlaCasesRepository()
 
 
 def get_case_documents_repo() -> CaseDocumentsRepository:
-    return sqla_repos.CaseDocumentsRepository()
+    return SqlaCaseDocumentsRepository()
 
 
 def get_applications_repo() -> ApplicationsRepository:

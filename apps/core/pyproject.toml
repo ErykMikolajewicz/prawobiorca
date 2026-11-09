@@ -94,13 +94,6 @@ ignore_imports = [
 ]
 
 [[tool.ty.overrides]]
-include = ["src/core_service/framework/dependencies/**", "src/core_service/framework/workers/**"]
-
-[tool.ty.overrides.rules]
-invalid-argument-type = "ignore"
-invalid-return-type = "ignore"
-
-[[tool.ty.overrides]]
 include = ["tests/**"]
 
 [tool.ty.overrides.rules]

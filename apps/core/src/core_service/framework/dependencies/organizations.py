@@ -3,7 +3,6 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Query, status
 
-import core_service.infrastructure.relational_db.repositories.organizations as sqla_repos
 from core_service.application.ports.organizations import OrganizationsRepository, SuborganizationsRepository
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.use_cases.organizations import (
@@ -17,6 +16,10 @@ from core_service.application.use_cases.organizations import (
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.framework.dependencies.relational import get_session_maker
+from core_service.infrastructure.relational_db.repositories.organizations import (
+    SqlaOrganizationsRepository,
+    SqlaSuborganizationsRepository,
+)
 
 
 def get_organization_filter(
@@ -35,11 +38,11 @@ def get_organization_filter(
 
 
 def get_organizations_repo() -> OrganizationsRepository:
-    return sqla_repos.OrganizationsRepository()
+    return SqlaOrganizationsRepository()
 
 
 def get_suborganizations_repo() -> SuborganizationsRepository:
-    return sqla_repos.SuborganizationsRepository()
+    return SqlaSuborganizationsRepository()
 
 
 def get_list_organizations(

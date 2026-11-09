@@ -173,7 +173,7 @@ Contains **Application Business Rules** and use case orchestrations.
 
 #### `../../apps/core/src/core_service/infrastructure`
 Acts as adapters for external systems and technical tools, implementing ports defined in `application/ports`. Adapter classes are named with the technology they use (e.g. `S3RegulationsStorage`, `LlmApplicationWriter`, `HttpTextsEmbedder`), so they never share a name with the port they implement.
-- **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas.
+- **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas. Adapter methods keep the port signature, typed with the port `AsyncSession` (`application/ports/relational.py`), and narrow it to the SQLAlchemy session with `sqla_session` (`infrastructure/relational_db/session.py`) as the first statement, so `ty` checks that every adapter satisfies its port.
 - **External Clients**: HTTP/gRPC clients communicating with external services (`embeddings-service`, `extraction-service`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
 

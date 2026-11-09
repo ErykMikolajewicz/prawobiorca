@@ -1,6 +1,7 @@
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Depends
+from taskiq import AsyncBroker
 
 from core_service.application.ports.application_templates import ApplicationTemplatesRepository
 from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
@@ -20,7 +21,7 @@ from core_service.infrastructure.tasks.applications import PostgresApplicationGe
 
 
 def get_application_generation_scheduler(
-    broker: Annotated[Any, Depends(get_broker)],
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> ApplicationGenerationScheduler:
     return PostgresApplicationGenerationScheduler(broker)
 

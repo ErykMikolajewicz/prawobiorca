@@ -1,6 +1,7 @@
 from typing import Annotated, Any
 
 from fastapi import Depends
+from taskiq import AsyncBroker
 
 from core_service.application.ports.application_templates import (
     ApplicationTemplateInspector,
@@ -38,7 +39,7 @@ from core_service.infrastructure.ai_services.application_template_instructions i
 from core_service.infrastructure.docx.template_inspector import DocxTemplateInspector
 from core_service.infrastructure.object_storage.repository import S3ApplicationTemplatesStorage
 from core_service.infrastructure.relational_db.repositories.application_templates import (
-    ApplicationTemplatesRepository as SqlaApplicationTemplatesRepository,
+    SqlaApplicationTemplatesRepository,
 )
 from core_service.infrastructure.tasks.application_templates import (
     PostgresApplicationTemplateDescriptionGenerationScheduler,
@@ -72,7 +73,7 @@ def get_application_template_instructions_provider() -> ApplicationTemplateInstr
 
 
 def get_application_template_description_generation_scheduler(
-    broker: Annotated[Any, Depends(get_broker)],
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> ApplicationTemplateDescriptionGenerationScheduler:
     return PostgresApplicationTemplateDescriptionGenerationScheduler(broker)
 

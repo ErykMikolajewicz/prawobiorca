@@ -2,7 +2,6 @@ from dataclasses import asdict
 from uuid import UUID
 
 from sqlalchemy import case, delete, func, insert, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.application.dtos.search import (
     SearchOrder,
@@ -11,6 +10,7 @@ from core_service.application.dtos.search import (
     SearchResultElement,
     SearchResultHighlight,
 )
+from core_service.application.ports.relational import AsyncSession
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
 from core_service.domain.value_objects.regulations import SectionContent
 from core_service.domain.value_objects.sections import SectionsCollection
@@ -18,6 +18,7 @@ from core_service.infrastructure.relational_db.schemas.sections import (
     regulations_chunks_table,
     regulations_sections_table,
 )
+from core_service.infrastructure.relational_db.session import sqla_session
 
 PRIMARY_CHUNK_SCORE_WEIGHT = 0.8
 
@@ -32,6 +33,7 @@ class RegulationsSectionsRepository:
         regulation_id: UUID,
         sections: SectionsCollection,
     ) -> None:
+        session = sqla_session(session)
         sections_data = []
         chunks_data = []
         for section in sections:
@@ -66,6 +68,7 @@ class RegulationsSectionsRepository:
     async def list_sections_contents(
         session: AsyncSession, user_id: UUID | None, regulation_id: UUID
     ) -> list[SectionContent]:
+        session = sqla_session(session)
         statement = (
             select(regulations_sections_table.c.header, regulations_sections_table.c.text)
             .where(
@@ -86,6 +89,7 @@ class RegulationsSectionsRepository:
         vector: list[float],
         search_params: SearchParams,
     ) -> list[SearchResult]:
+        session = sqla_session(session)
         exists_query = (
             select(1)
             .where(
@@ -195,6 +199,7 @@ class RegulationsSectionsRepository:
 
     @staticmethod
     async def remove_sections(session: AsyncSession, user_id: UUID | None, regulation_id: UUID) -> None:
+        session = sqla_session(session)
         query = delete(regulations_sections_table).where(
             regulations_sections_table.c.regulation_id == regulation_id,
             regulations_sections_table.c.user_id == user_id,

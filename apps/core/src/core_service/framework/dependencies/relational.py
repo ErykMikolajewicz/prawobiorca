@@ -1,6 +1,5 @@
-from core_service.application.ports.relational import SessionMaker
-from core_service.infrastructure.relational_db.connection import async_session_maker
+from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker, async_session_maker
 
 
-def get_session_maker() -> SessionMaker:
+def get_session_maker() -> DatabaseSessionMaker:
     return async_session_maker
