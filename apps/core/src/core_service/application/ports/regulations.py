@@ -36,8 +36,6 @@ class RegulationsStorage(Protocol):
 
 
 class RegulationsRepository(Protocol):
-    def __init__(self): ...
-
     async def list_regulations(
         self,
         session: AsyncSession,
