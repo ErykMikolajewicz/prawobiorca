@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from core_service.domain.value_objects.legal_units import LegalUnitElement
 from core_service.domain.value_objects.sections import ChunkSpan, RegulationSection, SectionChunk, SectionsCollection
@@ -86,6 +87,21 @@ async def test_add_sections_saves_sections(session_maker, regulation_id):
         ),
         ("Art. 2", "Content 3", 1, []),
     ]
+
+
+async def test_add_sections_rejects_sections_added_twice(session_maker, regulation_id):
+    async with session_maker.begin() as session:
+        await RegulationsSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
+
+    with pytest.raises(IntegrityError):
+        async with session_maker.begin() as session:
+            await RegulationsSectionsRepository.add_sections(
+                session, USER_ID, regulation_id, create_sections_collection()
+            )
+
+    sections = await get_sections(session_maker, regulation_id)
+
+    assert [section.section_order for section in sections] == [0, 1]
 
 
 async def test_add_sections_saves_chunks_with_their_section(session_maker, regulation_id):
