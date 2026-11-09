@@ -21,8 +21,10 @@ from core_service.domain.exceptions.application_templates import (
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from core_service.domain.exceptions.cases import CaseNotFound
 from core_service.domain.services.application_fields import validate_field_values
+from core_service.domain.services.case_access import resolve_case_owner
 from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.domain.value_objects.users import Caller
 from core_service.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 
@@ -36,7 +38,9 @@ class AddApplication:
     application_templates_repo: ApplicationTemplatesRepository
     application_generation_scheduler: ApplicationGenerationScheduler
 
-    async def execute(self, user_id: UUID, case_id: UUID, new_application: NewApplication) -> UUID:
+    async def execute(self, caller: Caller, case_id: UUID, new_application: NewApplication) -> UUID:
+        user_id = resolve_case_owner(caller)
+
         async with self.session_maker.begin() as session:
             template = await self.application_templates_repo.get(session, new_application.template_id)
             if template is None or template.status != ApplicationTemplateStatus.PUBLISHED:
@@ -173,7 +177,9 @@ class ListApplications:
     session_maker: SessionMaker
     applications_repo: ApplicationsRepository
 
-    async def execute(self, user_id: UUID, case_id: UUID) -> list[ApplicationRepresentation]:
+    async def execute(self, caller: Caller, case_id: UUID) -> list[ApplicationRepresentation]:
+        user_id = resolve_case_owner(caller)
+
         async with self.session_maker() as session:
             applications = await self.applications_repo.list_by_case_id(session, user_id, case_id)
         return applications
@@ -185,7 +191,9 @@ class GetApplicationDownloadUrl:
     applications_repo: ApplicationsRepository
     applications_storage: ApplicationsStorage
 
-    async def execute(self, user_id: UUID, case_id: UUID, application_id: UUID) -> str:
+    async def execute(self, caller: Caller, case_id: UUID, application_id: UUID) -> str:
+        user_id = resolve_case_owner(caller)
+
         async with self.session_maker() as session:
             application = await self.applications_repo.get(session, user_id, application_id)
 
@@ -206,7 +214,9 @@ class DeleteApplication:
     applications_repo: ApplicationsRepository
     applications_storage: ApplicationsStorage
 
-    async def execute(self, user_id: UUID, case_id: UUID, application_id: UUID) -> None:
+    async def execute(self, caller: Caller, case_id: UUID, application_id: UUID) -> None:
+        user_id = resolve_case_owner(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 await self.applications_repo.delete(session, user_id, case_id, application_id)

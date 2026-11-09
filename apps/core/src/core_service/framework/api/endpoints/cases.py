@@ -25,13 +25,14 @@ from core_service.domain.exceptions.application_templates import (
 )
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from core_service.domain.exceptions.cases import CaseNotFound
+from core_service.domain.value_objects.users import Caller
 from core_service.framework.dependencies.applications import (
     get_add_application,
     get_application_download_url,
     get_delete_application,
     get_list_applications,
 )
-from core_service.framework.dependencies.authentication import authorize_user, require_logged_user
+from core_service.framework.dependencies.authentication import get_caller
 from core_service.framework.dependencies.cases import (
     get_add_case_document,
     get_add_user_case,
@@ -41,7 +42,7 @@ from core_service.framework.dependencies.cases import (
     get_list_user_cases,
 )
 
-cases_router = APIRouter(tags=["cases"], dependencies=(Depends(authorize_user),), prefix="/api")
+cases_router = APIRouter(tags=["cases"], prefix="/api")
 
 
 @cases_router.get(
@@ -50,18 +51,18 @@ cases_router = APIRouter(tags=["cases"], dependencies=(Depends(authorize_user),)
 )
 async def get_cases_list(
     list_cases: Annotated[ListCases, Depends(get_list_user_cases)],
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
 ) -> list[CaseData]:
-    return await list_cases.execute(user_id)
+    return await list_cases.execute(caller)
 
 
 @cases_router.post("/cases")
 async def add_case(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     add_user_case_: Annotated[AddCase, Depends(get_add_user_case)],
     case_name: Annotated[str, Form(..., alias="caseName")],
 ) -> UUID:
-    case_id = await add_user_case_.execute(user_id, case_name)
+    case_id = await add_user_case_.execute(caller, case_name)
     return case_id
 
 
@@ -73,12 +74,12 @@ async def add_case(
     },
 )
 async def delete_user_case(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     delete_user_case_: Annotated[DeleteCase, Depends(get_delete_user_case)],
     case_id: Annotated[UUID, Path(alias="caseId")],
 ):
     try:
-        await delete_user_case_.execute(user_id, case_id)
+        await delete_user_case_.execute(caller, case_id)
     except CaseNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No case with that id!")
 
@@ -91,13 +92,13 @@ async def delete_user_case(
     },
 )
 async def add_case_document(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     add_case_document_: Annotated[AddCaseDocument, Depends(get_add_case_document)],
     case_id: Annotated[UUID, Path(alias="caseId")],
     new_document: NewCaseDocument,
 ):
     try:
-        await add_case_document_.execute(user_id, case_id, new_document)
+        await add_case_document_.execute(caller, case_id, new_document)
     except CaseNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No case with that id!")
 
@@ -107,11 +108,11 @@ async def add_case_document(
     response_model=list[CaseDocument],
 )
 async def get_case_documents(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     list_case_documents: Annotated[ListCaseDocuments, Depends(get_list_case_documents)],
     case_id: Annotated[UUID, Path(alias="caseId")],
 ) -> list[CaseDocument]:
-    return await list_case_documents.execute(user_id, case_id)
+    return await list_case_documents.execute(caller, case_id)
 
 
 @cases_router.delete(
@@ -122,13 +123,13 @@ async def get_case_documents(
     },
 )
 async def delete_case_document(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     delete_case_document_: Annotated[DeleteCaseDocument, Depends(get_delete_case_document)],
     case_id: Annotated[UUID, Path(alias="caseId")],
     document_id: Annotated[UUID, Path(alias="documentId")],
 ):
     try:
-        await delete_case_document_.execute(user_id, case_id, document_id)
+        await delete_case_document_.execute(caller, case_id, document_id)
     except CaseNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No document with that id!")
 
@@ -142,13 +143,13 @@ async def delete_case_document(
     },
 )
 async def generate_application(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     add_application_: Annotated[AddApplication, Depends(get_add_application)],
     case_id: Annotated[UUID, Path(alias="caseId")],
     new_application: NewApplication,
 ) -> UUID:
     try:
-        return await add_application_.execute(user_id, case_id, new_application)
+        return await add_application_.execute(caller, case_id, new_application)
     except CaseNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No case with that id!")
     except ApplicationTemplateNotFound:
@@ -164,11 +165,11 @@ async def generate_application(
     response_model=list[ApplicationRepresentation],
 )
 async def get_case_applications(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     list_applications: Annotated[ListApplications, Depends(get_list_applications)],
     case_id: Annotated[UUID, Path(alias="caseId")],
 ) -> list[ApplicationRepresentation]:
-    return await list_applications.execute(user_id, case_id)
+    return await list_applications.execute(caller, case_id)
 
 
 @cases_router.get(
@@ -179,13 +180,13 @@ async def get_case_applications(
     },
 )
 async def get_case_application_download_url(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     get_download_url: Annotated[GetApplicationDownloadUrl, Depends(get_application_download_url)],
     case_id: Annotated[UUID, Path(alias="caseId")],
     application_id: Annotated[UUID, Path(alias="applicationId")],
 ) -> str:
     try:
-        return await get_download_url.execute(user_id, case_id, application_id)
+        return await get_download_url.execute(caller, case_id, application_id)
     except ApplicationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found!")
     except ApplicationNotGenerated:
@@ -200,12 +201,12 @@ async def get_case_application_download_url(
     },
 )
 async def delete_application(
-    user_id: Annotated[UUID, Depends(require_logged_user)],
+    caller: Annotated[Caller, Depends(get_caller)],
     delete_application_: Annotated[DeleteApplication, Depends(get_delete_application)],
     case_id: Annotated[UUID, Path(alias="caseId")],
     application_id: Annotated[UUID, Path(alias="applicationId")],
 ):
     try:
-        await delete_application_.execute(user_id, case_id, application_id)
+        await delete_application_.execute(caller, case_id, application_id)
     except ApplicationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found!")

@@ -14,7 +14,8 @@ from core_service.application.use_cases.organizations import (
     UpdateSuborganization,
 )
 from core_service.domain.exceptions.organizations import OrganizationNotFound, SuborganizationNotFound
-from core_service.framework.dependencies.authentication import require_admin
+from core_service.domain.value_objects.users import Caller
+from core_service.framework.dependencies.authentication import get_caller
 from core_service.framework.dependencies.organizations import (
     get_add_organization,
     get_add_suborganization,
@@ -40,31 +41,31 @@ async def get_organizations(
 
 @organizations_router.post(
     "/organizations",
-    dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
 )
 async def add_organization(
+    caller: Annotated[Caller, Depends(get_caller)],
     add_organization_: Annotated[AddOrganization, Depends(get_add_organization)],
     new_organization: NewOrganization,
 ) -> UUID:
-    return await add_organization_.execute(new_organization)
+    return await add_organization_.execute(caller, new_organization)
 
 
 @organizations_router.put(
     "/organizations/{organizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Organization not found!"},
     },
 )
 async def update_organization(
+    caller: Annotated[Caller, Depends(get_caller)],
     update_organization_: Annotated[UpdateOrganization, Depends(get_update_organization)],
     organization_id: Annotated[UUID, Path(alias="organizationId")],
     new_organization: NewOrganization,
 ):
     try:
-        await update_organization_.execute(organization_id, new_organization)
+        await update_organization_.execute(caller, organization_id, new_organization)
     except OrganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found!")
 
@@ -72,36 +73,36 @@ async def update_organization(
 @organizations_router.delete(
     "/organizations/{organizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Organization not found!"},
     },
 )
 async def delete_organization(
+    caller: Annotated[Caller, Depends(get_caller)],
     delete_organization_: Annotated[DeleteOrganization, Depends(get_delete_organization)],
     organization_id: Annotated[UUID, Path(alias="organizationId")],
 ):
     try:
-        await delete_organization_.execute(organization_id)
+        await delete_organization_.execute(caller, organization_id)
     except OrganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found!")
 
 
 @organizations_router.post(
     "/organizations/{organizationId}/suborganizations",
-    dependencies=(Depends(require_admin),),
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Organization not found!"},
     },
 )
 async def add_suborganization(
+    caller: Annotated[Caller, Depends(get_caller)],
     add_suborganization_: Annotated[AddSuborganization, Depends(get_add_suborganization)],
     organization_id: Annotated[UUID, Path(alias="organizationId")],
     new_suborganization: NewSuborganization,
 ) -> UUID:
     try:
-        return await add_suborganization_.execute(organization_id, new_suborganization)
+        return await add_suborganization_.execute(caller, organization_id, new_suborganization)
     except OrganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found!")
 
@@ -109,19 +110,19 @@ async def add_suborganization(
 @organizations_router.put(
     "/organizations/{organizationId}/suborganizations/{suborganizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Suborganization not found!"},
     },
 )
 async def update_suborganization(
+    caller: Annotated[Caller, Depends(get_caller)],
     update_suborganization_: Annotated[UpdateSuborganization, Depends(get_update_suborganization)],
     organization_id: Annotated[UUID, Path(alias="organizationId")],
     suborganization_id: Annotated[UUID, Path(alias="suborganizationId")],
     new_suborganization: NewSuborganization,
 ):
     try:
-        await update_suborganization_.execute(organization_id, suborganization_id, new_suborganization)
+        await update_suborganization_.execute(caller, organization_id, suborganization_id, new_suborganization)
     except SuborganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suborganization not found!")
 
@@ -129,17 +130,17 @@ async def update_suborganization(
 @organizations_router.delete(
     "/organizations/{organizationId}/suborganizations/{suborganizationId}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=(Depends(require_admin),),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Suborganization not found!"},
     },
 )
 async def delete_suborganization(
+    caller: Annotated[Caller, Depends(get_caller)],
     delete_suborganization_: Annotated[DeleteSuborganization, Depends(get_delete_suborganization)],
     organization_id: Annotated[UUID, Path(alias="organizationId")],
     suborganization_id: Annotated[UUID, Path(alias="suborganizationId")],
 ):
     try:
-        await delete_suborganization_.execute(organization_id, suborganization_id)
+        await delete_suborganization_.execute(caller, organization_id, suborganization_id)
     except SuborganizationNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suborganization not found!")
