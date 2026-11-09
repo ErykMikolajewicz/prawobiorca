@@ -10,6 +10,7 @@ from core_service.application.dtos.application_templates import (
     PublishedApplicationTemplate,
 )
 from core_service.application.use_cases.application_templates import (
+    MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES,
     ConfirmApplicationTemplateUpload,
     DeleteApplicationTemplate,
     FailApplicationTemplateDescriptionGeneration,
@@ -36,7 +37,6 @@ from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateStatus,
 )
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments

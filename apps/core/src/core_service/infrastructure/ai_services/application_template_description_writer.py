@@ -1,7 +1,7 @@
+from core_service.domain.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH
 from core_service.domain.value_objects.application_templates import ApplicationTemplateDescriptionSource
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.prompt_templates import prompts_env
-from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH
 
 
 class ApplicationTemplateDescriptionWriter:

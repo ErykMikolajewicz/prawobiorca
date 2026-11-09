@@ -17,9 +17,9 @@ from core_service.framework.dependencies.workers import (
 )
 from core_service.infrastructure.ai_services.initialization import init_ai_services_client
 from core_service.infrastructure.ai_services.openai_client.connection import init_llm_client
+from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL
 from core_service.infrastructure.tasks.connection import broker
-from core_service.shared.consts import (
-    DELIVERY_ATTEMPT_LABEL,
+from core_service.infrastructure.tasks.regulations import (
     REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
     REGULATION_PREPARATION_TASK_NAME,
 )

@@ -39,6 +39,9 @@ class LlmServiceSettings(BaseSettings):
     MAX_TOKENS: int = Field(default=1000, gt=0)
     USE_GOOGLE_AUTH: bool = False
     MONTHLY_COST_LIMIT_PLN: float | None = Field(default=None, gt=0)
+    INPUT_PRICE_USD_PER_MILLION_TOKENS: float = Field(default=0.30, ge=0)
+    OUTPUT_PRICE_USD_PER_MILLION_TOKENS: float = Field(default=2.50, ge=0)
+    USD_TO_PLN_RATE: float = Field(default=4.0, gt=0)
 
     model_config = SettingsConfigDict(
         env_file=Path(".env"),

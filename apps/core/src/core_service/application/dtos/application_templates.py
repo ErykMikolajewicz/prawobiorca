@@ -5,16 +5,16 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
+from core_service.domain.consts import (
+    MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH,
+    MAX_FILENAME_LENGTH,
+    MIN_FILENAME_LENGTH,
+)
 from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
     ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
-)
-from core_service.shared.consts import (
-    MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH,
-    MAX_FILENAME_LENGTH,
-    MIN_FILENAME_LENGTH,
 )
 
 

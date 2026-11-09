@@ -15,11 +15,12 @@ from core_service.domain.value_objects.application_templates import (
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
-from core_service.shared.consts import (
-    HYBRID_TEMPLATE_SEARCH_LIMIT,
-    TEMPLATE_NAME_SCORE_WEIGHT,
-    TEMPLATE_NAME_SIMILARITY_THRESHOLD,
-)
+
+TEMPLATE_NAME_SIMILARITY_THRESHOLD = 0.3
+
+TEMPLATE_NAME_SCORE_WEIGHT = 0.6
+
+HYBRID_TEMPLATE_SEARCH_LIMIT = 10
 
 
 def _filter_templates(

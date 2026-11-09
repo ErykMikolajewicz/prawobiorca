@@ -8,7 +8,7 @@ from core_service.application.dtos.applications import NewApplication
 from core_service.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.infrastructure.relational_db.schemas.applications import applications_table
-from core_service.shared.consts import APPLICATION_GENERATION_TASK_NAME
+from core_service.infrastructure.tasks.applications import APPLICATION_GENERATION_TASK_NAME
 from tests.consts import ADMIN_ID, UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.application_templates import insert_application_template
 from tests.integration.fixtures.cases import insert_application, insert_case

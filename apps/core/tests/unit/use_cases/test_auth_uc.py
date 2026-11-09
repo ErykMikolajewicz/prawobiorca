@@ -7,10 +7,9 @@ from core_service.application.dtos.account import LoginData
 from core_service.application.use_cases.auth import LogoutUser, LogUser, RefreshTokens
 from core_service.domain.entities.user import User
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
-from core_service.domain.services.security import decode_access_token, hash_password, hash_refresh_token
+from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token, hash_password, hash_refresh_token
 from core_service.domain.value_objects.auth import UserSession
 from core_service.domain.value_objects.users import UserPrivileges
-from core_service.shared.consts import JWT_ALGORITHM
 from tests.consts import AUTH_TOKENS_CONFIG, REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
 from tests.mocks import get_awaited_argument
 

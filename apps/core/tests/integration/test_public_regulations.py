@@ -12,9 +12,10 @@ from core_service.domain.value_objects.regulations import (
     RegulationPreparationStatus,
     RegulationType,
 )
+from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
-from core_service.shared.consts import REGULATION_DESCRIPTION_GENERATION_TASK_NAME, VECTOR_LENGTH
+from core_service.infrastructure.tasks.regulations import REGULATION_DESCRIPTION_GENERATION_TASK_NAME
 from tests.consts import UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.ai_services import QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.organizations import insert_organization, insert_suborganization

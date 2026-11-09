@@ -6,6 +6,8 @@ import pytest
 from core_service.application.dtos.regulations import RegulationData, RegulationRepresentation
 from core_service.application.dtos.search import SearchParams
 from core_service.application.use_cases.regulations import (
+    MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
+    MAX_REGULATION_PREPARATION_DELIVERIES,
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
@@ -36,10 +38,6 @@ from core_service.domain.value_objects.regulations import (
     RegulationType,
 )
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import (
-    MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
-    MAX_REGULATION_PREPARATION_DELIVERIES,
-)
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments

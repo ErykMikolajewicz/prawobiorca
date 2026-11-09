@@ -13,13 +13,13 @@ from core_service.application.interfaces.users import UsersRepository, UsersSess
 from core_service.application.services.accounts import check_user_can_log
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
 from core_service.domain.services.security import (
+    JWT_ALGORITHM,
     create_access_token,
     generate_authorization_token,
     hash_refresh_token,
     prevent_timing_attack,
 )
 from core_service.domain.value_objects.auth import AccessTokenClaims
-from core_service.shared.consts import JWT_ALGORITHM
 
 logger = logging.getLogger(__name__)
 

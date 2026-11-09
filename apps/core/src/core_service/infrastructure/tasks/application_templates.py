@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from taskiq import TaskiqMessage
 
 from core_service.infrastructure.tasks.broker import insert_task_message
-from core_service.shared.consts import APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME
+
+APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_TASK_NAME = "generate_application_template_description"
 
 
 @dataclass

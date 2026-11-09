@@ -3,9 +3,8 @@ from uuid import UUID
 from pydantic import SecretStr
 
 from core_service.application.use_cases.auth import AuthTokensConfig
-from core_service.domain.services.security import create_access_token
+from core_service.domain.services.security import JWT_ALGORITHM, create_access_token
 from core_service.domain.value_objects.auth import AccessTokenClaims
-from core_service.shared.consts import JWT_ALGORITHM
 
 STRONG_PASSWORD = "StrongPassword12;"
 

@@ -31,9 +31,13 @@ dependencies = [
 requires = ["uv_build>=0.13,<0.14"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+namespace = true
+
 [dependency-groups]
 dev = [
     "granian[reload]==2.8.*",
+    "import-linter==2.16.*",
     "taskiq[reload]==0.13.*",
     "ty==0.0.99",
 ]
@@ -47,6 +51,48 @@ test = [
 
 [tool.uv]
 default-groups = ["dev", "test"]
+
+[tool.importlinter]
+root_package = "core_service"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers"
+type = "layers"
+layers = [
+    "core_service.framework",
+    "core_service.infrastructure",
+    "core_service.application",
+    "core_service.domain",
+    "core_service.shared",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain and application are framework independent"
+type = "forbidden"
+source_modules = ["core_service.domain", "core_service.application"]
+forbidden_modules = [
+    "aiobotocore",
+    "asyncpg",
+    "bcrypt",
+    "docxtpl",
+    "fastapi",
+    "httpx2",
+    "jinja2",
+    "jwt",
+    "openai",
+    "pgvector",
+    "sqlalchemy",
+    "taskiq",
+    "tokenizers",
+]
+ignore_imports = [
+    "core_service.application.dtos.search -> fastapi",
+    "core_service.application.services.accounts -> fastapi",
+    "core_service.application.use_cases.account -> fastapi",
+    "core_service.domain.services.security -> bcrypt",
+    "core_service.domain.services.security -> jwt",
+]
 
 [[tool.ty.overrides]]
 include = ["src/core_service/framework/dependencies/**", "src/core_service/framework/workers/**"]

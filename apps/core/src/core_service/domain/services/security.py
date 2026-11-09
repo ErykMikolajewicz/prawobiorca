@@ -11,7 +11,12 @@ from pydantic import SecretStr
 
 from core_service.domain.exceptions.users import InvalidAccessToken
 from core_service.domain.value_objects.auth import AccessTokenClaims
-from core_service.shared.consts import AUTHORIZATION_TOKEN_LENGTH, SECURITY_MIN_RESPONSE_TIME
+
+AUTHORIZATION_TOKEN_LENGTH = 32
+
+JWT_ALGORITHM = "HS256"
+
+SECURITY_MIN_RESPONSE_TIME = 2.0
 
 url_safe_authorization_token_length = ceil(AUTHORIZATION_TOKEN_LENGTH * 4 / 3)
 

@@ -8,7 +8,8 @@ from taskiq import TaskiqMessage
 
 from core_service.application.dtos.applications import NewApplication
 from core_service.infrastructure.tasks.broker import insert_task_message
-from core_service.shared.consts import APPLICATION_GENERATION_TASK_NAME
+
+APPLICATION_GENERATION_TASK_NAME = "generate_application"
 
 
 @dataclass

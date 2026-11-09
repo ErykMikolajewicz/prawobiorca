@@ -1,22 +1,21 @@
 import pytest
 from sqlalchemy import select
 
-from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
+from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter, LlmPricing
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
 from core_service.infrastructure.relational_db.schemas.llm_usage import llm_usage_table
-from core_service.shared.consts import (
-    LLM_INPUT_PRICE_USD_PER_MILLION_TOKENS,
-    LLM_OUTPUT_PRICE_USD_PER_MILLION_TOKENS,
-    USD_TO_PLN_RATE,
-)
 from core_service.shared.exceptions import ServiceUnavailable
 
 MILLION = 1_000_000
 
+PRICING = LlmPricing(
+    input_price_usd_per_million_tokens=0.30, output_price_usd_per_million_tokens=2.50, usd_to_pln_rate=4.0
+)
+
 
 def create_cost_limiter(session_maker, monthly_limit_pln: float) -> LlmCostLimiter:
-    return LlmCostLimiter(DatabaseSessionMaker(session_maker), LlmUsageRepository(), monthly_limit_pln)
+    return LlmCostLimiter(DatabaseSessionMaker(session_maker), LlmUsageRepository(), monthly_limit_pln, PRICING)
 
 
 async def test_record_accumulates_usage_of_month(session_maker):
@@ -38,8 +37,8 @@ async def test_check_allows_month_without_usage(session_maker):
 @pytest.mark.parametrize(
     ("input_tokens", "output_tokens", "cost_pln"),
     [
-        (MILLION, 0, LLM_INPUT_PRICE_USD_PER_MILLION_TOKENS * USD_TO_PLN_RATE),
-        (0, MILLION, LLM_OUTPUT_PRICE_USD_PER_MILLION_TOKENS * USD_TO_PLN_RATE),
+        (MILLION, 0, PRICING.input_price_usd_per_million_tokens * PRICING.usd_to_pln_rate),
+        (0, MILLION, PRICING.output_price_usd_per_million_tokens * PRICING.usd_to_pln_rate),
     ],
     ids=("input tokens", "output tokens"),
 )

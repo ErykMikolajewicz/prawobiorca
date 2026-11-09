@@ -2,8 +2,8 @@ import sqlalchemy as sqla
 from sqlalchemy.dialects import postgresql
 
 from core_service.application.dtos.cases import CaseData, CaseDocument
+from core_service.domain.consts import MAX_FILENAME_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
-from core_service.shared.consts import MAX_FILENAME_LENGTH
 
 cases_table = sqla.Table(
     "cases",

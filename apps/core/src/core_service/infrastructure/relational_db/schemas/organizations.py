@@ -1,7 +1,7 @@
 import sqlalchemy as sqla
 
+from core_service.domain.consts import MAX_ORGANIZATION_NAME_LENGTH, MAX_ORGANIZATION_SHORT_NAME_LENGTH
 from core_service.infrastructure.relational_db.connection import metadata
-from core_service.shared.consts import MAX_ORGANIZATION_NAME_LENGTH, MAX_ORGANIZATION_SHORT_NAME_LENGTH
 
 organizations_table = sqla.Table(
     "organizations",

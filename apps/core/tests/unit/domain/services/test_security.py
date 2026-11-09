@@ -10,6 +10,7 @@ from pydantic import SecretStr
 
 from core_service.domain.exceptions.users import InvalidAccessToken
 from core_service.domain.services.security import (
+    SECURITY_MIN_RESPONSE_TIME,
     create_access_token,
     decode_access_token,
     generate_authorization_token,
@@ -20,7 +21,6 @@ from core_service.domain.services.security import (
     verify_password,
 )
 from core_service.domain.value_objects.auth import AccessTokenClaims
-from core_service.shared.consts import SECURITY_MIN_RESPONSE_TIME
 from tests.consts import SESSION_ID, STRONG_PASSWORD, USER_ID
 
 SECRET = SecretStr("a" * 32)

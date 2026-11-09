@@ -48,7 +48,7 @@ from core_service.infrastructure.ai_services.application_template_description_wr
 )
 from core_service.infrastructure.ai_services.application_writer import ApplicationWriter as LlmApplicationWriter
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
-from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
+from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter, LlmPricing
 from core_service.infrastructure.ai_services.regulation_description_writer import (
     RegulationDescriptionWriter as LlmRegulationDescriptionWriter,
 )
@@ -131,7 +131,14 @@ def get_llm_chat(
 ) -> LlmChat:
     cost_limiter = None
     if llm_service_settings.MONTHLY_COST_LIMIT_PLN is not None:
-        cost_limiter = LlmCostLimiter(session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN)
+        pricing = LlmPricing(
+            input_price_usd_per_million_tokens=llm_service_settings.INPUT_PRICE_USD_PER_MILLION_TOKENS,
+            output_price_usd_per_million_tokens=llm_service_settings.OUTPUT_PRICE_USD_PER_MILLION_TOKENS,
+            usd_to_pln_rate=llm_service_settings.USD_TO_PLN_RATE,
+        )
+        cost_limiter = LlmCostLimiter(
+            session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN, pricing
+        )
     return LlmChat(
         client=client,
         model_name=llm_service_settings.MODEL_NAME,

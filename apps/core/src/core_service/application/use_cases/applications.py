@@ -25,10 +25,11 @@ from core_service.domain.services.case_access import resolve_case_owner
 from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
+
+MAX_APPLICATION_GENERATION_DELIVERIES = 3
 
 
 @dataclass

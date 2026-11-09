@@ -7,12 +7,12 @@ from core_service.application.interfaces.relational import SessionMaker
 from core_service.application.interfaces.users import UsersRepository, UsersSessionsRepository
 from core_service.application.use_cases.auth import AuthTokensConfig, LogoutUser, LogUser, RefreshTokens
 from core_service.domain.exceptions.users import InvalidAccessToken
-from core_service.domain.services.security import decode_access_token
+from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token
 from core_service.domain.value_objects.auth import AccessTokenClaims
 from core_service.domain.value_objects.users import Caller
+from core_service.framework.consts import ACCESS_COOKIE_NAME
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.users import get_users_repository, get_users_sessions_repository
-from core_service.shared.consts import ACCESS_COOKIE_NAME, JWT_ALGORITHM
 from core_service.shared.settings.application import app_settings
 
 logger = logging.getLogger(__name__)

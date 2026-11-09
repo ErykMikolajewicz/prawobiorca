@@ -3,8 +3,8 @@ from collections.abc import AsyncGenerator
 import pytest
 from httpx2 import ASGITransport, AsyncClient
 
+from core_service.framework.consts import ACCESS_COOKIE_NAME
 from core_service.main import prawobiorca
-from core_service.shared.consts import ACCESS_COOKIE_NAME
 from tests.consts import ACCESS_TOKEN, ADMIN_ACCESS_TOKEN
 
 

@@ -27,7 +27,7 @@ test-extraction:
 
 [working-directory: 'apps/core']
 cov:
-    uv run pytest tests/unit tests/integration --cov=core_service --cov-config=coverage.toml
+    uv run pytest tests/unit tests/integration --cov=src/core_service --cov-config=coverage.toml
 
 build-app:
     podman image build --tag=prawobiorca-backend apps/core
@@ -78,11 +78,15 @@ type-check-backend:
 type-check-scripts:
     uv run ty check
 
+[working-directory: 'apps/core']
+lint-imports-backend:
+    uv run lint-imports
+
 [working-directory: 'apps/extraction']
 type-check-extraction:
     uv run --group dev --group test ty check
 
-check-backend: && type-check-backend type-check-scripts test
+check-backend: && lint-imports-backend type-check-backend type-check-scripts test
     uv run ruff check .
     uv run ruff format --check
     uv run complexipy .

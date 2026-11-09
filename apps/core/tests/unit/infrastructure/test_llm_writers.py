@@ -7,6 +7,7 @@ import pytest
 from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import NewApplication
 from core_service.application.dtos.cases import CaseDocument
+from core_service.domain.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
 from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateDescriptionSource,
     ApplicationTemplateField,
@@ -19,7 +20,6 @@ from core_service.infrastructure.ai_services.application_template_description_wr
 from core_service.infrastructure.ai_services.application_writer import ApplicationWriter
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.regulation_description_writer import RegulationDescriptionWriter
-from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
 from tests.mocks import get_awaited_argument
 
 TEMPLATE_ID = UUID("6f7a8b9c-0d1e-4f2a-8b3c-4d5e6f7a8b9c")

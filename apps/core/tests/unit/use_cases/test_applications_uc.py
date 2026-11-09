@@ -7,6 +7,7 @@ from core_service.application.dtos.application_templates import ApplicationTempl
 from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
 from core_service.application.dtos.cases import CaseDocument
 from core_service.application.use_cases.applications import (
+    MAX_APPLICATION_GENERATION_DELIVERIES,
     AddApplication,
     DeleteApplication,
     FailApplicationGeneration,
@@ -18,7 +19,6 @@ from core_service.domain.exceptions.applications import ApplicationNotFound, App
 from core_service.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments

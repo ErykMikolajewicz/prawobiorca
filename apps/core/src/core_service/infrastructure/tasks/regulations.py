@@ -6,7 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from taskiq import TaskiqMessage
 
 from core_service.infrastructure.tasks.broker import insert_task_message
-from core_service.shared.consts import REGULATION_DESCRIPTION_GENERATION_TASK_NAME, REGULATION_PREPARATION_TASK_NAME
+
+REGULATION_PREPARATION_TASK_NAME = "prepare_regulation"
+
+REGULATION_DESCRIPTION_GENERATION_TASK_NAME = "generate_regulation_description"
 
 
 @dataclass

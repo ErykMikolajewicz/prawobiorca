@@ -186,6 +186,8 @@ The outermost delivery mechanism and dependency injection root.
 #### `../../apps/core/src/core_service/shared`
 Cross-cutting concerns across layers (configuration settings, logging utilities, common base exceptions).
 
+Constants are not kept in `shared`: each lives in the layer that owns it, next to its only user when there is one (e.g. task names in `infrastructure/tasks`, delivery limits in the use cases), or in the layer's `consts.py` when several modules share it (`domain/consts.py` for field length limits, `infrastructure/consts.py`, `framework/consts.py` for cookies). Values that may change between deployments, such as LLM prices, belong to the settings.
+
 ---
 
 ## 5. Import Rules
@@ -196,3 +198,9 @@ To preserve architectural boundaries:
 - **`infrastructure`** can import from `application` (interfaces, DTOs) and `domain`. It must NOT import from `framework`.
 - **`framework`** is the assembly root and can import from `application`, `domain`, and `infrastructure` to wire dependencies.
 - **`shared`** can be imported by any layer, but should not depend on domain or infrastructure specifics.
+
+These rules are checked by [import-linter](https://import-linter.readthedocs.io/) (`[tool.importlinter]` in `apps/core/pyproject.toml`), run by `just check-backend` in CI and by the pre-commit hook:
+- **Layers**: `framework` > `infrastructure` > `application` > `domain` > `shared`; a layer may import only the layers below it.
+- **Framework independence**: `domain` and `application` must not import, even indirectly, technical libraries such as `fastapi`, `sqlalchemy`, `taskiq`, `httpx2`, `aiobotocore`, `jwt` or `bcrypt`. Pydantic is allowed. Known violations waiting for a fix are listed in `ignore_imports`.
+
+The packages have no `__init__.py` files (`core_service` is a namespace package, built with `namespace = true` of `uv_build`).

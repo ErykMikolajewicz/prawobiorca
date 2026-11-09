@@ -2,13 +2,14 @@ import sqlalchemy as sqla
 from pgvector.sqlalchemy import Vector
 
 from core_service.application.dtos.regulations import RegulationRepresentation
+from core_service.domain.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
 from core_service.domain.value_objects.regulations import (
     RegulationDescriptionStatus,
     RegulationPreparationStatus,
     RegulationType,
 )
+from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
-from core_service.shared.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH, VECTOR_LENGTH
 
 regulations_table = sqla.Table(
     "regulations",

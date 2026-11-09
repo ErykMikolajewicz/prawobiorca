@@ -14,8 +14,7 @@ from core_service.framework.workers.applications import (
 from core_service.framework.workers.regulations import generate_regulation_description_task, prepare_regulation_task
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
-from core_service.infrastructure.tasks.broker import PostgresBroker
-from core_service.shared.consts import DELIVERY_ATTEMPT_LABEL, TASK_HEARTBEAT_SECONDS
+from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL, TASK_HEARTBEAT_SECONDS, PostgresBroker
 
 WORKER_TASKS = {
     task.task_name: task

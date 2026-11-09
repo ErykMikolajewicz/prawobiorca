@@ -49,13 +49,13 @@ from core_service.domain.value_objects.regulations import (
     RegulationType,
 )
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import (
-    MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
-    MAX_REGULATION_PREPARATION_DELIVERIES,
-)
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
+
+MAX_REGULATION_PREPARATION_DELIVERIES = 3
+
+MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES = 3
 
 
 @dataclass

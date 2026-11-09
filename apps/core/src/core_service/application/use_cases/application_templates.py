@@ -44,10 +44,11 @@ from core_service.domain.value_objects.application_templates import (
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
+
+MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES = 3
 
 
 def _to_published_template(template: ApplicationTemplateRepresentation) -> PublishedApplicationTemplate:

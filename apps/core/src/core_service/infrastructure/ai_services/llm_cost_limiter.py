@@ -1,35 +1,43 @@
 import logging
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
-from core_service.shared.consts import (
-    LLM_INPUT_PRICE_USD_PER_MILLION_TOKENS,
-    LLM_OUTPUT_PRICE_USD_PER_MILLION_TOKENS,
-    USD_TO_PLN_RATE,
-)
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class LlmPricing:
+    input_price_usd_per_million_tokens: float
+    output_price_usd_per_million_tokens: float
+    usd_to_pln_rate: float
+
+
 class LlmCostLimiter:
     def __init__(
-        self, session_maker: DatabaseSessionMaker, llm_usage_repo: LlmUsageRepository, monthly_limit_pln: float
+        self,
+        session_maker: DatabaseSessionMaker,
+        llm_usage_repo: LlmUsageRepository,
+        monthly_limit_pln: float,
+        pricing: LlmPricing,
     ):
         self._session_maker = session_maker
         self._llm_usage_repo = llm_usage_repo
         self._monthly_limit_pln = monthly_limit_pln
+        self._pricing = pricing
 
     async def check(self) -> None:
         async with self._session_maker() as session:
             input_tokens, output_tokens = await self._llm_usage_repo.get(session, self._current_month())
 
         cost_usd = (
-            input_tokens * LLM_INPUT_PRICE_USD_PER_MILLION_TOKENS
-            + output_tokens * LLM_OUTPUT_PRICE_USD_PER_MILLION_TOKENS
+            input_tokens * self._pricing.input_price_usd_per_million_tokens
+            + output_tokens * self._pricing.output_price_usd_per_million_tokens
         ) / 1_000_000
-        cost_pln = cost_usd * USD_TO_PLN_RATE
+        cost_pln = cost_usd * self._pricing.usd_to_pln_rate
         if cost_pln >= self._monthly_limit_pln:
             logger.error("Monthly LLM cost limit exceeded! cost: %.2f PLN", cost_pln)
             raise ServiceUnavailable()

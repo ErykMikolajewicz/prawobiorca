@@ -96,8 +96,9 @@ All external services should be mocked in unit tests, as well as other applicati
 Coverage of `core-service` is measured on unit and integration tests run together (`just cov`), for the whole
 `core_service` package, so code tested only by integration tests (endpoints, repositories, simple use cases) also counts.
 The threshold (90%) is set in `../../apps/core/coverage.toml` and checked by the CI `integration` job.
-Subpackages of `core_service` have no `__init__.py` files, so `include_namespace_packages` is enabled – otherwise files
-never imported by the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
+`core_service` and its subpackages have no `__init__.py` files (namespace packages), so `include_namespace_packages`
+is enabled and `just cov` passes the source directory (`--cov=src/core_service`) rather than the package name – otherwise
+files never imported by the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
 `just test` runs only the unit tests, without coverage, for fast feedback.
 
 ## Integration Tests

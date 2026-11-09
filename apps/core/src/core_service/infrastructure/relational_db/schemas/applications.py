@@ -1,9 +1,9 @@
 import sqlalchemy as sqla
 
 from core_service.application.dtos.applications import ApplicationRepresentation
+from core_service.domain.consts import MAX_FILENAME_LENGTH
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
-from core_service.shared.consts import MAX_FILENAME_LENGTH
 
 applications_table = sqla.Table(
     "applications",
