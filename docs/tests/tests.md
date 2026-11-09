@@ -6,7 +6,7 @@ Within the project, we maintain the following types of tests:
 
 - **Unit tests**
 - **Integration tests**
-- **Integration tests of the AI services** (`extraction-service`) — the service keeps them in its own
+- **Integration tests of the AI services** (`extraction`) — the service keeps them in its own
 `tests/` directory and they are run with `just test-extraction` (the service image must be built first).
 - **Frontend unit tests** — the frontend lives in `apps/web/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest).
 - **Manual E2E / UAT tests** — see [Manual E2E Test Case](manual_e2e_test.md) for step-by-step verification of full user flows (login, case creation, article search, and DOCX generation).
@@ -44,7 +44,7 @@ STRONG_PASSWORD = "StrongPassword12;"
 - Place recurring, valid data used for success scenarios there.
 
 - The `../../apps/core/tests/data` directory holds larger input fixtures — currently the real
-`extraction-service` output used to test the legal structure parser against unmodified Docling results.
+`extraction` output used to test the legal structure parser against unmodified Docling results.
 
 ## Unit Tests
 
@@ -93,7 +93,7 @@ All external services should be mocked in unit tests, as well as other applicati
 
 ## Coverage
 
-Coverage of `core-service` is measured on unit and integration tests run together (`just cov`), for the whole
+Coverage of `core` is measured on unit and integration tests run together (`just cov`), for the whole
 `core_service` package, so code tested only by integration tests (endpoints, repositories, simple use cases) also counts.
 The threshold (90%) is set in `../../apps/core/coverage.toml` and checked by the CI `integration` job.
 `core_service` and its subpackages have no `__init__.py` files (namespace packages), so `include_namespace_packages`
@@ -145,9 +145,9 @@ In CI they run only in the release repository, on every push to `main` and befor
 
 ### Environment
 
-- The tests run against the built `prawobiorca-backend` and `prawobiorca-frontend` images, deployed like the local environment (`podman kube play` with `deploy/local/`), through the nginx ingress at `http://localhost:8080`.
-- `extraction-service`, `llm-service` and the Taskiq worker are not deployed. `embedding-service` is required, because every search embeds the query.
-- Before the application starts, `just init-e2e-regulation` prepares a public legal act from the stored `extraction-service` output (`apps/core/tests/data/ustawa-nauka_slice_30-31.json`), using the current parsing and chunking code and the real `embedding-service`. It also creates the object storage bucket. It is skipped when the act already exists.
+- The tests run against the built `core` and `web` images, deployed like the local environment (`podman kube play` with `deploy/local/`), through the nginx ingress at `http://localhost:8080`.
+- `extraction`, `llm` and the Taskiq worker are not deployed. `embedding` is required, because every search embeds the query.
+- Before the application starts, `just init-e2e-regulation` prepares a public legal act from the stored `extraction` output (`apps/core/tests/data/ustawa-nauka_slice_30-31.json`), using the current parsing and chunking code and the real `embedding`. It also creates the object storage bucket. It is skipped when the act already exists.
 - Each run registers a new user with a unique name, so the tests need no cleanup.
 
 ### Running Locally
@@ -155,8 +155,8 @@ In CI they run only in the release repository, on every push to `main` and befor
 From the repository root:
 
 ```bash
-just build-app
-just build-frontend
+just build-core
+just build-web
 just run-e2e-env
 cd apps/web && pnpm test:e2e
 just run-locally-down

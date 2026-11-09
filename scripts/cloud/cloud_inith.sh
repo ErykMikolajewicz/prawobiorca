@@ -102,17 +102,17 @@ gcloud storage buckets update gs://prawobiorca-regulations \
 
 gcloud services enable run.googleapis.com
 
-gcloud iam service-accounts create extraction-service-runner \
+gcloud iam service-accounts create extraction-runner \
   --project=prawobiorca \
-  --display-name="Prawobiorca extraction-service runner"
+  --display-name="Prawobiorca extraction runner"
 
-gcloud iam service-accounts create embedding-service-runner \
+gcloud iam service-accounts create embedding-runner \
   --project=prawobiorca \
-  --display-name="Prawobiorca embedding-service runner"
+  --display-name="Prawobiorca embedding runner"
 
-gcloud iam service-accounts create embedding-batch-service-runner \
+gcloud iam service-accounts create embedding-batch-runner \
   --project=prawobiorca \
-  --display-name="Prawobiorca embedding-batch-service runner"
+  --display-name="Prawobiorca embedding-batch runner"
 
 gcloud services enable aiplatform.googleapis.com
 

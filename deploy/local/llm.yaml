@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: llm-service
+  name: llm
   labels:
     app: prawobiorca
-    component: llm-service
+    component: llm
 spec:
   containers:
-    - name: llm-service
+    - name: llm
       image: docker.io/openvino/model_server:2026.4.0-gpu
       args:
         - --source_model=OpenVINO/Qwen3.6-35B-A3B-int4-ov

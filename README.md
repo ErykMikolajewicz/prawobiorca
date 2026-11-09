@@ -97,8 +97,8 @@ For day-to-day development, run the backend and the frontend from the sources, w
 
 Build the images of the compute services once (or after changing them):
 ```sh
-just build-embedding-service
-just build-extraction-service
+just build-embedding
+just build-extraction
 ```
 
 Start the backend:

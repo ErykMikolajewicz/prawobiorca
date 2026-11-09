@@ -6,10 +6,10 @@ from google.auth import impersonated_credentials
 from google.auth.transport.requests import Request
 
 IMAGES_NAMES = (
-    "prawobiorca-backend",
-    "extraction-service",
-    "embedding-service",
-    "prawobiorca-frontend",
+    "core",
+    "extraction",
+    "embedding",
+    "web",
 )
 
 parser = argparse.ArgumentParser(description="Script to actualize image in artifact registry.")
@@ -57,7 +57,7 @@ stdout, stderr = login.communicate(input=token.encode("utf-8"))
 if login.returncode != 0:
     raise RuntimeError("Podman login failed!")
 
-subprocess.run(["podman", "tag", f"{image_name}:{tag}", remote_ref], check=True)
+subprocess.run(["podman", "tag", f"prawobiorca/{image_name}:{tag}", remote_ref], check=True)
 subprocess.run(["podman", "push", remote_ref], check=True)
 
 print(f"Success! Image pushed: {remote_ref}")

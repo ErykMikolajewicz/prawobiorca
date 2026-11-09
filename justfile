@@ -29,19 +29,19 @@ test-extraction:
 cov:
     uv run pytest tests/unit tests/integration --cov=src/core_service --cov-config=coverage.toml
 
-build-app:
-    podman image build --tag=prawobiorca-backend apps/core
+build-core:
+    podman image build --tag=prawobiorca/core apps/core
 
-build-extraction-service:
-    podman image build --tag=extraction-service apps/extraction
+build-extraction:
+    podman image build --tag=prawobiorca/extraction apps/extraction
 
-build-embedding-service:
-    podman image build --tag=embedding-service apps/embedding
+build-embedding:
+    podman image build --tag=prawobiorca/embedding apps/embedding
 
-build-frontend:
-    podman image build --tag=prawobiorca-frontend apps/web
+build-web:
+    podman image build --tag=prawobiorca/web apps/web
 
-build-images: build-app build-extraction-service build-embedding-service build-frontend
+build-images: build-core build-extraction build-embedding build-web
 
 [working-directory: 'apps/core']
 upgrade-db:

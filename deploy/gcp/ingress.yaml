@@ -42,14 +42,14 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: prawobiorca-backend
+                name: core
                 port:
                   number: 8000
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: prawobiorca-frontend
+                name: web
                 port:
                   number: 8000
     - host: prawobiorca.pl
@@ -59,6 +59,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: prawobiorca-frontend
+                name: web
                 port:
                   number: 8000

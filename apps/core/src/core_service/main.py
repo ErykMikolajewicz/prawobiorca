@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
 prawobiorca = FastAPI(
     lifespan=lifespan,
     title="PRAWOBIORCA",
-    version=version("core-service"),
+    version=version("core"),
     responses={status.HTTP_503_SERVICE_UNAVAILABLE: {"description": "Service unavailable!"}},
     generate_unique_id_function=lambda route: route.name,
 )

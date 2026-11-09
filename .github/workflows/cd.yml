@@ -45,38 +45,38 @@ jobs:
           file: apps/core/Containerfile
           push: true
           tags: |
-            ${{ env.REPOSITORY }}/prawobiorca-backend:${{ github.sha }}
-            ${{ env.REPOSITORY }}/prawobiorca-backend:latest
-          cache-from: type=gha,scope=prawobiorca-backend
+            ${{ env.REPOSITORY }}/core:${{ github.sha }}
+            ${{ env.REPOSITORY }}/core:latest
+          cache-from: type=gha,scope=core
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: apps/web
           file: apps/web/Containerfile
           push: true
           tags: |
-            ${{ env.REPOSITORY }}/prawobiorca-frontend:${{ github.sha }}
-            ${{ env.REPOSITORY }}/prawobiorca-frontend:latest
-          cache-from: type=gha,scope=prawobiorca-frontend
+            ${{ env.REPOSITORY }}/web:${{ github.sha }}
+            ${{ env.REPOSITORY }}/web:latest
+          cache-from: type=gha,scope=web
       - uses: google-github-actions/get-gke-credentials@3da1e46a907576cefaa90c484278bb5b259dd395 # v3.0.0
         with:
           cluster_name: prawobiorca
           location: europe-central2
       - run: >
           sed -i "s|:latest|:${{ github.sha }}|"
-          deploy/gcp/prawobiorca-migrations.yaml
-          deploy/gcp/prawobiorca-backend.yaml
-          deploy/gcp/prawobiorca-worker.yaml
-          deploy/gcp/prawobiorca-frontend.yaml
+          deploy/gcp/core-migrations.yaml
+          deploy/gcp/core.yaml
+          deploy/gcp/core-worker.yaml
+          deploy/gcp/web.yaml
       - run: |
-          kubectl delete job prawobiorca-migrations --ignore-not-found
-          kubectl apply -f deploy/gcp/prawobiorca-migrations.yaml
-          kubectl wait --for=condition=complete job/prawobiorca-migrations --timeout=300s
+          kubectl delete job core-migrations --ignore-not-found
+          kubectl apply -f deploy/gcp/core-migrations.yaml
+          kubectl wait --for=condition=complete job/core-migrations --timeout=300s
       - run: |
-          kubectl apply -f deploy/gcp/prawobiorca-backend.yaml
-          kubectl rollout status deployment/prawobiorca-backend --timeout=180s
+          kubectl apply -f deploy/gcp/core.yaml
+          kubectl rollout status deployment/core --timeout=180s
       - run: |
-          kubectl apply -f deploy/gcp/prawobiorca-worker.yaml
-          kubectl rollout status deployment/prawobiorca-worker --timeout=180s
+          kubectl apply -f deploy/gcp/core-worker.yaml
+          kubectl rollout status deployment/core-worker --timeout=180s
       - run: |
-          kubectl apply -f deploy/gcp/prawobiorca-frontend.yaml
-          kubectl rollout status deployment/prawobiorca-frontend --timeout=180s
+          kubectl apply -f deploy/gcp/web.yaml
+          kubectl rollout status deployment/web --timeout=180s

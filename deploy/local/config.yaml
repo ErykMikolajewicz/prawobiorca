@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prawobiorca-backend-config
+  name: core-config
 data:
   APP_LOGGING_LEVEL: "INFO"
   APP_COOKIE_SECURE: "false"
@@ -11,9 +11,9 @@ data:
   RELATIONAL_DB_PORT: "5432"
   RELATIONAL_DB_NAME: "postgres"
 
-  EMBEDDING_SERVICE_URL: "http://embedding-service:8080"
-  EXTRACTION_SERVICE_URL: "http://extraction-service:8080"
-  LLM_SERVICE_URL: "http://llm-service:8080/v1"
+  EMBEDDING_SERVICE_URL: "http://embedding:8080"
+  EXTRACTION_SERVICE_URL: "http://extraction:8080"
+  LLM_SERVICE_URL: "http://llm:8080/v1"
   LLM_SERVICE_MODEL_NAME: "qwen-3.6-35b"
 
   OBJECT_STORAGE_ENDPOINT_URL: "http://rustfs:9000"

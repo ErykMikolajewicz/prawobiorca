@@ -32,32 +32,32 @@ jobs:
         run: pnpm exec playwright install-deps chromium
         working-directory: apps/web
       - run: |
-          podman pull ghcr.io/erykmikolajewicz/embedding-service:latest
-          podman tag ghcr.io/erykmikolajewicz/embedding-service:latest localhost/embedding-service:latest
+          podman pull ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
+          podman tag ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest localhost/prawobiorca/embedding:latest
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: apps/core
           file: apps/core/Containerfile
           load: true
-          tags: localhost/prawobiorca-backend:latest
-          cache-from: type=gha,scope=prawobiorca-backend
-          cache-to: type=gha,scope=prawobiorca-backend,mode=max
+          tags: localhost/prawobiorca/core:latest
+          cache-from: type=gha,scope=core
+          cache-to: type=gha,scope=core,mode=max
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: apps/web
           file: apps/web/Containerfile
           load: true
-          tags: localhost/prawobiorca-frontend:latest
-          cache-from: type=gha,scope=prawobiorca-frontend
-          cache-to: type=gha,scope=prawobiorca-frontend,mode=max
-      - run: docker save localhost/prawobiorca-backend:latest localhost/prawobiorca-frontend:latest | podman load
+          tags: localhost/prawobiorca/web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+      - run: docker save localhost/prawobiorca/core:latest localhost/prawobiorca/web:latest | podman load
       - run: just run-e2e-env
       - run: pnpm test:e2e
         working-directory: apps/web
       - if: failure()
         run: |
-          podman logs prawobiorca-backend-prawobiorca-backend
+          podman logs core-core
           podman logs nginx-nginx
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

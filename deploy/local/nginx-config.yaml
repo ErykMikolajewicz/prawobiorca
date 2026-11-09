@@ -14,11 +14,11 @@ data:
         sendfile on;
 
         upstream backend_upstream {
-            server prawobiorca-backend:8000;
+            server core:8000;
         }
 
         upstream frontend_upstream {
-            server prawobiorca-frontend:8000;
+            server web:8000;
         }
 
         upstream rustfs_upstream {

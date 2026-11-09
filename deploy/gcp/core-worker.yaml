@@ -1,18 +1,26 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: prawobiorca-migrations
+  name: core-worker
+  annotations:
+    checkov.io/skip1: CKV_K8S_8=The worker has no HTTP endpoint to probe
+    checkov.io/skip2: CKV_K8S_9=The worker does not receive traffic
 spec:
-  backoffLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prawobiorca
+      component: core-worker
   template:
     metadata:
       labels:
         app: prawobiorca
-        component: prawobiorca-migrations
+        component: core-worker
     spec:
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
       serviceAccountName: prawobiorca-runner
       automountServiceAccountToken: false
-      restartPolicy: Never
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -20,9 +28,9 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: prawobiorca-migrations
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/prawobiorca-backend:latest
-          command: ["alembic", "upgrade", "head"]
+        - name: core-worker
+          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/core:latest
+          command: ["taskiq", "worker", "core_service.framework.workers.regulations:broker", "core_service.framework.workers.applications"]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -31,17 +39,22 @@ spec:
           resources:
             requests:
               cpu: "100m"
-              memory: "256Mi"
+              memory: "384Mi"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "1"
+              memory: "1Gi"
           volumeMounts:
             - name: secrets-store
               mountPath: "/mnt/secrets-store"
               readOnly: true
           envFrom:
             - configMapRef:
-                name: prawobiorca-backend-config
+                name: core-config
+          env:
+            - name: EMBEDDING_SERVICE_URL
+              value: "https://embedding-batch-296630821006.europe-central2.run.app"
+            - name: EMBEDDING_SERVICE_BATCH_SIZE
+              value: "32"
       volumes:
         - name: secrets-store
           csi:
