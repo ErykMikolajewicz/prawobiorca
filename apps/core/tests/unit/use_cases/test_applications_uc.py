@@ -3,7 +3,6 @@ from uuid import UUID
 
 import pytest
 
-from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
 from core_service.application.dtos.cases import CaseDocument
 from core_service.application.use_cases.applications import (
@@ -14,6 +13,8 @@ from core_service.application.use_cases.applications import (
     GenerateApplication,
     GetApplicationDownloadUrl,
 )
+from core_service.domain.entities.application import Application
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import ApplicationTemplateNotFound
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from core_service.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
@@ -21,7 +22,7 @@ from core_service.domain.value_objects.applications import ApplicationGeneration
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
-from tests.mocks import get_awaited_argument, get_awaited_arguments
+from tests.mocks import get_awaited_argument, record_saved_states
 
 USER = Caller(user_id=USER_ID)
 
@@ -40,10 +41,9 @@ NEW_APPLICATION = NewApplication(
 def create_template(
     status: ApplicationTemplateStatus = ApplicationTemplateStatus.PUBLISHED,
     fields: list[ApplicationTemplateField] | None = None,
-) -> ApplicationTemplateRepresentation:
-    return ApplicationTemplateRepresentation(
+) -> ApplicationTemplate:
+    return ApplicationTemplate(
         id=TEMPLATE_ID,
-        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
         name="Wniosek o urlop",
         status=status,
         fields=fields or [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")],
@@ -52,6 +52,12 @@ def create_template(
 
 
 def create_application(
+    generation_status: ApplicationGenerationStatus = ApplicationGenerationStatus.IN_PROGRESS,
+) -> Application:
+    return Application(id=APPLICATION_ID, case_id=CASE_ID, generation_status=generation_status)
+
+
+def create_application_representation(
     generation_status: ApplicationGenerationStatus = ApplicationGenerationStatus.IN_PROGRESS,
     case_id: UUID = CASE_ID,
 ) -> ApplicationRepresentation:
@@ -65,20 +71,21 @@ def create_application(
     )
 
 
-def get_generation_statuses(applications_repository) -> list[ApplicationGenerationStatus]:
-    return get_awaited_arguments(applications_repository.set_generation_status, "status")
+def record_generation_statuses(applications_repository) -> list[ApplicationGenerationStatus]:
+    return record_saved_states(applications_repository.save, "application", "generation_status")
 
 
 @pytest.fixture
 def applications_repository(mock_applications_repo):
-    mock_applications_repo.get.return_value = create_application()
+    mock_applications_repo.get_for_update.return_value = create_application()
+    mock_applications_repo.get.return_value = create_application_representation()
     mock_applications_repo.add.return_value = APPLICATION_ID
     return mock_applications_repo
 
 
 @pytest.fixture
 def application_templates_repository(mock_application_templates_repo):
-    mock_application_templates_repo.get.return_value = create_template()
+    mock_application_templates_repo.get_for_update.return_value = create_template()
     return mock_application_templates_repo
 
 
@@ -165,7 +172,7 @@ async def test_add_application_without_published_template(
     mock_application_generation_scheduler,
     template,
 ):
-    application_templates_repository.get.return_value = template
+    application_templates_repository.get_for_update.return_value = template
 
     with pytest.raises(ApplicationTemplateNotFound):
         await add_application.execute(USER, CASE_ID, NEW_APPLICATION)
@@ -183,6 +190,9 @@ async def test_generate_application_saves_generated_document(
     mock_application_writer,
     mock_application_renderer,
 ):
+    generation_statuses = record_generation_statuses(applications_repository)
+    application = create_application()
+    applications_repository.get_for_update.return_value = application
     document = CaseDocument(
         id=UUID("5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a"), caseId=CASE_ID, presentationName="doc.pdf", content="text"
     )
@@ -197,15 +207,12 @@ async def test_generate_application_saves_generated_document(
     mock_application_writer.write.assert_awaited_once_with(NEW_APPLICATION, create_template(), [document])
     mock_application_renderer.render.assert_awaited_once_with(b"TEMPLATE", NEW_APPLICATION, "Szanowny Panie Dziekanie")
     mock_applications_storage.upload_application.assert_awaited_once_with(APPLICATION_ID, b"PK")
-    assert get_awaited_argument(applications_repository.set_name, "name") == "Wniosek o urlop dziekański"
-    assert get_generation_statuses(applications_repository) == [
-        ApplicationGenerationStatus.IN_PROGRESS,
-        ApplicationGenerationStatus.GENERATED,
-    ]
+    assert application.name == "Wniosek o urlop dziekański"
+    assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS, ApplicationGenerationStatus.GENERATED]
 
 
 async def test_generate_application_not_found(generate_application, applications_repository, mock_application_writer):
-    applications_repository.get.return_value = None
+    applications_repository.get_for_update.return_value = None
 
     with pytest.raises(ApplicationNotFound):
         await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
@@ -216,12 +223,12 @@ async def test_generate_application_not_found(generate_application, applications
 async def test_generate_application_already_generated(
     generate_application, applications_repository, mock_application_writer
 ):
-    applications_repository.get.return_value = create_application(ApplicationGenerationStatus.GENERATED)
+    applications_repository.get_for_update.return_value = create_application(ApplicationGenerationStatus.GENERATED)
 
     await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_application_writer.write.assert_not_awaited()
-    assert get_generation_statuses(applications_repository) == []
+    applications_repository.save.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -236,60 +243,64 @@ async def test_generate_application_already_generated(
 async def test_generate_application_with_changed_template_marks_failed(
     generate_application, applications_repository, application_templates_repository, mock_application_writer, template
 ):
-    application_templates_repository.get.return_value = template
+    generation_statuses = record_generation_statuses(applications_repository)
+    application_templates_repository.get_for_update.return_value = template
 
     await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_application_writer.write.assert_not_awaited()
-    assert get_generation_statuses(applications_repository) == [ApplicationGenerationStatus.FAILED]
+    assert generation_statuses == [ApplicationGenerationStatus.FAILED]
 
 
 @pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
 async def test_generate_application_failure_marks_failed(
     generate_application, applications_repository, mock_applications_storage, mock_application_writer, error
 ):
+    generation_statuses = record_generation_statuses(applications_repository)
     mock_application_writer.write.side_effect = error
 
     with pytest.raises(error):
         await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_applications_storage.upload_application.assert_not_awaited()
-    assert get_generation_statuses(applications_repository) == [
-        ApplicationGenerationStatus.IN_PROGRESS,
-        ApplicationGenerationStatus.FAILED,
-    ]
+    assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS, ApplicationGenerationStatus.FAILED]
 
 
 async def test_generate_application_removed_during_generation(
     generate_application, applications_repository, mock_applications_storage
 ):
-    applications_repository.set_name.side_effect = ApplicationNotFound
+    generation_statuses = record_generation_statuses(applications_repository)
+    applications_repository.get_for_update.side_effect = [create_application(), None]
 
     await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
     mock_applications_storage.upload_application.assert_not_awaited()
-    assert get_generation_statuses(applications_repository) == [ApplicationGenerationStatus.IN_PROGRESS]
+    assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS]
 
 
 async def test_generate_application_failure_of_removed_application(
     generate_application, applications_repository, mock_application_writer
 ):
-    applications_repository.set_generation_status.side_effect = [None, ApplicationNotFound()]
+    generation_statuses = record_generation_statuses(applications_repository)
+    applications_repository.get_for_update.side_effect = [create_application(), None]
     mock_application_writer.write.side_effect = ServiceUnavailable
 
     with pytest.raises(ServiceUnavailable):
         await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
+    assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS]
+
 
 async def test_generate_application_upload_failure_marks_failed(
     generate_application, applications_repository, mock_applications_storage
 ):
+    generation_statuses = record_generation_statuses(applications_repository)
     mock_applications_storage.upload_application.side_effect = RuntimeError
 
     with pytest.raises(RuntimeError):
         await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
 
-    assert get_generation_statuses(applications_repository)[-1] == ApplicationGenerationStatus.FAILED
+    assert generation_statuses[-1] == ApplicationGenerationStatus.FAILED
 
 
 @pytest.mark.parametrize(
@@ -303,26 +314,29 @@ async def test_generate_application_upload_failure_marks_failed(
 async def test_fail_application_generation(
     fail_application_generation, applications_repository, delivery_attempt, expected_failed, expected_statuses
 ):
+    generation_statuses = record_generation_statuses(applications_repository)
+
     failed = await fail_application_generation.execute(USER_ID, APPLICATION_ID, delivery_attempt)
 
     assert failed is expected_failed
-    assert get_generation_statuses(applications_repository) == expected_statuses
+    assert generation_statuses == expected_statuses
 
 
 async def test_fail_application_generation_of_removed_application(fail_application_generation, applications_repository):
-    applications_repository.set_generation_status.side_effect = ApplicationNotFound
+    applications_repository.get_for_update.return_value = None
 
     failed = await fail_application_generation.execute(
         USER_ID, APPLICATION_ID, MAX_APPLICATION_GENERATION_DELIVERIES + 1
     )
 
     assert failed is True
+    applications_repository.save.assert_not_awaited()
 
 
 async def test_get_application_download_url(
     get_application_download_url, applications_repository, mock_applications_storage
 ):
-    applications_repository.get.return_value = create_application(ApplicationGenerationStatus.GENERATED)
+    applications_repository.get.return_value = create_application_representation(ApplicationGenerationStatus.GENERATED)
     mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/application"
 
     result = await get_application_download_url.execute(USER, CASE_ID, APPLICATION_ID)
@@ -335,8 +349,8 @@ async def test_get_application_download_url(
     ("application", "error"),
     [
         (None, ApplicationNotFound),
-        (create_application(ApplicationGenerationStatus.GENERATED, OTHER_CASE_ID), ApplicationNotFound),
-        (create_application(ApplicationGenerationStatus.IN_PROGRESS), ApplicationNotGenerated),
+        (create_application_representation(ApplicationGenerationStatus.GENERATED, OTHER_CASE_ID), ApplicationNotFound),
+        (create_application_representation(ApplicationGenerationStatus.IN_PROGRESS), ApplicationNotGenerated),
     ],
     ids=("not found", "other case", "not generated"),
 )

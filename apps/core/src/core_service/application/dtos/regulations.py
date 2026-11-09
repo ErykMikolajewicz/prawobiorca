@@ -6,8 +6,8 @@ from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
 from core_service.domain.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH, MIN_FILENAME_LENGTH
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import (
-    RegulationDescriptionStatus,
     RegulationPreparationStatus,
     RegulationScope,
     RegulationType,
@@ -56,7 +56,7 @@ class RegulationRepresentation:
     description: str | None = None
     regulation_type: RegulationType | None = None
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED
-    description_status: RegulationDescriptionStatus = RegulationDescriptionStatus.NOT_REQUESTED
+    description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
 

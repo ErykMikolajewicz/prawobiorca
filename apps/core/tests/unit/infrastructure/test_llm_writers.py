@@ -1,13 +1,12 @@
-from datetime import UTC, datetime
 from unittest.mock import create_autospec
 from uuid import UUID
 
 import pytest
 
-from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import NewApplication
 from core_service.application.dtos.cases import CaseDocument
 from core_service.domain.consts import MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateDescriptionSource,
     ApplicationTemplateField,
@@ -31,9 +30,8 @@ NEW_APPLICATION = NewApplication(
     fieldValues={"student_id": "123456", "pesel": "90010112345"},
 )
 
-TEMPLATE = ApplicationTemplateRepresentation(
+TEMPLATE = ApplicationTemplate(
     id=TEMPLATE_ID,
-    createDate=datetime(2026, 1, 1, tzinfo=UTC),
     name="Wniosek o urlop",
     status=ApplicationTemplateStatus.PUBLISHED,
     fields=[

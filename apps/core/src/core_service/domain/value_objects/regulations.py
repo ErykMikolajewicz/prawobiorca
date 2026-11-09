@@ -12,6 +12,7 @@ from core_service.domain.services.legal_structure_parser import (
     SUBSECTION_PATTERN,
     LegalStructureParser,
 )
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.legal_units import (
     BREADCRUMB_SEPARATOR,
     LegalUnit,
@@ -337,20 +338,13 @@ class RegulationPreparationStatus(StrEnum):
     FAILED = "FAILED"
 
 
-class RegulationDescriptionStatus(StrEnum):
-    NOT_REQUESTED = "NOT_REQUESTED"
-    IN_PROGRESS = "IN_PROGRESS"
-    GENERATED = "GENERATED"
-    FAILED = "FAILED"
-
-
 @dataclass
 class RegulationRegistrationData:
     presentation_name: str
     regulation_type: RegulationType | None = None
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
-    description_status: RegulationDescriptionStatus = RegulationDescriptionStatus.NOT_REQUESTED
+    description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
 
 
 @dataclass

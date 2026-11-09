@@ -7,8 +7,8 @@ from fastapi import status
 from sqlalchemy import select
 
 from core_service.application.dtos.regulations import RegulationUploadTarget
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import (
-    RegulationDescriptionStatus,
     RegulationPreparationStatus,
     RegulationType,
 )
@@ -59,7 +59,7 @@ async def test_get_public_regulation(client, session_maker, user):
         "description": None,
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.PREPARED,
-        "descriptionStatus": RegulationDescriptionStatus.NOT_REQUESTED,
+        "descriptionStatus": DescriptionStatus.NOT_REQUESTED,
         "organizationId": None,
         "suborganizationId": None,
     }
@@ -230,7 +230,7 @@ async def test_add_public_regulation(admin_client, session_maker, mock_regulatio
     assert regulation.organization_id == organization_id
     assert regulation.suborganization_id == suborganization_id
     assert regulation.preparation_status == RegulationPreparationStatus.NOT_STARTED
-    assert regulation.description_status == RegulationDescriptionStatus.IN_PROGRESS
+    assert regulation.description_status == DescriptionStatus.IN_PROGRESS
 
 
 async def test_add_public_regulation_with_suborganization_of_other_organization(admin_client, session_maker):
@@ -339,7 +339,7 @@ async def test_regenerate_public_regulation_description(admin_client, session_ma
             select(regulations_table.c.description_status).where(regulations_table.c.id == regulation_id)
         )
 
-    assert description_status == RegulationDescriptionStatus.IN_PROGRESS
+    assert description_status == DescriptionStatus.IN_PROGRESS
 
     response = await admin_client.post(f"/api/regulations/{regulation_id}/description-generation")
 

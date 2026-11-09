@@ -6,11 +6,11 @@ from fastapi import status
 from sqlalchemy import select
 
 from core_service.domain.value_objects.application_templates import (
-    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
 from core_service.infrastructure.relational_db.schemas.applications import applications_table
 from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR
@@ -103,4 +103,4 @@ async def test_generated_application_template_description_is_saved(
     template = result.one()
     assert template.description == "Wniosek o urlop dziekański."
     assert list(template.description_vector) == DESCRIPTION_VECTOR
-    assert template.description_status == ApplicationTemplateDescriptionStatus.GENERATED
+    assert template.description_status == DescriptionStatus.GENERATED

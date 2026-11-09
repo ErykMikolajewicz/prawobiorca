@@ -1,11 +1,11 @@
 from typing import Protocol
 from uuid import UUID
 
-from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
 from core_service.application.dtos.cases import CaseDocument
 from core_service.application.ports.relational import AsyncSession
-from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.domain.entities.application import Application
+from core_service.domain.entities.application_template import ApplicationTemplate
 
 
 class ApplicationsRepository(Protocol):
@@ -23,11 +23,11 @@ class ApplicationsRepository(Protocol):
         self, session: AsyncSession, user_id: UUID, case_id: UUID, template_id: UUID, template_name: str
     ) -> UUID: ...
 
-    async def set_generation_status(
-        self, session: AsyncSession, user_id: UUID, application_id: UUID, status: ApplicationGenerationStatus
-    ) -> None: ...
+    async def get_for_update(
+        self, session: AsyncSession, user_id: UUID, application_id: UUID
+    ) -> Application | None: ...
 
-    async def set_name(self, session: AsyncSession, user_id: UUID, application_id: UUID, name: str) -> None: ...
+    async def save(self, session: AsyncSession, application: Application) -> None: ...
 
     async def delete(self, session: AsyncSession, user_id: UUID, case_id: UUID, application_id: UUID) -> None: ...
 
@@ -44,7 +44,7 @@ class ApplicationWriter(Protocol):
     async def write(
         self,
         new_application: NewApplication,
-        template: ApplicationTemplateRepresentation,
+        template: ApplicationTemplate,
         legal_basis: list[CaseDocument],
     ) -> str: ...
 

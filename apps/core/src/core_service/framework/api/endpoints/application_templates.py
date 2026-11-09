@@ -26,12 +26,12 @@ from core_service.application.use_cases.application_templates import (
 )
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
-    ApplicationTemplateDescriptionGenerationInProgress,
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
     InvalidApplicationFieldsConfig,
     InvalidApplicationTemplate,
 )
+from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.users import Caller
@@ -292,7 +292,7 @@ async def regenerate_application_template_description(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application template not found!")
     except ApplicationTemplateInInvalidState:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Application template not a draft!")
-    except ApplicationTemplateDescriptionGenerationInProgress:
+    except DescriptionGenerationInProgress:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Application template description generation already in progress!",

@@ -8,7 +8,7 @@ from core_service.domain.value_objects.regulations import RegulationPreparationS
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
 from core_service.infrastructure.tasks.regulations import REGULATION_PREPARATION_TASK_NAME
 from tests.consts import ADMIN_ID, UNKNOWN_ID, USER_ID
-from tests.integration.fixtures.ai_services import QUERY_VECTOR, UNRELATED_VECTOR
+from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR, QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.regulations import insert_regulation
 from tests.integration.fixtures.tasks import get_scheduled_task_names
 
@@ -129,7 +129,7 @@ async def test_update_private_regulation(user_client, session_maker):
     assert regulation.description == "Opis regulacji"
 
 
-async def test_update_private_regulation_description_clears_description_vector(user_client, session_maker):
+async def test_update_private_regulation_description_recalculates_description_vector(user_client, session_maker):
     async with session_maker.begin() as session:
         regulation_id = await insert_regulation(
             session, USER_ID, description="Opis", description_vector=UNRELATED_VECTOR
@@ -140,11 +140,16 @@ async def test_update_private_regulation_description_clears_description_vector(u
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert (await get_regulation(session_maker, regulation_id)).description_vector is not None
+    assert list((await get_regulation(session_maker, regulation_id)).description_vector) == UNRELATED_VECTOR
 
     response = await user_client.patch(
         f"/api/regulations/{regulation_id}", json={"name": "regulation.pdf", "description": "Nowy opis"}
     )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert list((await get_regulation(session_maker, regulation_id)).description_vector) == DESCRIPTION_VECTOR
+
+    response = await user_client.patch(f"/api/regulations/{regulation_id}", json={"name": "regulation.pdf"})
 
     assert response.status_code == status.HTTP_200_OK
     assert (await get_regulation(session_maker, regulation_id)).description_vector is None

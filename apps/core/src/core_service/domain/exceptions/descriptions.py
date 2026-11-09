@@ -1,0 +1,2 @@
+class DescriptionGenerationInProgress(Exception):
+    pass

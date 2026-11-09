@@ -24,11 +24,11 @@ from core_service.application.use_cases.regulations import (
     SearchRegulations,
     UpdateRegulation,
 )
+from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
-    RegulationDescriptionGenerationInProgress,
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
@@ -329,7 +329,7 @@ async def regenerate_regulation_description(
             status_code=status.HTTP_409_CONFLICT,
             detail="Regulation not prepared!",
         )
-    except RegulationDescriptionGenerationInProgress:
+    except DescriptionGenerationInProgress:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Regulation description generation already in progress!",

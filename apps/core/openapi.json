@@ -2577,16 +2577,6 @@
         ],
         "title": "ApplicationTemplateData"
       },
-      "ApplicationTemplateDescriptionStatus": {
-        "type": "string",
-        "enum": [
-          "NOT_REQUESTED",
-          "IN_PROGRESS",
-          "GENERATED",
-          "FAILED"
-        ],
-        "title": "ApplicationTemplateDescriptionStatus"
-      },
       "ApplicationTemplateDetailsData": {
         "properties": {
           "name": {
@@ -2834,7 +2824,7 @@
             "title": "Description"
           },
           "descriptionStatus": {
-            "$ref": "#/components/schemas/ApplicationTemplateDescriptionStatus",
+            "$ref": "#/components/schemas/DescriptionStatus",
             "default": "NOT_REQUESTED"
           },
           "organizationId": {
@@ -3080,6 +3070,16 @@
           "isAdmin"
         ],
         "title": "CurrentUser"
+      },
+      "DescriptionStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUESTED",
+          "IN_PROGRESS",
+          "GENERATED",
+          "FAILED"
+        ],
+        "title": "DescriptionStatus"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3415,16 +3415,6 @@
         ],
         "title": "RegulationData"
       },
-      "RegulationDescriptionStatus": {
-        "type": "string",
-        "enum": [
-          "NOT_REQUESTED",
-          "IN_PROGRESS",
-          "GENERATED",
-          "FAILED"
-        ],
-        "title": "RegulationDescriptionStatus"
-      },
       "RegulationDetailsData": {
         "properties": {
           "name": {
@@ -3506,7 +3496,7 @@
             "default": "NOT_STARTED"
           },
           "descriptionStatus": {
-            "$ref": "#/components/schemas/RegulationDescriptionStatus",
+            "$ref": "#/components/schemas/DescriptionStatus",
             "default": "NOT_REQUESTED"
           },
           "organizationId": {

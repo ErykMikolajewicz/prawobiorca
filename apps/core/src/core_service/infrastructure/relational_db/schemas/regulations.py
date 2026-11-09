@@ -3,11 +3,9 @@ from pgvector.sqlalchemy import Vector
 
 from core_service.application.dtos.regulations import RegulationRepresentation
 from core_service.domain.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
-from core_service.domain.value_objects.regulations import (
-    RegulationDescriptionStatus,
-    RegulationPreparationStatus,
-    RegulationType,
-)
+from core_service.domain.entities.regulation import Regulation
+from core_service.domain.value_objects.descriptions import DescriptionStatus
+from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
 from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
 
@@ -22,9 +20,9 @@ regulations_table = sqla.Table(
     sqla.Column("description_vector", Vector(VECTOR_LENGTH), nullable=True),
     sqla.Column(
         "description_status",
-        sqla.Enum(RegulationDescriptionStatus, name="regulationdescriptionstatus"),
+        sqla.Enum(DescriptionStatus, name="regulationdescriptionstatus"),
         nullable=False,
-        default=RegulationDescriptionStatus.NOT_REQUESTED,
+        default=DescriptionStatus.NOT_REQUESTED,
     ),
     sqla.Column("regulation_type", sqla.Enum(RegulationType, name="regulationtype"), nullable=True, default=None),
     sqla.Column(
@@ -54,3 +52,8 @@ regulations_table = sqla.Table(
 
 
 mapper_registry.map_imperatively(RegulationRepresentation, regulations_table, exclude_properties=["description_vector"])
+mapper_registry.map_imperatively(
+    Regulation,
+    regulations_table,
+    include_properties=["id", "presentation_name", "preparation_status", "description", "description_status"],
+)

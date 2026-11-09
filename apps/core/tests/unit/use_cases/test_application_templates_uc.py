@@ -22,24 +22,26 @@ from core_service.application.use_cases.application_templates import (
     UnpublishApplicationTemplate,
     UpdateApplicationTemplate,
 )
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
-    ApplicationTemplateDescriptionGenerationInProgress,
     ApplicationTemplateInInvalidState,
     ApplicationTemplateNotFound,
+    InvalidApplicationFieldsConfig,
+    InvalidApplicationTemplate,
 )
-from core_service.domain.services.application_fields import create_default_fields
+from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
+from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
-    ApplicationTemplateDescriptionStatus,
-    ApplicationTemplateDetails,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
-from tests.mocks import get_awaited_argument, get_awaited_arguments
+from tests.mocks import get_awaited_argument, get_awaited_arguments, record_saved_states
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
 USER = Caller(user_id=USER_ID)
@@ -65,8 +67,20 @@ PUBLISHED_TEMPLATE = PublishedApplicationTemplate(
 def create_template(
     status: ApplicationTemplateStatus = ApplicationTemplateStatus.DRAFT,
     instructions: str | None = "Sporządź wniosek o urlop dziekański.",
-    description: str | None = None,
-    description_status: ApplicationTemplateDescriptionStatus = ApplicationTemplateDescriptionStatus.NOT_REQUESTED,
+    description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED,
+) -> ApplicationTemplate:
+    return ApplicationTemplate(
+        id=TEMPLATE_ID,
+        name="Wniosek o urlop",
+        status=status,
+        fields=[STUDENT_ID_FIELD],
+        instructions=instructions,
+        description_status=description_status,
+    )
+
+
+def create_template_representation(
+    status: ApplicationTemplateStatus = ApplicationTemplateStatus.DRAFT, description: str | None = None
 ) -> ApplicationTemplateRepresentation:
     return ApplicationTemplateRepresentation(
         id=TEMPLATE_ID,
@@ -74,27 +88,34 @@ def create_template(
         name="Wniosek o urlop",
         status=status,
         fields=[STUDENT_ID_FIELD],
-        instructions=instructions,
         description=description,
-        descriptionStatus=description_status,
     )
 
 
 def create_published_template() -> ApplicationTemplateRepresentation:
-    return create_template(ApplicationTemplateStatus.PUBLISHED, description="Wniosek o urlop dziekański.")
+    return create_template_representation(
+        ApplicationTemplateStatus.PUBLISHED, description="Wniosek o urlop dziekański."
+    )
 
 
-def store_template(application_templates_repository, template: ApplicationTemplateRepresentation | None) -> None:
+def store_template(application_templates_repository, template: ApplicationTemplate | None) -> None:
+    application_templates_repository.get_for_update.return_value = template
+
+
+def store_template_representation(
+    application_templates_repository, template: ApplicationTemplateRepresentation | None
+) -> None:
     application_templates_repository.get.return_value = template
 
 
-def get_description_statuses(application_templates_repository) -> list[ApplicationTemplateDescriptionStatus]:
-    return get_awaited_arguments(application_templates_repository.set_description_status, "status")
+def record_description_statuses(application_templates_repository) -> list[DescriptionStatus]:
+    return record_saved_states(application_templates_repository.save, "template", "description_status")
 
 
 @pytest.fixture
 def application_templates_repository(mock_application_templates_repo):
     store_template(mock_application_templates_repo, create_template())
+    store_template_representation(mock_application_templates_repo, create_template_representation())
     return mock_application_templates_repo
 
 
@@ -244,50 +265,59 @@ async def test_confirm_application_template_upload_creates_fields(
     mock_application_templates_storage,
     mock_application_template_inspector,
 ):
-    store_template(application_templates_repository, create_template(ApplicationTemplateStatus.NOT_UPLOADED))
+    template = create_template(ApplicationTemplateStatus.NOT_UPLOADED)
+    store_template(application_templates_repository, template)
     mock_application_templates_storage.get_template.return_value = b"docx"
-    variables = {"paragraphs", "student_id"}
-    mock_application_template_inspector.get_variables.return_value = variables
+    mock_application_template_inspector.get_variables.return_value = {"paragraphs", "student_id"}
 
     result = await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
 
     mock_application_template_inspector.get_variables.assert_awaited_once_with(b"docx")
-    confirm_upload = application_templates_repository.confirm_upload
-    assert get_awaited_argument(confirm_upload, "fields") == create_default_fields(variables)
-    assert result == application_templates_repository.confirm_upload.return_value
+    assert template.status == ApplicationTemplateStatus.DRAFT
+    assert template.fields == [ApplicationTemplateField(name="student_id", label="student_id")]
+    assert result == application_templates_repository.save.return_value
 
 
-@pytest.mark.parametrize(
-    ("template", "error"),
-    [
-        (None, ApplicationTemplateNotFound),
-        (create_template(ApplicationTemplateStatus.DRAFT), ApplicationTemplateInInvalidState),
-    ],
-    ids=("not found", "already confirmed"),
-)
-async def test_confirm_application_template_upload_rejected(
-    confirm_template_upload, application_templates_repository, mock_application_templates_storage, template, error
+async def test_confirm_application_template_upload_not_found(
+    confirm_template_upload, application_templates_repository, mock_application_templates_storage
 ):
-    store_template(application_templates_repository, template)
+    store_template_representation(application_templates_repository, None)
 
-    with pytest.raises(error):
+    with pytest.raises(ApplicationTemplateNotFound):
         await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
 
     mock_application_templates_storage.get_template.assert_not_awaited()
 
 
-async def test_confirm_application_template_upload_changed_during_confirmation(
-    confirm_template_upload, application_templates_repository, mock_application_template_inspector
+@pytest.mark.parametrize(
+    ("template", "variables", "error"),
+    [
+        (None, {"paragraphs"}, ApplicationTemplateNotFound),
+        (create_template(ApplicationTemplateStatus.DRAFT), {"paragraphs"}, ApplicationTemplateInInvalidState),
+        (create_template(ApplicationTemplateStatus.NOT_UPLOADED), {"student_id"}, InvalidApplicationTemplate),
+    ],
+    ids=("removed", "already confirmed", "without content variable"),
+)
+async def test_confirm_application_template_upload_rejected(
+    confirm_template_upload,
+    application_templates_repository,
+    mock_application_template_inspector,
+    template,
+    variables,
+    error,
 ):
-    store_template(application_templates_repository, create_template(ApplicationTemplateStatus.NOT_UPLOADED))
-    mock_application_template_inspector.get_variables.return_value = {"paragraphs"}
-    application_templates_repository.confirm_upload.return_value = None
+    store_template(application_templates_repository, template)
+    mock_application_template_inspector.get_variables.return_value = variables
 
-    with pytest.raises(ApplicationTemplateInInvalidState):
+    with pytest.raises(error):
         await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
+
+    application_templates_repository.save.assert_not_awaited()
 
 
 async def test_update_application_template_saves_details(update_template, application_templates_repository):
+    template = create_template()
+    store_template(application_templates_repository, template)
     fields = [ApplicationTemplateField(name="student_id", label="Numer albumu", pattern=r"\d{6}")]
     details_data = ApplicationTemplateDetailsData(
         name="Wniosek",
@@ -299,15 +329,12 @@ async def test_update_application_template_saves_details(update_template, applic
 
     result = await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    update_details = application_templates_repository.update_details
-    assert get_awaited_argument(update_details, "details") == ApplicationTemplateDetails(
-        name="Wniosek",
-        instructions="Instrukcje",
-        fields=fields,
-        organization_id=ORGANIZATION_ID,
-        suborganization_id=SUBORGANIZATION_ID,
-    )
-    assert result == update_details.return_value
+    assert template.name == "Wniosek"
+    assert template.instructions == "Instrukcje"
+    assert template.fields == fields
+    assert template.organization_id == ORGANIZATION_ID
+    assert template.suborganization_id == SUBORGANIZATION_ID
+    assert result == application_templates_repository.save.return_value
 
 
 @pytest.mark.parametrize(
@@ -318,7 +345,7 @@ async def test_update_application_template_saves_details(update_template, applic
 async def test_update_application_template_description_vector(
     update_template, application_templates_repository, mock_texts_embedder, description, expected_vectors
 ):
-    store_template(application_templates_repository, create_template(description="Opis."))
+    store_template_representation(application_templates_repository, create_template_representation(description="Opis."))
     mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
     details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description=description)
 
@@ -337,48 +364,60 @@ async def test_update_application_template_not_saved_when_embedding_unavailable(
     with pytest.raises(ServiceUnavailable):
         await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
 
-    application_templates_repository.update_details.assert_not_awaited()
+    application_templates_repository.save.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
-    ("template", "error"),
+    ("template_representation", "template", "fields", "error"),
     [
-        (None, ApplicationTemplateNotFound),
-        (create_template(ApplicationTemplateStatus.NOT_UPLOADED), ApplicationTemplateInInvalidState),
-        (create_template(ApplicationTemplateStatus.PUBLISHED), ApplicationTemplateInInvalidState),
+        (None, create_template(), [STUDENT_ID_FIELD], ApplicationTemplateNotFound),
+        (create_template_representation(), None, [STUDENT_ID_FIELD], ApplicationTemplateNotFound),
+        (
+            create_template_representation(),
+            create_template(ApplicationTemplateStatus.NOT_UPLOADED),
+            [STUDENT_ID_FIELD],
+            ApplicationTemplateInInvalidState,
+        ),
+        (
+            create_template_representation(),
+            create_template(ApplicationTemplateStatus.PUBLISHED),
+            [STUDENT_ID_FIELD],
+            ApplicationTemplateInInvalidState,
+        ),
+        (create_template_representation(), create_template(), [], InvalidApplicationFieldsConfig),
     ],
-    ids=("not found", "not uploaded", "published"),
+    ids=("not found", "removed during embedding", "not uploaded", "published", "fields not matching"),
 )
-async def test_update_application_template_rejected(update_template, application_templates_repository, template, error):
+async def test_update_application_template_rejected(
+    update_template, application_templates_repository, template_representation, template, fields, error
+):
+    store_template_representation(application_templates_repository, template_representation)
     store_template(application_templates_repository, template)
 
     with pytest.raises(error):
-        await update_template.execute(ADMIN, TEMPLATE_ID, ApplicationTemplateDetailsData(name="Wniosek", fields=[]))
+        await update_template.execute(ADMIN, TEMPLATE_ID, ApplicationTemplateDetailsData(name="Wniosek", fields=fields))
 
-    application_templates_repository.update_details.assert_not_awaited()
+    application_templates_repository.save.assert_not_awaited()
 
 
-async def test_update_application_template_published_during_embedding(
-    update_template, application_templates_repository, mock_texts_embedder
-):
-    application_templates_repository.get.side_effect = [
-        create_template(ApplicationTemplateStatus.DRAFT),
-        create_template(ApplicationTemplateStatus.PUBLISHED),
-    ]
-    mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
-    details_data = ApplicationTemplateDetailsData(name="Wniosek", fields=[STUDENT_ID_FIELD], description="Opis.")
+async def test_update_application_template_with_unknown_organization(update_template, application_templates_repository):
+    application_templates_repository.save.side_effect = OrganizationNotFound
+    details_data = ApplicationTemplateDetailsData(
+        name="Wniosek", fields=[STUDENT_ID_FIELD], organizationId=ORGANIZATION_ID
+    )
 
-    with pytest.raises(ApplicationTemplateInInvalidState):
+    with pytest.raises(OrganizationNotFound):
         await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
-
-    application_templates_repository.update_details.assert_not_awaited()
 
 
 async def test_publish_application_template(publish_template, application_templates_repository):
-    await publish_template.execute(ADMIN, TEMPLATE_ID)
+    template = create_template()
+    store_template(application_templates_repository, template)
 
-    set_status = application_templates_repository.set_status
-    assert get_awaited_argument(set_status, "status") == ApplicationTemplateStatus.PUBLISHED
+    result = await publish_template.execute(ADMIN, TEMPLATE_ID)
+
+    assert template.status == ApplicationTemplateStatus.PUBLISHED
+    assert result == application_templates_repository.save.return_value
 
 
 @pytest.mark.parametrize(
@@ -397,16 +436,17 @@ async def test_publish_application_template_rejected(
     with pytest.raises(error):
         await publish_template.execute(ADMIN, TEMPLATE_ID)
 
-    application_templates_repository.set_status.assert_not_awaited()
+    application_templates_repository.save.assert_not_awaited()
 
 
 async def test_unpublish_application_template(unpublish_template, application_templates_repository):
-    store_template(application_templates_repository, create_template(ApplicationTemplateStatus.PUBLISHED))
+    template = create_template(ApplicationTemplateStatus.PUBLISHED)
+    store_template(application_templates_repository, template)
 
-    await unpublish_template.execute(ADMIN, TEMPLATE_ID)
+    result = await unpublish_template.execute(ADMIN, TEMPLATE_ID)
 
-    set_status = application_templates_repository.set_status
-    assert get_awaited_argument(set_status, "status") == ApplicationTemplateStatus.DRAFT
+    assert template.status == ApplicationTemplateStatus.DRAFT
+    assert result == application_templates_repository.save.return_value
 
 
 @pytest.mark.parametrize(
@@ -425,7 +465,7 @@ async def test_unpublish_application_template_rejected(
     with pytest.raises(error):
         await unpublish_template.execute(ADMIN, TEMPLATE_ID)
 
-    application_templates_repository.set_status.assert_not_awaited()
+    application_templates_repository.save.assert_not_awaited()
 
 
 async def test_regenerate_application_template_description_schedules_generation(
@@ -433,11 +473,11 @@ async def test_regenerate_application_template_description_schedules_generation(
     application_templates_repository,
     mock_application_template_description_generation_scheduler,
 ):
+    description_statuses = record_description_statuses(application_templates_repository)
+
     await regenerate_template_description.execute(ADMIN, TEMPLATE_ID)
 
-    assert get_description_statuses(application_templates_repository) == [
-        ApplicationTemplateDescriptionStatus.IN_PROGRESS
-    ]
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
     scheduler = mock_application_template_description_generation_scheduler
     scheduler.schedule_application_template_description_generation.assert_awaited_once()
 
@@ -447,10 +487,7 @@ async def test_regenerate_application_template_description_schedules_generation(
     [
         (None, ApplicationTemplateNotFound),
         (create_template(ApplicationTemplateStatus.PUBLISHED), ApplicationTemplateInInvalidState),
-        (
-            create_template(description_status=ApplicationTemplateDescriptionStatus.IN_PROGRESS),
-            ApplicationTemplateDescriptionGenerationInProgress,
-        ),
+        (create_template(description_status=DescriptionStatus.IN_PROGRESS), DescriptionGenerationInProgress),
     ],
     ids=("not found", "not draft", "generation in progress"),
 )
@@ -466,7 +503,7 @@ async def test_regenerate_application_template_description_rejected(
     with pytest.raises(error):
         await regenerate_template_description.execute(ADMIN, TEMPLATE_ID)
 
-    assert get_description_statuses(application_templates_repository) == []
+    application_templates_repository.save.assert_not_awaited()
     scheduler = mock_application_template_description_generation_scheduler
     scheduler.schedule_application_template_description_generation.assert_not_awaited()
 
@@ -477,6 +514,8 @@ async def test_generate_application_template_description_saves_description_with_
     mock_application_template_description_writer,
     mock_texts_embedder,
 ):
+    template = create_template()
+    store_template(application_templates_repository, template)
     mock_application_template_description_writer.write.return_value = "Wniosek o urlop dziekański."
     mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
 
@@ -486,14 +525,14 @@ async def test_generate_application_template_description_saves_description_with_
     assert description_source.name == "Wniosek o urlop"
     assert description_source.content == TEMPLATE_TEXT
     mock_texts_embedder.embed_texts.assert_awaited_once_with(["Wniosek o urlop dziekański."])
-    set_generated_description = application_templates_repository.set_generated_description
-    assert get_awaited_argument(set_generated_description, "description") == "Wniosek o urlop dziekański."
-    assert get_awaited_argument(set_generated_description, "vector") == [0.1, 0.2]
+    assert template.description == "Wniosek o urlop dziekański."
+    assert template.description_status == DescriptionStatus.GENERATED
+    assert get_awaited_argument(application_templates_repository.set_description_vector, "vector") == [0.1, 0.2]
 
 
 @pytest.mark.parametrize(
     "template",
-    [None, create_template(description_status=ApplicationTemplateDescriptionStatus.GENERATED)],
+    [None, create_template(description_status=DescriptionStatus.GENERATED)],
     ids=("not found", "already generated"),
 )
 async def test_generate_application_template_description_skipped(
@@ -507,70 +546,65 @@ async def test_generate_application_template_description_skipped(
     await generate_template_description.execute(TEMPLATE_ID)
 
     mock_application_template_description_writer.write.assert_not_awaited()
-    assert get_description_statuses(application_templates_repository) == []
+    application_templates_repository.save.assert_not_awaited()
 
 
 async def test_generate_application_template_description_without_content_marks_failed(
     generate_template_description, application_templates_repository, mock_application_templates_storage
 ):
+    description_statuses = record_description_statuses(application_templates_repository)
     mock_application_templates_storage.get_template.side_effect = ApplicationTemplateContentNotFound
 
     with pytest.raises(ApplicationTemplateContentNotFound):
         await generate_template_description.execute(TEMPLATE_ID)
 
-    assert get_description_statuses(application_templates_repository) == [
-        ApplicationTemplateDescriptionStatus.IN_PROGRESS,
-        ApplicationTemplateDescriptionStatus.FAILED,
-    ]
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
 
 
 @pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
 async def test_generate_application_template_description_failure_marks_failed(
     generate_template_description, application_templates_repository, mock_application_template_description_writer, error
 ):
+    description_statuses = record_description_statuses(application_templates_repository)
     mock_application_template_description_writer.write.side_effect = error
 
     with pytest.raises(error):
         await generate_template_description.execute(TEMPLATE_ID)
 
-    application_templates_repository.set_generated_description.assert_not_awaited()
-    assert get_description_statuses(application_templates_repository) == [
-        ApplicationTemplateDescriptionStatus.IN_PROGRESS,
-        ApplicationTemplateDescriptionStatus.FAILED,
-    ]
+    application_templates_repository.set_description_vector.assert_not_awaited()
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
 
 
 async def test_generate_application_template_description_of_removed_template(
     generate_template_description, application_templates_repository
 ):
-    application_templates_repository.set_generated_description.side_effect = ApplicationTemplateNotFound
+    description_statuses = record_description_statuses(application_templates_repository)
+    application_templates_repository.get_for_update.side_effect = [create_template(), None]
 
     await generate_template_description.execute(TEMPLATE_ID)
 
-    assert get_description_statuses(application_templates_repository) == [
-        ApplicationTemplateDescriptionStatus.IN_PROGRESS
-    ]
+    application_templates_repository.set_description_vector.assert_not_awaited()
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
 
 
 async def test_generate_application_template_description_failure_of_removed_template(
     generate_template_description, application_templates_repository, mock_application_template_description_writer
 ):
-    application_templates_repository.set_description_status.side_effect = [None, ApplicationTemplateNotFound()]
+    description_statuses = record_description_statuses(application_templates_repository)
+    application_templates_repository.get_for_update.side_effect = [create_template(), None]
     mock_application_template_description_writer.write.side_effect = ServiceUnavailable
 
     with pytest.raises(ServiceUnavailable):
         await generate_template_description.execute(TEMPLATE_ID)
+
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
 
 
 @pytest.mark.parametrize(
     ("delivery_attempt", "expected_failed", "expected_statuses"),
     [
         (MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES, False, []),
-        (
-            MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1,
-            True,
-            [ApplicationTemplateDescriptionStatus.FAILED],
-        ),
+        (MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1, True, [DescriptionStatus.FAILED]),
     ],
     ids=("within limit", "limit exceeded"),
 )
@@ -581,22 +615,25 @@ async def test_fail_application_template_description_generation(
     expected_failed,
     expected_statuses,
 ):
+    description_statuses = record_description_statuses(application_templates_repository)
+
     failed = await fail_template_description_generation.execute(TEMPLATE_ID, delivery_attempt)
 
     assert failed is expected_failed
-    assert get_description_statuses(application_templates_repository) == expected_statuses
+    assert description_statuses == expected_statuses
 
 
 async def test_fail_application_template_description_generation_of_removed_template(
     fail_template_description_generation, application_templates_repository
 ):
-    application_templates_repository.set_description_status.side_effect = ApplicationTemplateNotFound
+    store_template(application_templates_repository, None)
 
     failed = await fail_template_description_generation.execute(
         TEMPLATE_ID, MAX_APPLICATION_TEMPLATE_DESCRIPTION_GENERATION_DELIVERIES + 1
     )
 
     assert failed is True
+    application_templates_repository.save.assert_not_awaited()
 
 
 async def test_delete_application_template(
@@ -642,14 +679,14 @@ async def test_get_application_template_download_url(get_template_download_url, 
     ("template", "error"),
     [
         (None, ApplicationTemplateNotFound),
-        (create_template(ApplicationTemplateStatus.NOT_UPLOADED), ApplicationTemplateInInvalidState),
+        (create_template_representation(ApplicationTemplateStatus.NOT_UPLOADED), ApplicationTemplateInInvalidState),
     ],
     ids=("not found", "not uploaded"),
 )
 async def test_get_application_template_download_url_rejected(
     get_template_download_url, application_templates_repository, mock_application_templates_storage, template, error
 ):
-    store_template(application_templates_repository, template)
+    store_template_representation(application_templates_repository, template)
 
     with pytest.raises(error):
         await get_template_download_url.execute(ADMIN, TEMPLATE_ID)

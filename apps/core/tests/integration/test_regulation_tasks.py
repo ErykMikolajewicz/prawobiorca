@@ -2,7 +2,8 @@ from fastapi import status
 from sqlalchemy import select
 
 from core_service.application.use_cases.regulations import MAX_REGULATION_PREPARATION_DELIVERIES
-from core_service.domain.value_objects.regulations import RegulationDescriptionStatus, RegulationPreparationStatus
+from core_service.domain.value_objects.descriptions import DescriptionStatus
+from core_service.domain.value_objects.regulations import RegulationPreparationStatus
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
 from core_service.infrastructure.tasks.regulations import (
     REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
@@ -27,9 +28,7 @@ async def test_prepared_regulation_is_searchable(
     user_client, session_maker, broker, mock_regulations_storage, mock_regulation_splitter, mock_texts_embedder
 ):
     async with session_maker.begin() as session:
-        regulation_id = await insert_regulation(
-            session, USER_ID, description_status=RegulationDescriptionStatus.IN_PROGRESS
-        )
+        regulation_id = await insert_regulation(session, USER_ID, description_status=DescriptionStatus.IN_PROGRESS)
     mock_regulations_storage.check_regulation_exists.return_value = True
     mock_regulations_storage.get_regulation.return_value = b"%PDF"
     mock_regulation_splitter.split.return_value = load_regulation_elements("ustawa-nauka_slice_30-31")
@@ -98,4 +97,4 @@ async def test_generated_regulation_description_is_saved(
     regulation = await get_regulation(session_maker, regulation_id)
     assert regulation.description == "Prawa i obowiązki studentów."
     assert list(regulation.description_vector) == DESCRIPTION_VECTOR
-    assert regulation.description_status == RegulationDescriptionStatus.GENERATED
+    assert regulation.description_status == DescriptionStatus.GENERATED

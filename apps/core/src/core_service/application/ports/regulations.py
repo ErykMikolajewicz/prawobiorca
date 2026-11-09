@@ -8,14 +8,12 @@ from core_service.application.dtos.regulations import (
     RegulationUploadTarget,
 )
 from core_service.application.ports.relational import AsyncSession
+from core_service.domain.entities.regulation import Regulation
 from core_service.domain.value_objects.legal_units import RegulationElement
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.regulations import (
     RegulationDescriptionSource,
-    RegulationDescriptionStatus,
-    RegulationDetails,
     RegulationOwner,
-    RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationType,
 )
@@ -60,21 +58,13 @@ class RegulationsRepository(Protocol):
 
     async def unregister_regulation(self, session: AsyncSession, user_id: UUID | None, id_: UUID) -> None: ...
 
-    async def set_preparation_status(
-        self, session: AsyncSession, user_id: UUID | None, id_: UUID, status: RegulationPreparationStatus
-    ) -> None: ...
+    async def get_for_update(self, session: AsyncSession, user_id: UUID | None, id_: UUID) -> Regulation | None: ...
 
-    async def set_description_status(
-        self, session: AsyncSession, user_id: UUID | None, id_: UUID, status: RegulationDescriptionStatus
-    ) -> None: ...
+    async def save(self, session: AsyncSession, regulation: Regulation) -> RegulationRepresentation: ...
 
-    async def set_generated_description(
-        self, session: AsyncSession, user_id: UUID | None, id_: UUID, description: str, vector: list[float]
+    async def set_description_vector(
+        self, session: AsyncSession, user_id: UUID | None, id_: UUID, vector: list[float] | None
     ) -> None: ...
-
-    async def update_regulation_details(
-        self, session: AsyncSession, user_id: UUID | None, id_: UUID, regulation_details: RegulationDetails
-    ) -> RegulationRepresentation: ...
 
     async def get_regulation_representation(
         self, session: AsyncSession, user_id: UUID | None, id_: UUID

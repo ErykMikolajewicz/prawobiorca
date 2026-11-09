@@ -1,7 +1,6 @@
-from core_service.application.dtos.application_templates import ApplicationTemplateRepresentation
 from core_service.application.dtos.applications import NewApplication
 from core_service.application.dtos.cases import CaseDocument
-from core_service.domain.services.application_fields import get_ai_field_values
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.prompt_templates import prompts_env
 
@@ -13,14 +12,13 @@ class LlmApplicationWriter:
     async def write(
         self,
         new_application: NewApplication,
-        template: ApplicationTemplateRepresentation,
+        template: ApplicationTemplate,
         legal_basis: list[CaseDocument],
     ) -> str:
         system_prompt = prompts_env.get_template("application.md").render(
             instructions=template.instructions,
             application_fields=[
-                f"{label}: {value}"
-                for label, value in get_ai_field_values(template.fields, new_application.field_values)
+                f"{label}: {value}" for label, value in template.get_ai_field_values(new_application.field_values)
             ],
             situation_description=new_application.description,
             pinned_articles=[f"{document.presentation_name}: {document.content}" for document in legal_basis],

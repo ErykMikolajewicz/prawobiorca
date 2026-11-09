@@ -12,10 +12,10 @@ from core_service.domain.consts import (
 )
 from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
-    ApplicationTemplateDescriptionStatus,
     ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
+from core_service.domain.value_objects.descriptions import DescriptionStatus
 
 
 class ApplicationTemplateData(BaseModel):
@@ -55,7 +55,7 @@ class ApplicationTemplateRepresentation:
     fields: list[ApplicationTemplateField]
     instructions: str | None = None
     description: str | None = None
-    description_status: ApplicationTemplateDescriptionStatus = ApplicationTemplateDescriptionStatus.NOT_REQUESTED
+    description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
 

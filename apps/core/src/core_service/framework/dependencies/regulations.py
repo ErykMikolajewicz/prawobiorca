@@ -109,8 +109,9 @@ def get_retry_regulation_preparation(
 def get_update_regulation(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+    texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
 ) -> UpdateRegulation:
-    return UpdateRegulation(session_maker, regulations_repository)
+    return UpdateRegulation(session_maker, regulations_repository, texts_embedder)
 
 
 def get_delete_regulation(

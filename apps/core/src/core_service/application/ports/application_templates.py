@@ -6,11 +6,9 @@ from core_service.application.dtos.application_templates import (
     ApplicationTemplateUploadTarget,
 )
 from core_service.application.ports.relational import AsyncSession
+from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateDescriptionSource,
-    ApplicationTemplateDescriptionStatus,
-    ApplicationTemplateDetails,
-    ApplicationTemplateField,
     ApplicationTemplateStatus,
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
@@ -45,29 +43,11 @@ class ApplicationTemplatesRepository(Protocol):
 
     async def add(self, session: AsyncSession, name: str, instructions: str) -> UUID: ...
 
-    async def confirm_upload(
-        self, session: AsyncSession, id_: UUID, fields: list[ApplicationTemplateField]
-    ) -> ApplicationTemplateRepresentation | None: ...
+    async def get_for_update(self, session: AsyncSession, id_: UUID) -> ApplicationTemplate | None: ...
 
-    async def set_status(
-        self, session: AsyncSession, id_: UUID, status: ApplicationTemplateStatus
-    ) -> ApplicationTemplateRepresentation: ...
+    async def save(self, session: AsyncSession, template: ApplicationTemplate) -> ApplicationTemplateRepresentation: ...
 
-    async def set_description_status(
-        self, session: AsyncSession, id_: UUID, status: ApplicationTemplateDescriptionStatus
-    ) -> ApplicationTemplateRepresentation: ...
-
-    async def set_generated_description(
-        self, session: AsyncSession, id_: UUID, description: str, vector: list[float]
-    ) -> ApplicationTemplateRepresentation: ...
-
-    async def set_description_vector(
-        self, session: AsyncSession, id_: UUID, vector: list[float] | None
-    ) -> ApplicationTemplateRepresentation: ...
-
-    async def update_details(
-        self, session: AsyncSession, id_: UUID, details: ApplicationTemplateDetails
-    ) -> ApplicationTemplateRepresentation: ...
+    async def set_description_vector(self, session: AsyncSession, id_: UUID, vector: list[float] | None) -> None: ...
 
     async def delete(self, session: AsyncSession, id_: UUID) -> None: ...
 
