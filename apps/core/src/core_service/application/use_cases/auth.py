@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from pydantic import SecretStr
+
 from core_service.application.dtos.account import LoginData
 from core_service.application.dtos.auth import AuthTokens
 from core_service.application.interfaces.relational import SessionMaker
@@ -18,28 +20,32 @@ from core_service.domain.services.security import (
 )
 from core_service.domain.value_objects.auth import AccessTokenClaims
 from core_service.shared.consts import JWT_ALGORITHM
-from core_service.shared.settings.application import app_settings
 
 logger = logging.getLogger(__name__)
 
-jwt_secret_key = app_settings.JWT_SECRET_KEY
-access_token_expiration_seconds = app_settings.ACCESS_TOKEN_EXPIRATION_SECONDS
-refresh_token_expiration_seconds = app_settings.REFRESH_TOKEN_EXPIRATION_SECONDS
+
+@dataclass(frozen=True)
+class AuthTokensConfig:
+    jwt_secret_key: SecretStr
+    access_token_expiration_seconds: int
+    refresh_token_expiration_seconds: int
 
 
-def build_auth_tokens(claims: AccessTokenClaims, refresh_token: str) -> AuthTokens:
-    access_token = create_access_token(claims, jwt_secret_key, JWT_ALGORITHM, access_token_expiration_seconds)
+def build_auth_tokens(claims: AccessTokenClaims, refresh_token: str, config: AuthTokensConfig) -> AuthTokens:
+    access_token = create_access_token(
+        claims, config.jwt_secret_key, JWT_ALGORITHM, config.access_token_expiration_seconds
+    )
 
     return AuthTokens(
         access_token=access_token,
-        access_expires_in=access_token_expiration_seconds,
+        access_expires_in=config.access_token_expiration_seconds,
         refresh_token=refresh_token,
-        refresh_expires_in=refresh_token_expiration_seconds,
+        refresh_expires_in=config.refresh_token_expiration_seconds,
     )
 
 
-def build_refresh_token_validity() -> datetime:
-    return datetime.now(UTC) + timedelta(seconds=refresh_token_expiration_seconds)
+def build_refresh_token_validity(config: AuthTokensConfig) -> datetime:
+    return datetime.now(UTC) + timedelta(seconds=config.refresh_token_expiration_seconds)
 
 
 @dataclass
@@ -47,6 +53,7 @@ class LogUser:
     session_maker: SessionMaker
     users_repo: UsersRepository
     sessions_repo: UsersSessionsRepository
+    tokens_config: AuthTokensConfig
 
     async def execute(self, login_data: LoginData) -> AuthTokens:
         execution_start_time = asyncio.get_event_loop().time()
@@ -64,12 +71,12 @@ class LogUser:
 
         async with self.session_maker.begin() as session:
             session_id = await self.sessions_repo.create_session(
-                session, user_id, hash_refresh_token(refresh_token), build_refresh_token_validity()
+                session, user_id, hash_refresh_token(refresh_token), build_refresh_token_validity(self.tokens_config)
             )
 
         claims = AccessTokenClaims(user_id=user_id, session_id=session_id, is_admin=user_privileges.is_admin)
 
-        return build_auth_tokens(claims, refresh_token)
+        return build_auth_tokens(claims, refresh_token, self.tokens_config)
 
 
 @dataclass
@@ -77,6 +84,7 @@ class RefreshTokens:
     session_maker: SessionMaker
     users_repo: UsersRepository
     sessions_repo: UsersSessionsRepository
+    tokens_config: AuthTokensConfig
 
     async def execute(self, refresh_token: str) -> AuthTokens:
         new_refresh_token = generate_authorization_token()
@@ -86,7 +94,7 @@ class RefreshTokens:
                 session,
                 hash_refresh_token(refresh_token),
                 hash_refresh_token(new_refresh_token),
-                build_refresh_token_validity(),
+                build_refresh_token_validity(self.tokens_config),
             )
             if user_session is None:
                 logger.warning("Refresh attempt with unknown or expired token!")
@@ -101,7 +109,7 @@ class RefreshTokens:
             user_id=user_session.user_id, session_id=user_session.id, is_admin=user_privileges.is_admin
         )
 
-        return build_auth_tokens(claims, new_refresh_token)
+        return build_auth_tokens(claims, new_refresh_token, self.tokens_config)
 
 
 @dataclass

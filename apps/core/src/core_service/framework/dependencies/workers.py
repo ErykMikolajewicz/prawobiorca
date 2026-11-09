@@ -1,6 +1,7 @@
 from typing import Any
 
 from httpx2 import AsyncClient
+from openai import AsyncOpenAI
 from taskiq import Context, TaskiqDepends, TaskiqState
 
 from core_service.application.interfaces.application_templates import (
@@ -48,7 +49,6 @@ from core_service.infrastructure.ai_services.application_template_description_wr
 from core_service.infrastructure.ai_services.application_writer import ApplicationWriter as LlmApplicationWriter
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
-from core_service.infrastructure.ai_services.openai_client.connection import client as llm_client
 from core_service.infrastructure.ai_services.regulation_description_writer import (
     RegulationDescriptionWriter as LlmRegulationDescriptionWriter,
 )
@@ -67,10 +67,15 @@ from core_service.shared.settings.ai_services import (
     extraction_service_settings,
     llm_service_settings,
 )
+from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_ai_services_client(state: TaskiqState = TaskiqDepends()) -> AsyncClient:
     return state.ai_services_client
+
+
+def get_llm_client(state: TaskiqState = TaskiqDepends()) -> AsyncOpenAI:
+    return state.llm_client
 
 
 def get_texts_embedder(client: AsyncClient = TaskiqDepends(get_ai_services_client)) -> TextsEmbedder:
@@ -82,15 +87,32 @@ def get_regulation_splitter(client: AsyncClient = TaskiqDepends(get_ai_services_
 
 
 def get_regulations_storage(state: TaskiqState = TaskiqDepends()) -> RegulationsStorage:
-    return S3RegulationsStorage(state.file_storage_client, state.file_storage_presign_client)
+    return S3RegulationsStorage(
+        state.file_storage_client,
+        state.file_storage_presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
+    )
 
 
 def get_applications_storage(state: TaskiqState = TaskiqDepends()) -> ApplicationsStorage:
-    return S3ApplicationsStorage(state.file_storage_client, state.file_storage_presign_client)
+    return S3ApplicationsStorage(
+        state.file_storage_client,
+        state.file_storage_presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+    )
 
 
 def get_application_templates_storage(state: TaskiqState = TaskiqDepends()) -> ApplicationTemplatesStorage:
-    return S3ApplicationTemplatesStorage(state.file_storage_client, state.file_storage_presign_client)
+    return S3ApplicationTemplatesStorage(
+        state.file_storage_client,
+        state.file_storage_presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
+    )
 
 
 def get_broker(context: Context = TaskiqDepends()) -> Any:
@@ -103,12 +125,15 @@ def get_regulation_description_generation_scheduler(
     return PostgresRegulationDescriptionGenerationScheduler(broker)
 
 
-def get_llm_chat(session_maker: SessionMaker = TaskiqDepends(get_session_maker)) -> LlmChat:
+def get_llm_chat(
+    client: AsyncOpenAI = TaskiqDepends(get_llm_client),
+    session_maker: SessionMaker = TaskiqDepends(get_session_maker),
+) -> LlmChat:
     cost_limiter = None
     if llm_service_settings.MONTHLY_COST_LIMIT_PLN is not None:
         cost_limiter = LlmCostLimiter(session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN)
     return LlmChat(
-        client=llm_client,
+        client=client,
         model_name=llm_service_settings.MODEL_NAME,
         temperature=llm_service_settings.TEMPERATURE,
         top_p=llm_service_settings.TOP_P,

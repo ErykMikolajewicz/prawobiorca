@@ -20,6 +20,7 @@ from core_service.infrastructure.object_storage.repository import S3Applications
 from core_service.infrastructure.relational_db.repositories.applications import (
     ApplicationsRepository as SqlaApplicationsRepository,
 )
+from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_cases_repo() -> CasesRepository:
@@ -38,7 +39,12 @@ def get_applications_storage(
     client: Annotated[Any, Depends(get_file_storage_client)],
     presign_client: Annotated[Any, Depends(get_file_storage_presign_client)],
 ) -> ApplicationsStorage:
-    return S3ApplicationsStorage(client, presign_client)
+    return S3ApplicationsStorage(
+        client,
+        presign_client,
+        bucket=object_storage_settings.BUCKET,
+        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+    )
 
 
 def get_list_user_cases(

@@ -55,7 +55,13 @@ async def init_regulations():
         except ClientError:
             await s3_client.create_bucket(Bucket=object_storage_settings.BUCKET)
 
-        regulations_storage = S3RegulationsStorage(s3_client, s3_client)
+        regulations_storage = S3RegulationsStorage(
+            s3_client,
+            s3_client,
+            bucket=object_storage_settings.BUCKET,
+            signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
+            max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
+        )
         texts_embedder = TextsEmbedder(
             client=client,
             embedding_service_url=embedding_service_settings.URL,
