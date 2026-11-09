@@ -17,10 +17,13 @@ from core_service.domain.exceptions.application_templates import ApplicationTemp
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
 from core_service.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.domain.value_objects.users import Caller
 from core_service.shared.consts import MAX_APPLICATION_GENERATION_DELIVERIES
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments
+
+USER = Caller(user_id=USER_ID)
 
 TEMPLATE_ID = UUID("00000000-0000-0000-0000-0000000000aa")
 CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
@@ -140,7 +143,7 @@ def delete_application(mock_session_maker, applications_repository, mock_applica
 async def test_add_application_schedules_generation_with_normalized_field_values(
     add_application, applications_repository, mock_application_generation_scheduler
 ):
-    application_id = await add_application.execute(USER_ID, CASE_ID, NEW_APPLICATION)
+    application_id = await add_application.execute(USER, CASE_ID, NEW_APPLICATION)
 
     assert application_id == APPLICATION_ID
     assert get_awaited_argument(applications_repository.add, "template_name") == "Wniosek o urlop"
@@ -165,7 +168,7 @@ async def test_add_application_without_published_template(
     application_templates_repository.get.return_value = template
 
     with pytest.raises(ApplicationTemplateNotFound):
-        await add_application.execute(USER_ID, CASE_ID, NEW_APPLICATION)
+        await add_application.execute(USER, CASE_ID, NEW_APPLICATION)
 
     applications_repository.add.assert_not_awaited()
     mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
@@ -322,7 +325,7 @@ async def test_get_application_download_url(
     applications_repository.get.return_value = create_application(ApplicationGenerationStatus.GENERATED)
     mock_applications_storage.get_download_url.return_value = "http://storage.local/bucket/application"
 
-    result = await get_application_download_url.execute(USER_ID, CASE_ID, APPLICATION_ID)
+    result = await get_application_download_url.execute(USER, CASE_ID, APPLICATION_ID)
 
     assert result == "http://storage.local/bucket/application"
     mock_applications_storage.get_download_url.assert_awaited_once_with(APPLICATION_ID)
@@ -343,13 +346,13 @@ async def test_get_application_download_url_rejected(
     applications_repository.get.return_value = application
 
     with pytest.raises(error):
-        await get_application_download_url.execute(USER_ID, CASE_ID, APPLICATION_ID)
+        await get_application_download_url.execute(USER, CASE_ID, APPLICATION_ID)
 
     mock_applications_storage.get_download_url.assert_not_awaited()
 
 
 async def test_delete_application(delete_application, applications_repository, mock_applications_storage):
-    await delete_application.execute(USER_ID, CASE_ID, APPLICATION_ID)
+    await delete_application.execute(USER, CASE_ID, APPLICATION_ID)
 
     applications_repository.delete.assert_awaited_once()
     mock_applications_storage.delete_application.assert_awaited_once_with(APPLICATION_ID)
@@ -359,7 +362,7 @@ async def test_delete_application_not_found(delete_application, applications_rep
     applications_repository.delete.side_effect = ApplicationNotFound
 
     with pytest.raises(ApplicationNotFound):
-        await delete_application.execute(USER_ID, CASE_ID, APPLICATION_ID)
+        await delete_application.execute(USER, CASE_ID, APPLICATION_ID)
 
     mock_applications_storage.delete_application.assert_not_awaited()
 
@@ -369,6 +372,6 @@ async def test_delete_application_ignores_storage_error(
 ):
     mock_applications_storage.delete_application.side_effect = Exception("Storage error")
 
-    await delete_application.execute(USER_ID, CASE_ID, APPLICATION_ID)
+    await delete_application.execute(USER, CASE_ID, APPLICATION_ID)
 
     applications_repository.delete.assert_awaited_once()

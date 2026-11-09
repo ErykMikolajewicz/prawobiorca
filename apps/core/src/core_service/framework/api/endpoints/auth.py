@@ -8,9 +8,11 @@ from core_service.application.dtos.account import LoginData
 from core_service.application.dtos.auth import AuthTokens, CurrentUser
 from core_service.application.use_cases.auth import LogoutUser, LogUser, RefreshTokens
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
-from core_service.domain.value_objects.users import UserPrivileges
+from core_service.domain.value_objects.auth import AccessTokenClaims
+from core_service.domain.value_objects.users import Caller
 from core_service.framework.dependencies.authentication import (
-    authorize_user,
+    get_access_token_claims,
+    get_caller,
     get_log_user,
     get_logout_user,
     get_refresh_tokens,
@@ -110,23 +112,20 @@ async def refresh_tokens(refresh_tokens_: Annotated[RefreshTokens, Depends(get_r
     "/auth/me",
     response_model=CurrentUser,
     responses={status.HTTP_401_UNAUTHORIZED: {"description": "User not logged."}},
-    dependencies=[Depends(authorize_user)],
 )
-async def check_is_user_logged(request: Request) -> CurrentUser:
-    user_id = request.state.user_id
-    user_privileges: UserPrivileges | None = request.state.user_privileges
-
-    if user_id is None or user_privileges is None:
+async def check_is_user_logged(caller: Annotated[Caller, Depends(get_caller)]) -> CurrentUser:
+    if caller.user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    return CurrentUser(is_admin=user_privileges.is_admin)
+    return CurrentUser(is_admin=caller.is_admin)
 
 
-@auth_router.post(
-    "/auth/logout",
-    dependencies=[Depends(authorize_user)],
-)
-async def logout_user(logout_user_: Annotated[LogoutUser, Depends(get_logout_user)], request: Request):
-    session_id = request.state.session_id
+@auth_router.post("/auth/logout")
+async def logout_user(
+    logout_user_: Annotated[LogoutUser, Depends(get_logout_user)],
+    claims: Annotated[AccessTokenClaims | None, Depends(get_access_token_claims)],
+    request: Request,
+):
+    session_id = claims.session_id if claims is not None else None
     refresh_token = request.cookies.get(REFRESH_COOKIE_NAME)
 
     await logout_user_.execute(session_id, refresh_token)

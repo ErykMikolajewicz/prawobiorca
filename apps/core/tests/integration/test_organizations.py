@@ -64,6 +64,12 @@ async def test_add_organization_as_normal_user(user_client):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+async def test_add_organization_unlogged(client):
+    response = await client.post("/api/organizations", json={"name": "Uniwersytet Wrocławski", "shortName": "UWr"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_update_organization(admin_client, session_maker):
     async with session_maker.begin() as session:
         organization_id = await insert_organization(session)

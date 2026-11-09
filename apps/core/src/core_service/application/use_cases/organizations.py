@@ -6,6 +6,8 @@ from core_service.application.dtos.organizations import NewOrganization, NewSubo
 from core_service.application.interfaces.organizations import OrganizationsRepository, SuborganizationsRepository
 from core_service.application.interfaces.relational import SessionMaker
 from core_service.domain.exceptions.organizations import OrganizationNotFound, SuborganizationNotFound
+from core_service.domain.services.organization_access import check_can_manage_organizations
+from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,9 @@ class AddOrganization:
     session_maker: SessionMaker
     organizations_repo: OrganizationsRepository
 
-    async def execute(self, new_organization: NewOrganization) -> UUID:
+    async def execute(self, caller: Caller, new_organization: NewOrganization) -> UUID:
+        check_can_manage_organizations(caller)
+
         async with self.session_maker.begin() as session:
             organization_id = await self.organizations_repo.add(session, new_organization)
         return organization_id
@@ -37,7 +41,9 @@ class UpdateOrganization:
     session_maker: SessionMaker
     organizations_repo: OrganizationsRepository
 
-    async def execute(self, organization_id: UUID, new_organization: NewOrganization) -> None:
+    async def execute(self, caller: Caller, organization_id: UUID, new_organization: NewOrganization) -> None:
+        check_can_manage_organizations(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 await self.organizations_repo.update(session, organization_id, new_organization)
@@ -51,7 +57,9 @@ class DeleteOrganization:
     session_maker: SessionMaker
     organizations_repo: OrganizationsRepository
 
-    async def execute(self, organization_id: UUID) -> None:
+    async def execute(self, caller: Caller, organization_id: UUID) -> None:
+        check_can_manage_organizations(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 await self.organizations_repo.delete(session, organization_id)
@@ -65,7 +73,9 @@ class AddSuborganization:
     session_maker: SessionMaker
     suborganizations_repo: SuborganizationsRepository
 
-    async def execute(self, organization_id: UUID, new_suborganization: NewSuborganization) -> UUID:
+    async def execute(self, caller: Caller, organization_id: UUID, new_suborganization: NewSuborganization) -> UUID:
+        check_can_manage_organizations(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 suborganization_id = await self.suborganizations_repo.add(session, organization_id, new_suborganization)
@@ -81,8 +91,14 @@ class UpdateSuborganization:
     suborganizations_repo: SuborganizationsRepository
 
     async def execute(
-        self, organization_id: UUID, suborganization_id: UUID, new_suborganization: NewSuborganization
+        self,
+        caller: Caller,
+        organization_id: UUID,
+        suborganization_id: UUID,
+        new_suborganization: NewSuborganization,
     ) -> None:
+        check_can_manage_organizations(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 await self.suborganizations_repo.update(
@@ -98,7 +114,9 @@ class DeleteSuborganization:
     session_maker: SessionMaker
     suborganizations_repo: SuborganizationsRepository
 
-    async def execute(self, organization_id: UUID, suborganization_id: UUID) -> None:
+    async def execute(self, caller: Caller, organization_id: UUID, suborganization_id: UUID) -> None:
+        check_can_manage_organizations(caller)
+
         async with self.session_maker.begin() as session:
             try:
                 await self.suborganizations_repo.delete(session, organization_id, suborganization_id)
