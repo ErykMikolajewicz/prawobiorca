@@ -87,7 +87,6 @@ forbidden_modules = [
     "tokenizers",
 ]
 ignore_imports = [
-    "core_service.application.dtos.search -> fastapi",
     "core_service.application.services.accounts -> fastapi",
     "core_service.application.use_cases.account -> fastapi",
     "core_service.domain.services.security -> bcrypt",

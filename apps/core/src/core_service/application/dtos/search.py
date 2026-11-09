@@ -1,7 +1,6 @@
 from enum import StrEnum
 from uuid import UUID
 
-from fastapi import Query
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -32,7 +31,7 @@ class SearchOrder(StrEnum):
 
 
 class SearchParams(BaseModel):
-    threshold: float = Query(ge=-1, le=1)
-    limit: int | None = Query(default=None, gt=0)
-    query: str = Query()
-    order_by: SearchOrder = Query(default=SearchOrder.DOCUMENT)
+    threshold: float = Field(ge=-1, le=1)
+    limit: int | None = Field(default=None, gt=0)
+    query: str
+    order_by: SearchOrder = SearchOrder.DOCUMENT

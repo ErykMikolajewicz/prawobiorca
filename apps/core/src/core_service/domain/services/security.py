@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -15,8 +14,6 @@ from core_service.domain.value_objects.auth import AccessTokenClaims
 AUTHORIZATION_TOKEN_LENGTH = 32
 
 JWT_ALGORITHM = "HS256"
-
-SECURITY_MIN_RESPONSE_TIME = 2.0
 
 url_safe_authorization_token_length = ceil(AUTHORIZATION_TOKEN_LENGTH * 4 / 3)
 
@@ -71,9 +68,3 @@ def decode_access_token(access_token: str, secret: SecretStr, algorithm: str) ->
         raise InvalidAccessToken
 
     return claims
-
-
-async def prevent_timing_attack(execution_start_time: float):
-    elapsed_execution_time = asyncio.get_event_loop().time() - execution_start_time
-    delay = max(0.0, SECURITY_MIN_RESPONSE_TIME - elapsed_execution_time)
-    await asyncio.sleep(delay)

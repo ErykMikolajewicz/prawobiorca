@@ -11,13 +11,13 @@ from core_service.application.dtos.auth import AuthTokens
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
 from core_service.application.services.accounts import check_user_can_log
+from core_service.application.services.security import prevent_timing_attack
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
 from core_service.domain.services.security import (
     JWT_ALGORITHM,
     create_access_token,
     generate_authorization_token,
     hash_refresh_token,
-    prevent_timing_attack,
 )
 from core_service.domain.value_objects.auth import AccessTokenClaims
 
