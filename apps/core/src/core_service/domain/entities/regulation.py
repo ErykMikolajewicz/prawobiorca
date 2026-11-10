@@ -35,9 +35,13 @@ class Regulation(Describable):
         self.preparation_status = RegulationPreparationStatus.IN_PROGRESS
 
     def complete_preparation(self) -> None:
+        if self.is_prepared:
+            raise RegulationAlreadyInitialized
         self.preparation_status = RegulationPreparationStatus.PREPARED
 
     def fail_preparation(self) -> None:
+        if self.is_prepared:
+            raise RegulationAlreadyInitialized
         self.preparation_status = RegulationPreparationStatus.FAILED
 
     def request_description(self) -> None:

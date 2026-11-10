@@ -79,6 +79,9 @@ async def _fail_preparation(
         if regulation is None:
             logger.warning("Regulation removed during preparation! regulation id: %s", regulation_id)
             return
+        if regulation.is_prepared:
+            logger.warning("Regulation already prepared, skipping failure! regulation id: %s", regulation_id)
+            return
 
         regulation.fail_preparation()
         await regulations_repository.save(session, regulation)
@@ -143,6 +146,9 @@ class PrepareRegulation:
             regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
             if regulation is None:
                 logger.warning("Regulation removed during preparation! regulation id: %s", regulation_id)
+                return
+            if regulation.is_prepared:
+                logger.warning("Regulation prepared by another delivery! regulation id: %s", regulation_id)
                 return
 
             await self.sections_repository.add_sections(session, user_id, regulation_id, sections_collection)

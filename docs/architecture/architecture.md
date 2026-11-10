@@ -125,6 +125,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * **Wake-up**: `NOTIFY` wakes the worker immediately, and polling every `TASK_POLL_INTERVAL_SECONDS` picks up tasks sent while no worker was listening.
   * **Heartbeat**: while a task runs, the worker extends its lease every `TASK_HEARTBEAT_SECONDS`. If the worker crashes, the lease expires and the task is delivered again.
   * **Acknowledgement**: the row is deleted only after the task has been executed.
+  * **Delayed retries**: `SmartRetryMiddleware` resends a task failed with `ServiceUnavailable` with the `delay` label; the broker stores it with `locked_until` set to that delay, so it is not claimed before.
   * **Poison messages**: each delivery is counted and passed to the task in the `delivery_attempt` label; above the limit, the task marks the document (or application) as failed instead of processing it.
 * **Resilience**: Provides built-in retry mechanisms, failure handling, and transparent task parameter serialization.
 

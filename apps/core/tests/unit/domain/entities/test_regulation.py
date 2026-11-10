@@ -111,6 +111,17 @@ def test_preparation_result():
     assert failed_regulation.preparation_status == RegulationPreparationStatus.FAILED
 
 
+def test_preparation_result_of_prepared_regulation():
+    regulation = create_regulation(RegulationPreparationStatus.PREPARED)
+
+    with pytest.raises(RegulationAlreadyInitialized):
+        regulation.complete_preparation()
+    with pytest.raises(RegulationAlreadyInitialized):
+        regulation.fail_preparation()
+
+    assert regulation.is_prepared
+
+
 @pytest.mark.parametrize(
     "description_status", [DescriptionStatus.NOT_REQUESTED, DescriptionStatus.GENERATED, DescriptionStatus.FAILED]
 )

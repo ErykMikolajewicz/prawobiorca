@@ -67,7 +67,7 @@ Szablonami zarządza administrator, a zalogowany użytkownik widzi tylko szablon
 6. Zapis nazwy, pliku w object storage i zmiana statusu na `GENERATED`. Frontend odpytuje listę wniosków, dopóki któryś ma status `IN_PROGRESS`, a gotowy plik pobiera przez presigned URL.
 
 Obsługa błędów:
-- Niedostępność LLM (`ServiceUnavailable`) ustawia status `FAILED` i ponawia zadanie (`SimpleRetryMiddleware`). Kolejna próba przywraca `IN_PROGRESS`.
+- Niedostępność LLM (`ServiceUnavailable`) ustawia status `FAILED` i ponawia zadanie z rosnącym opóźnieniem (`SmartRetryMiddleware`, opóźnienie realizowane przez `locked_until` w `task_messages`). Kolejna próba przywraca `IN_PROGRESS`.
 - Po przekroczeniu limitu dostarczeń (`MAX_APPLICATION_GENERATION_DELIVERIES`) wniosek dostaje status `FAILED` bez kolejnej próby.
 - Jeśli wniosek albo sprawa zostaną usunięte w trakcie generowania, worker kończy zadanie bez zapisu pliku.
 
