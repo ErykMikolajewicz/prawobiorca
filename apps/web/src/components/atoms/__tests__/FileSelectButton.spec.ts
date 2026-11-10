@@ -1,19 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { ElMessage } from 'element-plus'
+import ElementPlus from 'element-plus'
 import FileSelectButton from '../FileSelectButton.vue'
+import { shownMessages } from '@/__tests__/dom'
 
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    error: vi.fn(),
-  },
-}))
+function mountButton(modelValue: File | null, label?: string) {
+  return mount(FileSelectButton, {
+    props: { modelValue, label },
+    global: { plugins: [ElementPlus] },
+    attachTo: document.body,
+  })
+}
 
 async function selectFile(file: File, previousFile: File | null = null) {
-  const wrapper = mount(FileSelectButton, {
-    props: { modelValue: previousFile },
-    global: { stubs: { ElButton: true } },
-  })
+  const wrapper = mountButton(previousFile)
   const input = wrapper.find('input[type="file"]')
   const setValue = vi.fn()
   Object.defineProperty(input.element, 'files', { value: [file] })
@@ -26,8 +26,32 @@ async function selectFile(file: File, previousFile: File | null = null) {
 }
 
 describe('FileSelectButton', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
+  it('opens the file chooser from the button and shows the selected file name', async () => {
+    const wrapper = mountButton(new File(['dummy'], 'doc.pdf'), 'Wybierz PDF')
+    const openChooser = vi.spyOn(wrapper.find('input').element, 'click')
+
+    await wrapper.find('button').trigger('click')
+
+    expect(openChooser).toHaveBeenCalledOnce()
+    expect(wrapper.find('button').text()).toBe('Wybierz PDF')
+    expect(wrapper.find('.selected-file-name').text()).toBe('doc.pdf')
+  })
+
+  it('shows the default label and no file name before a file is selected', () => {
+    const wrapper = mountButton(null)
+
+    expect(wrapper.find('button').text()).toBe('Wybierz plik')
+    expect(wrapper.find('.selected-file-name').exists()).toBe(false)
+  })
+
+  it('clears the selection when the file chooser is closed without a file', async () => {
+    const wrapper = mountButton(new File(['previous'], 'previous.pdf'))
+
+    await wrapper.find('input[type="file"]').trigger('change')
+    await flushPromises()
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[null]])
+    expect(shownMessages('error')).toEqual([])
   })
 
   it('clears the input after selection so the same file can be selected again', async () => {
@@ -57,8 +81,6 @@ describe('FileSelectButton', () => {
     const { wrapper } = await selectFile(file, new File(['previous'], 'previous.pdf'))
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([null])
-    expect(ElMessage.error).toHaveBeenCalledWith(
-      'Nie udało się odczytać pliku. Wybierz go ponownie.',
-    )
+    expect(shownMessages('error')).toEqual(['Nie udało się odczytać pliku. Wybierz go ponownie.'])
   })
 })

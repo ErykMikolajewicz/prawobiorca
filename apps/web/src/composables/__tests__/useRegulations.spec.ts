@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { nextTick, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   getRegulations,
   searchRegulations,
 } from '@/api/generated/endpoints/regulations/regulations'
+import { createHttpError } from '@/__tests__/factories'
 import { useRegulations } from '@/composables/useRegulations'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { RegulationsSearchParams } from '@/domain/regulations'
@@ -71,6 +73,7 @@ describe('useRegulations', () => {
     )
 
     const { isLoading, load } = useRegulations('PUBLIC', withoutQuery)
+    expect(isLoading.value).toBe(false)
 
     const loading = load()
     expect(isLoading.value).toBe(true)
@@ -155,6 +158,87 @@ describe('useRegulations', () => {
       organizationId: 'pwr',
       suborganizationId: undefined,
     })
+  })
+
+  it('does not filter user regulations by the selected organization', async () => {
+    vi.mocked(getRegulations).mockResolvedValue([])
+    useOrganizationsStore().select('pwr', 'w10')
+
+    const { fetch } = useRegulations('PRIVATE', withoutQuery)
+    await fetch()
+    useOrganizationsStore().select('uwr', '')
+    await nextTick()
+
+    expect(getRegulations).toHaveBeenCalledExactlyOnceWith({
+      scope: 'PRIVATE',
+      documentType: undefined,
+    })
+  })
+
+  it('reloads regulations of the selected type when the type filter changes', async () => {
+    vi.mocked(getRegulations).mockResolvedValue([regulation('a')])
+
+    const { regulations, typeFilter } = useRegulations('PRIVATE', withoutQuery)
+    typeFilter.value = 'ACT'
+    await vi.waitFor(() => expect(regulations.value).toHaveLength(1))
+
+    expect(getRegulations).toHaveBeenCalledExactlyOnceWith({
+      scope: 'PRIVATE',
+      documentType: 'ACT',
+    })
+  })
+
+  it.each([
+    ['PUBLIC', 'Nie udało się pobrać regulacji publicznych.'],
+    ['PRIVATE', 'Nie udało się pobrać regulacji użytkownika.'],
+  ] as const)(
+    'load reports a failure of %s regulations and stops loading',
+    async (scope, message) => {
+      vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+      vi.mocked(getRegulations)
+        .mockResolvedValueOnce([regulation('a')])
+        .mockRejectedValueOnce(createHttpError(500))
+
+      const { regulations, isLoading, load } = useRegulations(scope, withoutQuery)
+      await load()
+      await load()
+
+      expect(ElMessage.error).toHaveBeenCalledExactlyOnceWith(message)
+      expect(isLoading.value).toBe(false)
+      expect(regulations.value).toEqual([regulation('a')])
+    },
+  )
+
+  it('adds a regulation to the list', async () => {
+    vi.mocked(getRegulations).mockResolvedValueOnce([regulation('b')])
+
+    const { regulations, pendingIds, fetch, add } = useRegulations('PRIVATE', withoutQuery)
+    await fetch()
+
+    add({ ...regulation('a'), preparationStatus: 'IN_PROGRESS' })
+
+    expect(regulations.value.map((item) => item.id)).toEqual(['a', 'b'])
+    expect(pendingIds.value).toEqual(['a'])
+  })
+
+  it('forgets scores after the query is cleared', async () => {
+    vi.mocked(searchRegulations).mockResolvedValueOnce([
+      { regulation: regulation('a'), score: 0.9 },
+    ])
+    vi.mocked(getRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
+    const searchParams = ref<RegulationsSearchParams>({
+      query: 'stypendium',
+      threshold: 0.5,
+      orderBy: 'score',
+    })
+
+    const { regulations, scores, fetch } = useRegulations('PUBLIC', () => searchParams.value)
+    await fetch()
+    searchParams.value = withoutQuery()
+    await fetch()
+
+    expect(scores.value).toEqual({})
+    expect(regulations.value.map((item) => item.id)).toEqual(['a', 'b'])
   })
 
   it('sorts regulations alphabetically without a query', async () => {

@@ -54,6 +54,47 @@ describe('cases store', () => {
     expect(store.activeCaseId).toBe('1')
   })
 
+  it('load leaves no active case when the user has no cases', async () => {
+    localStorage.setItem('active-case-id', '1')
+    vi.mocked(getCasesList).mockResolvedValueOnce([])
+    const store = useCasesStore()
+
+    await store.load()
+
+    expect(store.activeCaseId).toBe('')
+    expect(store.activeCase).toBeUndefined()
+  })
+
+  it('activeCase returns the case set as active', () => {
+    const store = useCasesStore()
+    store.add({ id: '1', name: 'Pierwsza' })
+    store.add({ id: '2', name: 'Druga' })
+
+    store.setActive('1')
+
+    expect(store.activeCase).toEqual({ id: '1', name: 'Pierwsza' })
+  })
+
+  it('remove of the last case leaves no active case', () => {
+    const store = useCasesStore()
+    store.add({ id: '1', name: 'Pierwsza' })
+
+    store.remove('1')
+
+    expect(store.activeCase).toBeUndefined()
+    expect(localStorage.getItem('active-case-id')).toBe('')
+  })
+
+  it('remove of another case keeps the active one', () => {
+    const store = useCasesStore()
+    store.add({ id: '1', name: 'Pierwsza' })
+    store.add({ id: '2', name: 'Druga' })
+
+    store.remove('1')
+
+    expect(store.activeCaseId).toBe('2')
+  })
+
   it('add prepends the case and sets it as active', () => {
     const store = useCasesStore()
     store.add({ id: '1', name: 'Pierwsza' })

@@ -8,7 +8,7 @@ Within the project, we maintain the following types of tests:
 - **Integration tests**
 - **Integration tests of the AI services** (`extraction`) — the service keeps them in its own
 `tests/` directory and they are run with `just test-extraction` (the service image must be built first).
-- **Frontend unit tests** — the frontend lives in `apps/web/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest).
+- **Frontend unit tests** — the frontend lives in `apps/web/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest), see [Frontend Unit Tests](#frontend-unit-tests).
 - **Manual E2E / UAT tests** — see [Manual E2E Test Case](manual_e2e_test.md) for step-by-step verification of full user flows (login, case creation, article search, and DOCX generation).
 - **E2E tests** — kept in `apps/web/e2e/`, written with Playwright, see [E2E Tests](#e2e-tests).
 
@@ -100,6 +100,70 @@ The threshold (90%) is set in `../../apps/core/coverage.toml` and checked by the
 is enabled and `just cov` passes the source directory (`--cov=src/core_service`) rather than the package name – otherwise
 files never imported by the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
 `just test` runs only the unit tests, without coverage, for fast feedback.
+
+## Frontend Unit Tests
+
+Frontend tests check what the user can observe: the rendered content, the request sent to `core`, the displayed message
+and the page opened by the router. A refactoring that keeps the behavior should not require changes in tests.
+
+### What Is Replaced
+
+- Only the edges of the application are mocked: the generated API client
+  (`vi.mock('@/api/generated/endpoints/cases/cases')` without a factory, so every function of the module is mocked and
+  a renamed one fails the type-check), the object storage helpers (`@/utils/storage`) and browser APIs missing in jsdom
+  (`matchMedia`, `window.open`, link clicks).
+- Stores, composables, the router and Element Plus stay real. Element Plus components are not replaced with hand-written
+  stubs: a stub accepts any prop and event, so a broken binding does not fail the test. Only tests of composables and
+  utils, which render nothing, replace `ElMessage` (`vi.mock('element-plus', ...)`) to read the shown messages.
+- `element-plus` is inlined in `vitest.config.ts` (`server.deps.inline`). Without it Node loads the CommonJS build of
+  `async-validator` and every form validation passes silently.
+- Own child components are stubbed only in a test of a container that just passes data and events
+  (e.g. `RegulationsList.spec.ts`), and when a child needs a heavy dependency (`MdEditorV3`,
+  `ApplicationTemplatePreviewDialog`).
+
+### Test Levels
+
+- **Pages** (`pages/__tests__`) — tested with their real child components and composables; only `AppLayout` is replaced.
+  They cover the main flows of a page and its reactions to errors, so composables used by a single page
+  (e.g. `useCaseApplications`) need no separate tests.
+- **Components** — tested separately when they have their own logic (validation, states depending on a status,
+  emitted events), e.g. `GeneratePdfForm.spec.ts`.
+- **Composables, stores, `domain/`, `utils/`** — tested directly, especially what is hard to reach from a page:
+  outdated responses, polling limits, mapping of values.
+- **Router** — the guards are tested against the real router (`router/__tests__/index.spec.ts`).
+- **Application start** — `src/__tests__/main.spec.ts` starts the whole application: restoring the session and the
+  reaction to its expiry.
+
+### Shared Helpers
+
+Helpers live in `apps/web/src/__tests__/`:
+
+- `setup.ts` — runs after each test: unmounts components, empties `document.body` and `localStorage`.
+- `app.ts` — `createTestApp(path)` returns the `global` mounting options with Element Plus, a fresh Pinia and a memory
+  router. The router is built from the real route table with empty pages, so a wrong route name fails the test.
+- `dom.ts` — access to elements teleported outside the mounted component (dialogs, select options, confirmations,
+  messages): `page()`, `findButton()`, `findOption()`, `confirmPopconfirm()`, `shownMessages()`, `mockLinkClicks()`.
+  Mount with `attachTo: document.body` to use them.
+- `factories.ts` — API objects with default values (`createRegulation()`, `createApplicationTemplate()`,
+  `createHttpError()`); a test overrides only the fields it checks.
+
+### Writing Tests
+
+- Act like the user: fill inputs, submit forms, click buttons and options. Emit an event of a child component directly
+  only when the user cannot trigger it (e.g. a defensive check).
+- Assert the outcome: the arguments of the API call, the text on the page, `shownMessages('error')`,
+  `router.currentRoute`. Assert the exact message, not only that some message was shown.
+- Cover the failure of each request the tested code reacts to, not only the success scenario.
+- Use `vi.waitFor()` for effects delayed by Element Plus (validation messages, popovers), and fake timers limited to
+  `setInterval` and `Date` for polling.
+
+`apps/web/src/pages/__tests__/CasePage.spec.ts` is the reference example.
+
+### Coverage
+
+Coverage is measured for the whole `src` except the generated API client; the thresholds (90%) are set in
+`apps/web/vitest.config.ts` and checked by `just check-frontend`. Coverage shows only which lines were executed, so
+a new test should fail when the tested behavior is broken — check it by breaking the code for a moment.
 
 ## Integration Tests
 

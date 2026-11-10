@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ElMessage } from 'element-plus'
+import { createHttpError } from '@/__tests__/factories'
 import {
   addRegulation,
   confirmRegulationUpload,
@@ -130,13 +132,142 @@ describe('useRegulationUpload', () => {
     expect(result?.regulation.descriptionStatus).toBe('IN_PROGRESS')
   })
 
-  it('resets description generation with the form', () => {
-    const upload = useRegulationUpload()
+  it('resetForm restores the initial form', () => {
+    const upload = prepareUpload('PUBLIC', 'Public Doc')
+    upload.selectedRegulationType.value = 'ACT'
+    upload.selectedOrganizationId.value = 'pwr'
+    upload.selectedSuborganizationId.value = 'w10'
     upload.generateDescription.value = true
 
     upload.resetForm()
 
+    expect(upload.selectedFile.value).toBeNull()
+    expect(upload.presentationName.value).toBe('')
+    expect(upload.selectedRegulationType.value).toBe('')
+    expect(upload.target.value).toBe('PRIVATE')
+    expect(upload.selectedOrganizationId.value).toBe('')
+    expect(upload.selectedSuborganizationId.value).toBe('')
     expect(upload.generateDescription.value).toBe(false)
+  })
+
+  it('setFile proposes the file name as the regulation name', () => {
+    const upload = useRegulationUpload()
+
+    upload.setFile(new File(['dummy'], 'regulamin.pdf'))
+
+    expect(upload.presentationName.value).toBe('regulamin.pdf')
+  })
+
+  it('setFile keeps the entered name when the file is cleared', () => {
+    const upload = prepareUpload('PRIVATE', 'User Doc')
+
+    upload.setFile(null)
+
+    expect(upload.selectedFile.value).toBeNull()
+    expect(upload.presentationName.value).toBe('User Doc')
+  })
+
+  it('submit requires a file', async () => {
+    const upload = useRegulationUpload()
+    upload.presentationName.value = 'User Doc'
+
+    expect(await upload.submit()).toBeNull()
+
+    expect(ElMessage.warning).toHaveBeenCalledExactlyOnceWith('Wybierz plik do przesłania.')
+    expect(addRegulation).not.toHaveBeenCalled()
+  })
+
+  it('submit requires a name', async () => {
+    const upload = prepareUpload('PRIVATE', '   ')
+
+    expect(await upload.submit()).toBeNull()
+
+    expect(ElMessage.warning).toHaveBeenCalledExactlyOnceWith('Podaj nazwę pliku.')
+    expect(addRegulation).not.toHaveBeenCalled()
+  })
+
+  it('submit trims the name', async () => {
+    vi.mocked(addRegulation).mockResolvedValueOnce({ id: 'uuid-1', url: '', fields: {} })
+
+    const upload = prepareUpload('PRIVATE', '  User Doc ')
+    const result = await upload.submit()
+
+    expect(addRegulation).toHaveBeenCalledWith(expect.objectContaining({ name: 'User Doc' }))
+    expect(result?.regulation.presentationName).toBe('User Doc')
+  })
+
+  it('submit does not assign a private regulation to an organization', async () => {
+    vi.mocked(addRegulation).mockResolvedValueOnce({ id: 'uuid-1', url: '', fields: {} })
+
+    const upload = prepareUpload('PRIVATE', 'User Doc')
+    upload.selectedOrganizationId.value = 'pwr'
+    upload.selectedSuborganizationId.value = 'w10'
+    const result = await upload.submit()
+
+    expect(addRegulation).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: null, suborganizationId: null }),
+    )
+    expect(result).toMatchObject({
+      target: 'PRIVATE',
+      regulation: { organizationId: null, suborganizationId: null },
+    })
+  })
+
+  it('submit informs that the file is being processed', async () => {
+    vi.mocked(addRegulation).mockResolvedValueOnce({ id: 'uuid-1', url: '', fields: {} })
+
+    await prepareUpload('PRIVATE', 'User Doc').submit()
+
+    expect(ElMessage.success).toHaveBeenCalledExactlyOnceWith(
+      'Plik został dodany i jest przetwarzany.',
+    )
+    expect(ElMessage.warning).not.toHaveBeenCalled()
+  })
+
+  it('submit marks the form as submitting until the upload ends', async () => {
+    let finishUpload: (() => void) | undefined
+    vi.mocked(addRegulation).mockResolvedValueOnce({ id: 'uuid-1', url: '', fields: {} })
+    vi.mocked(uploadFileToStorage).mockImplementationOnce(
+      () => new Promise((resolve) => (finishUpload = resolve)),
+    )
+
+    const upload = prepareUpload('PRIVATE', 'User Doc')
+    expect(upload.isSubmitting.value).toBe(false)
+
+    const submission = upload.submit()
+    await vi.waitFor(() => expect(uploadFileToStorage).toHaveBeenCalled())
+    expect(upload.isSubmitting.value).toBe(true)
+
+    finishUpload?.()
+    await submission
+    expect(upload.isSubmitting.value).toBe(false)
+  })
+
+  it('submit shows an error and creates nothing when the regulation is rejected', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+    vi.mocked(addRegulation).mockRejectedValueOnce(createHttpError(422))
+
+    const upload = prepareUpload('PRIVATE', 'User Doc')
+
+    expect(await upload.submit()).toBeNull()
+    expect(ElMessage.error).toHaveBeenCalledExactlyOnceWith(
+      'Wystąpił błąd podczas dodawania pliku.',
+    )
+    expect(uploadFileToStorage).not.toHaveBeenCalled()
+    expect(upload.isSubmitting.value).toBe(false)
+  })
+
+  it('submit does not confirm the upload when sending the file fails', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+    vi.mocked(addRegulation).mockResolvedValueOnce({ id: 'uuid-1', url: '', fields: {} })
+    vi.mocked(uploadFileToStorage).mockRejectedValueOnce(new Error('timeout'))
+
+    const upload = prepareUpload('PRIVATE', 'User Doc')
+
+    expect(await upload.submit()).toBeNull()
+    expect(confirmRegulationUpload).not.toHaveBeenCalled()
+    expect(ElMessage.error).toHaveBeenCalledOnce()
+    expect(ElMessage.success).not.toHaveBeenCalled()
   })
 
   it('submit keeps the uploaded regulation when confirm-upload fails', async () => {
@@ -149,9 +280,15 @@ describe('useRegulationUpload', () => {
       new Error('Preparation service not working!'),
     )
 
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+
     const upload = prepareUpload('PRIVATE', 'User Doc')
     const result = await upload.submit()
 
+    expect(ElMessage.warning).toHaveBeenCalledExactlyOnceWith(
+      'Plik został wgrany, ale nie udało się rozpocząć przetwarzania.',
+    )
+    expect(ElMessage.success).not.toHaveBeenCalled()
     expect(result?.regulation).toEqual({
       id: 'uuid-user-2',
       createDate: expect.any(String),

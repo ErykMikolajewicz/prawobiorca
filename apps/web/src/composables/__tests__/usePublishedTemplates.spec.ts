@@ -6,6 +6,7 @@ import {
   getPublishedApplicationTemplates,
   searchPublishedApplicationTemplates,
 } from '@/api/generated/endpoints/application-templates/application-templates'
+import { createHttpError } from '@/__tests__/factories'
 import { usePublishedTemplates } from '@/composables/usePublishedTemplates'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { PublishedApplicationTemplate } from '@/api/generated/model'
@@ -33,14 +34,62 @@ describe('usePublishedTemplates', () => {
     vi.mocked(getPublishedApplicationTemplates).mockResolvedValue([template('a'), template('b')])
   })
 
+  it('does not report a failure of a search replaced by a newer one', async () => {
+    let rejectStale: ((reason: Error) => void) | undefined
+    vi.mocked(searchPublishedApplicationTemplates)
+      .mockImplementationOnce(() => new Promise((_, reject) => (rejectStale = reject)))
+      .mockResolvedValueOnce([template('b')])
+
+    const { searchResults, search } = usePublishedTemplates()
+
+    const staleSearch = search('stary')
+    await search('nowy')
+    rejectStale!(new Error('Service unavailable'))
+    await staleSearch
+
+    expect(ElMessage.error).not.toHaveBeenCalled()
+    expect(searchResults.value).toEqual([template('b')])
+  })
+
   it('does not search without a query', async () => {
-    const { templates, searchResults, load } = usePublishedTemplates()
+    const { templates, searchResults, isSearching, load } = usePublishedTemplates()
+    expect(isSearching.value).toBe(false)
 
     await load()
 
     expect(templates.value).toEqual([template('a'), template('b')])
     expect(searchResults.value).toBeNull()
     expect(searchPublishedApplicationTemplates).not.toHaveBeenCalled()
+  })
+
+  it('shows an error and clears templates when they cannot be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+    const { templates, load } = usePublishedTemplates()
+    await load()
+    vi.mocked(getPublishedApplicationTemplates).mockRejectedValueOnce(createHttpError(500))
+
+    await load()
+
+    expect(ElMessage.error).toHaveBeenCalledExactlyOnceWith(
+      'Nie udało się pobrać szablonów wniosków.',
+    )
+    expect(templates.value).toEqual([])
+  })
+
+  it('ignores templates loaded for a previously selected organization', async () => {
+    let resolveStale: ((value: Array<PublishedApplicationTemplate>) => void) | undefined
+    vi.mocked(getPublishedApplicationTemplates)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)))
+      .mockResolvedValueOnce([template('b')])
+
+    const { templates, load } = usePublishedTemplates()
+
+    const staleLoad = load()
+    await load()
+    resolveStale!([template('a')])
+    await staleLoad
+
+    expect(templates.value).toEqual([template('b')])
   })
 
   it('searches templates filtered by the selected organization', async () => {

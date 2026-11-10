@@ -7,7 +7,7 @@ import {
   type InternalAxiosRequestConfig,
 } from 'axios'
 
-import { prawobiorcaClient } from '@/api/axios'
+import { prawobiorcaClient, prawobiorcaRequest } from '@/api/axios'
 import { notifySessionExpired, SessionExpiredError } from '@/api/sessionExpiry'
 
 vi.mock('@/api/sessionExpiry', async (importOriginal) => ({
@@ -54,6 +54,28 @@ function useAdapter(statuses: Record<string, number[]>) {
 function calledPaths(adapter: ReturnType<typeof vi.fn>): Array<string | undefined> {
   return adapter.mock.calls.map(([config]) => (config as InternalAxiosRequestConfig).url)
 }
+
+describe('prawobiorcaRequest', () => {
+  it('sends cookies with the request and returns the response body', async () => {
+    const adapter = vi.fn((config: InternalAxiosRequestConfig) =>
+      Promise.resolve({ ...response(config, 200), data: [{ id: 'case-1' }] }),
+    )
+    prawobiorcaClient.defaults.adapter = adapter
+
+    const data = await prawobiorcaRequest<Array<{ id: string }>>(
+      { url: '/api/cases', method: 'GET' },
+      { params: { limit: 5 } },
+    )
+
+    expect(data).toEqual([{ id: 'case-1' }])
+    expect(adapter.mock.calls[0]?.[0]).toMatchObject({
+      url: '/api/cases',
+      method: 'get',
+      params: { limit: 5 },
+      withCredentials: true,
+    })
+  })
+})
 
 describe('prawobiorcaClient refresh interceptor', () => {
   beforeEach(() => {
@@ -103,6 +125,25 @@ describe('prawobiorcaClient refresh interceptor', () => {
     })
     expect(notifySessionExpired).not.toHaveBeenCalled()
     expect(calledPaths(adapter)).toEqual(['/api/cases', '/api/auth/refresh'])
+  })
+
+  it('nie odświeża tokenów po błędzie innym niż 401', async () => {
+    const adapter = useAdapter({ '/api/cases': [403] })
+
+    await expect(prawobiorcaClient.get('/api/cases')).rejects.toMatchObject({
+      response: { status: 403 },
+    })
+    expect(calledPaths(adapter)).toEqual(['/api/cases'])
+    expect(notifySessionExpired).not.toHaveBeenCalled()
+  })
+
+  it('nie odświeża tokenów po 401 z wylogowania z parametrami w adresie', async () => {
+    const adapter = useAdapter({ '/api/auth/logout?all=true': [401] })
+
+    await expect(prawobiorcaClient.post('/api/auth/logout?all=true')).rejects.toMatchObject({
+      response: { status: 401 },
+    })
+    expect(calledPaths(adapter)).toEqual(['/api/auth/logout?all=true'])
   })
 
   it('nie odświeża tokenów po 401 z logowania', async () => {
