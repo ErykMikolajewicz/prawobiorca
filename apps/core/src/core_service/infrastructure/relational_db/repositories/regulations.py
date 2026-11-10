@@ -52,7 +52,7 @@ def _filter_regulations(
     return statement
 
 
-class RegulationsManagerRepository:
+class SqlaRegulationsRepository:
     @staticmethod
     async def list_regulations(
         session: AsyncSession,

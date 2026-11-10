@@ -160,7 +160,7 @@ score = 1.0 * best_chunk                                 (section with exactly 1
 The weights come from the `PRIMARY_CHUNK_SCORE_WEIGHT` constant (the secondary weight is its complement), so they
 always sum to 1 and the score stays on the cosine scale — it is shown to the user as-is. `threshold` and
 `limit` of a search apply to this combined section score. The whole computation is one SQL statement in
-`RegulationsSectionsRepository.search`.
+`SqlaSectionsRepository.search`.
 
 ---
 

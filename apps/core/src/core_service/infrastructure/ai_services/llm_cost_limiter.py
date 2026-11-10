@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
-from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
+from core_service.infrastructure.relational_db.repositories.llm_usage import SqlaLlmUsageRepository
 from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class LlmCostLimiter:
     def __init__(
         self,
         session_maker: DatabaseSessionMaker,
-        llm_usage_repo: LlmUsageRepository,
+        llm_usage_repo: SqlaLlmUsageRepository,
         monthly_limit_pln: float,
         pricing: LlmPricing,
     ):

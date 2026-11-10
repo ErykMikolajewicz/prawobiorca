@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core_service.infrastructure.relational_db.schemas.llm_usage import llm_usage_table
 
 
-class LlmUsageRepository:
+class SqlaLlmUsageRepository:
     @staticmethod
     async def get(session: AsyncSession, month: date) -> tuple[int, int]:
         statement = select(llm_usage_table.c.input_tokens, llm_usage_table.c.output_tokens).where(

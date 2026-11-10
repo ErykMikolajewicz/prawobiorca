@@ -16,7 +16,7 @@ from core_service.domain.value_objects.legal_units import RegulationElement
 from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
 from core_service.infrastructure.ai_services.text_embedder import HttpTextsEmbedder
 from core_service.infrastructure.relational_db.connection import async_session_maker
-from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
+from core_service.infrastructure.relational_db.repositories.sections import SqlaSectionsRepository
 
 # Unused import necessary for sqlalchemy
 from core_service.infrastructure.relational_db.schemas.organizations import organizations_table  # noqa: F401
@@ -100,7 +100,7 @@ async def init_e2e_regulation():
             ],
         )
 
-        await RegulationsSectionsRepository.add_sections(session, None, regulation_id, sections_to_embed)
+        await SqlaSectionsRepository.add_sections(session, None, regulation_id, sections_to_embed)
 
     print(f"Saved regulation: {REGULATION_NAME}")
 

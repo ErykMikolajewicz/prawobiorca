@@ -5,7 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from core_service.domain.value_objects.legal_units import LegalUnitElement
 from core_service.domain.value_objects.sections import ChunkSpan, RegulationSection, SectionChunk, SectionsCollection
 from core_service.infrastructure.consts import VECTOR_LENGTH
-from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
+from core_service.infrastructure.relational_db.repositories.regulations import SqlaRegulationsRepository
+from core_service.infrastructure.relational_db.repositories.sections import SqlaSectionsRepository
 from core_service.infrastructure.relational_db.schemas.sections import (
     regulations_chunks_table,
     regulations_sections_table,
@@ -14,6 +15,8 @@ from tests.consts import USER_ID
 from tests.integration.fixtures.regulations import insert_regulation
 
 VECTOR = [0.1] * VECTOR_LENGTH
+
+SECTIONS_OVER_QUERY_ARGUMENTS_LIMIT = 5000
 
 
 def create_sections_collection() -> SectionsCollection:
@@ -74,7 +77,7 @@ async def get_chunks(session_maker, regulation_id):
 
 async def test_add_sections_saves_sections(session_maker, regulation_id):
     async with session_maker.begin() as session:
-        await RegulationsSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
+        await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
 
     sections = await get_sections(session_maker, regulation_id)
 
@@ -91,13 +94,11 @@ async def test_add_sections_saves_sections(session_maker, regulation_id):
 
 async def test_add_sections_rejects_sections_added_twice(session_maker, regulation_id):
     async with session_maker.begin() as session:
-        await RegulationsSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
+        await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
 
     with pytest.raises(IntegrityError):
         async with session_maker.begin() as session:
-            await RegulationsSectionsRepository.add_sections(
-                session, USER_ID, regulation_id, create_sections_collection()
-            )
+            await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
 
     sections = await get_sections(session_maker, regulation_id)
 
@@ -108,7 +109,7 @@ async def test_add_sections_saves_chunks_with_their_section(session_maker, regul
     sections = create_sections_collection()
 
     async with session_maker.begin() as session:
-        await RegulationsSectionsRepository.add_sections(session, USER_ID, regulation_id, sections)
+        await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, sections)
 
     chunks = await get_chunks(session_maker, regulation_id)
 
@@ -121,3 +122,34 @@ async def test_add_sections_saves_chunks_with_their_section(session_maker, regul
         (first_section.id, 1, "Content 2", 1, 1),
         (second_section.id, 0, "Content 3", None, None),
     ]
+
+
+async def test_unregister_regulation_removes_its_sections_and_chunks(session_maker, regulation_id):
+    async with session_maker.begin() as session:
+        await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, create_sections_collection())
+
+    async with session_maker.begin() as session:
+        await SqlaRegulationsRepository.unregister_regulation(session, USER_ID, regulation_id)
+
+    assert await get_sections(session_maker, regulation_id) == []
+    assert await get_chunks(session_maker, regulation_id) == []
+
+
+async def test_add_sections_saves_sections_over_query_arguments_limit(session_maker, regulation_id):
+    sections = SectionsCollection(
+        [
+            RegulationSection(
+                header=f"Art. {order}",
+                text="Content",
+                chunks=[SectionChunk(text="Content", vector=VECTOR)],
+                section_order=order,
+            )
+            for order in range(SECTIONS_OVER_QUERY_ARGUMENTS_LIMIT)
+        ]
+    )
+
+    async with session_maker.begin() as session:
+        await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, sections)
+
+    assert len(await get_sections(session_maker, regulation_id)) == SECTIONS_OVER_QUERY_ARGUMENTS_LIMIT
+    assert len(await get_chunks(session_maker, regulation_id)) == SECTIONS_OVER_QUERY_ARGUMENTS_LIMIT

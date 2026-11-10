@@ -1,7 +1,10 @@
 from dataclasses import asdict
+from itertools import batched
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, delete, func, insert, select
+from sqlalchemy import Table, case, func, insert, select
+from sqlalchemy.ext.asyncio import AsyncSession as SqlaAsyncSession
 
 from core_service.application.dtos.search import (
     SearchOrder,
@@ -24,8 +27,15 @@ PRIMARY_CHUNK_SCORE_WEIGHT = 0.8
 
 SPAN_COLUMNS = ("span_start_element", "span_end_element")
 
+INSERT_BATCH_SIZE = 1000
 
-class RegulationsSectionsRepository:
+
+async def _insert_in_batches(session: SqlaAsyncSession, table: Table, rows: list[dict[str, Any]]) -> None:
+    for batch in batched(rows, INSERT_BATCH_SIZE, strict=False):
+        await session.execute(insert(table).values(list(batch)))
+
+
+class SqlaSectionsRepository:
     @staticmethod
     async def add_sections(
         session: AsyncSession,
@@ -61,8 +71,8 @@ class RegulationsSectionsRepository:
                 for chunk in section.chunks
             )
 
-        await session.execute(insert(regulations_sections_table).values(sections_data))
-        await session.execute(insert(regulations_chunks_table).values(chunks_data))
+        await _insert_in_batches(session, regulations_sections_table, sections_data)
+        await _insert_in_batches(session, regulations_chunks_table, chunks_data)
 
     @staticmethod
     async def list_sections_contents(
@@ -101,10 +111,6 @@ class RegulationsSectionsRepository:
         exists_result = await session.execute(exists_query)
         if not exists_result.scalar():
             raise RegulationDocumentsNotFound()
-
-        limit = search_params.limit
-        if limit is None:
-            limit = 2**32
 
         distance = regulations_chunks_table.c.vector.cosine_distance(vector)
 
@@ -151,7 +157,7 @@ class RegulationsSectionsRepository:
             .group_by(ranked_chunks.c.section_id)
             .having(score >= search_params.threshold)
             .order_by(score.desc())
-            .limit(limit)
+            .limit(search_params.limit)
             .subquery()
         )
 
@@ -196,13 +202,3 @@ class RegulationsSectionsRepository:
             )
             for row in rows
         ]
-
-    @staticmethod
-    async def remove_sections(session: AsyncSession, user_id: UUID | None, regulation_id: UUID) -> None:
-        session = sqla_session(session)
-        query = delete(regulations_sections_table).where(
-            regulations_sections_table.c.regulation_id == regulation_id,
-            regulations_sections_table.c.user_id == user_id,
-        )
-
-        await session.execute(query)
