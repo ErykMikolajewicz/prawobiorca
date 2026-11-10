@@ -49,10 +49,7 @@ The whole application lives in this repository:
     git config core.hooksPath .githooks
     ```
 
-4. **Open the documentation**:
-    ```sh
-    zensical serve
-    ```
+4. **Read the [developer documentation](https://erykmikolajewicz.github.io/prawobiorca/)**:
     - Read the section about **Workflow**, especially regarding the commit format.
     - Read about **Project Architecture**, especially the coding rules.
 
