@@ -9,6 +9,7 @@ dependencies = [
     "alembic==1.20.*",
     "asyncpg==0.32.*",
     "bcrypt==5.0.*",
+    "botocore==1.43.*",
     "email-validator==2.3.*",
     "fastapi==0.162.*",
     "google-auth[requests]==2.62.*",
@@ -91,6 +92,7 @@ forbidden_modules = [
 ]
 ignore_imports = [
     "core_service.application.services.accounts -> fastapi",
+    "core_service.application.services.regulations -> fastapi",
     "core_service.application.use_cases.account -> fastapi",
     "core_service.domain.services.security -> bcrypt",
     "core_service.domain.services.security -> jwt",

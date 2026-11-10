@@ -1,3 +1,4 @@
+import pytest
 from fastapi import status
 from sqlalchemy import select
 
@@ -5,11 +6,13 @@ from core_service.application.use_cases.regulations import MAX_REGULATION_PREPAR
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import RegulationPreparationStatus
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.tasks.connection import DEFAULT_TASK_RETRY_COUNT
 from core_service.infrastructure.tasks.regulations import (
     REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
     REGULATION_PREPARATION_TASK_NAME,
     PostgresRegulationPreparationScheduler,
 )
+from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import USER_ID
 from tests.fixtures.regulation_elements import load_regulation_elements
 from tests.integration.fixtures.ai_services import DESCRIPTION_VECTOR, QUERY_VECTOR
@@ -73,6 +76,35 @@ async def test_regulation_preparation_over_delivery_limit_marks_regulation_faile
     regulation = await get_regulation(session_maker, regulation_id)
     assert regulation.preparation_status == RegulationPreparationStatus.FAILED
     mock_regulation_splitter.split.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("retries", "expected_status"),
+    [
+        (0, RegulationPreparationStatus.IN_PROGRESS),
+        (DEFAULT_TASK_RETRY_COUNT - 1, RegulationPreparationStatus.FAILED),
+    ],
+    ids=("retried", "last attempt"),
+)
+async def test_regulation_preparation_with_unavailable_service_is_marked_failed_on_last_attempt(
+    user, session_maker, broker, mock_regulations_storage, mock_regulation_splitter, retries, expected_status
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(
+            session, USER_ID, preparation_status=RegulationPreparationStatus.IN_PROGRESS
+        )
+        await PostgresRegulationPreparationScheduler(broker).schedule_regulation_preparation(
+            session, USER_ID, regulation_id
+        )
+    (task,) = await get_scheduled_tasks(session_maker)
+    mock_regulations_storage.get_regulation.return_value = b"%PDF"
+    mock_regulation_splitter.split.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await execute_task(broker, task, retries=retries)
+
+    regulation = await get_regulation(session_maker, regulation_id)
+    assert regulation.preparation_status == expected_status
 
 
 async def test_generated_regulation_description_is_saved(

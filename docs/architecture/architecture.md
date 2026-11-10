@@ -69,7 +69,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * Retries a document up to 3 times when `extraction` or `embedding` is unavailable; after the last attempt the document is marked as failed and can be retried on demand. A document whose processing crashed the worker 3 times is marked as failed as well.
 * **Application Generator (Taskiq Worker)**:
   * Drafts the application text with `llm`, renders it to DOCX, stores the file in object storage and marks the application as generated — see [AI module](../ai.md).
-  * Retries when `llm` is unavailable; after the delivery limit the application is marked as failed.
+  * Retries up to 3 times when `llm` is unavailable; after the last attempt, or above the delivery limit, the application is marked as failed.
 
 ### 2.2. `embedding`
 * **Responsibilities**:
@@ -162,7 +162,7 @@ flowchart TB
 #### `../../apps/core/src/core_service/domain`
 The innermost core of the service containing **Enterprise Business Rules**. It has zero dependencies on outer layers or external frameworks.
 - **Entities**: Business models with identity, state and the rules that change it: `Regulation` (preparation and description lifecycle), `ApplicationTemplate` (upload, draft, publication, field configuration and values), `Application` (generation lifecycle) and `User`. The AI description lifecycle shared by regulations and templates lives in the `Describable` mixin. An invalid transition raises a domain exception. Modules without business rules (cases, case documents, organizations) have no entities and work on DTOs directly.
-- **Value Objects**: Immutable data structures representing concepts without identity.
+- **Value Objects**: Immutable (frozen) data structures representing concepts without identity. The exception are the working structures of the regulation processing pipeline – `LegalUnit` (built step by step by the parser), `RegulationSection` and `SectionChunk` (numbered after filtering and filled with vectors after embedding, with ids generated up front to link chunks to their section when saved) – which stay mutable.
 - **Services**: Pure business algorithms and domain rules.
 - **Exceptions**: Domain-specific error definitions.
 

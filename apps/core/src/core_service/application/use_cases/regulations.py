@@ -24,6 +24,7 @@ from core_service.application.ports.tasks import (
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.services.embedding import embed_description
 from core_service.application.services.regulations import RegulationPreparator
+from core_service.application.services.tasks import is_retried
 from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
 from core_service.domain.exceptions.organizations import OrganizationNotFound
@@ -52,8 +53,8 @@ from core_service.domain.value_objects.regulations import (
     RegulationScope,
     RegulationType,
 )
+from core_service.domain.value_objects.sections import SectionsCollection
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,11 @@ async def _fail_description_generation(
         if regulation is None:
             logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
             return
+        if regulation.is_description_generated:
+            logger.warning(
+                "Regulation description already generated, skipping failure! regulation id: %s", regulation_id
+            )
+            return
 
         regulation.fail_description_generation()
         await regulations_repository.save(session, regulation)
@@ -112,7 +118,7 @@ class PrepareRegulation:
     regulation_preparator: RegulationPreparator
     description_generation_scheduler: RegulationDescriptionGenerationScheduler
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> None:
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, is_last_attempt: bool) -> None:
         async with self.session_maker.begin() as session:
             regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
             if regulation is None:
@@ -129,40 +135,32 @@ class PrepareRegulation:
         try:
             regulation_content = await self.regulations_storage.get_regulation(regulation_id)
             sections_collection = await self.regulation_preparator.prepare_regulation(regulation_content)
-        except RegulationContentNotFound:
-            logger.error("Regulation content not found! regulation id: %s", regulation_id)
-            await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
-            raise
-        except ServiceUnavailable:
-            logger.error("Service to prepare regulation not working!")
-            await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
-            raise
-        except Exception as e:
-            logger.error("Unexpected error during regulation preparation! %s", e)
-            await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
+            await self._complete_preparation(user_id, regulation_id, sections_collection)
+        except Exception as error:
+            logger.exception("Regulation preparation failed! regulation id: %s", regulation_id)
+            if not is_retried(error, is_last_attempt):
+                await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
             raise
 
-        try:
-            async with self.session_maker.begin() as session:
-                regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
-                if regulation is None:
-                    logger.warning("Regulation removed during preparation! regulation id: %s", regulation_id)
-                    return
-                if regulation.is_prepared:
-                    logger.warning("Regulation prepared by another delivery! regulation id: %s", regulation_id)
-                    return
+    async def _complete_preparation(
+        self, user_id: UUID | None, regulation_id: UUID, sections_collection: SectionsCollection
+    ) -> None:
+        async with self.session_maker.begin() as session:
+            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+            if regulation is None:
+                logger.warning("Regulation removed during preparation! regulation id: %s", regulation_id)
+                return
+            if regulation.is_prepared:
+                logger.warning("Regulation prepared by another delivery! regulation id: %s", regulation_id)
+                return
 
-                await self.sections_repository.add_sections(session, user_id, regulation_id, sections_collection)
-                regulation.complete_preparation()
-                await self.regulations_repository.save(session, regulation)
-                if regulation.is_description_in_progress:
-                    await self.description_generation_scheduler.schedule_regulation_description_generation(
-                        session, user_id, regulation_id
-                    )
-        except Exception as e:
-            logger.error("Failed to save prepared regulation! %s", e)
-            await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
-            raise
+            await self.sections_repository.add_sections(session, user_id, regulation_id, sections_collection)
+            regulation.complete_preparation()
+            await self.regulations_repository.save(session, regulation)
+            if regulation.is_description_in_progress:
+                await self.description_generation_scheduler.schedule_regulation_description_generation(
+                    session, user_id, regulation_id
+                )
 
 
 @dataclass
@@ -218,7 +216,7 @@ class GenerateRegulationDescription:
     description_writer: RegulationDescriptionWriter
     texts_embedder: TextsEmbedder
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> None:
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, is_last_attempt: bool) -> None:
         async with self.session_maker.begin() as session:
             regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
             if regulation is None:
@@ -238,29 +236,27 @@ class GenerateRegulationDescription:
         try:
             description = await self.description_writer.write(description_source)
             vectors = await self.texts_embedder.embed_texts([description])
-        except ServiceUnavailable:
-            logger.error("Service to generate regulation description not working!")
-            await _fail_description_generation(self.session_maker, self.regulations_repository, user_id, regulation_id)
-            raise
-        except Exception as e:
-            logger.error("Unexpected error during regulation description generation! %s", e)
-            await _fail_description_generation(self.session_maker, self.regulations_repository, user_id, regulation_id)
+            await self._complete_description_generation(user_id, regulation_id, description, vectors[0])
+        except Exception as error:
+            logger.exception("Regulation description generation failed! regulation id: %s", regulation_id)
+            if not is_retried(error, is_last_attempt):
+                await _fail_description_generation(
+                    self.session_maker, self.regulations_repository, user_id, regulation_id
+                )
             raise
 
-        try:
-            async with self.session_maker.begin() as session:
-                regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
-                if regulation is None:
-                    logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
-                    return
+    async def _complete_description_generation(
+        self, user_id: UUID | None, regulation_id: UUID, description: str, vector: list[float]
+    ) -> None:
+        async with self.session_maker.begin() as session:
+            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+            if regulation is None:
+                logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
+                return
 
-                regulation.complete_description_generation(description)
-                await self.regulations_repository.save(session, regulation)
-                await self.regulations_repository.set_description_vector(session, user_id, regulation_id, vectors[0])
-        except Exception as e:
-            logger.error("Failed to save generated regulation description! %s", e)
-            await _fail_description_generation(self.session_maker, self.regulations_repository, user_id, regulation_id)
-            raise
+            regulation.complete_description_generation(description)
+            await self.regulations_repository.save(session, regulation)
+            await self.regulations_repository.set_description_vector(session, user_id, regulation_id, vector)
 
 
 @dataclass

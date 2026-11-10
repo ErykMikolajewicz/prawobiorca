@@ -15,6 +15,7 @@ from core_service.framework.workers.regulations import generate_regulation_descr
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
 from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL, TASK_HEARTBEAT_SECONDS, PostgresBroker
+from core_service.infrastructure.tasks.connection import RETRIES_LABEL
 
 WORKER_TASKS = {
     task.task_name: task
@@ -70,9 +71,12 @@ async def get_scheduled_task_names(session_maker) -> list[str]:
     return [task.task_name for task in await get_scheduled_tasks(session_maker)]
 
 
-async def execute_task(broker: PostgresBroker, task: TaskiqMessage, delivery_attempt: int = 1) -> None:
+async def execute_task(
+    broker: PostgresBroker, task: TaskiqMessage, delivery_attempt: int = 1, retries: int = 0
+) -> None:
     """Execute a scheduled task like the worker does, with the dependencies overridden in `broker`."""
     task.labels[DELIVERY_ATTEMPT_LABEL] = delivery_attempt
+    task.labels[RETRIES_LABEL] = retries
 
     result = await Receiver(broker).run_task(WORKER_TASKS[task.task_name].original_func, task)
 

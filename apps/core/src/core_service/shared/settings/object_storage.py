@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _SECRETS_DIR = Path("/mnt/secrets-store")
@@ -10,7 +11,7 @@ class ObjectStorageSettings(BaseSettings):
     PUBLIC_ENDPOINT_URL: str = ""
     REGION: str
     ACCESS_KEY: str
-    SECRET_KEY: str
+    SECRET_KEY: SecretStr
     BUCKET: str
     SIGNED_URL_EXPIRATION_SECONDS: int = 3600
     MAX_FILE_SIZE_BYTES: int = 10485760

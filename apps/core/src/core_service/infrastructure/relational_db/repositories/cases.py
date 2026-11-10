@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from core_service.application.dtos.cases import CaseData, CaseDocument, NewCaseDocument
 from core_service.application.ports.relational import AsyncSession
-from core_service.domain.exceptions.cases import CaseNotFound
+from core_service.domain.exceptions.cases import CaseDocumentNotFound, CaseNotFound
 from core_service.infrastructure.relational_db.schemas.cases import case_documents_table, cases_table
 from core_service.infrastructure.relational_db.session import sqla_session
 
@@ -74,16 +74,16 @@ class SqlaCaseDocumentsRepository:
             result = await session.execute(statement)
         except IntegrityError:
             raise CaseNotFound
-        case_article_id = result.scalar_one()
-        return case_article_id
+        document_id = result.scalar_one()
+        return document_id
 
     @staticmethod
-    async def delete(session: AsyncSession, user_id: UUID, case_id: UUID, article_id: UUID) -> None:
+    async def delete(session: AsyncSession, user_id: UUID, case_id: UUID, document_id: UUID) -> None:
         session = sqla_session(session)
         statement = (
             delete(case_documents_table)
             .where(
-                case_documents_table.c.id == article_id,
+                case_documents_table.c.id == document_id,
                 case_documents_table.c.case_id == case_id,
                 case_documents_table.c.user_id == user_id,
             )
@@ -92,4 +92,4 @@ class SqlaCaseDocumentsRepository:
         result = await session.execute(statement)
 
         if result.scalar_one_or_none() is None:
-            raise CaseNotFound
+            raise CaseDocumentNotFound

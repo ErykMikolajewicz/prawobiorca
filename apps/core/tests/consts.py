@@ -5,6 +5,7 @@ from pydantic import SecretStr
 from core_service.application.use_cases.auth import AuthTokensConfig
 from core_service.domain.services.security import JWT_ALGORITHM, create_access_token
 from core_service.domain.value_objects.auth import AccessTokenClaims
+from core_service.shared.exceptions import ServiceUnavailable
 
 STRONG_PASSWORD = "StrongPassword12;"
 
@@ -22,6 +23,9 @@ SUBORGANIZATION_ID = UUID("a3f54f36-9653-4ccf-b9f4-81bf885d02ee")
 UNKNOWN_ID = UUID("8f7a6b5c-4d3e-4f1a-9b8c-7d6e5f4a3b2c")
 
 REFRESH_TOKEN = "O8KwTwMvXTSn3VdWl6iZlNqmw39UvFRvIbeHfo-mykY"
+
+TASK_FAILURES = [(ServiceUnavailable, True), (RuntimeError, True), (RuntimeError, False)]
+TASK_FAILURES_IDS = ("service unavailable on last attempt", "unexpected error", "unexpected error before last attempt")
 
 AUTH_TOKENS_CONFIG = AuthTokensConfig(
     jwt_secret_key=SecretStr("test-jwt-secret-key-with-32-chars"),

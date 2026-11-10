@@ -1,6 +1,5 @@
-import asyncio
-
 import google.auth
+from fastapi.concurrency import run_in_threadpool
 from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request
 
@@ -12,10 +11,10 @@ _credentials: Credentials | None = None
 async def get_access_token() -> str:
     global _credentials
     if _credentials is None:
-        _credentials, _ = await asyncio.to_thread(google.auth.default, scopes=_SCOPES)
+        _credentials, _ = await run_in_threadpool(google.auth.default, scopes=_SCOPES)
 
     if not _credentials.valid:
-        await asyncio.to_thread(_credentials.refresh, Request())
+        await run_in_threadpool(_credentials.refresh, Request())
 
     token = _credentials.token
     if token is None:

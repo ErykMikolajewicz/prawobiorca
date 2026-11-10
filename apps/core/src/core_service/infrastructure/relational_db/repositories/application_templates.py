@@ -10,7 +10,13 @@ from core_service.domain.exceptions.application_templates import ApplicationTemp
 from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 from core_service.domain.value_objects.organizations import OrganizationFilter
-from core_service.infrastructure.relational_db.schemas.application_templates import application_templates_table
+from core_service.infrastructure.relational_db.integrity import get_violated_constraint
+from core_service.infrastructure.relational_db.schemas.application_templates import (
+    APPLICATION_TEMPLATES_ORGANIZATION_FOREIGN_KEY,
+    APPLICATION_TEMPLATES_ORGANIZATION_SUBORGANIZATION_FOREIGN_KEY,
+    APPLICATION_TEMPLATES_SUBORGANIZATION_FOREIGN_KEY,
+    application_templates_table,
+)
 from core_service.infrastructure.relational_db.session import sqla_session
 
 TEMPLATE_NAME_SIMILARITY_THRESHOLD = 0.3
@@ -143,8 +149,14 @@ class SqlaApplicationTemplatesRepository:
         session.add(template)
         try:
             await session.flush()
-        except IntegrityError:
-            raise OrganizationNotFound
+        except IntegrityError as e:
+            if get_violated_constraint(e) in (
+                APPLICATION_TEMPLATES_ORGANIZATION_FOREIGN_KEY,
+                APPLICATION_TEMPLATES_SUBORGANIZATION_FOREIGN_KEY,
+                APPLICATION_TEMPLATES_ORGANIZATION_SUBORGANIZATION_FOREIGN_KEY,
+            ):
+                raise OrganizationNotFound from e
+            raise
 
         statement = (
             select(ApplicationTemplateRepresentation)

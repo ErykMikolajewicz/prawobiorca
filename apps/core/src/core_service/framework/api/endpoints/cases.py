@@ -24,7 +24,7 @@ from core_service.domain.exceptions.application_templates import (
     InvalidApplicationFieldValues,
 )
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
-from core_service.domain.exceptions.cases import CaseNotFound
+from core_service.domain.exceptions.cases import CaseDocumentNotFound, CaseNotFound
 from core_service.domain.value_objects.users import Caller
 from core_service.framework.dependencies.applications import (
     get_add_application,
@@ -130,7 +130,7 @@ async def delete_case_document(
 ):
     try:
         await delete_case_document_.execute(caller, case_id, document_id)
-    except CaseNotFound:
+    except CaseDocumentNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No document with that id!")
 
 

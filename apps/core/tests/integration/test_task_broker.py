@@ -7,11 +7,14 @@ from taskiq import TaskiqMessage
 
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
 from core_service.infrastructure.tasks.broker import DELAY_LABEL, DELIVERY_ATTEMPT_LABEL, insert_task_message
+from core_service.shared.exceptions import ServiceUnavailable
 from tests.integration.fixtures.tasks import start_worker_broker
 
 LISTEN_TIMEOUT = 3
 
 HEARTBEAT_SECONDS = 0.1
+
+POLL_INTERVAL_SECONDS = 0.1
 
 
 def make_broker_message(broker, *args, labels=None):
@@ -111,3 +114,37 @@ async def test_heartbeat_survives_unexpected_error(postgres_container, session_m
         await asyncio.sleep(3 * HEARTBEAT_SECONDS)
 
         assert await get_locked_until(session_maker) > claimed_until
+
+
+async def test_closed_listener_is_reconnected(task_broker):
+    closed_connection = task_broker._listen_connection
+    await closed_connection.close()
+
+    await task_broker.kick(make_broker_message(task_broker))
+    await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
+
+    assert task_broker._listen_connection is not closed_connection
+    assert not task_broker._listen_connection.is_closed()
+
+
+async def test_message_is_delivered_while_listener_can_not_connect(task_broker):
+    await task_broker._listen_connection.close()
+    await task_broker.kick(make_broker_message(task_broker, "argument"))
+
+    with patch.object(task_broker, "_connect_listener", side_effect=OSError):
+        delivered = await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
+
+    assert task_broker.formatter.loads(delivered.data).args == ["argument"]
+
+
+async def test_message_is_claimed_again_after_database_is_unavailable(task_broker):
+    await task_broker.kick(make_broker_message(task_broker, "argument"))
+    claimed_message = await task_broker._claim_message()
+
+    with (
+        patch("core_service.infrastructure.tasks.broker.TASK_POLL_INTERVAL_SECONDS", POLL_INTERVAL_SECONDS),
+        patch.object(task_broker, "_claim_message", side_effect=[ServiceUnavailable, claimed_message]),
+    ):
+        delivered = await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
+
+    assert task_broker.formatter.loads(delivered.data).args == ["argument"]

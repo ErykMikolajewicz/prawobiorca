@@ -21,7 +21,7 @@ It talks to `core` exclusively over the HTTP REST API — it has no direct acces
 * **Material Symbols** icons (`@iconify-vue/material-symbols`) and the **Inter** font (`@fontsource-variable/inter`).
 * **Vitest** for unit tests, **Playwright** for E2E tests, **oxlint** + **ESLint** (with type-aware rules) for linting, **stylelint** for CSS, **oxfmt** for formatting and **knip** for unused files, exports and dependencies (`src/api/generated/` is excluded in `knip.json`).
 
-Required toolchain versions are declared in `apps/web/package.json`: Node `^24.15.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
+Required toolchain versions are declared in `apps/web/package.json`: Node `^26.13.0` (`engines`) and pnpm `11.24.0` (`packageManager`, enabled through Corepack).
 
 ---
 

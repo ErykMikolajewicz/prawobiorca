@@ -17,6 +17,7 @@ from core_service.application.ports.applications import (
 from core_service.application.ports.cases import CaseDocumentsRepository
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationGenerationScheduler
+from core_service.application.services.tasks import is_retried
 from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateNotFound,
@@ -27,7 +28,6 @@ from core_service.domain.exceptions.cases import CaseNotFound
 from core_service.domain.services.case_access import resolve_case_owner
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,9 @@ async def _fail_generation(
         application = await applications_repo.get_for_update(session, user_id, application_id)
         if application is None:
             logger.warning("Application removed during generation! application id: %s", application_id)
+            return
+        if application.is_generated:
+            logger.warning("Application already generated, skipping failure! application id: %s", application_id)
             return
 
         application.fail_generation()
@@ -92,7 +95,9 @@ class GenerateApplication:
     application_writer: ApplicationWriter
     application_renderer: ApplicationRenderer
 
-    async def execute(self, user_id: UUID, application_id: UUID, new_application: NewApplication) -> None:
+    async def execute(
+        self, user_id: UUID, application_id: UUID, new_application: NewApplication, is_last_attempt: bool
+    ) -> None:
         async with self.session_maker.begin() as session:
             template = await self.application_templates_repo.get_for_update(session, new_application.template_id)
             application = await self.applications_repo.get_for_update(session, user_id, application_id)
@@ -119,29 +124,23 @@ class GenerateApplication:
             content = await self.application_writer.write(new_application, template, legal_basis)
             name = await self.application_writer.write_name(new_application)
             document = await self.application_renderer.render(template_content, new_application, content)
-        except ServiceUnavailable:
-            logger.error("Service to generate application not working!")
-            await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
-            raise
-        except Exception as e:
-            logger.error("Unexpected error during application generation! %s", e)
-            await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
+            await self._complete_generation(user_id, application_id, name, document)
+        except Exception as error:
+            logger.exception("Application generation failed! application id: %s", application_id)
+            if not is_retried(error, is_last_attempt):
+                await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
             raise
 
-        try:
-            async with self.session_maker.begin() as session:
-                application = await self.applications_repo.get_for_update(session, user_id, application_id)
-                if application is None:
-                    logger.warning("Application removed during generation! application id: %s", application_id)
-                    return
+    async def _complete_generation(self, user_id: UUID, application_id: UUID, name: str, document: bytes) -> None:
+        async with self.session_maker.begin() as session:
+            application = await self.applications_repo.get_for_update(session, user_id, application_id)
+            if application is None:
+                logger.warning("Application removed during generation! application id: %s", application_id)
+                return
 
-                application.complete_generation(name)
-                await self.applications_repo.save(session, application)
-                await self.applications_storage.upload_application(application_id, document)
-        except Exception as e:
-            logger.error("Failed to save generated application! %s", e)
-            await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
-            raise
+            application.complete_generation(name)
+            await self.applications_repo.save(session, application)
+            await self.applications_storage.upload_application(application_id, document)
 
     @staticmethod
     def _is_template_valid(

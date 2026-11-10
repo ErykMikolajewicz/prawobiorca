@@ -21,7 +21,7 @@ from core_service.infrastructure.tasks.application_templates import (
 )
 from core_service.infrastructure.tasks.applications import APPLICATION_GENERATION_TASK_NAME
 from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL
-from core_service.infrastructure.tasks.connection import broker
+from core_service.infrastructure.tasks.connection import broker, is_last_attempt
 
 
 @broker.task(task_name=APPLICATION_GENERATION_TASK_NAME)
@@ -39,7 +39,10 @@ async def generate_application_task(
         return
 
     await generate_application.execute(
-        UUID(user_id), UUID(application_id), TypeAdapter(NewApplication).validate_python(new_application)
+        UUID(user_id),
+        UUID(application_id),
+        TypeAdapter(NewApplication).validate_python(new_application),
+        is_last_attempt(context.message),
     )
 
 
@@ -59,4 +62,4 @@ async def generate_application_template_description_task(
     ):
         return
 
-    await generate_description.execute(UUID(template_id))
+    await generate_description.execute(UUID(template_id), is_last_attempt(context.message))

@@ -41,7 +41,7 @@ from core_service.domain.value_objects.regulations import (
 )
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
-from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID
+from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, TASK_FAILURES, TASK_FAILURES_IDS
 from tests.mocks import get_awaited_argument, get_awaited_arguments, record_saved_states
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
@@ -234,7 +234,7 @@ async def test_prepare_regulation_saves_sections(
     mock_regulations_storage.get_regulation.return_value = b"content"
     sections = mock_regulation_preparator.prepare_regulation.return_value
 
-    await prepare_regulation.execute(None, REGULATION_ID)
+    await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     mock_regulation_preparator.prepare_regulation.assert_awaited_once_with(b"content")
     assert get_awaited_argument(sections_repository.add_sections, "sections") == sections
@@ -255,7 +255,7 @@ async def test_prepare_regulation_rejected(
     store_regulation(regulations_repository, regulation)
 
     with pytest.raises(error):
-        await prepare_regulation.execute(None, REGULATION_ID)
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     mock_regulation_preparator.prepare_regulation.assert_not_awaited()
     regulations_repository.save.assert_not_awaited()
@@ -268,24 +268,36 @@ async def test_prepare_regulation_without_content_marks_failed(
     mock_regulations_storage.get_regulation.side_effect = RegulationContentNotFound
 
     with pytest.raises(RegulationContentNotFound):
-        await prepare_regulation.execute(None, REGULATION_ID)
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     sections_repository.add_sections.assert_not_awaited()
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
 
 
-@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+@pytest.mark.parametrize(("error", "is_last_attempt"), TASK_FAILURES, ids=TASK_FAILURES_IDS)
 async def test_prepare_regulation_failure_marks_failed(
-    prepare_regulation, regulations_repository, sections_repository, mock_regulation_preparator, error
+    prepare_regulation, regulations_repository, sections_repository, mock_regulation_preparator, error, is_last_attempt
 ):
     preparation_statuses = record_preparation_statuses(regulations_repository)
     mock_regulation_preparator.prepare_regulation.side_effect = error
 
     with pytest.raises(error):
-        await prepare_regulation.execute(None, REGULATION_ID)
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt)
 
     sections_repository.add_sections.assert_not_awaited()
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
+
+
+async def test_prepare_regulation_retried_failure_keeps_in_progress(
+    prepare_regulation, regulations_repository, mock_regulation_preparator
+):
+    preparation_statuses = record_preparation_statuses(regulations_repository)
+    mock_regulation_preparator.prepare_regulation.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=False)
+
+    assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
 
 
 @pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
@@ -296,7 +308,7 @@ async def test_prepare_regulation_save_failure_marks_failed(
     sections_repository.add_sections.side_effect = error
 
     with pytest.raises(error):
-        await prepare_regulation.execute(None, REGULATION_ID)
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
 
@@ -307,7 +319,7 @@ async def test_prepare_regulation_removed_during_preparation(
     preparation_statuses = record_preparation_statuses(regulations_repository)
     regulations_repository.get_for_update.side_effect = [create_regulation(), None]
 
-    await prepare_regulation.execute(None, REGULATION_ID)
+    await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     sections_repository.add_sections.assert_not_awaited()
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
@@ -322,7 +334,7 @@ async def test_prepare_regulation_prepared_by_another_delivery(
         create_regulation(RegulationPreparationStatus.PREPARED),
     ]
 
-    await prepare_regulation.execute(None, REGULATION_ID)
+    await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     sections_repository.add_sections.assert_not_awaited()
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
@@ -339,7 +351,7 @@ async def test_prepare_regulation_failure_keeps_regulation_prepared_by_another_d
     mock_regulation_preparator.prepare_regulation.side_effect = ServiceUnavailable
 
     with pytest.raises(ServiceUnavailable):
-        await prepare_regulation.execute(None, REGULATION_ID)
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
 
@@ -357,7 +369,7 @@ async def test_prepare_regulation_schedules_requested_description_generation(
 ):
     store_regulation(regulations_repository, create_regulation(description_status=description_status))
 
-    await prepare_regulation.execute(None, REGULATION_ID)
+    await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
 
     scheduler = mock_regulation_description_generation_scheduler
     assert scheduler.schedule_regulation_description_generation.await_count == expected_schedules
@@ -489,7 +501,7 @@ async def test_generate_regulation_description_saves_description_with_vector(
     mock_regulation_description_writer.write.return_value = description
     mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
 
-    await generate_regulation_description.execute(None, REGULATION_ID)
+    await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=True)
 
     description_source = get_awaited_argument(mock_regulation_description_writer.write, "description_source")
     assert description_source.presentation_name == "Regulamin studiów"
@@ -509,24 +521,52 @@ async def test_generate_regulation_description_skipped(
 ):
     store_regulation(regulations_repository, regulation)
 
-    await generate_regulation_description.execute(None, REGULATION_ID)
+    await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=True)
 
     mock_regulation_description_writer.write.assert_not_awaited()
     regulations_repository.save.assert_not_awaited()
 
 
-@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+@pytest.mark.parametrize(("error", "is_last_attempt"), TASK_FAILURES, ids=TASK_FAILURES_IDS)
 async def test_generate_regulation_description_failure_marks_failed(
-    generate_regulation_description, regulations_repository, mock_regulation_description_writer, error
+    generate_regulation_description, regulations_repository, mock_regulation_description_writer, error, is_last_attempt
 ):
     description_statuses = record_description_statuses(regulations_repository)
     mock_regulation_description_writer.write.side_effect = error
 
     with pytest.raises(error):
-        await generate_regulation_description.execute(None, REGULATION_ID)
+        await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt)
 
     regulations_repository.set_description_vector.assert_not_awaited()
     assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
+
+
+async def test_generate_regulation_description_retried_failure_keeps_in_progress(
+    generate_regulation_description, regulations_repository, mock_regulation_description_writer
+):
+    description_statuses = record_description_statuses(regulations_repository)
+    mock_regulation_description_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=False)
+
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
+
+
+async def test_generate_regulation_description_failure_keeps_description_generated_by_another_delivery(
+    generate_regulation_description, regulations_repository, mock_regulation_description_writer
+):
+    description_statuses = record_description_statuses(regulations_repository)
+    regulations_repository.get_for_update.side_effect = [
+        create_regulation(),
+        create_regulation(description_status=DescriptionStatus.GENERATED),
+    ]
+    mock_regulation_description_writer.write.side_effect = RuntimeError
+
+    with pytest.raises(RuntimeError):
+        await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=True)
+
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
 
 
 @pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
@@ -534,10 +574,11 @@ async def test_generate_regulation_description_save_failure_marks_failed(
     generate_regulation_description, regulations_repository, error
 ):
     description_statuses = record_description_statuses(regulations_repository)
+    regulations_repository.get_for_update.side_effect = lambda *_: create_regulation()
     regulations_repository.set_description_vector.side_effect = error
 
     with pytest.raises(error):
-        await generate_regulation_description.execute(None, REGULATION_ID)
+        await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=True)
 
     assert description_statuses[-1] == DescriptionStatus.FAILED
 
@@ -548,7 +589,7 @@ async def test_generate_regulation_description_of_removed_regulation(
     description_statuses = record_description_statuses(regulations_repository)
     regulations_repository.get_for_update.side_effect = [create_regulation(), None]
 
-    await generate_regulation_description.execute(None, REGULATION_ID)
+    await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=True)
 
     regulations_repository.set_description_vector.assert_not_awaited()
     assert description_statuses == [DescriptionStatus.IN_PROGRESS]
@@ -562,7 +603,7 @@ async def test_generate_regulation_description_failure_of_removed_regulation(
     mock_regulation_description_writer.write.side_effect = ServiceUnavailable
 
     with pytest.raises(ServiceUnavailable):
-        await generate_regulation_description.execute(None, REGULATION_ID)
+        await generate_regulation_description.execute(None, REGULATION_ID, is_last_attempt=True)
 
     assert description_statuses == [DescriptionStatus.IN_PROGRESS]
 

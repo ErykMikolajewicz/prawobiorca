@@ -2,8 +2,8 @@ from datetime import datetime
 from io import BytesIO
 from zoneinfo import ZoneInfo
 
-import anyio
 from docxtpl import DocxTemplate
+from fastapi.concurrency import run_in_threadpool
 from jinja2.sandbox import SandboxedEnvironment
 
 from core_service.application.dtos.applications import NewApplication
@@ -18,7 +18,7 @@ APPLICATION_TIMEZONE = ZoneInfo("Europe/Warsaw")
 
 class DocxApplicationRenderer:
     async def render(self, template_content: bytes, new_application: NewApplication, content: str) -> bytes:
-        return await anyio.to_thread.run_sync(self._render, template_content, new_application, content)
+        return await run_in_threadpool(self._render, template_content, new_application, content)
 
     @staticmethod
     def _render(template_content: bytes, new_application: NewApplication, content: str) -> bytes:

@@ -16,6 +16,14 @@ from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
 
+APPLICATION_TEMPLATES_ORGANIZATION_FOREIGN_KEY = "application_templates_organization_id_fkey"
+
+APPLICATION_TEMPLATES_SUBORGANIZATION_FOREIGN_KEY = "application_templates_suborganization_id_fkey"
+
+APPLICATION_TEMPLATES_ORGANIZATION_SUBORGANIZATION_FOREIGN_KEY = (
+    "fk_application_templates_suborganization_id_organization_id"
+)
+
 
 class ApplicationTemplateFieldsType(sqla.types.TypeDecorator):
     impl = postgresql.JSONB
@@ -57,15 +65,25 @@ application_templates_table = sqla.Table(
         default=ApplicationTemplateStatus.NOT_UPLOADED,
     ),
     sqla.Column("fields", ApplicationTemplateFieldsType, nullable=False, server_default=sqla.text("'[]'::jsonb")),
-    sqla.Column("organization_id", sqla.UUID, sqla.ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True),
     sqla.Column(
-        "suborganization_id", sqla.UUID, sqla.ForeignKey("suborganizations.id", ondelete="SET NULL"), nullable=True
+        "organization_id",
+        sqla.UUID,
+        sqla.ForeignKey("organizations.id", ondelete="SET NULL", name=APPLICATION_TEMPLATES_ORGANIZATION_FOREIGN_KEY),
+        nullable=True,
+    ),
+    sqla.Column(
+        "suborganization_id",
+        sqla.UUID,
+        sqla.ForeignKey(
+            "suborganizations.id", ondelete="SET NULL", name=APPLICATION_TEMPLATES_SUBORGANIZATION_FOREIGN_KEY
+        ),
+        nullable=True,
     ),
     sqla.ForeignKeyConstraint(
         ["suborganization_id", "organization_id"],
         ["suborganizations.id", "suborganizations.organization_id"],
         ondelete="SET NULL (suborganization_id)",
-        name="fk_application_templates_suborganization_id_organization_id",
+        name=APPLICATION_TEMPLATES_ORGANIZATION_SUBORGANIZATION_FOREIGN_KEY,
     ),
     sqla.Index("ix_application_templates_organization_id_suborganization_id", "organization_id", "suborganization_id"),
 )

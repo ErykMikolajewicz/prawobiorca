@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from uuid import UUID
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserPrivileges:
     is_admin: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class Caller:
     user_id: UUID | None
     is_admin: bool = False
