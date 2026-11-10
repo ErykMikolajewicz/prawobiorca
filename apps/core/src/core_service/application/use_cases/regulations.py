@@ -142,22 +142,27 @@ class PrepareRegulation:
             await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
             raise
 
-        async with self.session_maker.begin() as session:
-            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
-            if regulation is None:
-                logger.warning("Regulation removed during preparation! regulation id: %s", regulation_id)
-                return
-            if regulation.is_prepared:
-                logger.warning("Regulation prepared by another delivery! regulation id: %s", regulation_id)
-                return
+        try:
+            async with self.session_maker.begin() as session:
+                regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+                if regulation is None:
+                    logger.warning("Regulation removed during preparation! regulation id: %s", regulation_id)
+                    return
+                if regulation.is_prepared:
+                    logger.warning("Regulation prepared by another delivery! regulation id: %s", regulation_id)
+                    return
 
-            await self.sections_repository.add_sections(session, user_id, regulation_id, sections_collection)
-            regulation.complete_preparation()
-            await self.regulations_repository.save(session, regulation)
-            if regulation.is_description_in_progress:
-                await self.description_generation_scheduler.schedule_regulation_description_generation(
-                    session, user_id, regulation_id
-                )
+                await self.sections_repository.add_sections(session, user_id, regulation_id, sections_collection)
+                regulation.complete_preparation()
+                await self.regulations_repository.save(session, regulation)
+                if regulation.is_description_in_progress:
+                    await self.description_generation_scheduler.schedule_regulation_description_generation(
+                        session, user_id, regulation_id
+                    )
+        except Exception as e:
+            logger.error("Failed to save prepared regulation! %s", e)
+            await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
+            raise
 
 
 @dataclass
@@ -242,15 +247,20 @@ class GenerateRegulationDescription:
             await _fail_description_generation(self.session_maker, self.regulations_repository, user_id, regulation_id)
             raise
 
-        async with self.session_maker.begin() as session:
-            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
-            if regulation is None:
-                logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
-                return
+        try:
+            async with self.session_maker.begin() as session:
+                regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+                if regulation is None:
+                    logger.warning("Regulation removed during description generation! regulation id: %s", regulation_id)
+                    return
 
-            regulation.complete_description_generation(description)
-            await self.regulations_repository.save(session, regulation)
-            await self.regulations_repository.set_description_vector(session, user_id, regulation_id, vectors[0])
+                regulation.complete_description_generation(description)
+                await self.regulations_repository.save(session, regulation)
+                await self.regulations_repository.set_description_vector(session, user_id, regulation_id, vectors[0])
+        except Exception as e:
+            logger.error("Failed to save generated regulation description! %s", e)
+            await _fail_description_generation(self.session_maker, self.regulations_repository, user_id, regulation_id)
+            raise
 
 
 @dataclass
@@ -516,23 +526,13 @@ class UpdateRegulation:
 class DeleteRegulation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
-    sections_repository: SectionsRepository
     regulations_storage: RegulationsStorage
 
     async def execute(self, caller: Caller, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
             owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
             check_can_manage_regulation(caller, owner)
-            user_id = owner.user_id
-
-            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
-            if regulation is None:
-                logger.warning("Regulation not found! regulation id: %s", regulation_id)
-                raise RegulationNotFound
-
-            if regulation.is_prepared:
-                await self.sections_repository.remove_sections(session, user_id, regulation_id)
-            await self.regulations_repository.unregister_regulation(session, user_id, regulation_id)
+            await self.regulations_repository.unregister_regulation(session, owner.user_id, regulation_id)
 
         try:
             # Orphaned files are tolerable, too much hassle with eventual consistency

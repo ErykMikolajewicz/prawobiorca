@@ -391,17 +391,22 @@ class GenerateApplicationTemplateDescription:
             await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
             raise
 
-        async with self.session_maker.begin() as session:
-            template = await self.application_templates_repo.get_for_update(session, template_id)
-            if template is None:
-                logger.warning(
-                    "Application template removed during description generation! template id: %s", template_id
-                )
-                return
+        try:
+            async with self.session_maker.begin() as session:
+                template = await self.application_templates_repo.get_for_update(session, template_id)
+                if template is None:
+                    logger.warning(
+                        "Application template removed during description generation! template id: %s", template_id
+                    )
+                    return
 
-            template.complete_description_generation(description)
-            await self.application_templates_repo.save(session, template)
-            await self.application_templates_repo.set_description_vector(session, template_id, vectors[0])
+                template.complete_description_generation(description)
+                await self.application_templates_repo.save(session, template)
+                await self.application_templates_repo.set_description_vector(session, template_id, vectors[0])
+        except Exception as e:
+            logger.error("Failed to save generated application template description! %s", e)
+            await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
+            raise
 
 
 @dataclass

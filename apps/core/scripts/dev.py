@@ -60,7 +60,8 @@ def run_worker():
         [
             "taskiq",
             "worker",
-            "core_service.framework.workers.regulations:broker",
+            "core_service.framework.workers.main:broker",
+            "core_service.framework.workers.regulations",
             "core_service.framework.workers.applications",
             "--reload",
             "--reload-dir",

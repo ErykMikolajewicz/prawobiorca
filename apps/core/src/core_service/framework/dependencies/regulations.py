@@ -31,8 +31,8 @@ from core_service.framework.dependencies.file_storage import (
     get_file_storage_presign_client,
 )
 from core_service.framework.dependencies.relational import get_session_maker
-from core_service.infrastructure.relational_db.repositories.regulations import RegulationsManagerRepository
-from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
+from core_service.infrastructure.relational_db.repositories.regulations import SqlaRegulationsRepository
+from core_service.infrastructure.relational_db.repositories.sections import SqlaSectionsRepository
 from core_service.infrastructure.tasks.regulations import (
     PostgresRegulationDescriptionGenerationScheduler,
     PostgresRegulationPreparationScheduler,
@@ -40,7 +40,7 @@ from core_service.infrastructure.tasks.regulations import (
 
 
 def get_sections_repository() -> SectionsRepository:
-    return RegulationsSectionsRepository()
+    return SqlaSectionsRepository()
 
 
 def get_regulations_storage(
@@ -51,7 +51,7 @@ def get_regulations_storage(
 
 
 def get_regulation_repository() -> RegulationsRepository:
-    return RegulationsManagerRepository()
+    return SqlaRegulationsRepository()
 
 
 def get_broker(request: Request) -> AsyncBroker:
@@ -106,10 +106,9 @@ def get_update_regulation(
 def get_delete_regulation(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
-    sections_repository: Annotated[SectionsRepository, Depends(get_sections_repository)],
     regulations_storage: Annotated[RegulationsStorage, Depends(get_regulations_storage)],
 ) -> DeleteRegulation:
-    return DeleteRegulation(session_maker, regulations_repository, sections_repository, regulations_storage)
+    return DeleteRegulation(session_maker, regulations_repository, regulations_storage)
 
 
 def get_search_regulation(

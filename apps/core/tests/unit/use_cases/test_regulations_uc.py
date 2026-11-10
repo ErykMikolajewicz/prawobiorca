@@ -205,11 +205,10 @@ def update_regulation(mock_session_maker, regulations_repository, mock_texts_emb
 
 
 @pytest.fixture
-def delete_regulation(mock_session_maker, regulations_repository, sections_repository, mock_regulations_storage):
+def delete_regulation(mock_session_maker, regulations_repository, mock_regulations_storage):
     return DeleteRegulation(
         session_maker=mock_session_maker,
         regulations_repository=regulations_repository,
-        sections_repository=sections_repository,
         regulations_storage=mock_regulations_storage,
     )
 
@@ -286,6 +285,19 @@ async def test_prepare_regulation_failure_marks_failed(
         await prepare_regulation.execute(None, REGULATION_ID)
 
     sections_repository.add_sections.assert_not_awaited()
+    assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
+
+
+@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+async def test_prepare_regulation_save_failure_marks_failed(
+    prepare_regulation, regulations_repository, sections_repository, error
+):
+    preparation_statuses = record_preparation_statuses(regulations_repository)
+    sections_repository.add_sections.side_effect = error
+
+    with pytest.raises(error):
+        await prepare_regulation.execute(None, REGULATION_ID)
+
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
 
 
@@ -517,6 +529,19 @@ async def test_generate_regulation_description_failure_marks_failed(
     assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
 
 
+@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+async def test_generate_regulation_description_save_failure_marks_failed(
+    generate_regulation_description, regulations_repository, error
+):
+    description_statuses = record_description_statuses(regulations_repository)
+    regulations_repository.set_description_vector.side_effect = error
+
+    with pytest.raises(error):
+        await generate_regulation_description.execute(None, REGULATION_ID)
+
+    assert description_statuses[-1] == DescriptionStatus.FAILED
+
+
 async def test_generate_regulation_description_of_removed_regulation(
     generate_regulation_description, regulations_repository
 ):
@@ -720,23 +745,9 @@ async def test_update_regulation_not_found(
     regulations_repository.save.assert_not_awaited()
 
 
-@pytest.mark.parametrize(
-    ("preparation_status", "expected_sections_removals"),
-    [(RegulationPreparationStatus.PREPARED, 1), (RegulationPreparationStatus.NOT_STARTED, 0)],
-)
-async def test_delete_regulation(
-    delete_regulation,
-    regulations_repository,
-    sections_repository,
-    mock_regulations_storage,
-    preparation_status,
-    expected_sections_removals,
-):
-    store_regulation(regulations_repository, create_regulation(preparation_status))
-
+async def test_delete_regulation(delete_regulation, regulations_repository, mock_regulations_storage):
     await delete_regulation.execute(ADMIN, REGULATION_ID)
 
-    assert sections_repository.remove_sections.await_count == expected_sections_removals
     regulations_repository.unregister_regulation.assert_awaited_once()
     mock_regulations_storage.delete_regulation.assert_awaited_once_with(REGULATION_ID)
 

@@ -30,7 +30,7 @@ spec:
       containers:
         - name: core-worker
           image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/core:latest
-          command: ["taskiq", "worker", "core_service.framework.workers.regulations:broker", "core_service.framework.workers.applications"]
+          command: ["taskiq", "worker", "core_service.framework.workers.main:broker", "core_service.framework.workers.regulations", "core_service.framework.workers.applications"]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

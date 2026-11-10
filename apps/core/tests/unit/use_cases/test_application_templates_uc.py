@@ -575,6 +575,19 @@ async def test_generate_application_template_description_failure_marks_failed(
     assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
 
 
+@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+async def test_generate_application_template_description_save_failure_marks_failed(
+    generate_template_description, application_templates_repository, error
+):
+    description_statuses = record_description_statuses(application_templates_repository)
+    application_templates_repository.set_description_vector.side_effect = error
+
+    with pytest.raises(error):
+        await generate_template_description.execute(TEMPLATE_ID)
+
+    assert description_statuses[-1] == DescriptionStatus.FAILED
+
+
 async def test_generate_application_template_description_of_removed_template(
     generate_template_description, application_templates_repository
 ):

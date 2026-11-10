@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from taskiq import Context, TaskiqDepends, TaskiqEvents
+from taskiq import Context, TaskiqDepends
 
 from core_service.application.use_cases.regulations import (
     FailRegulationDescriptionGeneration,
@@ -8,45 +8,18 @@ from core_service.application.use_cases.regulations import (
     GenerateRegulationDescription,
     PrepareRegulation,
 )
-from core_service.framework.dependencies.file_storage import init_file_storage_client
 from core_service.framework.dependencies.workers import (
     get_fail_regulation_description_generation,
     get_fail_regulation_preparation,
     get_generate_regulation_description,
     get_prepare_regulation,
 )
-from core_service.infrastructure.ai_services.initialization import init_ai_services_client
-from core_service.infrastructure.ai_services.openai_client.connection import init_llm_client
 from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL
 from core_service.infrastructure.tasks.connection import broker
 from core_service.infrastructure.tasks.regulations import (
     REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
     REGULATION_PREPARATION_TASK_NAME,
 )
-
-
-@broker.on_event(TaskiqEvents.WORKER_STARTUP)
-async def on_worker_startup(state) -> None:
-    state.closing_callbacks = []
-
-    ai_services_client, close_ai_services_client = await init_ai_services_client()
-    state.ai_services_client = ai_services_client
-    state.closing_callbacks.insert(0, close_ai_services_client)
-
-    llm_client, close_llm_client = await init_llm_client()
-    state.llm_client = llm_client
-    state.closing_callbacks.insert(0, close_llm_client)
-
-    file_storage_client, file_storage_presign_client, close_file_storage_client = await init_file_storage_client()
-    state.file_storage_client = file_storage_client
-    state.file_storage_presign_client = file_storage_presign_client
-    state.closing_callbacks.insert(0, close_file_storage_client)
-
-
-@broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)
-async def on_worker_shutdown(state) -> None:
-    for callback in state.closing_callbacks:
-        await callback()
 
 
 @broker.task(task_name=REGULATION_PREPARATION_TASK_NAME)

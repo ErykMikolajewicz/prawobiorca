@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter, LlmPricing
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
-from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
+from core_service.infrastructure.relational_db.repositories.llm_usage import SqlaLlmUsageRepository
 from core_service.infrastructure.relational_db.schemas.llm_usage import llm_usage_table
 from core_service.shared.exceptions import ServiceUnavailable
 
@@ -15,7 +15,7 @@ PRICING = LlmPricing(
 
 
 def create_cost_limiter(session_maker, monthly_limit_pln: float) -> LlmCostLimiter:
-    return LlmCostLimiter(DatabaseSessionMaker(session_maker), LlmUsageRepository(), monthly_limit_pln, PRICING)
+    return LlmCostLimiter(DatabaseSessionMaker(session_maker), SqlaLlmUsageRepository(), monthly_limit_pln, PRICING)
 
 
 async def test_record_accumulates_usage_of_month(session_maker):

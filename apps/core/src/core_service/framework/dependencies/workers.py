@@ -65,7 +65,7 @@ from core_service.infrastructure.ai_services.regulation_description_writer impor
 from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
 from core_service.infrastructure.docx.docx_renderer import DocxApplicationRenderer
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
-from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
+from core_service.infrastructure.relational_db.repositories.llm_usage import SqlaLlmUsageRepository
 from core_service.infrastructure.tasks.regulations import PostgresRegulationDescriptionGenerationScheduler
 from core_service.shared.settings.ai_services import (
     embedding_service_settings,
@@ -124,7 +124,7 @@ def get_llm_chat(
             usd_to_pln_rate=llm_service_settings.USD_TO_PLN_RATE,
         )
         cost_limiter = LlmCostLimiter(
-            session_maker, LlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN, pricing
+            session_maker, SqlaLlmUsageRepository(), llm_service_settings.MONTHLY_COST_LIMIT_PLN, pricing
         )
     return LlmChat(
         client=client,
