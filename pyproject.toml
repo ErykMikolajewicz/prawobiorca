@@ -8,11 +8,11 @@ requires-python = "==3.14.*"
 dependencies = [
     "ruff==0.17.*",
     "mkdocstrings[python]==1.0.*",
-    "zensical==0.0.74",
+    "zensical==0.1.*",
     "google-auth[requests]==2.62.*",
     "zizmor==1.32.*",
     "actionlint-py==1.7.12.*",
-    "ty==0.0.99",
+    "ty==0.0.100",
     "hadolint-py==2.15.1.*",
     "complexipy==8.3.*",
 ]
