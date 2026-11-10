@@ -1,4 +1,3 @@
-from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -6,10 +5,6 @@ from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _SECRETS_DIR = Path("/mnt/secrets-store")
-
-
-class HttpClientType(StrEnum):
-    HTTPX = "HTTPX"
 
 
 class ApplicationSettings(BaseSettings):
@@ -24,8 +19,6 @@ class ApplicationSettings(BaseSettings):
     COOKIE_SECURE: bool = True
 
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
-
-    HTTP_CLIENT: HttpClientType = HttpClientType.HTTPX
 
     CORS_ORIGINS: list[str] = Field(default_factory=list)
 

@@ -21,7 +21,7 @@ from core_service.domain.value_objects.application_templates import ApplicationT
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
-from tests.consts import USER_ID
+from tests.consts import TASK_FAILURES, TASK_FAILURES_IDS, USER_ID
 from tests.mocks import get_awaited_argument, record_saved_states
 
 USER = Caller(user_id=USER_ID)
@@ -202,7 +202,7 @@ async def test_generate_application_saves_generated_document(
     mock_application_writer.write_name.return_value = "Wniosek o urlop dziekański"
     mock_application_renderer.render.return_value = b"PK"
 
-    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     mock_application_writer.write.assert_awaited_once_with(NEW_APPLICATION, create_template(), [document])
     mock_application_renderer.render.assert_awaited_once_with(b"TEMPLATE", NEW_APPLICATION, "Szanowny Panie Dziekanie")
@@ -215,7 +215,7 @@ async def test_generate_application_not_found(generate_application, applications
     applications_repository.get_for_update.return_value = None
 
     with pytest.raises(ApplicationNotFound):
-        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     mock_application_writer.write.assert_not_awaited()
 
@@ -225,7 +225,7 @@ async def test_generate_application_already_generated(
 ):
     applications_repository.get_for_update.return_value = create_application(ApplicationGenerationStatus.GENERATED)
 
-    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     mock_application_writer.write.assert_not_awaited()
     applications_repository.save.assert_not_awaited()
@@ -246,24 +246,57 @@ async def test_generate_application_with_changed_template_marks_failed(
     generation_statuses = record_generation_statuses(applications_repository)
     application_templates_repository.get_for_update.return_value = template
 
-    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     mock_application_writer.write.assert_not_awaited()
     assert generation_statuses == [ApplicationGenerationStatus.FAILED]
 
 
-@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+@pytest.mark.parametrize(("error", "is_last_attempt"), TASK_FAILURES, ids=TASK_FAILURES_IDS)
 async def test_generate_application_failure_marks_failed(
-    generate_application, applications_repository, mock_applications_storage, mock_application_writer, error
+    generate_application,
+    applications_repository,
+    mock_applications_storage,
+    mock_application_writer,
+    error,
+    is_last_attempt,
 ):
     generation_statuses = record_generation_statuses(applications_repository)
     mock_application_writer.write.side_effect = error
 
     with pytest.raises(error):
-        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt)
 
     mock_applications_storage.upload_application.assert_not_awaited()
     assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS, ApplicationGenerationStatus.FAILED]
+
+
+async def test_generate_application_retried_failure_keeps_in_progress(
+    generate_application, applications_repository, mock_application_writer
+):
+    generation_statuses = record_generation_statuses(applications_repository)
+    mock_application_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=False)
+
+    assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS]
+
+
+async def test_generate_application_failure_keeps_application_generated_by_another_delivery(
+    generate_application, applications_repository, mock_application_writer
+):
+    generation_statuses = record_generation_statuses(applications_repository)
+    applications_repository.get_for_update.side_effect = [
+        create_application(),
+        create_application(ApplicationGenerationStatus.GENERATED),
+    ]
+    mock_application_writer.write.side_effect = RuntimeError
+
+    with pytest.raises(RuntimeError):
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
+
+    assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS]
 
 
 async def test_generate_application_removed_during_generation(
@@ -272,7 +305,7 @@ async def test_generate_application_removed_during_generation(
     generation_statuses = record_generation_statuses(applications_repository)
     applications_repository.get_for_update.side_effect = [create_application(), None]
 
-    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     mock_applications_storage.upload_application.assert_not_awaited()
     assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS]
@@ -286,7 +319,7 @@ async def test_generate_application_failure_of_removed_application(
     mock_application_writer.write.side_effect = ServiceUnavailable
 
     with pytest.raises(ServiceUnavailable):
-        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     assert generation_statuses == [ApplicationGenerationStatus.IN_PROGRESS]
 
@@ -295,10 +328,11 @@ async def test_generate_application_upload_failure_marks_failed(
     generate_application, applications_repository, mock_applications_storage
 ):
     generation_statuses = record_generation_statuses(applications_repository)
+    applications_repository.get_for_update.side_effect = lambda *_: create_application()
     mock_applications_storage.upload_application.side_effect = RuntimeError
 
     with pytest.raises(RuntimeError):
-        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION)
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
 
     assert generation_statuses[-1] == ApplicationGenerationStatus.FAILED
 

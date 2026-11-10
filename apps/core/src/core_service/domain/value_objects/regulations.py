@@ -23,7 +23,7 @@ class RegulationPreparationStatus(StrEnum):
     FAILED = "FAILED"
 
 
-@dataclass
+@dataclass(frozen=True)
 class RegulationRegistrationData:
     presentation_name: str
     regulation_type: RegulationType | None = None
@@ -32,30 +32,30 @@ class RegulationRegistrationData:
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
 
 
-@dataclass
+@dataclass(frozen=True)
 class RegulationDetails:
     presentation_name: str
     description: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class RegulationOwner:
     user_id: UUID | None
 
 
-@dataclass
+@dataclass(frozen=True)
 class SectionContent:
     header: str | None
     text: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class RegulationHeading:
     text: str
     level: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class RegulationDescriptionSource:
     presentation_name: str
     headings: list[RegulationHeading]

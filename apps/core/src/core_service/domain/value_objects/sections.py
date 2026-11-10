@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from core_service.domain.value_objects.legal_units import LegalUnitElement
 
 
-@dataclass
+@dataclass(frozen=True)
 class ChunkSpan:
     start_element: int
     end_element: int
@@ -38,7 +38,7 @@ class RegulationSection:
     id: UUID = field(default_factory=uuid4)
 
 
-@dataclass
+@dataclass(frozen=True)
 class SectionsCollection:
     _sections: list[RegulationSection]
 

@@ -6,7 +6,7 @@ from core_service.application.dtos.cases import CaseData, CaseDocument, NewCaseD
 from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
 from core_service.application.ports.cases import CaseDocumentsRepository, CasesRepository
 from core_service.application.ports.relational import SessionMaker
-from core_service.domain.exceptions.cases import CaseNotFound
+from core_service.domain.exceptions.cases import CaseDocumentNotFound, CaseNotFound
 from core_service.domain.services.case_access import resolve_case_owner
 from core_service.domain.value_objects.users import Caller
 
@@ -89,7 +89,11 @@ class DeleteCaseDocument:
         user_id = resolve_case_owner(caller)
 
         async with self.session_maker.begin() as session:
-            await self.case_documents_repo.delete(session, user_id, case_id, document_id)
+            try:
+                await self.case_documents_repo.delete(session, user_id, case_id, document_id)
+            except CaseDocumentNotFound:
+                logger.warning("No case document with that id!")
+                raise
 
 
 @dataclass

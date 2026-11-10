@@ -21,7 +21,7 @@ async def _create_client(endpoint_url: str) -> S3Client:
             endpoint_url=endpoint_url,
             region_name=object_storage_settings.REGION,
             aws_access_key_id=object_storage_settings.ACCESS_KEY,
-            aws_secret_access_key=object_storage_settings.SECRET_KEY,
+            aws_secret_access_key=object_storage_settings.SECRET_KEY.get_secret_value(),
             config=AioConfig(
                 signature_version="s3v4",
                 request_checksum_calculation="when_required",

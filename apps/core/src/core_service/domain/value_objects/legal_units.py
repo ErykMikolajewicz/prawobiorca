@@ -10,7 +10,7 @@ class UsefulLabels(StrEnum):
     TEXT = "text"
 
 
-@dataclass
+@dataclass(frozen=True)
 class RegulationElement:
     label: str
     text: str
@@ -28,7 +28,7 @@ UNIT_TYPE_PREFIXES = {
 }
 
 
-@dataclass
+@dataclass(frozen=True)
 class LegalUnitElement:
     text: str
     subsection: str | None = None

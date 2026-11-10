@@ -21,6 +21,7 @@ from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationTemplateDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.services.embedding import embed_description
+from core_service.application.services.tasks import is_retried
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
     ApplicationTemplateInInvalidState,
@@ -40,7 +41,6 @@ from core_service.domain.value_objects.application_templates import (
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.users import Caller
-from core_service.shared.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,11 @@ async def _fail_description_generation(
         template = await application_templates_repo.get_for_update(session, template_id)
         if template is None:
             logger.warning("Application template removed during description generation! template id: %s", template_id)
+            return
+        if template.is_description_generated:
+            logger.warning(
+                "Application template description already generated, skipping failure! template id: %s", template_id
+            )
             return
 
         template.fail_description_generation()
@@ -363,7 +368,7 @@ class GenerateApplicationTemplateDescription:
     description_writer: ApplicationTemplateDescriptionWriter
     texts_embedder: TextsEmbedder
 
-    async def execute(self, template_id: UUID) -> None:
+    async def execute(self, template_id: UUID, is_last_attempt: bool) -> None:
         async with self.session_maker.begin() as session:
             template = await self.application_templates_repo.get_for_update(session, template_id)
             if template is None:
@@ -382,31 +387,25 @@ class GenerateApplicationTemplateDescription:
             text = await self.application_template_inspector.get_text(content)
             description = await self.description_writer.write(template.create_description_source(text))
             vectors = await self.texts_embedder.embed_texts([description])
-        except ServiceUnavailable:
-            logger.error("Service to generate application template description not working!")
-            await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
-            raise
-        except Exception as e:
-            logger.error("Unexpected error during application template description generation! %s", e)
-            await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
+            await self._complete_description_generation(template_id, description, vectors[0])
+        except Exception as error:
+            logger.exception("Application template description generation failed! template id: %s", template_id)
+            if not is_retried(error, is_last_attempt):
+                await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
             raise
 
-        try:
-            async with self.session_maker.begin() as session:
-                template = await self.application_templates_repo.get_for_update(session, template_id)
-                if template is None:
-                    logger.warning(
-                        "Application template removed during description generation! template id: %s", template_id
-                    )
-                    return
+    async def _complete_description_generation(self, template_id: UUID, description: str, vector: list[float]) -> None:
+        async with self.session_maker.begin() as session:
+            template = await self.application_templates_repo.get_for_update(session, template_id)
+            if template is None:
+                logger.warning(
+                    "Application template removed during description generation! template id: %s", template_id
+                )
+                return
 
-                template.complete_description_generation(description)
-                await self.application_templates_repo.save(session, template)
-                await self.application_templates_repo.set_description_vector(session, template_id, vectors[0])
-        except Exception as e:
-            logger.error("Failed to save generated application template description! %s", e)
-            await _fail_description_generation(self.session_maker, self.application_templates_repo, template_id)
-            raise
+            template.complete_description_generation(description)
+            await self.application_templates_repo.save(session, template)
+            await self.application_templates_repo.set_description_vector(session, template_id, vector)
 
 
 @dataclass

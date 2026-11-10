@@ -1,7 +1,7 @@
 from io import BytesIO
 
-import anyio
 from docxtpl import DocxTemplate
+from fastapi.concurrency import run_in_threadpool
 from jinja2.sandbox import SandboxedEnvironment
 
 from core_service.domain.exceptions.application_templates import InvalidApplicationTemplate
@@ -9,7 +9,7 @@ from core_service.domain.exceptions.application_templates import InvalidApplicat
 
 class DocxTemplateInspector:
     async def get_variables(self, template: bytes) -> set[str]:
-        return await anyio.to_thread.run_sync(self._get_variables, template)
+        return await run_in_threadpool(self._get_variables, template)
 
     @staticmethod
     def _get_variables(template: bytes) -> set[str]:
@@ -20,7 +20,7 @@ class DocxTemplateInspector:
             raise InvalidApplicationTemplate("Invalid DOCX template!") from e
 
     async def get_text(self, template: bytes) -> str:
-        return await anyio.to_thread.run_sync(self._get_text, template)
+        return await run_in_threadpool(self._get_text, template)
 
     @staticmethod
     def _get_text(template: bytes) -> str:

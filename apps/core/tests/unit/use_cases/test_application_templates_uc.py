@@ -40,7 +40,7 @@ from core_service.domain.value_objects.application_templates import (
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
-from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, USER_ID
+from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, TASK_FAILURES, TASK_FAILURES_IDS, USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments, record_saved_states
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
@@ -519,7 +519,7 @@ async def test_generate_application_template_description_saves_description_with_
     mock_application_template_description_writer.write.return_value = "Wniosek o urlop dziekański."
     mock_texts_embedder.embed_texts.return_value = [[0.1, 0.2]]
 
-    await generate_template_description.execute(TEMPLATE_ID)
+    await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
 
     description_source = get_awaited_argument(mock_application_template_description_writer.write, "description_source")
     assert description_source.name == "Wniosek o urlop"
@@ -543,7 +543,7 @@ async def test_generate_application_template_description_skipped(
 ):
     store_template(application_templates_repository, template)
 
-    await generate_template_description.execute(TEMPLATE_ID)
+    await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
 
     mock_application_template_description_writer.write.assert_not_awaited()
     application_templates_repository.save.assert_not_awaited()
@@ -556,23 +556,55 @@ async def test_generate_application_template_description_without_content_marks_f
     mock_application_templates_storage.get_template.side_effect = ApplicationTemplateContentNotFound
 
     with pytest.raises(ApplicationTemplateContentNotFound):
-        await generate_template_description.execute(TEMPLATE_ID)
+        await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
 
     assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
 
 
-@pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
+@pytest.mark.parametrize(("error", "is_last_attempt"), TASK_FAILURES, ids=TASK_FAILURES_IDS)
 async def test_generate_application_template_description_failure_marks_failed(
-    generate_template_description, application_templates_repository, mock_application_template_description_writer, error
+    generate_template_description,
+    application_templates_repository,
+    mock_application_template_description_writer,
+    error,
+    is_last_attempt,
 ):
     description_statuses = record_description_statuses(application_templates_repository)
     mock_application_template_description_writer.write.side_effect = error
 
     with pytest.raises(error):
-        await generate_template_description.execute(TEMPLATE_ID)
+        await generate_template_description.execute(TEMPLATE_ID, is_last_attempt)
 
     application_templates_repository.set_description_vector.assert_not_awaited()
     assert description_statuses == [DescriptionStatus.IN_PROGRESS, DescriptionStatus.FAILED]
+
+
+async def test_generate_application_template_description_retried_failure_keeps_in_progress(
+    generate_template_description, application_templates_repository, mock_application_template_description_writer
+):
+    description_statuses = record_description_statuses(application_templates_repository)
+    mock_application_template_description_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=False)
+
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
+
+
+async def test_generate_application_template_description_failure_keeps_description_generated_by_another_delivery(
+    generate_template_description, application_templates_repository, mock_application_template_description_writer
+):
+    description_statuses = record_description_statuses(application_templates_repository)
+    application_templates_repository.get_for_update.side_effect = [
+        create_template(),
+        create_template(description_status=DescriptionStatus.GENERATED),
+    ]
+    mock_application_template_description_writer.write.side_effect = RuntimeError
+
+    with pytest.raises(RuntimeError):
+        await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
+
+    assert description_statuses == [DescriptionStatus.IN_PROGRESS]
 
 
 @pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
@@ -580,10 +612,11 @@ async def test_generate_application_template_description_save_failure_marks_fail
     generate_template_description, application_templates_repository, error
 ):
     description_statuses = record_description_statuses(application_templates_repository)
+    application_templates_repository.get_for_update.side_effect = lambda *_: create_template()
     application_templates_repository.set_description_vector.side_effect = error
 
     with pytest.raises(error):
-        await generate_template_description.execute(TEMPLATE_ID)
+        await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
 
     assert description_statuses[-1] == DescriptionStatus.FAILED
 
@@ -594,7 +627,7 @@ async def test_generate_application_template_description_of_removed_template(
     description_statuses = record_description_statuses(application_templates_repository)
     application_templates_repository.get_for_update.side_effect = [create_template(), None]
 
-    await generate_template_description.execute(TEMPLATE_ID)
+    await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
 
     application_templates_repository.set_description_vector.assert_not_awaited()
     assert description_statuses == [DescriptionStatus.IN_PROGRESS]
@@ -608,7 +641,7 @@ async def test_generate_application_template_description_failure_of_removed_temp
     mock_application_template_description_writer.write.side_effect = ServiceUnavailable
 
     with pytest.raises(ServiceUnavailable):
-        await generate_template_description.execute(TEMPLATE_ID)
+        await generate_template_description.execute(TEMPLATE_ID, is_last_attempt=True)
 
     assert description_statuses == [DescriptionStatus.IN_PROGRESS]
 

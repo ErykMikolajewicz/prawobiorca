@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _SECRETS_DIR = Path("/mnt/secrets-store")
@@ -8,7 +9,7 @@ _SECRETS_DIR = Path("/mnt/secrets-store")
 class RelationalDatabaseSettings(BaseSettings):
     DRIVER: str = "postgresql+asyncpg"
     USER: str
-    PASSWORD: str
+    PASSWORD: SecretStr
     HOST: str
     PORT: int
     NAME: str

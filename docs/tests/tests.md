@@ -7,7 +7,7 @@ Within the project, we maintain the following types of tests:
 - **Unit tests**
 - **Integration tests**
 - **Integration tests of the AI services** (`extraction`) — the service keeps them in its own
-`tests/` directory and they are run with `just test-extraction` (the service image must be built first).
+`tests/` directory and they are run with `just test-extraction` (the service image must be built first), locally and in the `extraction` CI job.
 - **Frontend unit tests** — the frontend lives in `apps/web/` in this repository and keeps its tests in `__tests__/` directories next to the tested code. They are run with `pnpm test:unit` (Vitest), see [Frontend Unit Tests](#frontend-unit-tests).
 - **Manual E2E / UAT tests** — see [Manual E2E Test Case](manual_e2e_test.md) for step-by-step verification of full user flows (login, case creation, article search, and DOCX generation).
 - **E2E tests** — kept in `apps/web/e2e/`, written with Playwright, see [E2E Tests](#e2e-tests).

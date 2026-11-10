@@ -32,7 +32,7 @@ class ApplicationFieldType(StrEnum):
     DATE = "DATE"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ApplicationTemplateField:
     name: str
     label: str
@@ -90,7 +90,7 @@ class ApplicationTemplateField:
             raise InvalidApplicationFieldsConfig(f"Invalid pattern for field: {self.name}!")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ApplicationTemplateDetails:
     name: str
     instructions: str | None
@@ -100,7 +100,7 @@ class ApplicationTemplateDetails:
     suborganization_id: UUID | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class ApplicationTemplateDescriptionSource:
     name: str
     instructions: str

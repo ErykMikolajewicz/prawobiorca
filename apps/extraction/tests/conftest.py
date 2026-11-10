@@ -16,6 +16,9 @@ from tests.consts import EXTRACTION_SERVICE_IMAGE_TAG, EXTRACTION_SERVICE_PORT, 
 
 @pytest.fixture(scope="session", autouse=True)
 def configure_podman():
+    if "DOCKER_HOST" in os.environ:
+        return
+
     subprocess.run(["systemctl", "--user", "enable", "--now", "podman.socket"], check=True)
 
     uid = os.getuid()

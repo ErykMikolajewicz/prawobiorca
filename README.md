@@ -37,7 +37,7 @@ The whole application lives in this repository:
     ```
     - Install [just](https://just.systems) (version `1.38` or newer), which runs the project tasks.
 
-2. **Install the frontend dependencies** (requires Node `^24.15.0` and pnpm `11.24.0`, easiest through `corepack enable`):
+2. **Install the frontend dependencies** (requires Node `^26.13.0` and pnpm `11.24.0`, easiest through `corepack enable`):
     ```sh
     cd apps/web
     pnpm install

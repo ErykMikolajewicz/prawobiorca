@@ -15,7 +15,7 @@ from core_service.framework.dependencies.workers import (
     get_prepare_regulation,
 )
 from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL
-from core_service.infrastructure.tasks.connection import broker
+from core_service.infrastructure.tasks.connection import broker, is_last_attempt
 from core_service.infrastructure.tasks.regulations import (
     REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
     REGULATION_PREPARATION_TASK_NAME,
@@ -37,7 +37,7 @@ async def prepare_regulation_task(
     ):
         return
 
-    await prepare_regulation.execute(owner_id, UUID(regulation_id))
+    await prepare_regulation.execute(owner_id, UUID(regulation_id), is_last_attempt(context.message))
 
 
 @broker.task(task_name=REGULATION_DESCRIPTION_GENERATION_TASK_NAME)
@@ -57,4 +57,4 @@ async def generate_regulation_description_task(
     ):
         return
 
-    await generate_description.execute(owner_id, UUID(regulation_id))
+    await generate_description.execute(owner_id, UUID(regulation_id), is_last_attempt(context.message))
