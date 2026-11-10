@@ -25,7 +25,6 @@ from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import RegulationDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
-from core_service.application.ports.tokenizer import Tokenizer
 from core_service.application.services.embedding import SectionsEmbedder
 from core_service.application.services.regulations import RegulationPreparator
 from core_service.application.use_cases.application_templates import (
@@ -39,11 +38,18 @@ from core_service.application.use_cases.regulations import (
     GenerateRegulationDescription,
     PrepareRegulation,
 )
+from core_service.domain.services.regulation_chunking import Tokenizer
+from core_service.framework.dependencies.ai_services import create_texts_embedder
 from core_service.framework.dependencies.application_templates import (
     get_application_template_inspector,
     get_application_templates_repo,
 )
 from core_service.framework.dependencies.cases import get_applications_repo, get_case_documents_repo
+from core_service.framework.dependencies.file_storage import (
+    create_application_templates_storage,
+    create_applications_storage,
+    create_regulations_storage,
+)
 from core_service.framework.dependencies.regulations import get_regulation_repository, get_sections_repository
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.tokenizer import get_tokenizer
@@ -57,13 +63,7 @@ from core_service.infrastructure.ai_services.regulation_description_writer impor
     LlmRegulationDescriptionWriter,
 )
 from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
-from core_service.infrastructure.ai_services.text_embedder import HttpTextsEmbedder
 from core_service.infrastructure.docx.docx_renderer import DocxApplicationRenderer
-from core_service.infrastructure.object_storage.repository import (
-    S3ApplicationsStorage,
-    S3ApplicationTemplatesStorage,
-    S3RegulationsStorage,
-)
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.repositories.llm_usage import LlmUsageRepository
 from core_service.infrastructure.tasks.regulations import PostgresRegulationDescriptionGenerationScheduler
@@ -72,7 +72,6 @@ from core_service.shared.settings.ai_services import (
     extraction_service_settings,
     llm_service_settings,
 )
-from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_ai_services_client(state: TaskiqState = TaskiqDepends()) -> AsyncClient:
@@ -84,7 +83,7 @@ def get_llm_client(state: TaskiqState = TaskiqDepends()) -> AsyncOpenAI:
 
 
 def get_texts_embedder(client: AsyncClient = TaskiqDepends(get_ai_services_client)) -> TextsEmbedder:
-    return HttpTextsEmbedder(client=client, embedding_service_url=embedding_service_settings.URL)
+    return create_texts_embedder(client)
 
 
 def get_regulation_splitter(client: AsyncClient = TaskiqDepends(get_ai_services_client)) -> RegulationSplitter:
@@ -92,32 +91,15 @@ def get_regulation_splitter(client: AsyncClient = TaskiqDepends(get_ai_services_
 
 
 def get_regulations_storage(state: TaskiqState = TaskiqDepends()) -> RegulationsStorage:
-    return S3RegulationsStorage(
-        state.file_storage_client,
-        state.file_storage_presign_client,
-        bucket=object_storage_settings.BUCKET,
-        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
-        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
-    )
+    return create_regulations_storage(state.file_storage_client, state.file_storage_presign_client)
 
 
 def get_applications_storage(state: TaskiqState = TaskiqDepends()) -> ApplicationsStorage:
-    return S3ApplicationsStorage(
-        state.file_storage_client,
-        state.file_storage_presign_client,
-        bucket=object_storage_settings.BUCKET,
-        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
-    )
+    return create_applications_storage(state.file_storage_client, state.file_storage_presign_client)
 
 
 def get_application_templates_storage(state: TaskiqState = TaskiqDepends()) -> ApplicationTemplatesStorage:
-    return S3ApplicationTemplatesStorage(
-        state.file_storage_client,
-        state.file_storage_presign_client,
-        bucket=object_storage_settings.BUCKET,
-        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
-        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
-    )
+    return create_application_templates_storage(state.file_storage_client, state.file_storage_presign_client)
 
 
 def get_broker(context: Context = TaskiqDepends()) -> AsyncBroker:

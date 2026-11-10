@@ -17,7 +17,7 @@ from core_service.shared.exceptions import ObjectExists
 
 class SqlaUsersRepository:
     @staticmethod
-    async def add(session: AsyncSession, create_data: CreateUserData):
+    async def add(session: AsyncSession, create_data: CreateUserData) -> None:
         session = sqla_session(session)
         statement = insert(User).values(**asdict(create_data))
         try:

@@ -27,24 +27,23 @@ from core_service.application.use_cases.application_templates import (
     UpdateApplicationTemplate,
 )
 from core_service.framework.dependencies.ai_services import get_texts_embedder
-from core_service.framework.dependencies.regulations import (
-    get_broker,
+from core_service.framework.dependencies.file_storage import (
+    create_application_templates_storage,
     get_file_storage_client,
     get_file_storage_presign_client,
 )
+from core_service.framework.dependencies.regulations import get_broker
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.infrastructure.ai_services.application_template_instructions import (
     PromptsApplicationTemplateInstructionsProvider,
 )
 from core_service.infrastructure.docx.template_inspector import DocxTemplateInspector
-from core_service.infrastructure.object_storage.repository import S3ApplicationTemplatesStorage
 from core_service.infrastructure.relational_db.repositories.application_templates import (
     SqlaApplicationTemplatesRepository,
 )
 from core_service.infrastructure.tasks.application_templates import (
     PostgresApplicationTemplateDescriptionGenerationScheduler,
 )
-from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_application_templates_repo() -> ApplicationTemplatesRepository:
@@ -55,13 +54,7 @@ def get_application_templates_storage(
     client: Annotated[Any, Depends(get_file_storage_client)],
     presign_client: Annotated[Any, Depends(get_file_storage_presign_client)],
 ) -> ApplicationTemplatesStorage:
-    return S3ApplicationTemplatesStorage(
-        client,
-        presign_client,
-        bucket=object_storage_settings.BUCKET,
-        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
-        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
-    )
+    return create_application_templates_storage(client, presign_client)
 
 
 def get_application_template_inspector() -> ApplicationTemplateInspector:

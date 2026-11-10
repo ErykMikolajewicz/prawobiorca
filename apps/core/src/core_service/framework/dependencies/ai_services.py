@@ -15,4 +15,8 @@ def get_ai_services_client(request: Request) -> AsyncClient:
 def get_texts_embedder(
     client: Annotated[AsyncClient, Depends(get_ai_services_client)],
 ) -> TextsEmbedder:
+    return create_texts_embedder(client)
+
+
+def create_texts_embedder(client: AsyncClient) -> TextsEmbedder:
     return HttpTextsEmbedder(client=client, embedding_service_url=embedding_service_settings.URL)

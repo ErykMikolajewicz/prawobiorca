@@ -69,10 +69,10 @@ def create_regulation_representation(
 ) -> RegulationRepresentation:
     return RegulationRepresentation(
         id=REGULATION_ID,
-        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
-        presentationName="Regulamin studiów",
+        create_date=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
+        presentation_name="Regulamin studiów",
         description=description,
-        preparationStatus=preparation_status,
+        preparation_status=preparation_status,
     )
 
 
@@ -301,6 +301,37 @@ async def test_prepare_regulation_removed_during_preparation(
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
 
 
+async def test_prepare_regulation_prepared_by_another_delivery(
+    prepare_regulation, regulations_repository, sections_repository
+):
+    preparation_statuses = record_preparation_statuses(regulations_repository)
+    regulations_repository.get_for_update.side_effect = [
+        create_regulation(),
+        create_regulation(RegulationPreparationStatus.PREPARED),
+    ]
+
+    await prepare_regulation.execute(None, REGULATION_ID)
+
+    sections_repository.add_sections.assert_not_awaited()
+    assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
+
+
+async def test_prepare_regulation_failure_keeps_regulation_prepared_by_another_delivery(
+    prepare_regulation, regulations_repository, mock_regulation_preparator
+):
+    preparation_statuses = record_preparation_statuses(regulations_repository)
+    regulations_repository.get_for_update.side_effect = [
+        create_regulation(),
+        create_regulation(RegulationPreparationStatus.PREPARED),
+    ]
+    mock_regulation_preparator.prepare_regulation.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await prepare_regulation.execute(None, REGULATION_ID)
+
+    assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
+
+
 @pytest.mark.parametrize(
     ("description_status", "expected_schedules"),
     [(DescriptionStatus.IN_PROGRESS, 1), (DescriptionStatus.NOT_REQUESTED, 0)],
@@ -341,6 +372,15 @@ async def test_fail_regulation_preparation(
 
 async def test_fail_regulation_preparation_of_removed_regulation(fail_regulation_preparation, regulations_repository):
     store_regulation(regulations_repository, None)
+
+    failed = await fail_regulation_preparation.execute(None, REGULATION_ID, MAX_REGULATION_PREPARATION_DELIVERIES + 1)
+
+    assert failed is True
+    regulations_repository.save.assert_not_awaited()
+
+
+async def test_fail_regulation_preparation_of_prepared_regulation(fail_regulation_preparation, regulations_repository):
+    store_regulation(regulations_repository, create_regulation(RegulationPreparationStatus.PREPARED))
 
     failed = await fail_regulation_preparation.execute(None, REGULATION_ID, MAX_REGULATION_PREPARATION_DELIVERIES + 1)
 
@@ -597,10 +637,10 @@ async def test_add_regulation_registers_regulation(
     regulation_data = RegulationData(
         scope=RegulationScope.PUBLIC,
         name="regulation.pdf",
-        regulationType=RegulationType.STATUTE,
-        organizationId=ORGANIZATION_ID,
-        suborganizationId=SUBORGANIZATION_ID,
-        generateDescription=generate_description,
+        regulation_type=RegulationType.STATUTE,
+        organization_id=ORGANIZATION_ID,
+        suborganization_id=SUBORGANIZATION_ID,
+        generate_description=generate_description,
     )
 
     upload_target = await add_regulation.execute(ADMIN, regulation_data)

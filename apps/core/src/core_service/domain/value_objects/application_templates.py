@@ -1,9 +1,10 @@
-import re
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from uuid import UUID
+
+import regex
 
 from core_service.domain.exceptions.application_templates import InvalidApplicationFieldsConfig
 
@@ -14,6 +15,8 @@ CURRENT_DATE_TEMPLATE_VARIABLE = "current_date"
 RESERVED_TEMPLATE_VARIABLES = frozenset({CURRENT_DATE_TEMPLATE_VARIABLE, CONTENT_TEMPLATE_VARIABLE})
 
 DATE_FORMAT = "%d.%m.%Y"
+
+PATTERN_MATCH_TIMEOUT_SECONDS = 0.1
 
 
 class ApplicationTemplateStatus(StrEnum):
@@ -56,7 +59,7 @@ class ApplicationTemplateField:
     def accepts(self, value: str) -> bool:
         match self.field_type:
             case ApplicationFieldType.TEXT:
-                return self.pattern is None or re.fullmatch(self.pattern, value) is not None
+                return self.pattern is None or self._matches_pattern(self.pattern, value)
             case ApplicationFieldType.NUMBER:
                 try:
                     return Decimal(value).is_finite()
@@ -71,12 +74,19 @@ class ApplicationTemplateField:
                 except ValueError:
                     return False
 
+    @staticmethod
+    def _matches_pattern(pattern: str, value: str) -> bool:
+        try:
+            return regex.fullmatch(pattern, value, timeout=PATTERN_MATCH_TIMEOUT_SECONDS) is not None
+        except TimeoutError:
+            return False
+
     def _check_pattern(self, pattern: str) -> None:
         if self.field_type != ApplicationFieldType.TEXT:
             raise InvalidApplicationFieldsConfig(f"Pattern allowed only for text field: {self.name}!")
         try:
-            re.compile(pattern)
-        except re.error:
+            regex.compile(pattern)
+        except regex.error:
             raise InvalidApplicationFieldsConfig(f"Invalid pattern for field: {self.name}!")
 
 

@@ -65,3 +65,9 @@ def test_check_config_rejects_invalid_field(field):
 )
 def test_accepts(field, value, expected):
     assert field.accepts(value) is expected
+
+
+def test_accepts_rejects_value_when_pattern_matching_times_out():
+    field = ApplicationTemplateField(name="field", label="Pole", pattern=r"(a|aa)+b")
+
+    assert field.accepts("a" * 64) is False

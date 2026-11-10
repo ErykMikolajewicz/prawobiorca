@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from taskiq import SimpleRetryMiddleware
+from taskiq import SmartRetryMiddleware
 
 from core_service.infrastructure.relational_db.connection import async_session_maker, engine
 from core_service.infrastructure.tasks.broker import PostgresBroker
@@ -9,13 +9,21 @@ from core_service.shared.exceptions import ServiceUnavailable
 
 DEFAULT_TASK_RETRY_COUNT = 3
 
+TASK_RETRY_DELAY_SECONDS = 10
+
+MAX_TASK_RETRY_DELAY_SECONDS = 60
+
 broker = PostgresBroker(
     session_maker=async_session_maker,
     listen_dsn=engine.url.set(drivername="postgresql").render_as_string(hide_password=False),
 ).with_middlewares(
-    SimpleRetryMiddleware(
+    SmartRetryMiddleware(
         default_retry_count=DEFAULT_TASK_RETRY_COUNT,
         default_retry_label=True,
+        default_delay=TASK_RETRY_DELAY_SECONDS,
+        use_jitter=True,
+        use_delay_exponent=True,
+        max_delay_exponent=MAX_TASK_RETRY_DELAY_SECONDS,
         types_of_exceptions=[ServiceUnavailable],
     )
 )

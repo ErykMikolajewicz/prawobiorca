@@ -1,4 +1,4 @@
-from core_service.application.ports.tokenizer import Tokenizer
+from core_service.domain.services.regulation_chunking import Tokenizer
 from core_service.infrastructure.tokenizers.mmlw import MmlwTokenizer
 
 

@@ -125,6 +125,7 @@ Hosts the core domain logic, user-facing endpoints, and background document inde
   * **Wake-up**: `NOTIFY` wakes the worker immediately, and polling every `TASK_POLL_INTERVAL_SECONDS` picks up tasks sent while no worker was listening.
   * **Heartbeat**: while a task runs, the worker extends its lease every `TASK_HEARTBEAT_SECONDS`. If the worker crashes, the lease expires and the task is delivered again.
   * **Acknowledgement**: the row is deleted only after the task has been executed.
+  * **Delayed retries**: `SmartRetryMiddleware` resends a task failed with `ServiceUnavailable` with the `delay` label; the broker stores it with `locked_until` set to that delay, so it is not claimed before.
   * **Poison messages**: each delivery is counted and passed to the task in the `delivery_attempt` label; above the limit, the task marks the document (or application) as failed instead of processing it.
 * **Resilience**: Provides built-in retry mechanisms, failure handling, and transparent task parameter serialization.
 
@@ -175,6 +176,7 @@ Contains **Application Business Rules** and use case orchestrations.
 Acts as adapters for external systems and technical tools, implementing ports defined in `application/ports`. Adapter classes are named with the technology they use (e.g. `S3RegulationsStorage`, `LlmApplicationWriter`, `HttpTextsEmbedder`), so they never share a name with the port they implement.
 - **Relational DB**: SQLAlchemy repositories, connection pools, and database schemas. Entities and representations are plain dataclasses mapped imperatively onto the same tables (`map_imperatively` in `relational_db/schemas`), so the domain does not import SQLAlchemy; `save` flushes the changed entity and returns the fresh representation where the use case needs it. Adapter methods keep the port signature, typed with the port `AsyncSession` (`application/ports/relational.py`), and narrow it to the SQLAlchemy session with `sqla_session` (`infrastructure/relational_db/session.py`) as the first statement, so `ty` checks that every adapter satisfies its port.
 - **External Clients**: HTTP/gRPC clients communicating with external services (`embedding`, `extraction`).
+- **Errors of external services**: adapters (HTTP clients, LLM, object storage) map connection errors and `5xx`, `408` and `429` responses to `ServiceUnavailable` (`shared/exceptions.py`), which the worker retries; other `4xx` responses become `ServiceRequestRejected` and fail the task without retries (`infrastructure/service_errors.py`).
 - **Object Storage**: a single S3-protocol adapter (`aiobotocore`), reused unchanged against RustFS on-premise and against Google Cloud Storage's S3-interoperability endpoint in the cloud. A separate "presign" client, pointed at a public endpoint URL, keeps presigned URLs handed to the browser reachable even when the internal endpoint isn't.
 
 #### `../../apps/core/src/core_service/framework`

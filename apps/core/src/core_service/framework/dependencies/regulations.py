@@ -25,40 +25,29 @@ from core_service.application.use_cases.regulations import (
     UpdateRegulation,
 )
 from core_service.framework.dependencies.ai_services import get_texts_embedder
+from core_service.framework.dependencies.file_storage import (
+    create_regulations_storage,
+    get_file_storage_client,
+    get_file_storage_presign_client,
+)
 from core_service.framework.dependencies.relational import get_session_maker
-from core_service.infrastructure.object_storage.repository import S3RegulationsStorage
 from core_service.infrastructure.relational_db.repositories.regulations import RegulationsManagerRepository
 from core_service.infrastructure.relational_db.repositories.sections import RegulationsSectionsRepository
 from core_service.infrastructure.tasks.regulations import (
     PostgresRegulationDescriptionGenerationScheduler,
     PostgresRegulationPreparationScheduler,
 )
-from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_sections_repository() -> SectionsRepository:
     return RegulationsSectionsRepository()
 
 
-def get_file_storage_client(request: Request) -> Any:
-    return request.app.state.file_storage_client
-
-
-def get_file_storage_presign_client(request: Request) -> Any:
-    return request.app.state.file_storage_presign_client
-
-
 def get_regulations_storage(
     client: Annotated[Any, Depends(get_file_storage_client)],
     presign_client: Annotated[Any, Depends(get_file_storage_presign_client)],
 ) -> RegulationsStorage:
-    return S3RegulationsStorage(
-        client,
-        presign_client,
-        bucket=object_storage_settings.BUCKET,
-        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
-        max_file_size_bytes=object_storage_settings.MAX_FILE_SIZE_BYTES,
-    )
+    return create_regulations_storage(client, presign_client)
 
 
 def get_regulation_repository() -> RegulationsRepository:

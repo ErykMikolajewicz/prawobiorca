@@ -27,9 +27,19 @@ TASK_POLL_INTERVAL_SECONDS = 10
 
 DELIVERY_ATTEMPT_LABEL = "delivery_attempt"
 
+DELAY_LABEL = "delay"
+
 
 async def insert_task_message(session: AsyncSession, message: BrokerMessage) -> None:
-    statement = insert(task_messages_table).values(message=message.message.decode()).returning(task_messages_table.c.id)
+    locked_until = None
+    if DELAY_LABEL in message.labels:
+        locked_until = func.now() + timedelta(seconds=float(message.labels[DELAY_LABEL]))
+
+    statement = (
+        insert(task_messages_table)
+        .values(message=message.message.decode(), locked_until=locked_until)
+        .returning(task_messages_table.c.id)
+    )
     result = await session.execute(statement)
     message_id = result.scalar_one()
 
@@ -146,6 +156,8 @@ class PostgresBroker(AsyncBroker):
                     await session.execute(statement)
             except ServiceUnavailable:
                 logger.error("Database unavailable, can not extend task messages leases!")
+            except Exception:
+                logger.exception("Unexpected error during extending task messages leases!")
 
     async def _ack(self, message_id: int) -> None:
         statement = delete(task_messages_table).where(task_messages_table.c.id == message_id)

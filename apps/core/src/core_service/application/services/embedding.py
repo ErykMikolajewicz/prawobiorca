@@ -7,7 +7,7 @@ class SectionsEmbedder:
         self._texts_embedder = texts_embedder
         self._batch_size = batch_size
 
-    async def embed_sections(self, sections_collection: SectionsCollection):
+    async def embed_sections(self, sections_collection: SectionsCollection) -> None:
         for batch in sections_collection.get_chunks_batch_iterator(self._batch_size):
             batch_vectors = await self._texts_embedder.embed_chunks(batch)
             for chunk, vector in zip(batch, batch_vectors, strict=True):

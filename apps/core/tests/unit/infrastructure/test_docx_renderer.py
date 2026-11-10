@@ -25,7 +25,7 @@ def create_template() -> bytes:
 
 async def render(student_name: str, content: str) -> list[str]:
     new_application = NewApplication(
-        templateId=TEMPLATE_ID, description="Opis sytuacji.", fieldValues={"student_name": student_name}
+        template_id=TEMPLATE_ID, description="Opis sytuacji.", field_values={"student_name": student_name}
     )
 
     rendered = await DocxApplicationRenderer().render(create_template(), new_application, content)

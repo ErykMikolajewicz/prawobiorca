@@ -13,15 +13,17 @@ from core_service.application.use_cases.cases import (
     ListCaseDocuments,
     ListCases,
 )
-from core_service.framework.dependencies.regulations import get_file_storage_client, get_file_storage_presign_client
+from core_service.framework.dependencies.file_storage import (
+    create_applications_storage,
+    get_file_storage_client,
+    get_file_storage_presign_client,
+)
 from core_service.framework.dependencies.relational import get_session_maker
-from core_service.infrastructure.object_storage.repository import S3ApplicationsStorage
 from core_service.infrastructure.relational_db.repositories.applications import SqlaApplicationsRepository
 from core_service.infrastructure.relational_db.repositories.cases import (
     SqlaCaseDocumentsRepository,
     SqlaCasesRepository,
 )
-from core_service.shared.settings.object_storage import object_storage_settings
 
 
 def get_cases_repo() -> CasesRepository:
@@ -40,12 +42,7 @@ def get_applications_storage(
     client: Annotated[Any, Depends(get_file_storage_client)],
     presign_client: Annotated[Any, Depends(get_file_storage_presign_client)],
 ) -> ApplicationsStorage:
-    return S3ApplicationsStorage(
-        client,
-        presign_client,
-        bucket=object_storage_settings.BUCKET,
-        signed_url_expiration_seconds=object_storage_settings.SIGNED_URL_EXPIRATION_SECONDS,
-    )
+    return create_applications_storage(client, presign_client)
 
 
 def get_list_user_cases(

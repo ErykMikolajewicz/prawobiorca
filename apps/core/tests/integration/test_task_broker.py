@@ -1,11 +1,12 @@
 import asyncio
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import func, select, update
 from taskiq import TaskiqMessage
 
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
-from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL, insert_task_message
+from core_service.infrastructure.tasks.broker import DELAY_LABEL, DELIVERY_ATTEMPT_LABEL, insert_task_message
 from tests.integration.fixtures.tasks import start_worker_broker
 
 LISTEN_TIMEOUT = 3
@@ -13,8 +14,8 @@ LISTEN_TIMEOUT = 3
 HEARTBEAT_SECONDS = 0.1
 
 
-def make_broker_message(broker, *args):
-    message = TaskiqMessage(task_id="task-id", task_name="task", labels={}, args=list(args), kwargs={})
+def make_broker_message(broker, *args, labels=None):
+    message = TaskiqMessage(task_id="task-id", task_name="task", labels=labels or {}, args=list(args), kwargs={})
     return broker.formatter.dumps(message)
 
 
@@ -76,6 +77,37 @@ async def test_heartbeat_extends_lease_of_message_in_progress(postgres_container
         await asyncio.wait_for(anext(broker.listen()), LISTEN_TIMEOUT)
         claimed_until = await get_locked_until(session_maker)
 
+        await asyncio.sleep(3 * HEARTBEAT_SECONDS)
+
+        assert await get_locked_until(session_maker) > claimed_until
+
+
+async def test_delayed_message_is_not_delivered_before_delay(task_broker):
+    await task_broker.kick(make_broker_message(task_broker, labels={DELAY_LABEL: 60}))
+
+    with pytest.raises(TimeoutError):
+        await asyncio.wait_for(anext(task_broker.listen()), 1)
+
+
+async def test_delayed_message_is_delivered_after_delay(task_broker, session_maker):
+    await task_broker.kick(make_broker_message(task_broker, labels={DELAY_LABEL: 60}))
+
+    async with session_maker.begin() as session:
+        await session.execute(update(task_messages_table).values(locked_until=func.now()))
+
+    delivered = await asyncio.wait_for(anext(task_broker.listen()), LISTEN_TIMEOUT)
+
+    assert task_broker.formatter.loads(delivered.data).labels[DELIVERY_ATTEMPT_LABEL] == 1
+
+
+async def test_heartbeat_survives_unexpected_error(postgres_container, session_maker):
+    async with start_worker_broker(postgres_container, session_maker, HEARTBEAT_SECONDS) as broker:
+        await broker.kick(make_broker_message(broker))
+        await asyncio.wait_for(anext(broker.listen()), LISTEN_TIMEOUT)
+        claimed_until = await get_locked_until(session_maker)
+
+        with patch.object(broker.session_maker, "begin", side_effect=RuntimeError):
+            await asyncio.sleep(3 * HEARTBEAT_SECONDS)
         await asyncio.sleep(3 * HEARTBEAT_SECONDS)
 
         assert await get_locked_until(session_maker) > claimed_until

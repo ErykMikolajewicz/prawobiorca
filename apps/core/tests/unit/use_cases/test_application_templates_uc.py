@@ -84,7 +84,7 @@ def create_template_representation(
 ) -> ApplicationTemplateRepresentation:
     return ApplicationTemplateRepresentation(
         id=TEMPLATE_ID,
-        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
+        create_date=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
         name="Wniosek o urlop",
         status=status,
         fields=[STUDENT_ID_FIELD],
@@ -323,8 +323,8 @@ async def test_update_application_template_saves_details(update_template, applic
         name="Wniosek",
         instructions="Instrukcje",
         fields=fields,
-        organizationId=ORGANIZATION_ID,
-        suborganizationId=SUBORGANIZATION_ID,
+        organization_id=ORGANIZATION_ID,
+        suborganization_id=SUBORGANIZATION_ID,
     )
 
     result = await update_template.execute(ADMIN, TEMPLATE_ID, details_data)
@@ -403,7 +403,7 @@ async def test_update_application_template_rejected(
 async def test_update_application_template_with_unknown_organization(update_template, application_templates_repository):
     application_templates_repository.save.side_effect = OrganizationNotFound
     details_data = ApplicationTemplateDetailsData(
-        name="Wniosek", fields=[STUDENT_ID_FIELD], organizationId=ORGANIZATION_ID
+        name="Wniosek", fields=[STUDENT_ID_FIELD], organization_id=ORGANIZATION_ID
     )
 
     with pytest.raises(OrganizationNotFound):

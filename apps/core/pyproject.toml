@@ -25,6 +25,7 @@ dependencies = [
     "docxtpl==0.20.*",
     "taskiq==0.13.*",
     "tokenizers==0.23.*",
+    "regex==2026.11.*",
 ]
 
 [build-system]
@@ -41,6 +42,7 @@ dev = [
     "import-linter==2.16.*",
     "taskiq[reload]==0.13.*",
     "ty==0.0.99",
+    "types-aiobotocore[s3]==3.10.*",
 ]
 
 test = [

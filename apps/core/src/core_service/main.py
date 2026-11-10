@@ -13,6 +13,7 @@ from core_service.infrastructure.ai_services.initialization import init_ai_servi
 from core_service.infrastructure.relational_db.connection import check_relational_db_connection
 from core_service.infrastructure.tasks.connection import init_broker
 from core_service.shared.logging_config import setup_logging
+from core_service.shared.settings.application import app_settings
 
 setup_logging()
 logger = logging.getLogger("core_service")
@@ -71,11 +72,9 @@ prawobiorca = FastAPI(
     generate_unique_id_function=lambda route: route.name,
 )
 
-origins = ["http://localhost:5173", "http://localhost:5174"]
-
 prawobiorca.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=app_settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

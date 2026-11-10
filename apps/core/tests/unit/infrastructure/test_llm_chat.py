@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 
 from core_service.infrastructure.ai_services.llm_chat import LlmChat
 from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
-from core_service.shared.exceptions import ServiceUnavailable
+from core_service.shared.exceptions import ServiceRequestRejected, ServiceUnavailable
 
 
 def create_llm_chat(handler, cost_limiter: LlmCostLimiter | None = None) -> LlmChat:
@@ -71,14 +71,22 @@ async def test_generate_text_over_cost_limit_does_not_call_llm(cost_limiter):
     ("status_code", "body"),
     [
         (503, {}),
+        (429, {}),
         (200, create_completion([])),
         (200, create_completion([create_choice(None)])),
         (200, create_completion([create_choice("")])),
     ],
-    ids=("error status", "no choices", "no content", "empty content"),
+    ids=("error status", "rate limit", "no choices", "no content", "empty content"),
 )
 async def test_generate_text_without_answer_raises_service_unavailable(status_code, body):
     llm_chat = create_llm_chat(lambda request: Response(status_code, json=body))
 
     with pytest.raises(ServiceUnavailable):
+        await llm_chat.generate_text("System.", "Pytanie.")
+
+
+async def test_generate_text_rejected_request_raises_service_request_rejected():
+    llm_chat = create_llm_chat(lambda request: Response(400, json={}))
+
+    with pytest.raises(ServiceRequestRejected):
         await llm_chat.generate_text("System.", "Pytanie.")

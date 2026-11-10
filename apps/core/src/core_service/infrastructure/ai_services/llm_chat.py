@@ -1,6 +1,7 @@
-from openai import APIError, AsyncOpenAI
+from openai import APIError, APIStatusError, AsyncOpenAI
 
 from core_service.infrastructure.ai_services.llm_cost_limiter import LlmCostLimiter
+from core_service.infrastructure.service_errors import get_status_error
 from core_service.shared.exceptions import ServiceUnavailable
 
 
@@ -38,6 +39,8 @@ class LlmChat:
                 presence_penalty=0.1,
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
+        except APIStatusError as e:
+            raise get_status_error(e.status_code) from e
         except APIError as e:
             raise ServiceUnavailable() from e
 

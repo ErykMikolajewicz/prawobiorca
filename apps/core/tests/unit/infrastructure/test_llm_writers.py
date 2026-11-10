@@ -25,9 +25,9 @@ TEMPLATE_ID = UUID("6f7a8b9c-0d1e-4f2a-8b3c-4d5e6f7a8b9c")
 CASE_ID = UUID("4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e")
 
 NEW_APPLICATION = NewApplication(
-    templateId=TEMPLATE_ID,
+    template_id=TEMPLATE_ID,
     description="Proszę o urlop dziekański z powodu choroby.",
-    fieldValues={"student_id": "123456", "pesel": "90010112345"},
+    field_values={"student_id": "123456", "pesel": "90010112345"},
 )
 
 TEMPLATE = ApplicationTemplate(
@@ -43,8 +43,8 @@ TEMPLATE = ApplicationTemplate(
 
 CASE_DOCUMENT = CaseDocument(
     id=UUID("5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a"),
-    caseId=CASE_ID,
-    presentationName="Regulamin studiów",
+    case_id=CASE_ID,
+    presentation_name="Regulamin studiów",
     content="§ 20. Student może otrzymać urlop dziekański.",
 )
 

@@ -15,7 +15,7 @@ from core_service.domain.value_objects.regulations import (
 
 
 class RegulationData(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel)
+    model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
     scope: RegulationScope
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
@@ -34,20 +34,22 @@ class RegulationData(BaseModel):
 
 
 class RegulationDetailsData(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel)
+    model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     description: str | None = Field(default=None, max_length=MAX_REGULATION_DESCRIPTION_LENGTH)
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel))
+@dataclass(config=ConfigDict(alias_generator=to_camel, validate_by_name=True))
 class RegulationUploadTarget:
     id: UUID
     url: str
     fields: dict[str, str]
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel, json_schema_serialization_defaults_required=True))
+@dataclass(
+    config=ConfigDict(alias_generator=to_camel, validate_by_name=True, json_schema_serialization_defaults_required=True)
+)
 class RegulationRepresentation:
     id: UUID
     create_date: datetime
@@ -61,7 +63,7 @@ class RegulationRepresentation:
     suborganization_id: UUID | None = None
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel))
+@dataclass(config=ConfigDict(alias_generator=to_camel, validate_by_name=True))
 class RegulationSearchResult:
     regulation: RegulationRepresentation
     score: float
