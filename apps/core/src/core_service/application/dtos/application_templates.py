@@ -23,7 +23,7 @@ class ApplicationTemplateData(BaseModel):
 
 
 class ApplicationTemplateDetailsData(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel)
+    model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
     name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     instructions: str | None = None
@@ -39,14 +39,16 @@ class ApplicationTemplateDetailsData(BaseModel):
         return self
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel))
+@dataclass(config=ConfigDict(alias_generator=to_camel, validate_by_name=True))
 class ApplicationTemplateUploadTarget:
     id: UUID
     url: str
     fields: dict[str, str]
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel, json_schema_serialization_defaults_required=True))
+@dataclass(
+    config=ConfigDict(alias_generator=to_camel, validate_by_name=True, json_schema_serialization_defaults_required=True)
+)
 class ApplicationTemplateRepresentation:
     id: UUID
     create_date: datetime

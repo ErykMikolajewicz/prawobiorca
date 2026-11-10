@@ -15,7 +15,7 @@ class NewApplication:
     field_values: dict[str, str] = Field(default_factory=dict)
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel))
+@dataclass(config=ConfigDict(alias_generator=to_camel, validate_by_name=True))
 class ApplicationRepresentation:
     id: UUID
     case_id: UUID

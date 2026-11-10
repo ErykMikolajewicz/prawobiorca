@@ -19,7 +19,7 @@ class CreateAccount:
     session_maker: SessionMaker
     users_repo: UsersRepository
 
-    async def execute(self, login_data: LoginData):
+    async def execute(self, login_data: LoginData) -> None:
         hashed_password = await run_in_threadpool(hash_password, login_data.password)
         create_user_data = CreateUserData(login_data.username, hashed_password)
 

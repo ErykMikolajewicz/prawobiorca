@@ -32,9 +32,9 @@ OTHER_CASE_ID = UUID("9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b")
 APPLICATION_ID = UUID("2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f")
 
 NEW_APPLICATION = NewApplication(
-    templateId=TEMPLATE_ID,
+    template_id=TEMPLATE_ID,
     description="Proszę o urlop dziekański.",
-    fieldValues={"student_id": " 123456 "},
+    field_values={"student_id": " 123456 "},
 )
 
 
@@ -63,10 +63,10 @@ def create_application_representation(
 ) -> ApplicationRepresentation:
     return ApplicationRepresentation(
         id=APPLICATION_ID,
-        caseId=case_id,
-        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
-        templateName="Wniosek o urlop",
-        generationStatus=generation_status,
+        case_id=case_id,
+        create_date=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
+        template_name="Wniosek o urlop",
+        generation_status=generation_status,
         name=None,
     )
 
@@ -158,7 +158,7 @@ async def test_add_application_schedules_generation_with_normalized_field_values
         mock_application_generation_scheduler.schedule_application_generation, "new_application"
     )
     assert scheduled_application == NewApplication(
-        templateId=TEMPLATE_ID, description="Proszę o urlop dziekański.", fieldValues={"student_id": "123456"}
+        template_id=TEMPLATE_ID, description="Proszę o urlop dziekański.", field_values={"student_id": "123456"}
     )
 
 
@@ -194,7 +194,7 @@ async def test_generate_application_saves_generated_document(
     application = create_application()
     applications_repository.get_for_update.return_value = application
     document = CaseDocument(
-        id=UUID("5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a"), caseId=CASE_ID, presentationName="doc.pdf", content="text"
+        id=UUID("5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a"), case_id=CASE_ID, presentation_name="doc.pdf", content="text"
     )
     mock_case_documents_repo.list_by_case_id.return_value = [document]
     mock_application_templates_storage.get_template.return_value = b"TEMPLATE"

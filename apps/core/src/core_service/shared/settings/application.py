@@ -27,6 +27,8 @@ class ApplicationSettings(BaseSettings):
 
     HTTP_CLIENT: HttpClientType = HttpClientType.HTTPX
 
+    CORS_ORIGINS: list[str] = Field(default_factory=list)
+
     model_config = SettingsConfigDict(
         env_file=Path(".env"),
         secrets_dir=_SECRETS_DIR if _SECRETS_DIR.exists() else None,

@@ -8,7 +8,7 @@ from core_service.application.dtos.search import SearchResultElement, SearchResu
 from core_service.domain.consts import MAX_FILENAME_LENGTH, MIN_FILENAME_LENGTH
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel))
+@dataclass(config=ConfigDict(alias_generator=to_camel, validate_by_name=True))
 class NewCaseDocument:
     presentation_name: str = Field(min_length=1)
     content: str = Field(min_length=1)
@@ -23,7 +23,9 @@ class CaseData:
     name: str
 
 
-@dataclass(config=ConfigDict(alias_generator=to_camel, json_schema_serialization_defaults_required=True))
+@dataclass(
+    config=ConfigDict(alias_generator=to_camel, validate_by_name=True, json_schema_serialization_defaults_required=True)
+)
 class CaseDocument:
     id: UUID
     case_id: UUID

@@ -1,17 +1,20 @@
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any
+from typing import TYPE_CHECKING
 
 from aiobotocore.config import AioConfig
 from aiobotocore.session import get_session
 
 from core_service.shared.settings.object_storage import object_storage_settings
 
+if TYPE_CHECKING:
+    from types_aiobotocore_s3 import S3Client
+
 session = get_session()
 exit_stack = AsyncExitStack()
 
 
-async def _create_client(endpoint_url: str) -> Any:
+async def _create_client(endpoint_url: str) -> S3Client:
     return await exit_stack.enter_async_context(
         session.create_client(
             "s3",
@@ -28,7 +31,7 @@ async def _create_client(endpoint_url: str) -> Any:
     )
 
 
-async def init_object_storage_client() -> tuple[Any, Any, Callable[..., Awaitable[None]]]:
+async def init_object_storage_client() -> tuple[S3Client, S3Client, Callable[..., Awaitable[None]]]:
     client = await _create_client(object_storage_settings.ENDPOINT_URL)
     await client.head_bucket(Bucket=object_storage_settings.BUCKET)
 

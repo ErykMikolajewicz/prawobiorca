@@ -8,7 +8,7 @@ from core_service.domain.consts import MAX_ORGANIZATION_NAME_LENGTH, MAX_ORGANIZ
 
 
 class NewOrganization(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel)
+    model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
     name: str = Field(min_length=1, max_length=MAX_ORGANIZATION_NAME_LENGTH)
     short_name: str = Field(min_length=1, max_length=MAX_ORGANIZATION_SHORT_NAME_LENGTH)

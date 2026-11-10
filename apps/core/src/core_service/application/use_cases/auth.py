@@ -56,7 +56,7 @@ class LogUser:
     tokens_config: AuthTokensConfig
 
     async def execute(self, login_data: LoginData) -> AuthTokens:
-        execution_start_time = asyncio.get_event_loop().time()
+        execution_start_time = asyncio.get_running_loop().time()
 
         user_privileges = None
         async with self.session_maker() as session:

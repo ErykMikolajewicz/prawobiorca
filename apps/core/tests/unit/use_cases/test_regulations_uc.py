@@ -69,10 +69,10 @@ def create_regulation_representation(
 ) -> RegulationRepresentation:
     return RegulationRepresentation(
         id=REGULATION_ID,
-        createDate=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
-        presentationName="Regulamin studiów",
+        create_date=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
+        presentation_name="Regulamin studiów",
         description=description,
-        preparationStatus=preparation_status,
+        preparation_status=preparation_status,
     )
 
 
@@ -637,10 +637,10 @@ async def test_add_regulation_registers_regulation(
     regulation_data = RegulationData(
         scope=RegulationScope.PUBLIC,
         name="regulation.pdf",
-        regulationType=RegulationType.STATUTE,
-        organizationId=ORGANIZATION_ID,
-        suborganizationId=SUBORGANIZATION_ID,
-        generateDescription=generate_description,
+        regulation_type=RegulationType.STATUTE,
+        organization_id=ORGANIZATION_ID,
+        suborganization_id=SUBORGANIZATION_ID,
+        generate_description=generate_description,
     )
 
     upload_target = await add_regulation.execute(ADMIN, regulation_data)

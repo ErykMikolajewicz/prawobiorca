@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 import pytest
 
-from core_service.domain.value_objects import regulations as regulations_module
+from core_service.domain.services import regulation_chunking
+from core_service.domain.services.regulation_chunking import RegulationAct, Tokenizer
 from core_service.domain.value_objects.legal_units import RegulationElement, UsefulLabels
-from core_service.domain.value_objects.regulations import RegulationAct, Tokenizer
 from core_service.infrastructure.tokenizers.mmlw import MmlwTokenizer
 
 DATA_DIR = Path(__file__).parents[3] / "data"
@@ -43,7 +43,7 @@ class SpecialTokensWordTokenizer(WordTokenizer):
 
 @pytest.fixture(autouse=True)
 def chunk_max_tokens():
-    with patch.object(regulations_module, "CHUNK_MAX_TOKENS", CHUNK_MAX_TOKENS):
+    with patch.object(regulation_chunking, "CHUNK_MAX_TOKENS", CHUNK_MAX_TOKENS):
         yield
 
 
@@ -469,7 +469,7 @@ def test_chunks_split_between_letters_repeat_point_lead_in_embed_title():
 
 
 def test_point_lead_is_not_separated_from_its_first_letter():
-    with patch.object(regulations_module, "CHUNK_MAX_TOKENS", 125):
+    with patch.object(regulation_chunking, "CHUNK_MAX_TOKENS", 125):
         section = find_section(STUDY_REGULATIONS_FIXTURE, "3")
 
     chunk = next(chunk for chunk in section.chunks if "1) studia pierwszego stopnia" in chunk.text)

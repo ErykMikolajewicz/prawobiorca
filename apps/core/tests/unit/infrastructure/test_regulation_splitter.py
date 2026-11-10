@@ -3,7 +3,7 @@ from httpx2 import AsyncClient, MockTransport, Response
 
 from core_service.domain.value_objects.legal_units import RegulationElement, UsefulLabels
 from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
-from core_service.shared.exceptions import ServiceUnavailable
+from core_service.shared.exceptions import ServiceRequestRejected, ServiceUnavailable
 
 EXTRACTION_SERVICE_URL = "http://extraction.local"
 
@@ -30,3 +30,8 @@ async def test_split_sends_regulation_file_and_returns_its_elements():
 async def test_split_failure_raises_service_unavailable():
     with pytest.raises(ServiceUnavailable):
         await create_splitter(lambda request: Response(503)).split(b"%PDF-1.7")
+
+
+async def test_split_rejected_request_raises_service_request_rejected():
+    with pytest.raises(ServiceRequestRejected):
+        await create_splitter(lambda request: Response(422)).split(b"%PDF-1.7")

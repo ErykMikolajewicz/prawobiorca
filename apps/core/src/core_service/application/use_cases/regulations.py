@@ -112,7 +112,7 @@ class PrepareRegulation:
     regulation_preparator: RegulationPreparator
     description_generation_scheduler: RegulationDescriptionGenerationScheduler
 
-    async def execute(self, user_id: UUID | None, regulation_id: UUID):
+    async def execute(self, user_id: UUID | None, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
             regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
             if regulation is None:
@@ -519,7 +519,7 @@ class DeleteRegulation:
     sections_repository: SectionsRepository
     regulations_storage: RegulationsStorage
 
-    async def execute(self, caller: Caller, regulation_id: UUID):
+    async def execute(self, caller: Caller, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
             owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
             check_can_manage_regulation(caller, owner)

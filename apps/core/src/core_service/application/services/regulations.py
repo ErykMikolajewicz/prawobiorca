@@ -1,9 +1,8 @@
 import asyncio
 
 from core_service.application.ports.regulations import RegulationSplitter
-from core_service.application.ports.tokenizer import Tokenizer
 from core_service.application.services.embedding import SectionsEmbedder
-from core_service.domain.value_objects.regulations import RegulationAct
+from core_service.domain.services.regulation_chunking import RegulationAct, Tokenizer
 from core_service.domain.value_objects.sections import SectionsCollection
 
 

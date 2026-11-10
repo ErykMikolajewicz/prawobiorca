@@ -5,7 +5,7 @@ from httpx2 import AsyncClient, ConnectError, MockTransport, Response
 
 from core_service.domain.value_objects.sections import SectionChunk
 from core_service.infrastructure.ai_services.text_embedder import EMBEDDING_MODEL_NAME, HttpTextsEmbedder
-from core_service.shared.exceptions import ServiceUnavailable
+from core_service.shared.exceptions import ServiceRequestRejected, ServiceUnavailable
 
 EMBEDDING_SERVICE_URL = "http://embedding.local"
 
@@ -65,8 +65,15 @@ def fail_with_connection_error(request):
 
 
 @pytest.mark.parametrize(
-    "handler", [lambda request: Response(503), fail_with_connection_error], ids=("error status", "connection error")
+    "handler",
+    [lambda request: Response(503), lambda request: Response(429), fail_with_connection_error],
+    ids=("error status", "rate limit", "connection error"),
 )
 async def test_embedding_failure_raises_service_unavailable(handler):
     with pytest.raises(ServiceUnavailable):
         await create_embedder(handler).embed_texts(["Opis."])
+
+
+async def test_embedding_rejected_request_raises_service_request_rejected():
+    with pytest.raises(ServiceRequestRejected):
+        await create_embedder(lambda request: Response(400)).embed_texts(["Opis."])

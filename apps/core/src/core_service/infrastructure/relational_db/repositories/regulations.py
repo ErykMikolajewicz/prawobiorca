@@ -16,7 +16,13 @@ from core_service.domain.value_objects.regulations import (
     RegulationRegistrationData,
     RegulationType,
 )
-from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
+from core_service.infrastructure.relational_db.integrity import get_violated_constraint
+from core_service.infrastructure.relational_db.schemas.regulations import (
+    REGULATIONS_ORGANIZATION_FOREIGN_KEY,
+    REGULATIONS_SUBORGANIZATION_FOREIGN_KEY,
+    REGULATIONS_USER_FOREIGN_KEY,
+    regulations_table,
+)
 from core_service.infrastructure.relational_db.session import sqla_session
 
 
@@ -100,10 +106,13 @@ class RegulationsManagerRepository:
 
         try:
             result = await session.execute(statement)
-        except IntegrityError:
-            if user_id is None:
-                raise OrganizationNotFound
-            raise UserNotFound
+        except IntegrityError as e:
+            violated_constraint = get_violated_constraint(e)
+            if violated_constraint == REGULATIONS_USER_FOREIGN_KEY:
+                raise UserNotFound from e
+            if violated_constraint in (REGULATIONS_ORGANIZATION_FOREIGN_KEY, REGULATIONS_SUBORGANIZATION_FOREIGN_KEY):
+                raise OrganizationNotFound from e
+            raise
 
         regulation_id = result.scalar_one()
         return regulation_id

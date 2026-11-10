@@ -4,3 +4,7 @@ class ObjectExists(Exception):
 
 class ServiceUnavailable(Exception):
     pass
+
+
+class ServiceRequestRejected(Exception):
+    pass

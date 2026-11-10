@@ -1,8 +1,9 @@
 from collections.abc import Iterable
 
-from httpx2 import AsyncClient, HTTPError
+from httpx2 import AsyncClient, HTTPError, HTTPStatusError
 
 from core_service.domain.value_objects.sections import SectionChunk
+from core_service.infrastructure.service_errors import get_status_error
 from core_service.shared.exceptions import ServiceUnavailable
 
 EMBEDDING_MODEL_NAME = "mmlw-retrieval-roberta-large-v2"
@@ -30,6 +31,8 @@ class HttpTextsEmbedder:
                 self._embedding_url, timeout=300, json={"model": EMBEDDING_MODEL_NAME, "input": texts}
             )
             response.raise_for_status()
+        except HTTPStatusError as e:
+            raise get_status_error(e.response.status_code) from e
         except HTTPError as e:
             raise ServiceUnavailable() from e
         embeddings_data = sorted(response.json()["data"], key=lambda item: item["index"])
