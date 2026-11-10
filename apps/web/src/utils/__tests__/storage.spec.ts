@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
-import { uploadFileToStorage } from '@/utils/storage'
+import { downloadFromStorage, uploadFileToStorage } from '@/utils/storage'
 
 vi.mock('axios', () => ({
   default: {
@@ -75,5 +75,31 @@ describe('storage utils', () => {
 
     const [url] = vi.mocked(axios.post).mock.calls[0] ?? []
     expect(url).toBe('http://localhost:9000/regulations')
+  })
+
+  it('uploadFileToStorage keeps a url from another origin than dev storage', async () => {
+    vi.stubEnv('VITE_DEV_STORAGE_ORIGIN', 'http://localhost:9000')
+    vi.mocked(axios.post).mockResolvedValueOnce({ status: 204 })
+    const target = { id: 'uuid-123', url: 'https://storage.example.com/upload', fields: {} }
+
+    await uploadFileToStorage(target, new File(['content'], 'test.pdf'))
+
+    const [url] = vi.mocked(axios.post).mock.calls[0] ?? []
+    expect(url).toBe('https://storage.example.com/upload')
+  })
+
+  it('downloadFromStorage opens the file url and leaves no link in the document', () => {
+    vi.stubEnv('VITE_DEV_STORAGE_ORIGIN', 'http://localhost:9000')
+    const clickedUrls: Array<string> = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementationOnce(function (
+      this: HTMLAnchorElement,
+    ) {
+      clickedUrls.push(this.getAttribute('href') ?? '')
+    })
+
+    downloadFromStorage('http://localhost:9000/applications/wniosek.docx')
+
+    expect(clickedUrls).toEqual(['/storage/applications/wniosek.docx'])
+    expect(document.querySelector('a')).toBeNull()
   })
 })

@@ -49,6 +49,56 @@ describe('useApplicationTemplateUpload', () => {
     expect(upload.name.value).toBe('Wniosek o urlop')
   })
 
+  it('setFile keeps the name when the file is cleared', () => {
+    const upload = prepareUpload()
+
+    upload.setFile(null)
+
+    expect(upload.selectedFile.value).toBeNull()
+    expect(upload.name.value).toBe('Wniosek o urlop')
+  })
+
+  it('resetForm clears the file and the name', () => {
+    const upload = prepareUpload()
+
+    upload.resetForm()
+
+    expect(upload.selectedFile.value).toBeNull()
+    expect(upload.name.value).toBe('')
+  })
+
+  it('submit trims the template name', async () => {
+    vi.mocked(addApplicationTemplate).mockResolvedValueOnce(uploadTarget)
+
+    const upload = prepareUpload()
+    upload.name.value = '  Wniosek o urlop  '
+    await upload.submit()
+
+    expect(addApplicationTemplate).toHaveBeenCalledWith(
+      { name: 'Wniosek o urlop' },
+      { signal: expect.any(AbortSignal) },
+    )
+  })
+
+  it('submit marks the form as submitting until the upload ends', async () => {
+    let finishUpload: (() => void) | undefined
+    vi.mocked(addApplicationTemplate).mockResolvedValueOnce(uploadTarget)
+    vi.mocked(uploadFileToStorage).mockImplementationOnce(
+      () => new Promise((resolve) => (finishUpload = resolve)),
+    )
+
+    const upload = prepareUpload()
+    expect(upload.isSubmitting.value).toBe(false)
+
+    const submission = upload.submit()
+    await vi.waitFor(() => expect(uploadFileToStorage).toHaveBeenCalled())
+    expect(upload.isSubmitting.value).toBe(true)
+
+    finishUpload?.()
+    await submission
+    expect(upload.isSubmitting.value).toBe(false)
+  })
+
   it('submit orchestrates flow: create -> upload -> confirm', async () => {
     vi.mocked(addApplicationTemplate).mockResolvedValueOnce(uploadTarget)
 
@@ -60,7 +110,9 @@ describe('useApplicationTemplateUpload', () => {
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File), signal)
     expect(confirmApplicationTemplateUpload).toHaveBeenCalledWith('template-1', { signal })
     expect(templateId).toBe('template-1')
-    expect(ElMessage.success).toHaveBeenCalled()
+    expect(ElMessage.success).toHaveBeenCalledExactlyOnceWith(
+      'Szablon został dodany. Skonfiguruj pola i instrukcje dla AI.',
+    )
   })
 
   it('submit returns null and shows upload error when sending file fails', async () => {
@@ -144,7 +196,10 @@ describe('useApplicationTemplateUpload', () => {
     upload.name.value = ' '
 
     expect(await upload.submit()).toBeNull()
-    expect(ElMessage.warning).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(ElMessage.warning).mock.calls).toEqual([
+      ['Wybierz plik szablonu.'],
+      ['Podaj nazwę szablonu.'],
+    ])
     expect(addApplicationTemplate).not.toHaveBeenCalled()
   })
 })

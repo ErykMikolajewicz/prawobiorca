@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import RegulationDetailsDialog from '../RegulationDetailsDialog.vue'
+import { createTestApp } from '@/__tests__/app'
+import { confirmPopconfirm, findButton, page, shownMessages } from '@/__tests__/dom'
+import { createFailingRequest, createHttpError, createRegulation } from '@/__tests__/factories'
 import {
   deleteRegulation,
   getRegulationDownloadUrlById,
@@ -9,209 +11,383 @@ import {
   updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { useAuthStore } from '@/stores/auth'
-import type {
-  DescriptionStatus,
-  RegulationPreparationStatus,
-  RegulationRepresentation,
-} from '@/api/generated/model'
+import type { RegulationRepresentation } from '@/api/generated/model'
 
-vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
-  deleteRegulation: vi.fn(),
-  getRegulationDownloadUrlById: vi.fn(),
-  regenerateRegulationDescription: vi.fn(),
-  updateRegulation: vi.fn(),
-}))
+vi.mock('@/api/generated/endpoints/regulations/regulations')
 
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    warning: vi.fn(),
-    error: vi.fn(),
-  },
-}))
+const NAME_INPUT = 'input[placeholder="Nazwa regulacji"]'
+const DESCRIPTION_INPUT = 'textarea'
 
-function createRegulation(
-  preparationStatus: RegulationPreparationStatus,
-  descriptionStatus: DescriptionStatus = 'NOT_REQUESTED',
-): RegulationRepresentation {
-  return {
-    id: 'uuid-1',
-    createDate: '2026-09-29T10:00:00',
-    presentationName: 'Ustawa testowa',
-    description: 'Opis ustawy',
-    regulationType: 'ACT',
-    preparationStatus,
-    descriptionStatus,
-    organizationId: null,
-    suborganizationId: null,
-  }
+const regulation = createRegulation({
+  id: 'uuid-1',
+  presentationName: 'Ustawa testowa',
+  description: 'Opis ustawy',
+})
+
+type DialogOptions = {
+  canManage: boolean
+  isAdmin?: boolean
+  regulation?: Partial<RegulationRepresentation>
 }
 
-async function mountDialog(
-  canManage: boolean,
-  preparationStatus: RegulationPreparationStatus = 'PREPARED',
-  descriptionStatus: DescriptionStatus = 'NOT_REQUESTED',
-) {
-  const wrapper = mount(RegulationDetailsDialog, {
+async function mountDialog(options: DialogOptions) {
+  const { global } = await createTestApp()
+  useAuthStore().isAdmin = options.isAdmin ?? false
+  const wrapper: VueWrapper = mount(RegulationDetailsDialog, {
     props: {
       modelValue: false,
-      'onUpdate:modelValue': (value: boolean) => wrapper.setProps({ modelValue: value }),
-      regulation: createRegulation(preparationStatus, descriptionStatus),
-      canManage,
+      'onUpdate:modelValue': (modelValue: boolean) => wrapper.setProps({ modelValue }),
+      regulation: { ...regulation, ...options.regulation },
+      canManage: options.canManage,
     },
-    global: {
-      stubs: {
-        ElDialog: {
-          template:
-            '<div v-if="modelValue" class="dialog-stub"><slot /><slot name="footer" /></div>',
-          props: ['modelValue'],
-        },
-        ElForm: { template: '<form><slot /></form>' },
-        ElFormItem: { template: '<div><slot /></div>' },
-        ElInput: {
-          template:
-            '<input :class="type === \'textarea\' ? \'description-input\' : \'name-input\'" :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)" />',
-          props: ['modelValue', 'type', 'disabled'],
-        },
-        ElTag: { template: '<span class="tag-stub"><slot /></span>' },
-        ElButton: {
-          template: '<button @click="$emit(\'click\')"><slot /></button>',
-          emits: ['click'],
-        },
-        ElPopconfirm: {
-          template:
-            '<div><slot name="reference" /><button class="confirm-delete" @click="$emit(\'confirm\')" /></div>',
-        },
-      },
-    },
+    global,
+    attachTo: document.body,
   })
   await wrapper.setProps({ modelValue: true })
   return wrapper
 }
 
-function findButton(wrapper: Awaited<ReturnType<typeof mountDialog>>, text: string) {
-  return wrapper.findAll('button').find((button) => button.text() === text)
+function dialog() {
+  return page().find('.el-dialog')
+}
+
+function isDialogOpen() {
+  return dialog().exists() && dialog().isVisible()
+}
+
+function inputValue(selector: string) {
+  return dialog().find<HTMLInputElement | HTMLTextAreaElement>(selector).element.value
+}
+
+async function clickButton(text: string) {
+  await findButton(text)!.trigger('click')
+  await flushPromises()
+}
+
+function mockPreviewWindow() {
+  const previewWindow = { opener: window, location: { href: '' }, close: vi.fn() }
+  const open = vi.spyOn(window, 'open').mockReturnValueOnce(previewWindow as unknown as Window)
+  return { previewWindow, open }
 }
 
 describe('RegulationDetailsDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    setActivePinia(createPinia())
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  it('saves edited name and description', async () => {
-    const wrapper = await mountDialog(true)
-    const updatedRegulation = {
-      ...createRegulation('PREPARED'),
-      presentationName: 'Nowa nazwa',
-      description: 'Nowy opis',
-    }
-    vi.mocked(updateRegulation).mockResolvedValueOnce(updatedRegulation)
+  describe('editing', () => {
+    it('saves edited name and description', async () => {
+      const wrapper = await mountDialog({ canManage: true })
+      const updatedRegulation = {
+        ...regulation,
+        presentationName: 'Nowa nazwa',
+        description: 'Nowy opis',
+      }
+      vi.mocked(updateRegulation).mockResolvedValueOnce(updatedRegulation)
 
-    await wrapper.find('.name-input').setValue('Nowa nazwa')
-    await wrapper.find('.description-input').setValue('Nowy opis')
-    await findButton(wrapper, 'Zapisz')?.trigger('click')
-    await flushPromises()
+      await dialog().find(NAME_INPUT).setValue('Nowa nazwa')
+      await dialog().find(DESCRIPTION_INPUT).setValue('Nowy opis')
+      await clickButton('Zapisz')
 
-    expect(updateRegulation).toHaveBeenCalledWith('uuid-1', {
-      name: 'Nowa nazwa',
-      description: 'Nowy opis',
+      expect(updateRegulation).toHaveBeenCalledExactlyOnceWith('uuid-1', {
+        name: 'Nowa nazwa',
+        description: 'Nowy opis',
+      })
+      expect(wrapper.emitted('updated')).toEqual([[updatedRegulation]])
+      expect(shownMessages('success')).toEqual(['Regulacja została zaktualizowana'])
     })
-    expect(wrapper.emitted('updated')?.[0]).toEqual([updatedRegulation])
+
+    it('trims the name and sends an empty description as null', async () => {
+      await mountDialog({ canManage: true })
+      vi.mocked(updateRegulation).mockResolvedValueOnce(regulation)
+
+      await dialog().find(NAME_INPUT).setValue('  Nowa nazwa ')
+      await dialog().find(DESCRIPTION_INPUT).setValue('   ')
+      await clickButton('Zapisz')
+
+      expect(updateRegulation).toHaveBeenCalledExactlyOnceWith('uuid-1', {
+        name: 'Nowa nazwa',
+        description: null,
+      })
+    })
+
+    it('does not save a regulation without a name', async () => {
+      const wrapper = await mountDialog({ canManage: true })
+
+      await dialog().find(NAME_INPUT).setValue('   ')
+      await clickButton('Zapisz')
+
+      expect(shownMessages('warning')).toEqual(['Podaj nazwę regulacji.'])
+      expect(updateRegulation).not.toHaveBeenCalled()
+      expect(wrapper.emitted('updated')).toBeUndefined()
+    })
+
+    it('reports a regulation that could not be saved', async () => {
+      const wrapper = await mountDialog({ canManage: true })
+      vi.mocked(updateRegulation).mockRejectedValueOnce(createHttpError(500))
+
+      await clickButton('Zapisz')
+
+      expect(shownMessages('error')).toEqual(['Nie udało się zaktualizować regulacji'])
+      expect(shownMessages('success')).toEqual([])
+      expect(wrapper.emitted('updated')).toBeUndefined()
+    })
+
+    it('shows the current data again after unsaved changes were abandoned', async () => {
+      const wrapper = await mountDialog({ canManage: true })
+      await dialog().find(NAME_INPUT).setValue('Porzucona nazwa')
+      await dialog().find(DESCRIPTION_INPUT).setValue('Porzucony opis')
+
+      await wrapper.setProps({ modelValue: false })
+      await wrapper.setProps({ modelValue: true })
+
+      expect(inputValue(NAME_INPUT)).toBe('Ustawa testowa')
+      expect(inputValue(DESCRIPTION_INPUT)).toBe('Opis ustawy')
+    })
+
+    it('deletes regulation after confirmation and closes dialog', async () => {
+      const wrapper = await mountDialog({ canManage: true })
+
+      await clickButton('Usuń')
+      expect(deleteRegulation).not.toHaveBeenCalled()
+      await confirmPopconfirm()
+      await flushPromises()
+
+      expect(deleteRegulation).toHaveBeenCalledExactlyOnceWith('uuid-1')
+      expect(wrapper.emitted('deleted')).toEqual([['uuid-1']])
+      expect(shownMessages('success')).toEqual(['Regulacja została usunięta'])
+      expect(isDialogOpen()).toBe(false)
+    })
+
+    it('keeps the dialog open and reports an error when deleting fails', async () => {
+      const wrapper = await mountDialog({ canManage: true })
+      vi.mocked(deleteRegulation).mockRejectedValueOnce(createHttpError(500))
+
+      await clickButton('Usuń')
+      await confirmPopconfirm()
+      await flushPromises()
+
+      expect(shownMessages('error')).toEqual(['Nie udało się usunąć regulacji'])
+      expect(wrapper.emitted('deleted')).toBeUndefined()
+      expect(isDialogOpen()).toBe(true)
+    })
   })
 
-  it('deletes regulation and closes dialog', async () => {
-    const wrapper = await mountDialog(true)
-    vi.mocked(deleteRegulation).mockResolvedValueOnce(undefined)
+  describe('running requests', () => {
+    it.each([
+      [
+        'Zapisz',
+        (request: Promise<never>) => vi.mocked(updateRegulation).mockReturnValueOnce(request),
+      ],
+      [
+        'Wygeneruj opis przez AI',
+        (request: Promise<never>) =>
+          vi.mocked(regenerateRegulationDescription).mockReturnValueOnce(request),
+      ],
+    ])('shows "%s" as busy until its request ends', async (label, mockRequest) => {
+      const { request, fail } = createFailingRequest()
+      mockRequest(request)
+      await mountDialog({ canManage: true, isAdmin: true })
+      expect(findButton(label)!.classes()).not.toContain('is-loading')
 
-    await wrapper.find('.confirm-delete').trigger('click')
-    await flushPromises()
+      await clickButton(label)
+      expect(findButton(label)!.classes()).toContain('is-loading')
 
-    expect(deleteRegulation).toHaveBeenCalledWith('uuid-1')
-    expect(wrapper.emitted('deleted')?.[0]).toEqual(['uuid-1'])
-    expect(wrapper.find('.dialog-stub').exists()).toBe(false)
+      fail()
+      await flushPromises()
+      expect(findButton(label)!.classes()).not.toContain('is-loading')
+    })
+
+    it('shows loading the preview as busy until its request ends', async () => {
+      const { request, fail } = createFailingRequest()
+      vi.mocked(getRegulationDownloadUrlById).mockReturnValueOnce(request)
+      mockPreviewWindow()
+      await mountDialog({ canManage: false })
+      expect(findButton('Pokaż podgląd')!.classes()).not.toContain('is-loading')
+
+      await clickButton('Pokaż podgląd')
+      expect(findButton('Pokaż podgląd')!.classes()).toContain('is-loading')
+
+      fail()
+      await flushPromises()
+      expect(findButton('Pokaż podgląd')!.classes()).not.toContain('is-loading')
+    })
+
+    it('shows deleting as busy until its request ends', async () => {
+      const { request, fail } = createFailingRequest()
+      vi.mocked(deleteRegulation).mockReturnValueOnce(request)
+      await mountDialog({ canManage: true })
+
+      await clickButton('Usuń')
+      await confirmPopconfirm()
+      await flushPromises()
+      expect(findButton('Usuń')!.classes()).toContain('is-loading')
+
+      fail()
+      await flushPromises()
+      expect(findButton('Usuń')!.classes()).not.toContain('is-loading')
+    })
   })
 
-  it('shows details read-only when user cannot manage regulation', async () => {
-    const wrapper = await mountDialog(false)
+  describe('reading', () => {
+    it('shows details read-only when user cannot manage regulation', async () => {
+      await mountDialog({ canManage: false })
 
-    expect(wrapper.find('.name-input').exists()).toBe(false)
-    expect(wrapper.find('.confirm-delete').exists()).toBe(false)
-    expect(findButton(wrapper, 'Zapisz')).toBeUndefined()
-    expect(wrapper.text()).toContain('Ustawa testowa')
-    expect(wrapper.text()).toContain('Opis ustawy')
+      expect(dialog().find(NAME_INPUT).exists()).toBe(false)
+      expect(dialog().find(DESCRIPTION_INPUT).exists()).toBe(false)
+      expect(findButton('Zapisz')).toBeUndefined()
+      expect(findButton('Usuń')).toBeUndefined()
+      expect(dialog().text()).toContain('Ustawa testowa')
+      expect(dialog().find('.regulation-description').text()).toBe('Opis ustawy')
+    })
+
+    it('informs a reader that the regulation has no description', async () => {
+      await mountDialog({ canManage: false, regulation: { description: null } })
+
+      expect(dialog().find('.regulation-description').text()).toBe('Brak opisu')
+    })
+
+    it('shows when the regulation was added', async () => {
+      await mountDialog({ canManage: false })
+
+      expect(dialog().text()).toContain('29.09.2026, 10:00')
+    })
   })
 
-  it('opens file preview in new browser tab', async () => {
-    const wrapper = await mountDialog(false)
-    const previewWindow = { opener: window, location: { href: '' }, close: vi.fn() }
-    const openSpy = vi.spyOn(window, 'open').mockReturnValueOnce(previewWindow as unknown as Window)
-    vi.mocked(getRegulationDownloadUrlById).mockResolvedValueOnce(
-      'https://storage.example.com/uuid-1',
-    )
+  describe('file preview', () => {
+    it('opens file preview in new browser tab', async () => {
+      await mountDialog({ canManage: false })
+      const { previewWindow, open } = mockPreviewWindow()
+      vi.mocked(getRegulationDownloadUrlById).mockResolvedValueOnce(
+        'https://storage.example.com/uuid-1',
+      )
 
-    await findButton(wrapper, 'Pokaż podgląd')?.trigger('click')
-    await flushPromises()
+      await clickButton('Pokaż podgląd')
 
-    expect(openSpy).toHaveBeenCalledWith('', '_blank')
-    expect(getRegulationDownloadUrlById).toHaveBeenCalledWith('uuid-1')
-    expect(previewWindow.opener).toBeNull()
-    expect(previewWindow.location.href).toBe('https://storage.example.com/uuid-1')
-    openSpy.mockRestore()
-  })
+      expect(open).toHaveBeenCalledExactlyOnceWith('', '_blank')
+      expect(getRegulationDownloadUrlById).toHaveBeenCalledExactlyOnceWith('uuid-1')
+      expect(previewWindow.opener).toBeNull()
+      expect(previewWindow.location.href).toBe('https://storage.example.com/uuid-1')
+    })
 
-  it('starts description generation as admin', async () => {
-    useAuthStore().isAdmin = true
-    const wrapper = await mountDialog(true)
-    vi.mocked(regenerateRegulationDescription).mockResolvedValueOnce(undefined)
+    it('closes the opened tab and reports an error when the preview cannot be loaded', async () => {
+      await mountDialog({ canManage: false })
+      const { previewWindow } = mockPreviewWindow()
+      vi.mocked(getRegulationDownloadUrlById).mockRejectedValueOnce(createHttpError(404))
 
-    await findButton(wrapper, 'Wygeneruj opis przez AI')?.trigger('click')
-    await flushPromises()
+      await clickButton('Pokaż podgląd')
 
-    expect(regenerateRegulationDescription).toHaveBeenCalledWith('uuid-1')
-    expect(wrapper.emitted('description-generation-started')?.[0]).toEqual(['uuid-1'])
-  })
+      expect(previewWindow.close).toHaveBeenCalledOnce()
+      expect(previewWindow.location.href).toBe('')
+      expect(shownMessages('error')).toEqual(['Nie udało się pobrać podglądu pliku'])
+    })
 
-  it('does not offer description generation to normal user', async () => {
-    const wrapper = await mountDialog(true)
+    it('does not offer preview when file upload was not confirmed', async () => {
+      await mountDialog({ canManage: true, regulation: { preparationStatus: 'NOT_STARTED' } })
 
-    expect(findButton(wrapper, 'Wygeneruj opis przez AI')).toBeUndefined()
-  })
+      expect(findButton('Pokaż podgląd')).toBeUndefined()
+    })
 
-  it('does not offer description generation before regulation is prepared', async () => {
-    useAuthStore().isAdmin = true
-    const wrapper = await mountDialog(true, 'IN_PROGRESS')
+    it.each(['IN_PROGRESS', 'FAILED', 'PREPARED'] as const)(
+      'offers preview of an uploaded file of a regulation with status %s',
+      async (preparationStatus) => {
+        await mountDialog({ canManage: false, regulation: { preparationStatus } })
 
-    expect(findButton(wrapper, 'Wygeneruj opis przez AI')).toBeUndefined()
-  })
-
-  it('locks description while it is being generated', async () => {
-    useAuthStore().isAdmin = true
-    const wrapper = await mountDialog(true, 'PREPARED', 'IN_PROGRESS')
-
-    expect(wrapper.find('.description-input').attributes('disabled')).toBeDefined()
-    expect(wrapper.find('.tag-stub').text()).toBe('Generowanie opisu')
-    expect(findButton(wrapper, 'Wygeneruj opis przez AI')).toBeUndefined()
-  })
-
-  it('shows generated description when regulation is refreshed', async () => {
-    const wrapper = await mountDialog(true, 'PREPARED', 'IN_PROGRESS')
-
-    await wrapper.setProps({
-      regulation: {
-        ...createRegulation('PREPARED', 'GENERATED'),
-        description: 'Wygenerowany opis',
+        expect(findButton('Pokaż podgląd')).toBeDefined()
       },
-    })
-
-    expect((wrapper.find('.description-input').element as HTMLInputElement).value).toBe(
-      'Wygenerowany opis',
     )
   })
 
-  it('does not offer preview when file upload was not confirmed', async () => {
-    const wrapper = await mountDialog(true, 'NOT_STARTED')
+  describe('description generation', () => {
+    it('starts description generation as admin', async () => {
+      const wrapper = await mountDialog({ canManage: true, isAdmin: true })
 
-    expect(findButton(wrapper, 'Pokaż podgląd')).toBeUndefined()
+      await clickButton('Wygeneruj opis przez AI')
+
+      expect(regenerateRegulationDescription).toHaveBeenCalledExactlyOnceWith('uuid-1')
+      expect(wrapper.emitted('description-generation-started')).toEqual([['uuid-1']])
+      expect(shownMessages('success')).toEqual(['Generowanie opisu zostało rozpoczęte'])
+    })
+
+    it('explains why description generation could not be started', async () => {
+      const wrapper = await mountDialog({ canManage: true, isAdmin: true })
+      vi.mocked(regenerateRegulationDescription).mockRejectedValueOnce(createHttpError(409))
+
+      await clickButton('Wygeneruj opis przez AI')
+
+      expect(shownMessages('error')).toEqual([
+        'Opis jest już generowany lub regulacja nie jest jeszcze przetworzona.',
+      ])
+      expect(wrapper.emitted('description-generation-started')).toBeUndefined()
+    })
+
+    it('does not offer description generation to normal user', async () => {
+      await mountDialog({ canManage: true })
+
+      expect(findButton('Wygeneruj opis przez AI')).toBeUndefined()
+    })
+
+    it('does not offer description generation for a regulation the admin cannot manage', async () => {
+      await mountDialog({
+        canManage: false,
+        isAdmin: true,
+        regulation: { descriptionStatus: 'FAILED' },
+      })
+
+      expect(findButton('Wygeneruj opis przez AI')).toBeUndefined()
+      expect(dialog().find('.el-tag').exists()).toBe(false)
+    })
+
+    it('does not offer description generation before regulation is prepared', async () => {
+      await mountDialog({
+        canManage: true,
+        isAdmin: true,
+        regulation: { preparationStatus: 'IN_PROGRESS' },
+      })
+
+      expect(findButton('Wygeneruj opis przez AI')).toBeUndefined()
+    })
+
+    it('locks description while it is being generated', async () => {
+      await mountDialog({
+        canManage: true,
+        isAdmin: true,
+        regulation: { descriptionStatus: 'IN_PROGRESS' },
+      })
+
+      expect(dialog().find(DESCRIPTION_INPUT).attributes('disabled')).toBeDefined()
+      expect(dialog().find('.el-tag').text()).toBe('Generowanie opisu')
+      expect(findButton('Wygeneruj opis przez AI')).toBeUndefined()
+    })
+
+    it('informs that description generation failed and allows another attempt', async () => {
+      await mountDialog({
+        canManage: true,
+        isAdmin: true,
+        regulation: { descriptionStatus: 'FAILED' },
+      })
+
+      expect(dialog().find('.el-tag').text()).toBe('Błąd generowania opisu')
+      expect(findButton('Wygeneruj opis przez AI')).toBeDefined()
+      expect(dialog().find(DESCRIPTION_INPUT).attributes('disabled')).toBeUndefined()
+    })
+
+    it('shows generated description when regulation is refreshed', async () => {
+      const wrapper = await mountDialog({
+        canManage: true,
+        regulation: { descriptionStatus: 'IN_PROGRESS' },
+      })
+
+      await wrapper.setProps({
+        regulation: {
+          ...regulation,
+          descriptionStatus: 'GENERATED',
+          description: 'Wygenerowany opis',
+        },
+      })
+
+      expect(inputValue(DESCRIPTION_INPUT)).toBe('Wygenerowany opis')
+    })
   })
 })

@@ -45,6 +45,17 @@ describe('useSidebar', () => {
     expect(isCollapsed.value).toBe(true)
   })
 
+  it('toggles between collapsed and expanded', async () => {
+    mockViewport(false)
+    const { isCollapsed, toggleCollapsed } = await loadSidebar()
+
+    toggleCollapsed()
+    expect(isCollapsed.value).toBe(true)
+
+    toggleCollapsed()
+    expect(isCollapsed.value).toBe(false)
+  })
+
   it('collapses when the viewport becomes mobile and expands back on desktop', async () => {
     const changeViewport = mockViewport(false)
     const { isCollapsed } = await loadSidebar()

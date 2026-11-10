@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+import ElementPlus from 'element-plus'
 import SearchResultItem from '../SearchResultItem.vue'
 import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
 
@@ -11,13 +12,7 @@ function mountItem(
 ) {
   return mount(SearchResultItem, {
     props: { result, elements, score: 0.5, selectedCaseId, highlight, canAddToCase: true },
-    global: {
-      stubs: {
-        ElCard: { template: '<div class="el-card"><slot /></div>' },
-        ElTooltip: { template: '<div><slot /></div>' },
-        ElButton: { template: '<button><slot /></button>' },
-      },
-    },
+    global: { plugins: [ElementPlus] },
   })
 }
 
@@ -63,6 +58,16 @@ describe('SearchResultItem', () => {
     ])
   })
 
+  it('does not emit add-to-case when no case is selected', async () => {
+    const elements: Array<SearchResultElement> = [{ text: '1. Ustęp pierwszy', subsection: '1' }]
+    const wrapper = mountItem('1. Ustęp pierwszy', elements, '')
+
+    await wrapper.find('button').trigger('click')
+
+    expect(wrapper.find('button').attributes('disabled')).toBeDefined()
+    expect(wrapper.emitted('add-to-case')).toBeUndefined()
+  })
+
   it('highlights blocks containing the best chunk span', () => {
     const elements: Array<SearchResultElement> = [
       { text: '1. Ustęp pierwszy', subsection: '1' },
@@ -77,6 +82,23 @@ describe('SearchResultItem', () => {
     expect(blocks[0]!.classes()).toContain('is-highlighted')
     expect(blocks[1]!.classes()).toContain('is-highlighted')
     expect(blocks[2]!.classes()).not.toContain('is-highlighted')
+  })
+
+  it('highlights a whole block when the best chunk covers only a part of it', () => {
+    const elements: Array<SearchResultElement> = [
+      { text: '1. Ustęp pierwszy', subsection: '1' },
+      { text: '1) punkt pierwszy', subsection: '1' },
+      { text: '2. Ustęp drugi', subsection: '2' },
+    ]
+
+    const wrapper = mountItem('irrelevant', elements, 'case-1', {
+      start_element: 1,
+      end_element: 1,
+    })
+
+    expect(
+      wrapper.findAll('.result-block').map((block) => block.classes('is-highlighted')),
+    ).toEqual([true, false])
   })
 
   it('does not highlight anything without highlight', () => {

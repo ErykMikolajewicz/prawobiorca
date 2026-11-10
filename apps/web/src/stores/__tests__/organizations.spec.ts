@@ -92,6 +92,52 @@ describe('organizations store', () => {
     expect(store.selectedSuborganizationId).toBe('')
   })
 
+  it('load drops a stored suborganization that does not belong to the stored organization', async () => {
+    localStorage.setItem(
+      'selected-organization',
+      JSON.stringify({ organizationId: 'uwr', suborganizationId: 'w10' }),
+    )
+    vi.mocked(getOrganizations).mockResolvedValueOnce(organizations)
+    const store = useOrganizationsStore()
+
+    await store.load()
+
+    expect(store.selectedOrganizationId).toBe('uwr')
+    expect(store.selectedSuborganizationId).toBe('')
+  })
+
+  it('load falls back to the default selection when the stored one is corrupted', async () => {
+    localStorage.setItem('selected-organization', '{not-json')
+    vi.mocked(getOrganizations).mockResolvedValueOnce(organizations)
+    const store = useOrganizationsStore()
+
+    await store.load()
+
+    expect(store.selectedOrganizationId).toBe('pwr')
+    expect(store.selectedSuborganizationId).toBe('')
+  })
+
+  it('load clears a previously selected suborganization when nothing is stored', async () => {
+    vi.mocked(getOrganizations).mockResolvedValueOnce(organizations)
+    const store = useOrganizationsStore()
+    store.select('pwr', 'w10')
+    localStorage.clear()
+
+    await store.load()
+
+    expect(store.selectedSuborganizationId).toBe('')
+  })
+
+  it('selectedSuborganization is searched only in the selected organization', () => {
+    const store = useOrganizationsStore()
+    store.organizations = organizations
+
+    store.select('uwr', 'w10')
+
+    expect(store.selectedOrganization?.shortName).toBe('UWr')
+    expect(store.selectedSuborganization).toBeUndefined()
+  })
+
   it('select stores the selection', () => {
     const store = useOrganizationsStore()
 

@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import RegulationItem from '../RegulationItem.vue'
+import { shownMessages } from '@/__tests__/dom'
+import { createHttpError } from '@/__tests__/factories'
 import {
   confirmRegulationUpload,
   retryRegulationPreparation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { useOrganizationsStore } from '@/stores/organizations'
+import type { RegulationScope } from '@/domain/regulations'
 import type { RegulationPreparationStatus, RegulationRepresentation } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
@@ -22,6 +25,7 @@ function mountItem(
   canManage: boolean,
   overrides: Partial<RegulationRepresentation> = {},
   score?: number,
+  target: RegulationScope = 'PUBLIC',
 ) {
   const regulation: RegulationRepresentation = {
     id: 'uuid-1',
@@ -37,11 +41,13 @@ function mountItem(
   }
 
   return mount(RegulationItem, {
-    props: { regulation, target: 'PUBLIC', canManage, score },
+    props: { regulation, target, canManage, score },
     global: {
       stubs: {
         RouterLink: {
-          template: '<a class="router-link-stub"><slot /></a>',
+          template:
+            '<a class="router-link-stub" :data-route="to.name" :data-regulation="to.params.regulationId"><slot /></a>',
+          props: ['to'],
         },
         RegulationTypeBadge: true,
         RegulationStatusBadge: {
@@ -79,6 +85,34 @@ describe('RegulationItem', () => {
     expect(wrapper.find('.regulation-organization').text()).toBe('PWr · Wydział Mechaniczny')
   })
 
+  it('renders only the organization of a regulation not assigned to a suborganization', () => {
+    useOrganizationsStore().organizations = [
+      {
+        id: 'pwr',
+        name: 'Politechnika Wrocławska',
+        shortName: 'PWr',
+        suborganizations: [{ id: 'w10', name: 'Wydział Mechaniczny' }],
+      },
+    ]
+
+    const wrapper = mountItem('PREPARED', false, { organizationId: 'pwr' })
+
+    expect(wrapper.find('.regulation-organization').text()).toBe('PWr')
+  })
+
+  it.each([
+    ['PUBLIC', 'SearchPublicRegulation'],
+    ['PRIVATE', 'SearchUserRegulation'],
+  ] as const)('links a prepared %s regulation to its search page', (target, routeName) => {
+    const wrapper = mountItem('PREPARED', false, {}, undefined, target)
+
+    expect(wrapper.find('.router-link-stub').attributes()).toMatchObject({
+      'data-route': routeName,
+      'data-regulation': 'uuid-1',
+    })
+    expect(wrapper.find('.search-action').exists()).toBe(true)
+  })
+
   it('renders similarity score when given', () => {
     const wrapper = mountItem('PREPARED', false, {}, 0.73456)
 
@@ -109,6 +143,7 @@ describe('RegulationItem', () => {
     const wrapper = mountItem('IN_PROGRESS', true)
 
     expect(wrapper.find('.router-link-stub').exists()).toBe(false)
+    expect(wrapper.find('.search-action').exists()).toBe(false)
     expect(wrapper.find('.status-badge-stub').text()).toBe('IN_PROGRESS')
     expect(wrapper.find(RETRY_BUTTON).exists()).toBe(false)
   })
@@ -124,7 +159,26 @@ describe('RegulationItem', () => {
     await button.trigger('click')
 
     expect(retryRegulationPreparation).toHaveBeenCalledWith('uuid-1')
+    expect(confirmRegulationUpload).not.toHaveBeenCalled()
     expect(wrapper.emitted('preparation-retried')?.[0]).toEqual(['uuid-1'])
+    expect(shownMessages('success')).toEqual(['Ponowne przetwarzanie zostało rozpoczęte'])
+  })
+
+  it('blocks the retry button until the retry request ends', async () => {
+    let finishRetry: ((value: unknown) => void) | undefined
+    vi.mocked(retryRegulationPreparation).mockImplementationOnce(
+      () => new Promise((resolve) => (finishRetry = resolve)),
+    )
+    const wrapper = mountItem('FAILED', true)
+    const button = wrapper.find(RETRY_BUTTON)
+    expect(button.attributes('disabled')).toBeUndefined()
+
+    await button.trigger('click')
+    expect(button.attributes('disabled')).toBeDefined()
+
+    finishRetry?.(undefined)
+    await flushPromises()
+    expect(button.attributes('disabled')).toBeUndefined()
   })
 
   it('confirms the upload again when regulation was not started', async () => {
@@ -139,12 +193,40 @@ describe('RegulationItem', () => {
   })
 
   it('does not emit retry when the retry request fails', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
     const wrapper = mountItem('FAILED', true)
 
     vi.mocked(retryRegulationPreparation).mockRejectedValueOnce(new Error('boom'))
     await wrapper.find(RETRY_BUTTON).trigger('click')
+    await flushPromises()
 
     expect(wrapper.emitted('preparation-retried')).toBeUndefined()
+    expect(shownMessages('success')).toEqual([])
+    expect(wrapper.find(RETRY_BUTTON).attributes('disabled')).toBeUndefined()
+  })
+
+  it('explains that a failed regulation is already being processed', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+    const wrapper = mountItem('FAILED', true)
+
+    vi.mocked(retryRegulationPreparation).mockRejectedValueOnce(createHttpError(409))
+    await wrapper.find(RETRY_BUTTON).trigger('click')
+    await flushPromises()
+
+    expect(shownMessages('error')).toEqual(['Regulacja jest już przetwarzana lub przygotowana.'])
+  })
+
+  it('explains that the file of a not started regulation is missing', async () => {
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {})
+    const wrapper = mountItem('NOT_STARTED', true)
+
+    vi.mocked(confirmRegulationUpload).mockRejectedValueOnce(createHttpError(409))
+    await wrapper.find(RETRY_BUTTON).trigger('click')
+    await flushPromises()
+
+    expect(shownMessages('error')).toEqual([
+      'Pliku nie ma w magazynie. Usuń regulację i dodaj ją ponownie.',
+    ])
   })
 
   it('does not render status, retry or search action when user cannot manage and not prepared', () => {

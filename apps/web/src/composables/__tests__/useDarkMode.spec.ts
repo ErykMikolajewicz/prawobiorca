@@ -54,6 +54,30 @@ describe('useDarkMode', () => {
     expect(localStorage.getItem('color-theme')).toBe('dark')
   })
 
+  it('toggles back to the light theme and stores that choice', async () => {
+    mockSystemPreference(true)
+    const { isDark, toggleDark } = await loadDarkMode()
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+
+    toggleDark()
+    await nextTick()
+
+    expect(isDark.value).toBe(false)
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(localStorage.getItem('color-theme')).toBe('light')
+  })
+
+  it('applies the stored dark theme on a light system', async () => {
+    localStorage.setItem('color-theme', 'dark')
+    const changeSystemTheme = mockSystemPreference(false)
+    const { isDark } = await loadDarkMode()
+
+    changeSystemTheme(false)
+
+    expect(isDark.value).toBe(true)
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+  })
+
   it('uses the stored choice over the system theme', async () => {
     localStorage.setItem('color-theme', 'light')
     mockSystemPreference(true)

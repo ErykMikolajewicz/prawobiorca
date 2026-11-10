@@ -73,6 +73,64 @@ describe('usePendingPolling', () => {
     expect(refresh).toHaveBeenCalledTimes(4)
   })
 
+  it('keeps the polling pace when another element becomes pending', async () => {
+    const pending = ref(['a'])
+    const refresh = vi.fn().mockResolvedValue(undefined)
+
+    mountPolling(() => pending.value, refresh, { intervalMs: 1000 })
+    await vi.advanceTimersByTimeAsync(1000)
+
+    pending.value = ['a', 'b']
+    await vi.advanceTimersByTimeAsync(2000)
+
+    expect(refresh).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not start a refresh before the previous one has finished', async () => {
+    let finishRefresh: (() => void) | undefined
+    const refresh = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (finishRefresh = resolve)))
+      .mockResolvedValue(undefined)
+
+    mountPolling(() => ['a'], refresh, { intervalMs: 1000 })
+
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(refresh).toHaveBeenCalledTimes(1)
+
+    finishRefresh?.()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(refresh).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not refresh while the browser tab is hidden', async () => {
+    const visibilityState = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    const refresh = vi.fn().mockResolvedValue(undefined)
+
+    mountPolling(() => ['a'], refresh, { intervalMs: 1000 })
+
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(refresh).not.toHaveBeenCalled()
+
+    visibilityState.mockReturnValue('visible')
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(refresh).toHaveBeenCalledTimes(1)
+
+    visibilityState.mockRestore()
+  })
+
+  it('polls every 5 seconds by default', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined)
+
+    mountPolling(() => ['a'], refresh)
+
+    await vi.advanceTimersByTimeAsync(4999)
+    expect(refresh).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
   it('stops polling when the component is unmounted', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
 
