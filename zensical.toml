@@ -6,6 +6,7 @@ nav = [
     {"Home" = "index.md"},
     {"Application logic" = "app_logic.md"},
     {"Workflow" = "workflow.md"},
+    {"CI/CD" = "ci_cd.md"},
     {"Application architecture" = [
         {"General information" = "architecture/architecture.md"},
         {"Frontend" = "architecture/frontend.md"},
