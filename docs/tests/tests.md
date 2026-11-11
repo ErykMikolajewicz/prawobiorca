@@ -242,7 +242,9 @@ and the page opened by the router. A refactoring that keeps the behavior should 
 
 Helpers live in `apps/web/src/__tests__/`:
 
-- `setup.ts` — runs after each test: unmounts components, empties `document.body` and `localStorage`.
+- `setup.ts` — unmounts components, waits for pending promises, and empties `document.body` and `localStorage`.
+  Uncaught Vue component errors are collected by the global error handler and fail the current test during
+  teardown. This also lets Stryker report a mutation as killed instead of crashing on an unhandled async error.
 - `app.ts` — `createTestApp(path)` returns the `global` mounting options with Element Plus, a fresh Pinia and a memory
   router. The router is built from the real route table with empty pages, so a wrong route name fails the test.
 - `dom.ts` — access to elements teleported outside the mounted component (dialogs, select options, confirmations,

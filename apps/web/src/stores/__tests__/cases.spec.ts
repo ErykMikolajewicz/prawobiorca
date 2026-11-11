@@ -89,10 +89,13 @@ describe('cases store', () => {
     const store = useCasesStore()
     store.add({ id: '1', name: 'Pierwsza' })
     store.add({ id: '2', name: 'Druga' })
+    store.add({ id: '3', name: 'Trzecia' })
+    store.setActive('1')
 
-    store.remove('1')
+    store.remove('2')
 
-    expect(store.activeCaseId).toBe('2')
+    expect(store.activeCaseId).toBe('1')
+    expect(localStorage.getItem('active-case-id')).toBe('1')
   })
 
   it('add prepends the case and sets it as active', () => {

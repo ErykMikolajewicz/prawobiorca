@@ -4,7 +4,7 @@ import axios from 'axios'
 import ElementPlus from 'element-plus'
 import { renderAsync } from 'docx-preview'
 import ApplicationTemplatePreviewDialog from '../ApplicationTemplatePreviewDialog.vue'
-import { shownMessages } from '@/__tests__/dom'
+import { page, shownMessages } from '@/__tests__/dom'
 import { createHttpError } from '@/__tests__/factories'
 import { getAdminApplicationTemplateDownloadUrl } from '@/api/generated/endpoints/application-templates/application-templates'
 
@@ -62,6 +62,32 @@ describe('ApplicationTemplatePreviewDialog', () => {
     })
     expect(vi.mocked(renderAsync).mock.calls[0]?.[0]).toBe(templateFile)
     expect(document.querySelector('.preview-container')?.textContent).toBe('Treść szablonu')
+  })
+
+  it.each(['success', 'failure'])('removes the loading indicator after %s', async (outcome) => {
+    let finishDownload: ((url: string) => void) | undefined
+    let failDownload: ((reason: unknown) => void) | undefined
+    const download = new Promise<string>((resolve, reject) => {
+      finishDownload = resolve
+      failDownload = reject
+    })
+    vi.mocked(getAdminApplicationTemplateDownloadUrl).mockReturnValueOnce(download)
+    const wrapper = mountDialog()
+
+    await open(wrapper)
+
+    expect(page().find('.preview-container .el-loading-mask').isVisible()).toBe(true)
+
+    if (outcome === 'success') {
+      finishDownload?.('https://storage.example.com/template.docx')
+    } else {
+      failDownload?.(createHttpError(404))
+    }
+    await flushPromises()
+
+    await vi.waitFor(() => {
+      expect(page().find('.preview-container .el-loading-mask').exists()).toBe(false)
+    })
   })
 
   it('downloads the file through the dev storage proxy', async () => {
