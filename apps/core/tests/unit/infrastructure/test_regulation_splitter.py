@@ -1,3 +1,6 @@
+from email.parser import BytesParser
+from email.policy import default
+
 import pytest
 from httpx2 import AsyncClient, MockTransport, Response
 
@@ -24,7 +27,13 @@ async def test_split_sends_regulation_file_and_returns_its_elements():
     assert elements == [RegulationElement(label=UsefulLabels.TEXT, text="Art. 1. Ustawa określa zasady.")]
     (request,) = requests
     assert request.url == f"{EXTRACTION_SERVICE_URL}/parse-regulation"
-    assert b"%PDF-1.7" in request.content
+    multipart = BytesParser(policy=default).parsebytes(
+        f"Content-Type: {request.headers['content-type']}\r\n\r\n".encode() + request.content
+    )
+    (file_part,) = multipart.iter_parts()
+    assert file_part.get_content_disposition() == "form-data"
+    assert file_part.get_param("name", header="content-disposition") == "file"
+    assert file_part.get_payload(decode=True) == b"%PDF-1.7"
 
 
 async def test_split_failure_raises_service_unavailable():

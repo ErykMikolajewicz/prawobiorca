@@ -50,10 +50,19 @@ async def test_generate_text_returns_answer_and_records_usage(cost_limiter):
     text = await create_llm_chat(handler, cost_limiter).generate_text("Jesteś asystentem.", "Napisz pismo.")
 
     assert text == "Szanowni Państwo,"
-    assert json.loads(requests[0].content)["messages"] == [
-        {"role": "system", "content": "Jesteś asystentem."},
-        {"role": "user", "content": "Napisz pismo."},
-    ]
+    (request,) = requests
+    assert json.loads(request.content) == {
+        "model": "model",
+        "messages": [
+            {"role": "system", "content": "Jesteś asystentem."},
+            {"role": "user", "content": "Napisz pismo."},
+        ],
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 100,
+        "presence_penalty": 0.1,
+        "chat_template_kwargs": {"enable_thinking": False},
+    }
     cost_limiter.record.assert_awaited_once_with(120, 30)
 
 

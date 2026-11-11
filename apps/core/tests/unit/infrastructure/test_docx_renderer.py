@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 from docx import Document
+from jinja2.exceptions import SecurityError
 
 from core_service.application.dtos.applications import NewApplication
 from core_service.domain.value_objects.application_templates import DATE_FORMAT
@@ -12,9 +13,9 @@ from core_service.infrastructure.docx.docx_renderer import APPLICATION_TIMEZONE,
 TEMPLATE_ID = UUID("6f7a8b9c-0d1e-4f2a-8b3c-4d5e6f7a8b9c")
 
 
-def create_template() -> bytes:
+def create_template(first_paragraph: str = "{{ student_name }}, {{ current_date }}") -> bytes:
     document = Document()
-    document.add_paragraph("{{ student_name }}, {{ current_date }}")
+    document.add_paragraph(first_paragraph)
     document.add_paragraph("{%p for paragraph in paragraphs %}")
     document.add_paragraph("{{ paragraph }}")
     document.add_paragraph("{%p endfor %}")
@@ -46,3 +47,13 @@ async def test_render_keeps_user_text_literally(text):
 
     assert paragraphs[0].startswith(f"{text}, ")
     assert paragraphs[1:] == [text]
+
+
+async def test_render_blocks_unsafe_attributes_in_template():
+    new_application = NewApplication(
+        template_id=TEMPLATE_ID, description="Opis sytuacji.", field_values={"student_name": "Jan Kowalski"}
+    )
+    template = create_template("{{ student_name.__class__.__name__ }}")
+
+    with pytest.raises(SecurityError):
+        await DocxApplicationRenderer().render(template, new_application, "Treść pisma.")

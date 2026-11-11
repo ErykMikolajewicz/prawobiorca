@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -68,12 +69,18 @@ def logout_user(mock_session_maker, sessions_repository):
 
 
 async def test_log_user_creates_session(log_user, sessions_repository):
+    started_at = datetime.now(UTC)
     tokens = await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD)))
+    finished_at = datetime.now(UTC)
 
     claims = decode(tokens.access_token)
     assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, True)
     stored_hash = get_awaited_argument(sessions_repository.create_session, "refresh_token_hash")
     assert stored_hash == hash_refresh_token(tokens.refresh_token)
+    valid_until = get_awaited_argument(sessions_repository.create_session, "valid_until")
+    validity = timedelta(seconds=AUTH_TOKENS_CONFIG.refresh_token_expiration_seconds)
+    assert valid_until.tzinfo == UTC
+    assert started_at + validity <= valid_until <= finished_at + validity
 
 
 @pytest.mark.parametrize(
@@ -96,7 +103,9 @@ async def test_log_user_rejected(
 async def test_refresh_tokens_rotates_session(refresh_tokens, users_repository, sessions_repository):
     users_repository.get_user_privileges.return_value = UserPrivileges(is_admin=False)
 
+    started_at = datetime.now(UTC)
     tokens = await refresh_tokens.execute(REFRESH_TOKEN)
+    finished_at = datetime.now(UTC)
 
     claims = decode(tokens.access_token)
     assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, False)
@@ -104,6 +113,10 @@ async def test_refresh_tokens_rotates_session(refresh_tokens, users_repository, 
     rotate_session = sessions_repository.rotate_session
     assert get_awaited_argument(rotate_session, "old_refresh_token_hash") == hash_refresh_token(REFRESH_TOKEN)
     assert get_awaited_argument(rotate_session, "new_refresh_token_hash") == hash_refresh_token(tokens.refresh_token)
+    valid_until = get_awaited_argument(rotate_session, "valid_until")
+    validity = timedelta(seconds=AUTH_TOKENS_CONFIG.refresh_token_expiration_seconds)
+    assert valid_until.tzinfo == UTC
+    assert started_at + validity <= valid_until <= finished_at + validity
 
 
 @pytest.mark.parametrize(
