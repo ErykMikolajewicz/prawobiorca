@@ -101,6 +101,64 @@ is enabled and `just cov` passes the source directory (`--cov=src/core_service`)
 files never imported by the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
 `just test` runs only the unit tests, without coverage, for fast feedback.
 
+## Mutation Tests
+
+Optional mutation tests for `core` use `mutmut`, installed automatically from the `mutation` dependency group.
+Run them from the repository root, choosing source paths relative to `apps/core`:
+
+```bash
+just test-mutation src/core_service/domain/services/case_access.py
+just test-mutation src/core_service/domain/services/regulation_access.py --tests 'tests/unit/domain/services -k access'
+just test-mutation src/core_service --max-children 4 --fresh
+just mutation-results
+just mutation-results --all
+just mutation-show <mutant-id>
+just mutation-browse
+just mutation-report
+```
+
+Tests default to `tests/unit`; `--tests` accepts pytest paths, node IDs and selection options.
+Runs keep their working copies and results in `.cache/mutation/core`.
+Repeated runs reuse results; `--fresh` discards them for a fresh measurement. Changing the source or test selection
+starts a new run. Source, test, fixture and configuration changes invalidate cached results.
+Results commands refer to the latest selection.
+Surviving mutations need review; `mutmut` does not fail the command simply because some survive.
+Mutations reported as `no tests` were not checked by the selected tests; this includes integration-only code
+when selecting the whole package with the default unit tests.
+Requires Linux or macOS (WSL on Windows). Mutation tests are not part of the default CI checks.
+
+### Weekly Report
+
+The `Mutation tests` workflow (`.github/workflows/mutation.yml`) runs every Saturday at 04:00
+in the `Europe/Warsaw` timezone (including daylight saving time), on the default branch in the source repository.
+It can also be started manually with **Actions → Mutation tests → Run workflow**.
+Each run tests the entire `core_service` package with unit tests from scratch, without reusing mutation results.
+Survivors do not fail the job; test setup, execution or report generation failures do.
+
+Download the `core-mutation-<run-id>-<attempt>` artifact from the workflow run page within 30 days.
+It contains `summary.md`, all statuses in `results.json` and `results.txt`, surviving mutation diffs in
+`survivors.diff`, the selection in `selection.toml`, and the execution log in `run.log`.
+The summary records the tested commit so fixes can be made against the matching version of the code.
+Reports are also available locally with `just mutation-report` in `.cache/mutation/report`, or in another
+directory with `just mutation-report --output /tmp/mutation-report`. Weekly scheduling takes effect after
+the workflow is merged into the default branch. Reports do not yet compare against previous runs.
+
+### Local Timing (2026-11-11)
+
+Measured on Linux with an Intel Core i7-13650HX, Python 3.14.2, `mutmut` 3.8.1 and four mutation workers.
+Dependencies were already downloaded. Mutation times were measured with a temporary timer in the script;
+`just test` was timed externally.
+
+| Scope | Fresh mutation run | Cached repeat | Result |
+| --- | --- | --- | --- |
+| `src/core_service`, default `tests/unit` | 177.93 s | 12.03 s | 5229 mutations: 2005 killed, 896 survived, 10 timeouts, 2318 without tests |
+| `src/core_service/domain/services/regulation_access.py`, `tests/unit/domain/services/test_regulation_access.py` | 2.71 s | 2.35 s | All 19 mutations killed |
+| Ordinary unit tests (`just test`) | 6.87 s | — | 427 tests passed |
+
+Cached repeats used identical inputs and did not execute mutants again; clean tests and tool checks still ran.
+Another fresh full run took 174.20 s and produced the same mutation counts. These are local observations, not CI estimates.
+Survivors are not confirmed bugs: reviewed examples include changed log messages and arguments passed to mocked repositories.
+
 ## Frontend Unit Tests
 
 Frontend tests check what the user can observe: the rendered content, the request sent to `core`, the displayed message

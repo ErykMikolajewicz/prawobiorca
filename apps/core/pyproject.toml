@@ -45,6 +45,9 @@ dev = [
     "ty==0.0.99",
     "types-aiobotocore[s3]==3.10.*",
 ]
+mutation = [
+    "mutmut==3.8.*",
+]
 
 test = [
     "pytest==9.2.*",
