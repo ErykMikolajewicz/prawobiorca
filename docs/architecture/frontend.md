@@ -2,9 +2,9 @@
 
 ## 1. Introduction
 
-The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `apps/web/` directory of this repository, next to the Python services described in [General information](architecture.md).
+The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `apps/web/` directory of this repository, next to the services described in [Backend](backend.md). See [General information](architecture.md) for the system overview.
 
-It talks to `core` exclusively over the HTTP REST API — it has no direct access to the database, the object storage, or any of the compute services.
+It talks to `core` over the HTTP REST API and transfers files directly to and from object storage using presigned URLs issued by `core`. It has no direct access to the database or any of the compute services.
 
 ---
 

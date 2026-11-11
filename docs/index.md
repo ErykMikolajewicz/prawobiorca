@@ -14,7 +14,8 @@ Both the backend services and the Vue frontend are kept in a single repository.
 * **[AI / LLM Service](ai.md)**: AI module architecture, supported models, application templates and DOCX application generation.
 * **[Workflow](workflow.md)**: Team workflow, branches and commit conventions.
 * **[CI/CD](ci_cd.md)**: Automated checks, releases, deployment and pipeline maintenance.
-* **[Application architecture](architecture/architecture.md)**: Reference for developers.
+* **[Application architecture](architecture/architecture.md)**: System overview, repository layout and deployment environments.
+* **[Backend](architecture/backend.md)**: Services, background processing, API conventions and Clean Architecture.
 * **[Frontend](architecture/frontend.md)**: Stack, structure and development commands of the Vue application.
 * **[Tests](tests/tests.md)**: Information about testing conventions and [Manual E2E Test Case](tests/manual_e2e_test.md).
 

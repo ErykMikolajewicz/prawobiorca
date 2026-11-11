@@ -9,11 +9,14 @@ nav = [
     {"CI/CD" = "ci_cd.md"},
     {"Application architecture" = [
         {"General information" = "architecture/architecture.md"},
+        {"Backend" = [
+            {"General information" = "architecture/backend.md"},
+            {"Library Overview" = "architecture/libraries.md"},
+            {"Legal documents parsing" = "architecture/legal_documents_parsing.md"}
+        ]},
         {"Frontend" = "architecture/frontend.md"},
         {"Coding Rules" = "architecture/coding_rules.md"},
-        {"Library Overview" = "architecture/libraries.md"},
-        {"External services" = "architecture/external_services.md"},
-        {"Legal documents parsing" = "architecture/legal_documents_parsing.md"}
+        {"External services" = "architecture/external_services.md"}
     ]},
   {"Tests" = [
     {"General information" = "tests/tests.md"},
