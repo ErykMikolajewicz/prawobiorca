@@ -21,6 +21,7 @@ For logged-in users, the application offers a "Cases" management function, which
 ### 2.3. Administrator
 - Has all Logged User permissions.
 - Can add, edit and delete public documents. When adding a public document, can assign it to an organization and optionally to one of its suborganizations. The assignment cannot be changed later. Private documents of users never belong to an organization.
+- Can generate document descriptions with AI, either when adding a document or after it has been prepared. Descriptions support searching for relevant legal acts on the Main Screen.
 - Manages application templates used to generate DOCX applications. A template can be assigned to an organization and optionally to one of its suborganizations.
 - Manages organizations and their suborganizations.
 ---
@@ -34,6 +35,8 @@ This is the starting point of the application.
 **For Guest:**
 - **List of Public Documents**: The user sees a list of predefined legal acts (read-only).
 - There is no possibility to add or remove documents from this list.
+- **Search by Description**: The user describes their issue in natural language to find relevant legal acts. The search compares the query with document descriptions; documents without a description vector do not appear in the results. Clearing the query restores the full list.
+- **Search Controls**: The user can choose a relevance threshold, sort results alphabetically or by relevance, and filter the list by document type. Search results show each document's similarity score. The query, threshold and sort order are stored in the page URL.
 - **Organization filter**: The list is filtered by the organization and suborganization selected in the sidebar. The filter is a convenience only, all public documents stay accessible:
     - No organization selected: all public documents are shown.
     - Organization selected: documents of the organization (including all its suborganizations) are shown.
@@ -46,8 +49,9 @@ This is the starting point of the application.
 - **My Documents**:
     - Ability to upload own files (legal acts, regulations).
     - List of files added by themselves.
+    - Ability to edit the name and description of their own document and delete it. Saving a description makes the document available to search by description; the Main Screen search applies to both the public and private lists. The organization filter applies only to public documents.
     - **Automatic indexing**: Once an upload is confirmed, the indexing process (creating embeddings) is queued automatically. No manual action is required.
-    - **Preparation status**: Each file shows its state (`NOT_STARTED`, `IN_PROGRESS`, `PREPARED`, `FAILED`). Only `PREPARED` files can be searched.
+    - **Preparation status**: Each file shows its state (`NOT_STARTED`, `IN_PROGRESS`, `PREPARED`, `FAILED`). Only `PREPARED` files can be searched for provisions in the Document Search View.
     - **Retry option**: A file that ends up `FAILED` (after the automatic attempts are exhausted) can be retried by the user.
 
 **Sidebar (Logged User):**
@@ -88,6 +92,7 @@ View available exclusively for **Logged Users**, serving to finalize work on a l
 
 2. **Context / Application Description**:
     - Selection of the application type, from the templates published by the Administrator. The list is filtered by the organization and suborganization selected in the sidebar, by the same rules as the list of public documents on the Main Screen: general templates are always shown, a selected organization shows its templates (including all its suborganizations), a selected suborganization shows its templates and templates assigned to the whole organization.
+    - Typing in the application type selector searches template names with approximate matching. The optional "AI Search" switch also uses the meaning of template descriptions once the query contains a space after a word. Results are ordered by relevance, and a template's description is available in a tooltip. An empty query shows all published templates for the selected organization context. If search fails, an error message is shown and the selector falls back to that full list.
     - Fields defined by the selected template (text, number, select list or date), prefilled with their default values. Required fields must be filled.
     - Text field (Input/Textarea) where the user describes their situation or the purpose of the letter (e.g., *"I request financial aid due to the difficult situation I found myself in after the death of a parent..."*).
 
@@ -125,6 +130,8 @@ View available exclusively for the **Administrator**, serving to manage template
 
 3. **Template Editor**:
     - Editing the template name.
+    - Editing a short description of when to use the template. The description is shown during template selection and supports AI-assisted template search.
+    - Generating the description with AI from the template's name, instructions, fields and DOCX content. The current draft is saved before generation starts. While generation runs in the background, editing is disabled and the page refreshes the generation status automatically. A failed generation is shown to the administrator and can be retried.
     - Assigning the template to an organization and optionally to one of its suborganizations. A template without an organization is general.
     - Editing the AI instructions in a Markdown editor.
     - Configuration of each field: label, type (text, number, select list, date), optional validation regex (text only), list options (select list only), optional default value, "Required" and "Pass to AI" flags.

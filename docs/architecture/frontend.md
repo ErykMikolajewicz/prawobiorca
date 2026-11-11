@@ -2,9 +2,9 @@
 
 ## 1. Introduction
 
-The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `apps/web/` directory of this repository, next to the Python services described in [General information](architecture.md).
+The frontend is the user-facing layer of Prawobiorca. It is a single-page application (SPA) written in **Vue 3**, living in the `apps/web/` directory of this repository, next to the services described in [Backend](backend.md). See [General information](architecture.md) for the system overview.
 
-It talks to `core` exclusively over the HTTP REST API — it has no direct access to the database, the object storage, or any of the compute services.
+It talks to `core` over the HTTP REST API and transfers files directly to and from object storage using presigned URLs issued by `core`. It has no direct access to the database or any of the compute services.
 
 ---
 
@@ -37,7 +37,7 @@ All application code lives in `apps/web/src`:
 * **`stores/`** — Pinia stores: `auth`, holding the session state, `cases`, holding the user's cases shown in the sidebar, and `organizations`, holding the organization and suborganization context (kept in `localStorage`; a logged user gets the first organization by default, a guest none).
 * **`router/`** — route definitions. Pages are lazy-loaded, unknown paths redirect to the main page, and the auth guard passes the requested path to the login page, which returns there after logging in. Routes marked `requiresAdmin` redirect a non-administrator to the main page. Routes indexed by search engines (`MainPage`, `FeaturesPage`, listed in `public/sitemap.xml`) set their own `title` and `description` in route `meta`; other routes fall back to the ones from `index.html`.
 * **`utils/`**, **`assets/`** — error helpers, object storage helpers (presigned upload, dev URL rewrite), page title and description helper and global styles.
-* **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover. `src/__tests__/` also holds the shared test helpers (see [Frontend Unit Tests](../tests/tests.md#frontend-unit-tests)).
+* **`__tests__/`** — unit tests, placed in a `__tests__` directory next to the code they cover. `src/__tests__/` also holds the shared test helpers (see [Frontend tests](../tests/frontend.md)).
 
 E2E tests live outside `src`, in `apps/web/e2e/`.
 
@@ -90,7 +90,7 @@ All commands are run from the `apps/web/` directory:
 | `pnpm build` | Type-check and build the production bundle. |
 | `pnpm type-check` | Type-check with `vue-tsc`. |
 | `pnpm test:unit` | Run unit tests with Vitest. |
-| `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [Tests](../tests/tests.md#e2e-tests)). |
+| `pnpm test:e2e` | Run E2E tests with Playwright against a running environment (see [E2E tests](../tests/e2e.md)). |
 | `pnpm lint` | Run oxlint, ESLint and stylelint with autofix. |
 | `pnpm format` | Format `src/` with oxfmt. |
 | `pnpm check` | Run oxlint, ESLint, stylelint, oxfmt and knip without fixing; used by CI. |

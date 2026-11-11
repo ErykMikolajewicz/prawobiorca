@@ -1,6 +1,14 @@
 name: Docs
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/**
+      - zensical.toml
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/docs.yml
   push:
     branches: [main]
     paths:
@@ -11,7 +19,7 @@ on:
       - .github/workflows/docs.yml
 
 concurrency:
-  group: pages
+  group: docs-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -29,13 +37,15 @@ jobs:
       - run: uv sync --locked
 
       - name: Build documentation
-        run: uv run zensical build --clean
+        run: uv run zensical build --clean --strict
 
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        if: github.event_name == 'push'
         with:
           path: site
 
   deploy:
+    if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     permissions:

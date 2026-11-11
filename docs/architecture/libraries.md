@@ -23,7 +23,7 @@ Shipped in the application image, so migrations run from the same image as the a
 ### asyncpg
 
 Chosen as an asynchronous Postgres client, consistent with the philosophy of the [FastAPI](#fastapi) framework, which encourages asynchronous code.  
-A connection is bound to the event loop it was created in, so in tests the application and the test code must share one event loop — see the [integration tests](../tests/integration_fixtures.md) section for more details.
+A connection is bound to the event loop it was created in, so in tests the application and the test code must share one event loop — see [Integration tests](../tests/integration.md#isolation-and-database-lifecycle).
 
 `asyncpg` was selected due to its top performance in benchmarks. `psycopg3` was also considered, as its support for both synchronous and asynchronous APIs could simplify certain operations (e.g., `alembic` migrations). However, performance was deemed more critical due to frequent database reads.
 
@@ -139,7 +139,7 @@ Distributed task queue used to run heavy, long-running document preparation (ext
 
 Alternative: **Celery** — the most established Python task queue, but it is not async-native and requires more configuration to work well with an asyncio-based codebase.
 
-The broker is not a library: it is a small PostgreSQL broker in `apps/core/src/core_service/infrastructure/tasks/broker.py`, so the queue lives in the existing database and no separate service is needed (see [Architecture](architecture.md#32-asynchronous-job-processing-with-taskiq)). The ready-made PostgreSQL brokers (`taskiq-pg`, `taskiq-postgres`) were rejected because they pick messages up only on `NOTIFY`: a message sent while no worker is listening, or one claimed by a worker that crashed, is never delivered again. Redis (`taskiq-redis`) was used before, but it added a separate stateful service, and its list-based broker lost the task being processed when the worker crashed.
+The broker is not a library: it is a small PostgreSQL broker in `apps/core/src/core_service/infrastructure/tasks/broker.py`, so the queue lives in the existing database and no separate service is needed (see [Backend](backend.md#32-asynchronous-job-processing-with-taskiq)). The ready-made PostgreSQL brokers (`taskiq-pg`, `taskiq-postgres`) were rejected because they pick messages up only on `NOTIFY`: a message sent while no worker is listening, or one claimed by a worker that crashed, is never delivered again. Redis (`taskiq-redis`) was used before, but it added a separate stateful service, and its list-based broker lost the task being processed when the worker crashed.
 
 ## Storage Dependencies
 
@@ -163,17 +163,13 @@ Calculates the cognitive complexity of Python functions. Used to keep functions 
 ---
 
 ### granian\[reload\]
-An extension of [Granian](#granian) that enables automatic reload when code changes. Used during debugging when running the application via a bash script.
+An extension of [Granian](#granian) that enables automatic reload when code changes. Used by
+`apps/core/scripts/dev.py`, started with `just dev` from the repository root.
 
 ---
 
 ### zensical
 A documentation generator that outputs a website. You are most likely reading documentation generated with it right now.
-
----
-
-### mkdocstrings\[python\]
-A plugin that integrates Python docstrings into documentation generated with [zensical](#zensical).
 
 ---
 
@@ -183,7 +179,9 @@ The most popular testing framework in Python. Significantly extends the capabili
 ---
 
 ### pytest-asyncio
-A [Pytest](#pytest) plugin that enables testing asynchronous code. It has some limitations—tests are executed in a simulated asynchronous manner (each in a separate thread), which makes sharing the event loop with the application difficult and prevents speeding up tests by skipping the wait for asynchronous operations to complete.
+A [Pytest](#pytest) plugin that runs asynchronous tests and fixtures on an asyncio event loop.
+Tests and application code share an event loop so they can use the same asynchronous database connections.
+See [Integration tests](../tests/integration.md#isolation-and-database-lifecycle) for the rationale and configuration.
 
 ---
 

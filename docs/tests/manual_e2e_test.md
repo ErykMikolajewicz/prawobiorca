@@ -1,41 +1,52 @@
-# Test E2E (Frontend + Backend)
+# Manual E2E Test (Frontend + Backend)
 
-## 1. Logowanie
-- **Login**: `PrawobiorcaTester`
-- **Hasło**: `PrawobiorcaPassword1;`
-- **Akcja**: Zaloguj
+Run this scenario against a local environment initialized with `just init-db` from the repository root.
+The API, worker, object storage, extraction, embedding and LLM services must be running.
+UI labels and sample input below remain in Polish to match the application.
 
-## 2. Szablon wniosku
-- **Pomiń**: Jeśli jest już opublikowany szablon wniosku (`PrawobiorcaTester` jest administratorem)
-- **Gdzie**: Panel boczny, "Szablony wniosków"
-- **Akcja**: Kliknij "Dodaj szablon", wybierz plik DOCX ze zmienną `paragraphs`, kliknij "Dodaj"
-- **Akcja**: Otwórz dodany szablon, skonfiguruj pola, kliknij "Zapisz i opublikuj"
-- **Rezultat**: Szablon ma status "Opublikowany"
+## 1. Log In
 
-## 3. Nowa sprawa
-- **Gdzie**: Moje sprawy
-- **Input**: Wpisz nazwę (np. "Odwołanie od skreślenia")
-- **Akcja**: Stwórz
+- **Username**: `PrawobiorcaTester`
+- **Password**: `PrawobiorcaPassword1;`
+- **Action**: Click “Zaloguj”.
 
-## 4. Dokument prawny
-- **Gdzie**: Publiczne regulacje
-- **Wybierz**: `PWR - regulamin studiów.pdf` (jeśli jest)
-- **Akcja**: Ustawić (lub >)
+## 2. Application Template
 
-## 5. Wybór sprawy
-- **Gdzie**: Panel boczny, lista "Moje sprawy"
-- **Sprawdź**: "Odwołanie od skreślenia" (nazwa z kroku 3) ma wypełnioną pinezkę, czyli jest aktywna. Inną sprawę ustawia się jako aktywną kliknięciem jej pinezki
+- **Skip**: If a published application template already exists. The seeded `PrawobiorcaTester` account is an administrator.
+- **Where**: Sidebar, “Szablony wniosków”.
+- **Action**: Add a template, select a DOCX file containing the `paragraphs` variable, and click “Dodaj”.
+- **Action**: Open the new template, configure its fields, and click “Zapisz i opublikuj”.
+- **Expected result**: The template has the “Opublikowany” status.
 
-## 6. Zapytanie
-- **Gdzie**: Twoje zapytanie
-- **Input**: Wpisz pytanie (np. "Ile mam dni na odwołanie się od decyzji o skreśleniu z listy studentów?")
-- **Akcja**: Przeszukaj
-- **Wybierz**: Fragment z największą wartością "Podobieństwo", kliknij "Dodaj do sprawy"
+## 3. Create a Case
 
-## 7. Generowanie Wniosku
-- **Gdzie**: Widok szczegółów sprawy (Kontekst / Opis Wniosku)
-- **Input**: Wybierz opublikowany szablon wniosku, wypełnij jego pola i opisz sytuację (np. "Wnoszę o uchylenie decyzji o skreśleniu z listy studentów z powodu długotrwałej hospitalizacji w trakcie sesji.")
-- **Akcja**: Kliknij "Generuj Wniosek (DOCX)"
-- **Rezultat**: Pojawia się komunikat, że wniosek jest generowany, a na liście "Wygenerowane Wnioski" pojawia się wniosek ze statusem "Generowanie". Po zakończeniu generowania status znika, a przycisk "Pobierz" staje się aktywny.
-- **Akcja**: Kliknij "Pobierz"
-- **Rezultat**: Przeglądarka powinna pobrać gotowy plik DOCX.
+- **Where**: “Moje sprawy”.
+- **Input**: Enter a name, for example “Odwołanie od skreślenia”.
+- **Action**: Create the case.
+
+## 4. Open a Legal Document
+
+- **Where**: “Publiczne regulacje”.
+- **Select**: A prepared regulation, for example the seeded `PWr - regulamin studiow.pdf`.
+- **Action**: Open the document's search view.
+
+## 5. Select the Active Case
+
+- **Where**: Sidebar, “Moje sprawy” list.
+- **Check**: “Odwołanie od skreślenia” (created in step 3) has a filled pin icon, indicating that it is active. Click another case's pin icon to make that case active instead.
+
+## 6. Search
+
+- **Where**: “Twoje zapytanie”.
+- **Input**: Enter a question, for example “Ile mam dni na odwołanie się od decyzji o skreśleniu z listy studentów?”.
+- **Action**: Click “Przeszukaj”.
+- **Select**: The result with the highest “Podobieństwo” value, then click “Dodaj do sprawy”.
+
+## 7. Generate an Application
+
+- **Where**: The case details view, in the application form.
+- **Input**: Select a published application template, fill in its fields, and describe the situation, for example “Wnoszę o uchylenie decyzji o skreśleniu z listy studentów z powodu długotrwałej hospitalizacji w trakcie sesji.”.
+- **Action**: Click “Generuj Wniosek (DOCX)”.
+- **Expected result**: A message confirms that generation has started, and an application appears in the generated applications list with the generation-in-progress status. When generation completes, that status disappears and “Pobierz” becomes available.
+- **Action**: Click “Pobierz”.
+- **Expected result**: The browser downloads the generated DOCX file.

@@ -7,7 +7,6 @@ readme = "README.md"
 requires-python = "==3.14.*"
 dependencies = [
     "ruff==0.17.*",
-    "mkdocstrings[python]==1.0.*",
     "zensical==0.1.*",
     "google-auth[requests]==2.62.*",
     "zizmor==1.32.*",
