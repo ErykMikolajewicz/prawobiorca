@@ -24,6 +24,18 @@ Runs on PRs and pushes to `main` in the source repository. The `changes` job sel
 
 When the API changes, commit the output of `just api-types`: `apps/core/openapi.json` and `apps/web/src/api/generated/`. The commit hook regenerates these for changes in `apps/core/src/`.
 
+## Documentation (`docs.yml`)
+
+Runs on PRs targeting `main` and pushes to `main` when `docs/`, `zensical.toml`, the root `pyproject.toml`,
+`uv.lock` or the documentation workflow changes. It builds the site with `uv run zensical build --clean --strict`;
+warnings fail the check.
+
+PRs only build the documentation. On pushes to `main`, the workflow also uploads the site artifact and deploys it
+to GitHub Pages through the `github-pages` environment. PR runs use read-only repository permissions, and each
+ref has its own concurrency group so a PR build cannot cancel publication from `main`.
+
+See [Working on documentation](index.md#working-on-documentation) for local preview and build commands.
+
 ## Audits and mutation tests
 
 - **`audit.yml`** runs weekly, on demand and on PRs changing dependency or audit configuration files. It runs `just audit-backend`, `just audit-frontend` and `just audit-licenses`.

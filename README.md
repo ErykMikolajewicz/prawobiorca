@@ -51,6 +51,7 @@ The whole application lives in this repository:
 4. **Read the [developer documentation](https://erykmikolajewicz.github.io/prawobiorca/)**:
     - Read the section about **Workflow**, especially regarding the commit format.
     - Read about **Project Architecture**, especially the coding rules.
+    - See [Working on documentation](docs/index.md#working-on-documentation) for local preview and build commands.
 
 5. **Develop your code**:
     - Write your code on a feature branch.

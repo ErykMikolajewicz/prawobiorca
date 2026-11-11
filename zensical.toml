@@ -11,6 +11,7 @@ nav = [
         {"General information" = "architecture/architecture.md"},
         {"Backend" = [
             {"General information" = "architecture/backend.md"},
+            {"AI / LLM Service" = "ai.md"},
             {"Library Overview" = "architecture/libraries.md"},
             {"Legal documents parsing" = "architecture/legal_documents_parsing.md"}
         ]},
@@ -20,7 +21,8 @@ nav = [
     ]},
   {"Tests" = [
     {"General information" = "tests/tests.md"},
-    {"Integration fixtures" = "tests/integration_fixtures.md"}
+    {"Integration fixtures" = "tests/integration_fixtures.md"},
+    {"Manual E2E test" = "tests/manual_e2e_test.md"}
   ]}
 ]
 

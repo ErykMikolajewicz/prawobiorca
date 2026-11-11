@@ -22,6 +22,33 @@ Both the backend services and the Vue frontend are kept in a single repository.
 
 ---
 
+## Working on documentation
+
+Documentation lives in `docs/`, and its navigation is configured in `zensical.toml`.
+Write explanations in English; keep Polish UI labels, legal text examples and code identifiers as they appear in the application.
+Add new pages to the navigation and update links when changing headings.
+
+From the repository root, install the documentation tools and start the local preview:
+
+```bash
+uv sync --locked
+uv run zensical serve --dev-addr 127.0.0.1:8001
+```
+
+Open [http://127.0.0.1:8001](http://127.0.0.1:8001). The preview reloads as you edit the documentation.
+Port `8001` lets it run alongside the backend on port `8000`. Stop it with `Ctrl+C`.
+
+Before submitting a change, run the same build as CI:
+
+```bash
+uv run zensical build --clean --strict
+```
+
+The generated site is written to `site/`, which is ignored by Git. The
+[Docs workflow](ci_cd.md#documentation-docsyml) checks relevant PRs and publishes the site after a push to `main`.
+
+---
+
 ## Need Support?
 
 Have questions not covered in the documentation?
