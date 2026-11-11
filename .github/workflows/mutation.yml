@@ -42,3 +42,35 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
+
+  frontend:
+    if: github.repository_id == '1120768327'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-frontend
+      - name: Prepare report directory
+        run: mkdir -p .cache/mutation/web/report
+      - name: Run frontend mutation tests
+        id: mutation
+        shell: bash
+        run: just test-mutation-frontend --force 2>&1 | tee .cache/mutation/web/report/run.log
+      - name: Generate report
+        if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
+        run: |
+          just mutation-report-frontend
+          cat .cache/mutation/web/report/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload report
+        if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-mutation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .cache/mutation/web/report/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30

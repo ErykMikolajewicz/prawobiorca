@@ -35,6 +35,15 @@ mutation-browse:
 mutation-report *args:
     uv run --project apps/core --locked --group mutation scripts/mutation_report.py "$@"
 
+[working-directory: 'apps/web']
+[positional-arguments]
+test-mutation-frontend *args:
+    pnpm test:mutation "$@"
+
+[working-directory: 'apps/web']
+mutation-report-frontend:
+    pnpm mutation:report
+
 [working-directory: 'apps/core']
 test-integration:
     uv run pytest tests/integration

@@ -127,12 +127,53 @@ Mutations reported as `no tests` were not checked by the selected tests; this in
 when selecting the whole package with the default unit tests.
 Requires Linux or macOS (WSL on Windows). Mutation tests are not part of the default CI checks.
 
+### Frontend
+
+Frontend mutation tests use [StrykerJS](https://stryker-mutator.io/docs/stryker-js/guides/vuejs/)
+with its Vitest runner and the existing `vitest.config.ts`. Install dependencies with `pnpm install`
+in `apps/web`, then run from the repository root:
+
+```bash
+just test-mutation-frontend
+just test-mutation-frontend --mutate 'src/utils/error.ts'
+just test-mutation-frontend --mutate 'src/stores/**/*.ts,src/composables/**/*.ts' --concurrency 4
+just test-mutation-frontend --mutate 'src/utils/error.ts' --testFiles 'src/utils/__tests__/error.spec.ts'
+just test-mutation-frontend --force
+just mutation-report-frontend
+```
+
+The equivalent commands inside `apps/web` are `pnpm test:mutation` and `pnpm mutation:report`.
+Arguments are forwarded to Stryker; quote glob patterns so the shell does not expand them.
+The default scope covers `src/**/*.ts` and the scripts in `src/**/*.vue`, excluding generated API code,
+test directories and type declarations. Vue templates and styles are not mutated.
+The local `vue-macros` ignore plugin preserves compiler macro calls such as `defineProps` and
+`withDefaults`, including their arguments: instrumenting them breaks Vue's static macro analysis.
+Other component logic is mutated normally, and skipped macro mutations appear as `Ignored` in the report.
+`--mutate` replaces the default selection, including its exclusions; select application sources only.
+Vitest runs tests related to the selected sources, using per-test coverage to select tests for each mutant.
+`--testFiles` can further restrict the tests to check a module's dedicated tests independently.
+
+Stryker runs in temporary copies under `.cache/mutation/web/tmp`, leaving source files untouched.
+Incremental results are stored in `.cache/mutation/web/incremental.json`; repeated runs reuse them
+based on source and test changes. Use `--force` after dependency, configuration or shared fixture changes,
+or whenever a fresh measurement is needed. The default worker count is four; adjust it with `--concurrency`.
+Incremental reports can retain results for previously selected files. Remove
+`.cache/mutation/web/incremental.json` before running to discard that history entirely.
+Survivors do not fail the command (`thresholds.break` is zero); setup and execution failures do.
+
+Open `.cache/mutation/web/report/mutation.html` to browse mutations and source changes by status.
+The same directory contains `mutation.json` with all mutants and test details. `just mutation-report-frontend`
+generates `summary.md` from the latest completed report and records the current commit.
+Generate the summary before switching revisions. `NoCoverage` means no selected test covered the mutation;
+survivors and timeouts need review, just as with the backend.
+
 ### Weekly Report
 
 The `Mutation tests` workflow (`.github/workflows/mutation.yml`) runs every Saturday at 04:00
 in the `Europe/Warsaw` timezone (including daylight saving time), on the default branch in the source repository.
 It can also be started manually with **Actions → Mutation tests → Run workflow**.
-Each run tests the entire `core_service` package with unit tests from scratch, without reusing mutation results.
+Each run tests the entire `core_service` package and the frontend's default mutation scope in separate jobs
+from scratch, without reusing mutation results.
 Survivors do not fail the job; test setup, execution or report generation failures do.
 
 Download the `core-mutation-<run-id>-<attempt>` artifact from the workflow run page within 30 days.
@@ -142,6 +183,11 @@ The summary records the tested commit so fixes can be made against the matching 
 Reports are also available locally with `just mutation-report` in `.cache/mutation/report`, or in another
 directory with `just mutation-report --output /tmp/mutation-report`. Weekly scheduling takes effect after
 the workflow is merged into the default branch. Reports do not yet compare against previous runs.
+
+The `frontend-mutation-<run-id>-<attempt>` artifact contains the frontend's interactive `mutation.html`,
+all statuses and test details in `mutation.json`, `summary.md` with the tested commit, and `run.log`.
+It is retained for 30 days, and the summary is also displayed on the workflow run page.
+If a run fails before Stryker writes its reports, the artifact still contains the execution log.
 
 ### Local Timing (2026-11-11)
 

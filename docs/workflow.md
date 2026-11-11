@@ -124,7 +124,7 @@ The same workflow checks licenses of the runtime dependencies with `just audit-l
 
 - `taskiq-dependencies` – MIT in the `LICENSE` file, missing from the package metadata.
 
-The `mutation.yml` workflow runs mutation tests for `core` every Saturday at 04:00 Europe/Warsaw and on demand.
+The `mutation.yml` workflow runs mutation tests for `core` and the frontend in separate jobs every Saturday at 04:00 Europe/Warsaw and on demand.
 Download its report artifact to review surviving mutations and their diffs; see [Weekly Report](tests/tests.md#weekly-report).
 
 ### 6.2 E2E (`e2e.yml`)
