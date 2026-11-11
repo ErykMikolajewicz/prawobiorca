@@ -65,6 +65,7 @@ async def test_application_prompt_contains_application_data_allowed_for_ai(llm_c
     assert "Proszę o urlop dziekański z powodu choroby." in system_prompt
     assert "Regulamin studiów: § 20. Student może otrzymać urlop dziekański." in system_prompt
     assert "90010112345" not in system_prompt
+    assert get_awaited_argument(llm_chat.generate_text, "user_prompt").strip()
 
 
 async def test_application_name_prompt_contains_situation_description(llm_chat):
@@ -73,6 +74,7 @@ async def test_application_name_prompt_contains_situation_description(llm_chat):
     assert name == "Odpowiedź."
     system_prompt = get_awaited_argument(llm_chat.generate_text, "system_prompt")
     assert "Proszę o urlop dziekański z powodu choroby." in system_prompt
+    assert get_awaited_argument(llm_chat.generate_text, "user_prompt").strip()
 
 
 async def test_regulation_description_is_limited(llm_chat):
@@ -89,6 +91,8 @@ async def test_regulation_description_is_limited(llm_chat):
     system_prompt = get_awaited_argument(llm_chat.generate_text, "system_prompt")
     assert "Regulamin studiów" in system_prompt
     assert "Urlopy" in system_prompt
+    assert description_source.beginning in system_prompt
+    assert get_awaited_argument(llm_chat.generate_text, "user_prompt").strip()
 
 
 async def test_application_template_description_is_limited(llm_chat):
@@ -106,3 +110,6 @@ async def test_application_template_description_is_limited(llm_chat):
     system_prompt = get_awaited_argument(llm_chat.generate_text, "system_prompt")
     assert "Wniosek o urlop" in system_prompt
     assert "Numer albumu" in system_prompt
+    assert description_source.instructions in system_prompt
+    assert description_source.content in system_prompt
+    assert get_awaited_argument(llm_chat.generate_text, "user_prompt").strip()

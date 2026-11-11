@@ -124,6 +124,9 @@ The same workflow checks licenses of the runtime dependencies with `just audit-l
 
 - `taskiq-dependencies` – MIT in the `LICENSE` file, missing from the package metadata.
 
+The `mutation.yml` workflow runs mutation tests for `core` and the frontend in separate jobs every Saturday at 04:00 Europe/Warsaw and on demand.
+Download its report artifact to review surviving mutations and their diffs; see [Weekly Report](tests/tests.md#weekly-report).
+
 ### 6.2 E2E (`e2e.yml`)
 
 Runs only in the release repository, on every push to `main` and as the first step of every release. It builds the backend and frontend images, deploys them with `just run-e2e-env` and runs the Playwright tests (see [Tests](tests/tests.md#e2e-tests)). On failure it prints the backend and nginx logs and uploads the Playwright report as an artifact.

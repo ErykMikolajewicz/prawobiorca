@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner", "./scripts/stryker-vue-ignorer.mjs"],
+  "ignorers": ["vue-macros"],
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "mutate": [
+    "src/**/*.{ts,vue}",
+    "!src/api/generated/**",
+    "!src/**/__tests__/**",
+    "!src/**/*.d.ts"
+  ],
+  "concurrency": 4,
+  "incremental": true,
+  "incrementalFile": "../../.cache/mutation/web/incremental.json",
+  "tempDirName": "../../.cache/mutation/web/tmp",
+  "ignorePatterns": ["dist", "coverage", "playwright-report", "test-results"],
+  "reporters": ["clear-text", "progress", "html", "json"],
+  "htmlReporter": {
+    "fileName": "../../.cache/mutation/web/report/mutation.html"
+  },
+  "jsonReporter": {
+    "fileName": "../../.cache/mutation/web/report/mutation.json"
+  },
+  "thresholds": {
+    "break": 0
+  }
+}

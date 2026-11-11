@@ -18,7 +18,10 @@ const organizations = [
     id: 'pwr',
     name: 'Politechnika Wrocławska',
     shortName: 'PWr',
-    suborganizations: [{ id: 'w10', name: 'Wydział Mechaniczny' }],
+    suborganizations: [
+      { id: 'w4', name: 'Wydział Informatyki' },
+      { id: 'w10', name: 'Wydział Mechaniczny' },
+    ],
   },
   { id: 'uwr', name: 'Uniwersytet Wrocławski', shortName: 'UWr', suborganizations: [] },
 ]
@@ -51,7 +54,7 @@ describe('organizations store', () => {
     expect(store.selectedOrganizationId).toBe('')
   })
 
-  it('load restores the stored selection', async () => {
+  it('load restores the stored selection of a non-first suborganization', async () => {
     localStorage.setItem(
       'selected-organization',
       JSON.stringify({ organizationId: 'pwr', suborganizationId: 'w10' }),

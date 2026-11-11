@@ -101,6 +101,110 @@ is enabled and `just cov` passes the source directory (`--cov=src/core_service`)
 files never imported by the tests (e.g. worker tasks) would be missing from the report instead of counting as not covered.
 `just test` runs only the unit tests, without coverage, for fast feedback.
 
+## Mutation Tests
+
+Optional mutation tests for `core` use `mutmut`, installed automatically from the `mutation` dependency group.
+Run them from the repository root, choosing source paths relative to `apps/core`:
+
+```bash
+just test-mutation src/core_service/domain/services/case_access.py
+just test-mutation src/core_service/domain/services/regulation_access.py --tests 'tests/unit/domain/services -k access'
+just test-mutation src/core_service --max-children 4 --fresh
+just mutation-results
+just mutation-results --all
+just mutation-show <mutant-id>
+just mutation-browse
+just mutation-report
+```
+
+Tests default to `tests/unit`; `--tests` accepts pytest paths, node IDs and selection options.
+Runs keep their working copies and results in `.cache/mutation/core`.
+Repeated runs reuse results; `--fresh` discards them for a fresh measurement. Changing the source or test selection
+starts a new run. Source, test, fixture and configuration changes invalidate cached results.
+Results commands refer to the latest selection.
+Surviving mutations need review; `mutmut` does not fail the command simply because some survive.
+Mutations reported as `no tests` were not checked by the selected tests; this includes integration-only code
+when selecting the whole package with the default unit tests.
+Requires Linux or macOS (WSL on Windows). Mutation tests are not part of the default CI checks.
+
+### Frontend
+
+Frontend mutation tests use [StrykerJS](https://stryker-mutator.io/docs/stryker-js/guides/vuejs/)
+with its Vitest runner and the existing `vitest.config.ts`. Install dependencies with `pnpm install`
+in `apps/web`, then run from the repository root:
+
+```bash
+just test-mutation-frontend
+just test-mutation-frontend --mutate 'src/utils/error.ts'
+just test-mutation-frontend --mutate 'src/stores/**/*.ts,src/composables/**/*.ts' --concurrency 4
+just test-mutation-frontend --mutate 'src/utils/error.ts' --testFiles 'src/utils/__tests__/error.spec.ts'
+just test-mutation-frontend --force
+just mutation-report-frontend
+```
+
+The equivalent commands inside `apps/web` are `pnpm test:mutation` and `pnpm mutation:report`.
+Arguments are forwarded to Stryker; quote glob patterns so the shell does not expand them.
+The default scope covers `src/**/*.ts` and the scripts in `src/**/*.vue`, excluding generated API code,
+test directories and type declarations. Vue templates and styles are not mutated.
+The local `vue-macros` ignore plugin preserves compiler macro calls such as `defineProps` and
+`withDefaults`, including their arguments: instrumenting them breaks Vue's static macro analysis.
+Other component logic is mutated normally, and skipped macro mutations appear as `Ignored` in the report.
+`--mutate` replaces the default selection, including its exclusions; select application sources only.
+Vitest runs tests related to the selected sources, using per-test coverage to select tests for each mutant.
+`--testFiles` can further restrict the tests to check a module's dedicated tests independently.
+
+Stryker runs in temporary copies under `.cache/mutation/web/tmp`, leaving source files untouched.
+Incremental results are stored in `.cache/mutation/web/incremental.json`; repeated runs reuse them
+based on source and test changes. Use `--force` after dependency, configuration or shared fixture changes,
+or whenever a fresh measurement is needed. The default worker count is four; adjust it with `--concurrency`.
+Incremental reports can retain results for previously selected files. Remove
+`.cache/mutation/web/incremental.json` before running to discard that history entirely.
+Survivors do not fail the command (`thresholds.break` is zero); setup and execution failures do.
+
+Open `.cache/mutation/web/report/mutation.html` to browse mutations and source changes by status.
+The same directory contains `mutation.json` with all mutants and test details. `just mutation-report-frontend`
+generates `summary.md` from the latest completed report and records the current commit.
+Generate the summary before switching revisions. `NoCoverage` means no selected test covered the mutation;
+survivors and timeouts need review, just as with the backend.
+
+### Weekly Report
+
+The `Mutation tests` workflow (`.github/workflows/mutation.yml`) runs every Saturday at 04:00
+in the `Europe/Warsaw` timezone (including daylight saving time), on the default branch in the source repository.
+It can also be started manually with **Actions → Mutation tests → Run workflow**.
+Each run tests the entire `core_service` package and the frontend's default mutation scope in separate jobs
+from scratch, without reusing mutation results.
+Survivors do not fail the job; test setup, execution or report generation failures do.
+
+Download the `core-mutation-<run-id>-<attempt>` artifact from the workflow run page within 30 days.
+It contains `summary.md`, all statuses in `results.json` and `results.txt`, surviving mutation diffs in
+`survivors.diff`, the selection in `selection.toml`, and the execution log in `run.log`.
+The summary records the tested commit so fixes can be made against the matching version of the code.
+Reports are also available locally with `just mutation-report` in `.cache/mutation/report`, or in another
+directory with `just mutation-report --output /tmp/mutation-report`. Weekly scheduling takes effect after
+the workflow is merged into the default branch. Reports do not yet compare against previous runs.
+
+The `frontend-mutation-<run-id>-<attempt>` artifact contains the frontend's interactive `mutation.html`,
+all statuses and test details in `mutation.json`, `summary.md` with the tested commit, and `run.log`.
+It is retained for 30 days, and the summary is also displayed on the workflow run page.
+If a run fails before Stryker writes its reports, the artifact still contains the execution log.
+
+### Local Timing (2026-11-11)
+
+Measured on Linux with an Intel Core i7-13650HX, Python 3.14.2, `mutmut` 3.8.1 and four mutation workers.
+Dependencies were already downloaded. Mutation times were measured with a temporary timer in the script;
+`just test` was timed externally.
+
+| Scope | Fresh mutation run | Cached repeat | Result |
+| --- | --- | --- | --- |
+| `src/core_service`, default `tests/unit` | 177.93 s | 12.03 s | 5229 mutations: 2005 killed, 896 survived, 10 timeouts, 2318 without tests |
+| `src/core_service/domain/services/regulation_access.py`, `tests/unit/domain/services/test_regulation_access.py` | 2.71 s | 2.35 s | All 19 mutations killed |
+| Ordinary unit tests (`just test`) | 6.87 s | — | 427 tests passed |
+
+Cached repeats used identical inputs and did not execute mutants again; clean tests and tool checks still ran.
+Another fresh full run took 174.20 s and produced the same mutation counts. These are local observations, not CI estimates.
+Survivors are not confirmed bugs: reviewed examples include changed log messages and arguments passed to mocked repositories.
+
 ## Frontend Unit Tests
 
 Frontend tests check what the user can observe: the rendered content, the request sent to `core`, the displayed message
@@ -138,7 +242,9 @@ and the page opened by the router. A refactoring that keeps the behavior should 
 
 Helpers live in `apps/web/src/__tests__/`:
 
-- `setup.ts` — runs after each test: unmounts components, empties `document.body` and `localStorage`.
+- `setup.ts` — unmounts components, waits for pending promises, and empties `document.body` and `localStorage`.
+  Uncaught Vue component errors are collected by the global error handler and fail the current test during
+  teardown. This also lets Stryker report a mutation as killed instead of crashing on an unhandled async error.
 - `app.ts` — `createTestApp(path)` returns the `global` mounting options with Element Plus, a fresh Pinia and a memory
   router. The router is built from the real route table with empty pages, so a wrong route name fails the test.
 - `dom.ts` — access to elements teleported outside the mounted component (dialogs, select options, confirmations,

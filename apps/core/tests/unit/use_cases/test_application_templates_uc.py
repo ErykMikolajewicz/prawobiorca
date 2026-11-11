@@ -58,8 +58,21 @@ PUBLISHED_TEMPLATE = PublishedApplicationTemplate(
     description="Wniosek o urlop dziekański.",
     fields=[
         PublishedApplicationField(
-            name="student_id", label="Numer albumu", field_type=ApplicationFieldType.TEXT, required=True
-        )
+            name="student_id",
+            label="Numer albumu",
+            field_type=ApplicationFieldType.TEXT,
+            required=True,
+            default_value="123456",
+            pattern=r"\d{6}",
+        ),
+        PublishedApplicationField(
+            name="department",
+            label="Wydział",
+            field_type=ApplicationFieldType.SELECT,
+            required=False,
+            default_value="W4",
+            options=["W4", "W8"],
+        ),
     ],
 )
 
@@ -80,21 +93,37 @@ def create_template(
 
 
 def create_template_representation(
-    status: ApplicationTemplateStatus = ApplicationTemplateStatus.DRAFT, description: str | None = None
+    status: ApplicationTemplateStatus = ApplicationTemplateStatus.DRAFT,
+    description: str | None = None,
+    fields: list[ApplicationTemplateField] | None = None,
 ) -> ApplicationTemplateRepresentation:
     return ApplicationTemplateRepresentation(
         id=TEMPLATE_ID,
         create_date=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC),
         name="Wniosek o urlop",
         status=status,
-        fields=[STUDENT_ID_FIELD],
+        fields=fields if fields is not None else [STUDENT_ID_FIELD],
         description=description,
     )
 
 
 def create_published_template() -> ApplicationTemplateRepresentation:
     return create_template_representation(
-        ApplicationTemplateStatus.PUBLISHED, description="Wniosek o urlop dziekański."
+        ApplicationTemplateStatus.PUBLISHED,
+        description="Wniosek o urlop dziekański.",
+        fields=[
+            ApplicationTemplateField(
+                name="student_id", label="Numer albumu", default_value="123456", pattern=r"\d{6}", pass_to_ai=False
+            ),
+            ApplicationTemplateField(
+                name="department",
+                label="Wydział",
+                field_type=ApplicationFieldType.SELECT,
+                required=False,
+                default_value="W4",
+                options=["W4", "W8"],
+            ),
+        ],
     )
 
 
