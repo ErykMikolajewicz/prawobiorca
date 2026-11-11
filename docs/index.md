@@ -3,7 +3,8 @@
 Welcome to the Prawobiorca developer documentation.
 
 ## What is Prawobiorca?
-Prawobiorca is a web application for searching law acts, and courts judgments, by classical, and AI supported methods.
+Prawobiorca is a web application for semantic search of legal acts, case management and AI-assisted drafting of student applications in DOCX format.
+Users can search descriptions to find a relevant act, search provisions within a selected document, and find published application templates by name or with AI-assisted search.
 Both the backend services and the Vue frontend are kept in a single repository.
 
 ---

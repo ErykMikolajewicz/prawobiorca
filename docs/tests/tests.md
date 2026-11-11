@@ -282,13 +282,16 @@ Integration tests are prepared by developers, with help from other team members 
 - Is the full functional scope covered without duplication?
 - Are fixtures used appropriately without duplication/misuse?
 
-Please note that during these tests, storage and external services are running in containers, but the application itself runs locally to allow for the mocking of its specific components.
+In `core` integration tests, PostgreSQL runs in a container and the application runs in the test process through
+`ASGITransport`. Object storage and AI services are replaced with mocks. The `extraction` service has its own
+integration tests against its container image, run with `just test-extraction`.
 
 ### Integration Test Scope
 
 - The entire path is tested: from endpoint call to response.
-- Do not mock services that can be recreated locally (PostgreSQL, text-transformator) — use `testcontainers`.
-- Other services (e.g., cloud storage, LLM conversations) should be mocked.
+- Use a real PostgreSQL database with pgvector through `testcontainers`.
+- Mock object storage and AI services (extraction, embeddings and LLM) in `core` integration tests, as described
+  in [Integration Fixtures](integration_fixtures.md).
 - All integration tests should use shared container instances (due to their initialization time).
 - Each test prepares its own data. The database is emptied before each test, so a test does not clean up after itself.
 - Insert test data with shared helpers (e.g. `insert_regulation` from

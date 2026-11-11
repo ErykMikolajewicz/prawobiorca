@@ -147,7 +147,7 @@ The innermost core of the service containing **Enterprise Business Rules**. It h
 
 #### `../../apps/core/src/core_service/application`
 Contains **Application Business Rules** and use case orchestrations.
-- **Use Cases**: Individual business workflows (e.g., `RegisterUser`, `ProcessUploadedDocument`, `SearchDocuments`). A use case that changes a resource with an entity loads it with `get_for_update` (`SELECT ... FOR UPDATE`, so concurrent requests see the state after the previous change), calls the entity method and stores it with `save`, all in one transaction. Reads (lists, details, search) skip the entity and get representations straight from the repository.
+- **Use Cases**: Individual business workflows (e.g., `CreateAccount`, `PrepareRegulation`, `SearchRegulation`). A use case that changes a resource with an entity loads it with `get_for_update` (`SELECT ... FOR UPDATE`, so concurrent requests see the state after the previous change), calls the entity method and stores it with `save`, all in one transaction. Reads (lists, details, search) skip the entity and get representations straight from the repository.
 - **DTOs**: Data Transfer Objects defining input/output contracts.
 - **Ports** (`application/ports`): Abstract contracts (`typing.Protocol`) for repositories, object storage, task scheduling, LLM writers, embedders and other external APIs, implemented by the Infrastructure layer.
 

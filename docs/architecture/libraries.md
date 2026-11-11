@@ -163,7 +163,8 @@ Calculates the cognitive complexity of Python functions. Used to keep functions 
 ---
 
 ### granian\[reload\]
-An extension of [Granian](#granian) that enables automatic reload when code changes. Used during debugging when running the application via a bash script.
+An extension of [Granian](#granian) that enables automatic reload when code changes. Used by
+`apps/core/scripts/dev.py`, started with `just dev` from the repository root.
 
 ---
 
@@ -183,7 +184,10 @@ The most popular testing framework in Python. Significantly extends the capabili
 ---
 
 ### pytest-asyncio
-A [Pytest](#pytest) plugin that enables testing asynchronous code. It has some limitations—tests are executed in a simulated asynchronous manner (each in a separate thread), which makes sharing the event loop with the application difficult and prevents speeding up tests by skipping the wait for asynchronous operations to complete.
+A [Pytest](#pytest) plugin that runs asynchronous tests and fixtures on an asyncio event loop.
+In `core`, `apps/core/pytest.ini` enables auto mode and sets both test and fixture loop scopes to `session`.
+The test clients call the application through `ASGITransport` in that same loop, so tests and application code
+can share the database engine and its `asyncpg` connections. See [Integration Fixtures](../tests/integration_fixtures.md#database-connection).
 
 ---
 

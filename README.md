@@ -5,16 +5,15 @@ Its goal is to help students defend and assert their rights.
 
 The application is available at **[prawobiorca.pl](https://www.prawobiorca.pl)**.
 
-The core part of the application is a regulations search engine. It allows collecting information in a simple and accessible way by entering queries, which are then processed based on their meaning rather than exact text matching.
+The core part of the application is a regulations search engine. Users can find relevant legal acts by searching their descriptions, then search for provisions within a selected document. Both searches use the meaning of natural language queries.
 
 Logged-in users can also:
 - **Manage cases** - create cases and pin the regulations relevant to them.
 - **Generate applications** - draft DOCX applications with AI, based on application templates and the data from a case.
+- **Find application templates** - search published templates by name, with an optional AI search using their descriptions.
 - **Search own regulations** - upload own files and search them the same way as public regulations.
 
 Plans include:
-- **Court Judgments Search Engine** - check if other students have defended their cases in court and what the outcomes were.
-- **Court Judgments Summarizer** - easily extract important facts from a sea of legal jargon!
 - **Dean's Office Simulator** - practice in front of a computer to avoid stress at the counter.
 
 ## Repository Layout
