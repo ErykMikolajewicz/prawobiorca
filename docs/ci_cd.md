@@ -40,11 +40,11 @@ See [Working on documentation](index.md#working-on-documentation) for local prev
 
 - **`audit.yml`** runs weekly, on demand and on PRs changing dependency or audit configuration files. It runs `just audit-backend`, `just audit-frontend` and `just audit-licenses`.
 - **License checks** cover Python runtime dependencies of `core` and `extraction` (pip-licenses) and frontend production dependencies (`pnpm licenses list --prod`). GPL, AGPL, SSPL and missing licenses fail; LGPL and MPL are allowed. A dual license passes if any alternative is allowed. Manually verified metadata omissions go in `ACCEPTED` in `scripts/check_licenses.py` (`taskiq-dependencies`: MIT).
-- **`mutation.yml`** runs for `core` and the frontend every Saturday at 04:00 Europe/Warsaw and on demand. Download the report artifacts to inspect surviving mutations and diffs; see [Weekly Report](tests/tests.md#weekly-report).
+- **`mutation.yml`** runs for `core` and the frontend every Saturday at 04:00 Europe/Warsaw and on demand. Download the report artifacts to inspect surviving mutations and diffs; see [Weekly Report](tests/mutation.md#weekly-report).
 
 ## E2E (`e2e.yml`)
 
-Runs in the release repository on pushes to `main` and before each deployment. It builds `core` and `web`, starts `just run-e2e-env` and runs Playwright. Failures include backend/nginx logs and a Playwright report artifact. Results are visible in the public repository and are not reported back to the source repository. See [E2E tests](tests/tests.md#e2e-tests).
+Runs in the release repository on pushes to `main` and before each deployment. It builds `core` and `web`, starts `just run-e2e-env` and runs Playwright. Failures include backend/nginx logs and a Playwright report artifact. Results are visible in the public repository and are not reported back to the source repository. See [E2E tests](tests/e2e.md).
 
 The `embedding` image is pulled from GHCR; see [Manually maintained images](#manually-maintained-images) when updating it.
 

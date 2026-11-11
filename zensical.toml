@@ -21,14 +21,16 @@ nav = [
     ]},
   {"Tests" = [
     {"General information" = "tests/tests.md"},
-    {"Integration fixtures" = "tests/integration_fixtures.md"},
+    {"Backend unit tests" = "tests/backend_unit.md"},
+    {"Integration tests" = "tests/integration.md"},
+    {"Frontend tests" = "tests/frontend.md"},
+    {"Mutation tests" = "tests/mutation.md"},
+    {"E2E tests" = "tests/e2e.md"},
     {"Manual E2E test" = "tests/manual_e2e_test.md"}
   ]}
 ]
 
 [project.plugins.search]
-[project.plugins.mkdocstrings.handlers.python]
-paths = ["apps/core/src", "apps/core"]
 
 
 [project.theme.classic]

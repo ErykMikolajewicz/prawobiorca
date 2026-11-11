@@ -66,8 +66,10 @@ external_service_manager instead of serv_manager
 ## Commenting Guidelines
 Adding comments in the code is optional. Ideally, the code should be readable enough to understand without
 additional comments. Comments should be left for particularly complex or unusual situations.
-Docstrings are also optional. They can be added as part of mkdocs documentation, which can be integrated via a plugin,
-and for explaining the operation of functions/classes with many parameters or behavior not easily captured by the name.
+Docstrings are also optional. Use them to explain non-obvious behavior, constraints or intent near the code.
+Keep implementation details, helper signatures and fixture dependencies in the code. Documentation pages should
+explain the testing strategy, conventions and reasons for decisions, with links to representative tests instead
+of generated code reference pages. See [Test documentation](../tests/tests.md#maintaining-test-documentation).
 
 Use type hints in function signatures. For variables/class fields, do so when the type is not obvious or required
 for other reasons, such as Pydantic validation.

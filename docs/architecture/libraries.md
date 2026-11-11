@@ -23,7 +23,7 @@ Shipped in the application image, so migrations run from the same image as the a
 ### asyncpg
 
 Chosen as an asynchronous Postgres client, consistent with the philosophy of the [FastAPI](#fastapi) framework, which encourages asynchronous code.  
-A connection is bound to the event loop it was created in, so in tests the application and the test code must share one event loop — see the [integration tests](../tests/integration_fixtures.md) section for more details.
+A connection is bound to the event loop it was created in, so in tests the application and the test code must share one event loop — see [Integration tests](../tests/integration.md#isolation-and-database-lifecycle).
 
 `asyncpg` was selected due to its top performance in benchmarks. `psycopg3` was also considered, as its support for both synchronous and asynchronous APIs could simplify certain operations (e.g., `alembic` migrations). However, performance was deemed more critical due to frequent database reads.
 
@@ -173,11 +173,6 @@ A documentation generator that outputs a website. You are most likely reading do
 
 ---
 
-### mkdocstrings\[python\]
-A plugin that integrates Python docstrings into documentation generated with [zensical](#zensical).
-
----
-
 ### pytest
 The most popular testing framework in Python. Significantly extends the capabilities of the built-in `unittest` module. Alternative testing frameworks were not considered.
 
@@ -185,9 +180,8 @@ The most popular testing framework in Python. Significantly extends the capabili
 
 ### pytest-asyncio
 A [Pytest](#pytest) plugin that runs asynchronous tests and fixtures on an asyncio event loop.
-In `core`, `apps/core/pytest.ini` enables auto mode and sets both test and fixture loop scopes to `session`.
-The test clients call the application through `ASGITransport` in that same loop, so tests and application code
-can share the database engine and its `asyncpg` connections. See [Integration Fixtures](../tests/integration_fixtures.md#database-connection).
+Tests and application code share an event loop so they can use the same asynchronous database connections.
+See [Integration tests](../tests/integration.md#isolation-and-database-lifecycle) for the rationale and configuration.
 
 ---
 
