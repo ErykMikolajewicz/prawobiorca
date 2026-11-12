@@ -8,6 +8,7 @@ import bcrypt
 import jwt
 from pydantic import SecretStr
 
+from core_service.domain.consts import MAX_PASSWORD_BYTES
 from core_service.domain.exceptions.users import InvalidAccessToken
 from core_service.domain.value_objects.auth import AccessTokenClaims
 
@@ -33,6 +34,8 @@ def generate_authorization_token(authorization_token_length: int = AUTHORIZATION
 
 def verify_password(password: SecretStr, hashed_password: bytes) -> bool:
     password_bytes = password.get_secret_value().encode("utf-8")
+    if len(password_bytes) > MAX_PASSWORD_BYTES:
+        return False
     return bcrypt.checkpw(password_bytes, hashed_password)
 
 

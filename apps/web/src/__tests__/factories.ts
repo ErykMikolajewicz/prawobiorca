@@ -28,6 +28,20 @@ export function createFailingRequest() {
   return { request, fail: () => reject?.(createHttpError(500)) }
 }
 
+export function createDeferred<T>() {
+  let resolve: ((value: T) => void) | undefined
+  let reject: ((reason: unknown) => void) | undefined
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return {
+    promise,
+    resolve: (value: T) => resolve?.(value),
+    reject: (reason: unknown) => reject?.(reason),
+  }
+}
+
 export function createNetworkError(): AxiosError {
   return new AxiosError('Network Error', AxiosError.ERR_NETWORK, undefined, {})
 }

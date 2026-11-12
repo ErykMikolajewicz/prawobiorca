@@ -5,6 +5,15 @@ import { notifySessionExpired, SessionExpiredError } from '@/api/sessionExpiry'
 export const prawobiorcaClient = axios.create()
 prawobiorcaClient.defaults.withCredentials = true
 
+const AUTH_REQUEST_TIMEOUT_MS = 10_000
+
+prawobiorcaClient.interceptors.request.use((config) => {
+  if (config.url?.startsWith('/api/auth/')) {
+    config.timeout = AUTH_REQUEST_TIMEOUT_MS
+  }
+  return config
+})
+
 export async function prawobiorcaRequest<T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig,

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { defineComponent, h } from 'vue'
+import { createPinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, useRoute } from 'vue-router'
 import App from '../App.vue'
@@ -20,7 +21,7 @@ async function mountApp(path: string) {
     routes: [{ path: '/cases/:id', component: CasePage }],
   })
   await router.push(path)
-  const wrapper = mount(App, { global: { plugins: [router] } })
+  const wrapper = mount(App, { global: { plugins: [createPinia(), router] } })
   return { router, wrapper }
 }
 

@@ -1,4 +1,4 @@
-export interface LoginData {
+export interface RegistrationData {
   username: string
   /**
    * @minLength 8

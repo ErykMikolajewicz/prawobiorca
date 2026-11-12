@@ -3,6 +3,8 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 const envDir = fileURLToPath(new URL('./', import.meta.url))
 const devStorageOrigin = loadEnv('development', envDir).VITE_DEV_STORAGE_ORIGIN
@@ -11,6 +13,11 @@ const devStorageOrigin = loadEnv('development', envDir).VITE_DEV_STORAGE_ORIGIN
 export default defineConfig({
   plugins: [
     vue(),
+    Components({
+      dirs: [],
+      dts: false,
+      resolvers: [ElementPlusResolver()],
+    }),
     vueDevTools(),
   ],
   resolve: {

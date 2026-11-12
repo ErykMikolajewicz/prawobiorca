@@ -892,7 +892,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LoginData"
+                "$ref": "#/components/schemas/RegistrationData"
               }
             }
           },
@@ -3094,28 +3094,6 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "LoginData": {
-        "properties": {
-          "username": {
-            "type": "string",
-            "title": "Username"
-          },
-          "password": {
-            "type": "string",
-            "maxLength": 32,
-            "minLength": 8,
-            "format": "password",
-            "title": "Password",
-            "writeOnly": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "username",
-          "password"
-        ],
-        "title": "LoginData"
-      },
       "NewApplication": {
         "properties": {
           "templateId": {
@@ -3356,6 +3334,28 @@
           "fields"
         ],
         "title": "PublishedApplicationTemplate"
+      },
+      "RegistrationData": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 8,
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "RegistrationData"
       },
       "RegulationData": {
         "properties": {

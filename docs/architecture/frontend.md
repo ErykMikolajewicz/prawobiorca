@@ -41,7 +41,7 @@ All application code lives in `apps/web/src`:
 
 E2E tests live outside `src`, in `apps/web/e2e/`.
 
-`src/main.ts` is the entry point: it wires Pinia, the router and Element Plus, registers the session-expiry handler and resolves the current session before mounting the app.
+`src/main.ts` is the entry point: it wires Pinia and the router, configures Element Plus messages, registers the session-expiry handler and mounts the app immediately. A loading screen stays visible while the current session is checked and the initial route is resolved. The auth guard waits for that check before deciding whether to redirect, so a direct link to a protected page is preserved for a logged user. If the check fails, the app reports the error and continues as a guest.
 
 ---
 
@@ -59,6 +59,7 @@ The organization and suborganization selected in the `organizations` store form 
 
 * The shared axios instance (`src/api/axios.ts`) has no `baseURL` — the paths in the contract already carry the `/api` prefix, under which the API is served on the same origin in every environment (the Vite dev server proxies it to `core`).
 * `withCredentials` is enabled — access and refresh tokens are carried in cookies, never stored by the application itself.
+* Each request under `/api/auth/` has a 10-second timeout, including session checks and token refreshes. A timed-out session check ends the loading screen and reports a connection error.
 * A response interceptor retries a request once after refreshing the tokens when `core` answers `401`. Concurrent refreshes share a single in-flight request, and the auth endpoints themselves are excluded from this path.
 * When the refresh fails, the session-expiry handler resets the auth store and redirects to the login page, and the request is rejected with `SessionExpiredError`, which `showApiError` ignores so the user sees a single message.
 * The API client is generated with `just api-types` (run from the repository root): it exports `apps/core/openapi.json` and generates `src/api/generated/` from it with **Orval** (`orval.config.ts`). Generated functions send requests through `prawobiorcaRequest`, so they share the axios instance and its interceptor. Components, composables and stores call them directly; logic around the calls lives in composables and utils. The generated files are committed, and CI fails when they are out of date.
@@ -101,6 +102,8 @@ A JetBrains IDE (PyCharm Professional, free for students under a non-commercial 
 ---
 
 ## 8. Styling
+
+Element Plus components, directives (including `v-loading`) and their CSS are imported on demand by `unplugin-vue-components` with `ElementPlusResolver` in `vite.config.ts`. Local application components retain explicit imports. `env.d.ts` supplies Element Plus template types without generating declarations. Do not register the full Element Plus plugin or import its full stylesheet: that includes unused components in the initial bundle. Programmatic APIs such as `ElMessage` need an explicit style import; message styles and dark theme variables are loaded in `src/main.ts`.
 
 Element Plus provides the base look; the application customises it through CSS variables. Global styles live in `src/assets/styles/`, imported once through `index.css` in `src/main.ts`:
 
