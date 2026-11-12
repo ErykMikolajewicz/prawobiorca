@@ -1,4 +1,4 @@
-import type { LoginData } from '../../model'
+import type { RegistrationData } from '../../model'
 
 import { prawobiorcaRequest } from '../../../axios'
 
@@ -8,7 +8,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1]
  * @summary Create Account
  */
 export const createAccount = (
-  loginData: LoginData,
+  registrationData: RegistrationData,
   options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
 ) => {
   return prawobiorcaRequest<unknown>(
@@ -16,7 +16,7 @@ export const createAccount = (
       url: `/api/accounts/register`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: loginData,
+      data: registrationData,
     },
     options,
   )

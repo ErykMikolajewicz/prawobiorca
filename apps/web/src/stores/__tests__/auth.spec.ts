@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AxiosError } from 'axios'
 import { createPinia, setActivePinia } from 'pinia'
-import { createHttpError } from '@/__tests__/factories'
+import { createDeferred, createHttpError } from '@/__tests__/factories'
 import { checkIsUserLogged, logoutUser, logUser } from '@/api/generated/endpoints/auth/auth'
 import { SessionExpiredError } from '@/api/sessionExpiry'
 import { useAuthStore } from '@/stores/auth'
@@ -59,6 +59,24 @@ describe('auth store', () => {
     const store = useAuthStore()
 
     await expect(store.checkIsLogged()).rejects.toBe(error)
+    expect(store.isCheckingSession).toBe(false)
+  })
+
+  it('shares a session check between concurrent callers', async () => {
+    const { promise, resolve } = createDeferred<{ isAdmin: boolean }>()
+    vi.mocked(checkIsUserLogged).mockReturnValueOnce(promise)
+    const store = useAuthStore()
+
+    const firstCheck = store.checkIsLogged()
+    const secondCheck = store.checkIsLogged()
+    expect(store.isCheckingSession).toBe(true)
+
+    resolve({ isAdmin: false })
+    await Promise.all([firstCheck, secondCheck])
+
+    expect(checkIsUserLogged).toHaveBeenCalledOnce()
+    expect(store.isCheckingSession).toBe(false)
+    expect(store.isUserLogged).toBe(true)
   })
 
   it('login stores the session and admin flag', async () => {

@@ -163,6 +163,9 @@ describe('prawobiorcaClient refresh interceptor', () => {
 
     expect(result.status).toBe(200)
     expect(calledPaths(adapter)).toEqual(['/api/auth/me', '/api/auth/refresh', '/api/auth/me'])
+    for (const [config] of adapter.mock.calls) {
+      expect(config).toMatchObject({ timeout: 10_000 })
+    }
     expect(notifySessionExpired).not.toHaveBeenCalled()
   })
 

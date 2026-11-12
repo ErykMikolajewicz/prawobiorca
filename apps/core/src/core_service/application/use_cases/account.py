@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from fastapi.concurrency import run_in_threadpool
 
-from core_service.application.dtos.account import LoginData
+from core_service.application.dtos.account import RegistrationData
 from core_service.application.dtos.user import CreateUserData
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.users import UsersRepository
@@ -19,9 +19,9 @@ class CreateAccount:
     session_maker: SessionMaker
     users_repo: UsersRepository
 
-    async def execute(self, login_data: LoginData) -> None:
-        hashed_password = await run_in_threadpool(hash_password, login_data.password)
-        create_user_data = CreateUserData(login_data.username, hashed_password)
+    async def execute(self, registration_data: RegistrationData) -> None:
+        hashed_password = await run_in_threadpool(hash_password, registration_data.password)
+        create_user_data = CreateUserData(registration_data.username, hashed_password)
 
         async with self.session_maker.begin() as session:
             try:

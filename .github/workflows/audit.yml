@@ -2,7 +2,8 @@ name: Audit
 
 on:
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 4 * * 6"
+      timezone: Europe/Warsaw
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -26,7 +27,21 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-backend
-      - run: just audit-backend
+      - name: Run backend audit
+        id: audit
+        shell: bash
+        run: |
+          mkdir -p .cache/audit/backend
+          just audit-backend 2>&1 | tee .cache/audit/backend/report.log
+      - name: Upload audit report
+        if: ${{ !cancelled() && (steps.audit.outcome == 'success' || steps.audit.outcome == 'failure') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: audit-backend-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .cache/audit/backend/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
 
   frontend:
     if: github.repository_id == '1120768327'
@@ -38,7 +53,21 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-frontend
-      - run: just audit-frontend
+      - name: Run frontend audit
+        id: audit
+        shell: bash
+        run: |
+          mkdir -p .cache/audit/frontend
+          just audit-frontend 2>&1 | tee .cache/audit/frontend/report.log
+      - name: Upload audit report
+        if: ${{ !cancelled() && (steps.audit.outcome == 'success' || steps.audit.outcome == 'failure') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: audit-frontend-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .cache/audit/frontend/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
 
   licenses:
     if: github.repository_id == '1120768327'
@@ -51,4 +80,18 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-backend
       - uses: ./.github/actions/setup-frontend
-      - run: just audit-licenses
+      - name: Run licenses audit
+        id: audit
+        shell: bash
+        run: |
+          mkdir -p .cache/audit/licenses
+          just audit-licenses 2>&1 | tee .cache/audit/licenses/report.log
+      - name: Upload audit report
+        if: ${{ !cancelled() && (steps.audit.outcome == 'success' || steps.audit.outcome == 'failure') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: audit-licenses-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .cache/audit/licenses/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30

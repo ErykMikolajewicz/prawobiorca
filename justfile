@@ -13,27 +13,33 @@ run-locally-down:
 run-e2e-env:
     uv run scripts/local/run_e2e.py
 
+# Active scan: use only with a disposable E2E database.
+dast:
+    uv run scripts/dast/run.py
+
 [working-directory: 'apps/core']
 test:
     uv run pytest tests/unit
 
+mutation := "uv run --project apps/core --locked --group mutation scripts/mutation.py"
+
 [positional-arguments]
 test-mutation +args:
-    uv run scripts/mutation.py run "$@"
+    {{mutation}} run "$@"
 
 [positional-arguments]
 mutation-results *args:
-    uv run scripts/mutation.py results "$@"
+    {{mutation}} results "$@"
 
 mutation-show mutant:
-    uv run scripts/mutation.py show {{quote(mutant)}}
+    {{mutation}} show {{quote(mutant)}}
 
 mutation-browse:
-    uv run scripts/mutation.py browse
+    {{mutation}} browse
 
 [positional-arguments]
 mutation-report *args:
-    uv run --project apps/core --locked --group mutation scripts/mutation_report.py "$@"
+    {{mutation}} report "$@"
 
 [working-directory: 'apps/web']
 [positional-arguments]

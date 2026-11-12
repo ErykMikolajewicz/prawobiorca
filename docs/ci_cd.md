@@ -38,9 +38,66 @@ See [Working on documentation](index.md#working-on-documentation) for local prev
 
 ## Audits and mutation tests
 
-- **`audit.yml`** runs weekly, on demand and on PRs changing dependency or audit configuration files. It runs `just audit-backend`, `just audit-frontend` and `just audit-licenses`.
+- **`audit.yml`** runs every Saturday at 04:00 Europe/Warsaw, on demand and on PRs changing dependency or audit configuration files. It runs `just audit-backend`, `just audit-frontend` and `just audit-licenses`. Each job uploads its text output as a separate `audit-<backend|frontend|licenses>-<run id>-<attempt>` artifact, retained for 30 days, including when the audit fails.
 - **License checks** cover Python runtime dependencies of `core` and `extraction` (pip-licenses) and frontend production dependencies (`pnpm licenses list --prod`). GPL, AGPL, SSPL and missing licenses fail; LGPL and MPL are allowed. A dual license passes if any alternative is allowed. Manually verified metadata omissions go in `ACCEPTED` in `scripts/check_licenses.py` (`taskiq-dependencies`: MIT).
 - **`mutation.yml`** runs for `core` and the frontend every Saturday at 04:00 Europe/Warsaw and on demand. Download the report artifacts to inspect surviving mutations and diffs; see [Weekly Report](tests/mutation.md#weekly-report).
+
+## DAST (`dast.yml`)
+
+Runs every Saturday at 04:00 Europe/Warsaw and on demand in the **private source repository**.
+It builds `core` and `web`, starts a disposable `just run-e2e-env` on the runner, then runs
+`just dast`. No production credentials or external scan targets are used.
+
+The [ZAP Automation Framework](https://www.zaproxy.org/docs/automate/automation-framework/)
+plan lives in `scripts/dast/plan.yaml`; `scripts/dast/run.py` prepares a filtered copy of
+`apps/core/openapi.json`, registers a unique ordinary user and starts the pinned ZAP container.
+ZAP first scans as a guest, then imports and scans the API again as that user. Form login and
+cookie sessions are verified through `/api/auth/me` during the scan; protected requests are
+also checked before and after it. ZAP can log in again when the access token expires.
+
+Active scanning is limited to 10 minutes as a guest and 15 minutes as a user, with two threads
+and a delay between requests. These are bounded scans, not a guarantee that every rule finishes.
+The scanner process has a 35-minute timeout and the whole workflow a 60-minute timeout.
+
+Download the `dast-<run id>-<attempt>` artifact for HTML/JSON findings, scanner and application logs;
+artifacts are retained for 30 days. Reports stay in the private repository and are not published
+as issues or mirrored files. During initial rollout, findings are **report-only**: scanner,
+setup and authentication errors fail the workflow, but vulnerability alerts do not. Review the
+first reports before introducing alert-based failure thresholds or documented exceptions.
+DAST is independent of the release workflow and does not block deployments.
+
+### Scope and limitations
+
+- Login, refresh, logout and registration are excluded from attack traffic to preserve scan
+  sessions; registration and login still run as setup steps.
+- Upload confirmation, processing retries, description generation and case applications are
+  excluded because E2E does not run extraction, LLM or workers. These paths are removed before
+  OpenAPI import as well as excluded from the scan context.
+- The scan covers API traffic through the local nginx ingress. It does not crawl the Vue UI,
+  check production TLS/GCP configuration, or exercise administrator-only functionality.
+- Generated OpenAPI inputs do not guarantee valid IDs for existing objects. Some object routes
+  will return validation or not-found responses. DAST does not replace integration tests for
+  cross-user access or business rules.
+
+### Local use
+
+Use a **disposable database and object storage**: active scanning can create, modify and delete
+records. The ordinary local E2E environment shares volumes with `just run-locally`, so do not
+scan a developer environment containing data you want to keep. Prefer a fresh VM or CI runner.
+
+On that disposable Linux environment, build `core` and `web`, prepare the embedding image as
+in E2E, then run:
+
+```bash
+just run-e2e-env
+just dast
+just run-locally-down
+```
+
+Reports are written to `.cache/dast/report/`. The temporary credentials file is removed after the
+scanner exits and is not uploaded; reports may contain the disposable user's session data.
+Update `ZAP_IMAGE` in `scripts/dast/run.py`
+and validate the plan when upgrading ZAP.
 
 ## E2E (`e2e.yml`)
 

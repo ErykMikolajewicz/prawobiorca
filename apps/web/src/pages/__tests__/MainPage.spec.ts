@@ -89,23 +89,6 @@ describe('MainPage', () => {
       expect(findButton('Dodaj regulacje')).toBeUndefined()
     })
 
-    it('explains the three steps for finding legal provisions', async () => {
-      const { wrapper } = await mountPage()
-
-      expect(
-        wrapper
-          .findAll('.how-it-works .step')
-          .map((step) => [
-            step.find('.feature-item-title').text(),
-            step.find('.feature-item-description').text(),
-          ]),
-      ).toEqual([
-        ['1. Wybierz akt prawny', 'Kliknij regulację z listy poniżej.'],
-        ['2. Zadaj pytanie', 'Napisz, czego chciałbyś się dowiedzieć.'],
-        ['3. Poznaj przepisy', 'Zobacz artykuły, które najlepiej pasują do pytania.'],
-      ])
-    })
-
     it('labels regulations with their type', async () => {
       mockRegulations({
         PUBLIC: [

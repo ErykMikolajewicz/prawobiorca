@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import { AxiosError } from 'axios'
 import { findButton, page, shownMessages } from '@/__tests__/dom'
-import { createHttpError } from '@/__tests__/factories'
+import { createDeferred, createHttpError } from '@/__tests__/factories'
 import type { CurrentUser } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/auth/auth')
@@ -9,7 +10,7 @@ vi.mock('@/api/generated/endpoints/cases/cases')
 vi.mock('@/api/generated/endpoints/organizations/organizations')
 vi.mock('@/api/generated/endpoints/regulations/regulations')
 
-async function startApp(currentUser: Promise<CurrentUser>) {
+async function startApp(currentUser: Promise<CurrentUser>, waitForNavigation = true) {
   vi.resetModules()
   document.body.innerHTML = '<div id="app"></div>'
 
@@ -24,7 +25,7 @@ async function startApp(currentUser: Promise<CurrentUser>) {
 
   await import('@/main')
   const { default: router } = await import('@/router')
-  await router.isReady()
+  if (waitForNavigation) await router.isReady()
   await flushPromises()
 
   const { useAuthStore } = await import('@/stores/auth')
@@ -55,6 +56,39 @@ describe('application start', { timeout: 30_000 }, () => {
     expect(findButton('Szukaj')).toBeDefined()
     expect(document.documentElement.classList.contains('dark')).toBe(false)
     expect(page().find('.app-top-bar').exists()).toBe(false)
+  })
+
+  it('shows loading while checking the session and preserves a protected destination', async () => {
+    window.history.replaceState({}, '', '/admin/organizations')
+    const { promise, resolve } = createDeferred<CurrentUser>()
+    const { router } = await startApp(promise, false)
+
+    expect(page().find('[role="status"]').text()).toBe('Ładowanie aplikacji…')
+    expect(window.location.pathname).toBe('/admin/organizations')
+    expect(findButton('Zaloguj')).toBeUndefined()
+
+    resolve({ isAdmin: true })
+    await router.isReady()
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/organizations')
+    expect(page().find('.app-loading').exists()).toBe(false)
+  })
+
+  it('leaves loading and shows the public page when the session request times out', async () => {
+    const { promise, reject } = createDeferred<CurrentUser>()
+    const { router } = await startApp(promise, false)
+    expect(page().find('.app-loading').exists()).toBe(true)
+
+    reject(new AxiosError('timeout', AxiosError.ECONNABORTED, undefined, {}))
+    await router.isReady()
+    await flushPromises()
+
+    expect(page().find('.app-loading').exists()).toBe(false)
+    expect(page().text()).toContain('Publiczne regulacje')
+    expect(shownMessages('error')).toEqual([
+      'Nie można połączyć się z serwerem. Sprawdź połączenie sieciowe.',
+    ])
   })
 
   it('follows the dark system theme and the mobile viewport', async () => {

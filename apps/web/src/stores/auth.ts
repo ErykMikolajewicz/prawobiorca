@@ -25,11 +25,28 @@ async function getCurrentUser(): Promise<CurrentUser | null> {
 export const useAuthStore = defineStore('auth', () => {
   const isUserLogged = ref(false)
   const isAdmin = ref(false)
+  const isCheckingSession = ref(false)
+  let sessionCheck: Promise<void> | null = null
 
-  async function checkIsLogged(): Promise<void> {
-    const currentUser = await getCurrentUser()
-    isUserLogged.value = currentUser !== null
-    isAdmin.value = currentUser?.isAdmin ?? false
+  function checkIsLogged(): Promise<void> {
+    if (sessionCheck) return sessionCheck
+
+    isCheckingSession.value = true
+    sessionCheck = getCurrentUser()
+      .then((currentUser) => {
+        isUserLogged.value = currentUser !== null
+        isAdmin.value = currentUser?.isAdmin ?? false
+      })
+      .finally(() => {
+        isCheckingSession.value = false
+        sessionCheck = null
+      })
+    return sessionCheck
+  }
+
+  async function waitForSessionCheck(): Promise<void> {
+    // The caller that starts the check reports errors; navigation can still continue.
+    await sessionCheck?.catch(() => undefined)
   }
 
   async function login(username: string, password: string): Promise<void> {
@@ -53,5 +70,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { isUserLogged, isAdmin, checkIsLogged, login, logout, resetSession }
+  return {
+    isUserLogged,
+    isAdmin,
+    isCheckingSession,
+    checkIsLogged,
+    waitForSessionCheck,
+    login,
+    logout,
+    resetSession,
+  }
 })

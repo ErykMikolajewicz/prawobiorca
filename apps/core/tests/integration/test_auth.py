@@ -1,5 +1,6 @@
 from http.cookies import SimpleCookie
 
+import pytest
 from fastapi import status
 from sqlalchemy import select
 
@@ -59,8 +60,9 @@ async def test_login_sets_both_cookies(client, session_maker, user):
     assert stored_session.refresh_token_hash != refresh_cookie.value
 
 
-async def test_login_failure_wrong_password(client, session_maker, user):
-    payload = {"username": VALID_USERNAME, "password": "WrongPassword123!"}
+@pytest.mark.parametrize("password", ["WrongPassword123!", "x", "nouppercase1!", "Aa1!" + "😀" * 20])
+async def test_login_failure_wrong_password(client, session_maker, user, password):
+    payload = {"username": VALID_USERNAME, "password": password}
 
     response = await client.post("/api/auth/login", data=payload)
 

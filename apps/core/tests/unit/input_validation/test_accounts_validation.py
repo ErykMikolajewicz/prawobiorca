@@ -9,6 +9,7 @@ from fastapi import status
         ("NOLOWERCASE1!", "Password must contain at least one lowercase letter."),
         ("NoDigits!!", "Password must contain at least one digit."),
         ("NoSpecial1", "Password must contain at least one special character."),
+        ("Aa1!" + "😀" * 17 + "a", "Password must not exceed 72 UTF-8 bytes."),
     ],
 )
 async def test_create_account_weak_passwords(client, password, error_detail):
