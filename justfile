@@ -17,23 +17,25 @@ run-e2e-env:
 test:
     uv run pytest tests/unit
 
+mutation := "uv run --project apps/core --locked --group mutation scripts/mutation.py"
+
 [positional-arguments]
 test-mutation +args:
-    uv run scripts/mutation.py run "$@"
+    {{mutation}} run "$@"
 
 [positional-arguments]
 mutation-results *args:
-    uv run scripts/mutation.py results "$@"
+    {{mutation}} results "$@"
 
 mutation-show mutant:
-    uv run scripts/mutation.py show {{quote(mutant)}}
+    {{mutation}} show {{quote(mutant)}}
 
 mutation-browse:
-    uv run scripts/mutation.py browse
+    {{mutation}} browse
 
 [positional-arguments]
 mutation-report *args:
-    uv run --project apps/core --locked --group mutation scripts/mutation_report.py "$@"
+    {{mutation}} report "$@"
 
 [working-directory: 'apps/web']
 [positional-arguments]

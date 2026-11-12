@@ -33,7 +33,7 @@ just mutation-browse
 just mutation-report
 ```
 
-`just mutation-report` writes a summary, detailed results and surviving diffs to `.cache/mutation/report`.
+`just mutation-report` writes a summary, detailed results and surviving diffs to `.cache/mutation/core/report`.
 Use `--output <directory>` to choose another destination. Generate reports before switching revisions
 so the recorded commit matches the code under review.
 

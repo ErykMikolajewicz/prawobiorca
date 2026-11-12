@@ -23,22 +23,22 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-backend
       - name: Prepare report directory
-        run: mkdir -p .cache/mutation/report
+        run: mkdir -p .cache/mutation/core/report
       - name: Run core mutation tests
         id: mutation
         shell: bash
-        run: just test-mutation src/core_service --fresh 2>&1 | tee .cache/mutation/report/run.log
+        run: just test-mutation src/core_service --fresh 2>&1 | tee .cache/mutation/core/report/run.log
       - name: Generate report
         if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
         run: |
           just mutation-report
-          cat .cache/mutation/report/summary.md >> "$GITHUB_STEP_SUMMARY"
+          cat .cache/mutation/core/report/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload report
         if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: core-mutation-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .cache/mutation/report/
+          path: .cache/mutation/core/report/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

@@ -49,7 +49,7 @@ pnpm mutation:report
 ```
 
 Open `../../.cache/mutation/web/report/mutation.html` for the interactive report.
-See [Mutation Tests](../../docs/tests/tests.md#frontend) for selection, incremental runs and CI reports.
+See [Mutation Tests](../../docs/tests/mutation.md#frontend) for selection, incremental runs and CI reports.
 
 ### Lint with [Oxlint](https://oxc.rs/docs/guide/usage/linter) and [ESLint](https://eslint.org/)
 

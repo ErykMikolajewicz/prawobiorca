@@ -6,11 +6,16 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tomllib
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / "apps/core"
-WORKSPACE = ROOT / ".cache/mutation/core"
+WORKSPACE = ROOT / ".cache/mutation/core/workspace"
+REPORT = ROOT / ".cache/mutation/core/report"
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,6 +31,8 @@ def parse_args() -> argparse.Namespace:
     show = commands.add_parser("show", help="Show a mutant's diff.")
     show.add_argument("mutant")
     commands.add_parser("browse", help="Open the interactive results browser.")
+    report = commands.add_parser("report", help="Export results, summary and surviving mutation diffs.")
+    report.add_argument("--output", type=Path, default=REPORT)
     args = parser.parse_args()
     if args.command == "run" and args.max_children < 1:
         parser.error("--max-children must be positive")
@@ -90,31 +97,82 @@ def prepare_workspace(args: argparse.Namespace) -> None:
     print(f"Sources: {', '.join(patterns)}\nTests: {args.tests}", flush=True)
 
 
+def run_mutmut(*args: str) -> int:
+    return subprocess.run(["mutmut", *args], cwd=WORKSPACE, check=False).returncode
+
+
+def mutmut_output(*args: str) -> str:
+    return subprocess.run(["mutmut", *args], cwd=WORKSPACE, check=True, capture_output=True, text=True).stdout
+
+
+def write_report(output: Path) -> None:
+    results_text = mutmut_output("results", "--all", "true")
+    results = dict(line.strip().rsplit(": ", 1) for line in results_text.splitlines() if line.strip())
+    if not results:
+        raise ValueError("No mutation results found. Run just test-mutation <source path> first.")
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    config = tomllib.loads((WORKSPACE / "pyproject.toml").read_text())["tool"]["mutmut"]
+    counts = Counter(results.values())
+    report = {
+        "commit": revision,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "sources": config["only_mutate"],
+        "tests": config["pytest_add_cli_args_test_selection"],
+        "total": len(results),
+        "counts": dict(sorted(counts.items())),
+        "mutants": results,
+    }
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "results.txt").write_text(results_text)
+    (output / "results.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+    survivors = sorted(name for name, status in results.items() if status == "survived")
+    with ThreadPoolExecutor(max_workers=4) as executor, (output / "survivors.diff").open("w") as diffs:
+        for diff in executor.map(lambda name: mutmut_output("show", name), survivors):
+            diffs.write(diff + "\n")
+    summary = [
+        "# Core mutation tests",
+        "",
+        f"Commit: `{revision}`",
+        f"Generated at: {report['generated_at']}",
+        f"Sources: {', '.join(report['sources'])}",
+        f"Pytest selection: {json.dumps(report['tests'])}",
+        "",
+        "| Status | Count |",
+        "| --- | ---: |",
+        *(f"| {status} | {count} |" for status, count in sorted(counts.items())),
+        f"| Total | {len(results)} |",
+        "",
+        "Review `survivors.diff` for surviving mutations and `results.json` or `results.txt` for all results.",
+        "Surviving mutations require review; they are not confirmed bugs. 'No tests' means the selected tests",
+        "did not check those mutations. Timeouts and other abnormal statuses require separate investigation.",
+        "Partial runs can contain 'not checked' results; check the workflow outcome and `run.log` for failures.",
+    ]
+    (output / "summary.md").write_text("\n".join(summary) + "\n")
+    shutil.copy2(WORKSPACE / "pyproject.toml", output / "selection.toml")
+    print(f"Mutation report: {output}")
+
+
 def main() -> int:
     args = parse_args()
-    if args.command == "run":
-        try:
+    try:
+        if args.command == "run":
             prepare_workspace(args)
-        except ValueError as error:
-            print(error, file=sys.stderr)
-            return 2
-        command = ["run", "--max-children", str(args.max_children)]
-    else:
+            return run_mutmut("run", "--max-children", str(args.max_children))
         if not (WORKSPACE / "mutants").exists():
-            print("Run just test-mutation <source path> first.", file=sys.stderr)
-            return 2
-        command = [args.command]
-        if args.command == "results" and args.all:
-            command.extend(["--all", "true"])
+            raise ValueError("Run just test-mutation <source path> first.")
+        if args.command == "report":
+            write_report(args.output)
+            return 0
+        if args.command == "results":
+            return run_mutmut("results", *(["--all", "true"] if args.all else []))
         if args.command == "show":
-            command.append(args.mutant)
-    result = subprocess.run(
-        ["uv", "run", "--project", str(CORE), "--locked", "--group", "mutation", "--", "mutmut", *command],
-        cwd=WORKSPACE,
-        env=os.environ | {"VIRTUAL_ENV": ""},
-        check=False,
-    )
-    return result.returncode
+            return run_mutmut("show", args.mutant)
+        return run_mutmut("browse")
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

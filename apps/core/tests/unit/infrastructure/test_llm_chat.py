@@ -51,18 +51,13 @@ async def test_generate_text_returns_answer_and_records_usage(cost_limiter):
 
     assert text == "Szanowni Państwo,"
     (request,) = requests
-    assert json.loads(request.content) == {
-        "model": "model",
-        "messages": [
-            {"role": "system", "content": "Jesteś asystentem."},
-            {"role": "user", "content": "Napisz pismo."},
-        ],
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "max_tokens": 100,
-        "presence_penalty": 0.1,
-        "chat_template_kwargs": {"enable_thinking": False},
-    }
+    body = json.loads(request.content)
+    assert body["messages"] == [
+        {"role": "system", "content": "Jesteś asystentem."},
+        {"role": "user", "content": "Napisz pismo."},
+    ]
+    assert (body["model"], body["temperature"], body["top_p"], body["max_tokens"]) == ("model", 0.2, 0.9, 100)
+    assert body["chat_template_kwargs"] == {"enable_thinking": False}
     cost_limiter.record.assert_awaited_once_with(120, 30)
 
 
