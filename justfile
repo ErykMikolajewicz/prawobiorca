@@ -13,6 +13,10 @@ run-locally-down:
 run-e2e-env:
     uv run scripts/local/run_e2e.py
 
+# Active scan: use only with a disposable E2E database.
+dast:
+    uv run scripts/dast/run.py
+
 [working-directory: 'apps/core']
 test:
     uv run pytest tests/unit

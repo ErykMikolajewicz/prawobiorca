@@ -1,0 +1,125 @@
+# Local disposable E2E instance only. OpenAPI is filtered before import.
+env:
+  contexts:
+    - name: prawobiorca
+      urls:
+        - http://localhost:8080/api
+      excludePaths:
+        - 'http://localhost:8080/api/auth/(login|logout|refresh).*'
+        - 'http://localhost:8080/api/accounts/register.*'
+        - 'http://localhost:8080/api/.*/(confirm-upload|preparation-retry|description-generation).*'
+        - 'http://localhost:8080/api/cases/[^/]+/applications.*'
+      authentication:
+        method: form
+        parameters:
+          loginRequestUrl: http://localhost:8080/api/auth/login
+          loginRequestBody: 'username={%username%}&password={%password%}'
+        verification:
+          method: poll
+          pollUrl: http://localhost:8080/api/auth/me
+          pollFrequency: 20
+          pollUnits: requests
+          loggedInRegex: '"is_admin"\s*:\s*false'
+          loggedOutRegex: '401 Unauthorized'
+      sessionManagement:
+        method: cookie
+      users:
+        - name: scanner
+          credentials:
+            username: '${DAST_USERNAME}'
+            password: '${DAST_PASSWORD}'
+  parameters:
+    failOnError: true
+    failOnWarning: true
+    continueOnFailure: false
+    progressToStdout: true
+jobs:
+  - type: passiveScan-config
+    parameters:
+      scanOnlyInScope: true
+  - type: requestor
+    name: Verify anonymous access
+    requests:
+      - url: http://localhost:8080/api/auth/me
+        responseCode: 401
+  - type: openapi
+    name: Import API as guest
+    parameters:
+      apiFile: /zap/wrk/openapi.json
+      targetUrl: http://localhost:8080
+      context: prawobiorca
+  - type: activeScan
+    name: Scan API as guest
+    parameters:
+      context: prawobiorca
+      maxScanDurationInMins: 10
+      maxRuleDurationInMins: 1
+      threadPerHost: 2
+      delayInMs: 50
+  - type: requestor
+    name: Verify authenticated access before scan
+    parameters:
+      user: scanner
+    requests:
+      - url: http://localhost:8080/api/auth/me
+        responseCode: 200
+      - url: http://localhost:8080/api/cases
+        responseCode: 200
+  - type: openapi
+    name: Import API as user
+    parameters:
+      apiFile: /zap/wrk/openapi.json
+      targetUrl: http://localhost:8080
+      context: prawobiorca
+      user: scanner
+  - type: activeScan
+    name: Scan API as user
+    parameters:
+      context: prawobiorca
+      user: scanner
+      maxScanDurationInMins: 15
+      maxRuleDurationInMins: 1
+      threadPerHost: 2
+      delayInMs: 50
+    tests:
+      - name: Authentication succeeded
+        type: stats
+        statistic: stats.auth.success
+        site: http://localhost:8080
+        operator: '>='
+        value: 1
+        onFail: error
+      - name: Authentication polling identified a logged-in session
+        type: stats
+        statistic: stats.auth.state.loggedin
+        site: http://localhost:8080
+        operator: '>='
+        value: 1
+        onFail: error
+  - type: requestor
+    name: Verify authenticated access after scan
+    parameters:
+      user: scanner
+    requests:
+      - url: http://localhost:8080/api/auth/me
+        responseCode: 200
+      - url: http://localhost:8080/api/cases
+        responseCode: 200
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+  # Findings are reported without an alert-based exitStatus gate during rollout.
+  # Setup, authentication and scanner failures still fail the workflow.
+  - type: report
+    alwaysRun: true
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk/report
+      reportFile: report.html
+      reportTitle: Prawobiorca weekly API DAST
+  - type: report
+    alwaysRun: true
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk/report
+      reportFile: report.json
