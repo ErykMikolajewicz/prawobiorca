@@ -13,7 +13,7 @@ gcloud run deploy extraction \
   --service-account="extraction-runner@${PROJECT_ID}.iam.gserviceaccount.com" \
   --port=8080 \
   --cpu=4 \
-  --memory=4Gi \
+  --memory=8Gi \
   --concurrency=1 \
   --min-instances=0 \
   --max-instances=3 \
