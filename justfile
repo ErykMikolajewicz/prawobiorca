@@ -120,12 +120,15 @@ check-backend: && lint-imports-backend type-check-backend type-check-scripts tes
     uv run ruff format --check
     uv run complexipy .
 
+actionlint := "docker.io/rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667"
+hadolint := "docker.io/hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d"
+
 check-workflows:
     uv run zizmor --offline .github
-    uv run actionlint
+    podman run --rm -v "$PWD:/repo:ro" -w /repo {{actionlint}}
 
 check-containers:
-    uv run hadolint apps/*/Containerfile
+    podman run --rm -v "$PWD:/repo:ro" -w /repo {{hadolint}} hadolint apps/*/Containerfile
 
 check-deployment:
     uv run --group deployment checkov --directory deploy/gcp

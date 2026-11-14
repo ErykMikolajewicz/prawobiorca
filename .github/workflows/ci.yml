@@ -58,8 +58,6 @@ jobs:
             containers:
               - '**/Containerfile'
               - .hadolint.yaml
-              - pyproject.toml
-              - uv.lock
               - justfile
               - .github/workflows/ci.yml
               - .github/actions/setup-backend/**
