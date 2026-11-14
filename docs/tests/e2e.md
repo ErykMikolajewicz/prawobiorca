@@ -13,7 +13,8 @@ use the [manual E2E scenario](manual_e2e_test.md).
 Tests use built `core` and `web` images through the local ingress at `http://localhost:8080`.
 Real embedding and object storage services support the search flow. The environment prepares a public
 legal act from stored extraction output, avoiding a dependency on live extraction, LLM generation
-or background workers for this smoke test.
+or background workers for this smoke test. A one-off `core-e2e-seed` pod runs the seeding script
+from the built `core` image, so no backend Python environment is needed on the host.
 
 Each run registers a uniquely named user. The environment shares volumes with `just run-locally`,
 so the prepared legal act remains in the local database between runs.

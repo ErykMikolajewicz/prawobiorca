@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: core-e2e-seed
+  labels:
+    app: prawobiorca
+    component: core-e2e-seed
+spec:
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: core-e2e-seed
+      image: localhost/prawobiorca/core:latest
+      command: ["python", "init_e2e_regulation.py"]
+      workingDir: /seed
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      volumeMounts:
+        - name: seed-script
+          mountPath: /seed/init_e2e_regulation.py
+          readOnly: true
+        - name: seed-data
+          mountPath: /seed/tests/data
+          readOnly: true
+      envFrom:
+        - configMapRef:
+            name: core-config
+      env:
+        - name: RELATIONAL_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: prawobiorca-secrets
+              key: POSTGRES_PASSWORD
+        - name: OBJECT_STORAGE_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: prawobiorca-secrets
+              key: OBJECT_STORAGE_ACCESS_KEY
+        - name: OBJECT_STORAGE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: prawobiorca-secrets
+              key: OBJECT_STORAGE_SECRET_KEY
+  volumes:
+    - name: seed-script
+      hostPath:
+        path: apps/core/scripts/init_e2e_regulation.py
+        type: File
+    - name: seed-data
+      hostPath:
+        path: apps/core/tests/data
+        type: Directory

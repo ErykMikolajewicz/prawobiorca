@@ -2,8 +2,10 @@ import subprocess
 import time
 import urllib.request
 
-from manifests import BACKEND, E2E_MANIFESTS, MIGRATIONS
-from run import play_manifest, wait_for_migrations, wait_for_postgres
+from manifests import E2E_MANIFESTS, E2E_SEED, MIGRATIONS
+from run import play_manifest, wait_for_completion, wait_for_migrations, wait_for_postgres
+
+E2E_SEED_CONTAINER = "core-e2e-seed-core-e2e-seed"
 
 EMBEDDING_SERVICE_HEALTH_URL = "http://localhost:8081/v2/health/ready"
 EMBEDDING_SERVICE_READY_TIMEOUT = 120
@@ -28,12 +30,13 @@ def main():
     for manifest, configmaps in E2E_MANIFESTS:
         if manifest == MIGRATIONS:
             wait_for_postgres()
-        if manifest == BACKEND:
+        if manifest == E2E_SEED:
             wait_for_url(EMBEDDING_SERVICE_HEALTH_URL, EMBEDDING_SERVICE_READY_TIMEOUT, "Embedding service")
-            subprocess.run(["just", "init-e2e-regulation"], check=True)
         play_manifest(manifest, configmaps)
         if manifest == MIGRATIONS:
             wait_for_migrations()
+        if manifest == E2E_SEED:
+            wait_for_completion(E2E_SEED_CONTAINER)
 
     wait_for_url(APPLICATION_URL, APPLICATION_READY_TIMEOUT, "Application")
 

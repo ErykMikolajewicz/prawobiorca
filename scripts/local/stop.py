@@ -1,10 +1,10 @@
 import subprocess
 
-from manifests import MANIFESTS
+from manifests import E2E_SEED, MANIFESTS
 
 
 def main():
-    for manifest, _ in reversed(MANIFESTS):
+    for manifest in (E2E_SEED, *(manifest for manifest, _ in reversed(MANIFESTS))):
         print(f"Removing {manifest.name}...")
         subprocess.run(["podman", "kube", "play", "--down", str(manifest)], check=False)
 

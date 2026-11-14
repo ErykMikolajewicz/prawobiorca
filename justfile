@@ -5,17 +5,17 @@ dev:
     uv run scripts/dev.py
 
 run-locally:
-    uv run scripts/local/run.py
+    uv run --no-default-groups scripts/local/run.py
 
 run-locally-down:
-    uv run scripts/local/stop.py
+    uv run --no-default-groups scripts/local/stop.py
 
 run-e2e-env:
-    uv run scripts/local/run_e2e.py
+    uv run --no-default-groups scripts/local/run_e2e.py
 
 # Active scan: use only with a disposable E2E database.
 dast:
-    uv run scripts/dast/run.py
+    uv run --no-default-groups scripts/dast/run.py
 
 [working-directory: 'apps/core']
 test:
@@ -89,10 +89,6 @@ init-regulations:
     uv run scripts/init_regulations.py
 
 [working-directory: 'apps/core']
-init-e2e-regulation:
-    uv run scripts/init_e2e_regulation.py
-
-[working-directory: 'apps/core']
 export-openapi:
     uv run scripts/export_openapi.py
 
@@ -109,7 +105,7 @@ type-check-backend:
     uv run ty check
 
 type-check-scripts:
-    uv run ty check
+    uv run --only-group lint --only-group cloud ty check
 
 [working-directory: 'apps/core']
 lint-imports-backend:
@@ -120,19 +116,22 @@ type-check-extraction:
     uv run --group dev --group test ty check
 
 check-backend: && lint-imports-backend type-check-backend type-check-scripts test
-    uv run ruff check .
-    uv run ruff format --check
-    uv run complexipy .
+    uv run --only-group lint ruff check .
+    uv run --only-group lint ruff format --check
+    uv run --only-group lint complexipy .
+
+actionlint := "docker.io/rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667"
+hadolint := "docker.io/hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d"
 
 check-workflows:
-    uv run zizmor --offline .github
-    uv run actionlint
+    uv run --only-group workflows zizmor --offline .github
+    podman run --rm -v "$PWD:/repo:ro" -w /repo {{actionlint}}
 
 check-containers:
-    uv run hadolint apps/*/Containerfile
+    podman run --rm -v "$PWD:/repo:ro" -w /repo {{hadolint}} hadolint apps/*/Containerfile
 
 check-deployment:
-    uv run --group deployment checkov --directory deploy/gcp
+    uv run --only-group deployment checkov --directory deploy/gcp
 
 [working-directory: 'apps/web']
 check-frontend:
@@ -151,7 +150,7 @@ audit-frontend:
     pnpm audit --dev --audit-level high
 
 audit-licenses:
-    uv run scripts/check_licenses.py
+    uv run --no-default-groups scripts/check_licenses.py
 
 audit: audit-backend audit-frontend audit-licenses
 

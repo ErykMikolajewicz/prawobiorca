@@ -88,10 +88,14 @@ def wait_for_postgres():
     raise RuntimeError("Postgres is not ready.")
 
 
-def wait_for_migrations():
-    result = subprocess.run(["podman", "wait", MIGRATIONS_CONTAINER], capture_output=True, text=True, check=True)
+def wait_for_completion(container: str):
+    result = subprocess.run(["podman", "wait", container], capture_output=True, text=True, check=True)
     if result.stdout.strip() != "0":
-        raise RuntimeError(f"Migrations failed, check logs: podman logs {MIGRATIONS_CONTAINER}")
+        raise RuntimeError(f"{container} failed, check logs: podman logs {container}")
+
+
+def wait_for_migrations():
+    wait_for_completion(MIGRATIONS_CONTAINER)
 
 
 def play_manifest(manifest: Path, configmaps: tuple[Path, ...]):
