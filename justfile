@@ -89,10 +89,6 @@ init-regulations:
     uv run scripts/init_regulations.py
 
 [working-directory: 'apps/core']
-init-e2e-regulation:
-    uv run scripts/init_e2e_regulation.py
-
-[working-directory: 'apps/core']
 export-openapi:
     uv run scripts/export_openapi.py
 
