@@ -28,6 +28,8 @@ MIN_CONTENT_TOKENS = 32
 
 MAX_TITLE_TOKENS_SHARE = 0.25
 
+MAX_CONTEXT_TOKENS_SHARE = 0.5
+
 
 @dataclass
 class ChunkAtom:
@@ -282,8 +284,14 @@ class RegulationAct:
 
         return [" ".join(words[word] for word in group) for group in self._pack_evenly(words_tokens, content_budget)]
 
-    @staticmethod
-    def _create_part_titles(title: str | None, parts: list[ChunkPart]) -> list[str | None]:
+    def _fit_context(self, context: list[str]) -> list[str]:
+        max_context_tokens = int(CHUNK_MAX_TOKENS * MAX_CONTEXT_TOKENS_SHARE)
+        while context and self._count_content_tokens("\n".join(context)) > max_context_tokens:
+            context = context[1:]
+
+        return context
+
+    def _create_part_titles(self, title: str | None, parts: list[ChunkPart]) -> list[str | None]:
         parts_total = len(parts)
         if parts_total == 1:
             return [title]
@@ -301,7 +309,7 @@ class RegulationAct:
                 part_suffix = f"{subsection_suffix} (część {part_index}/{parts_total})"
 
             part_title = part_suffix if title is None else f"{title} {part_suffix}"
-            part_titles.append("\n".join([part_title, *part.context]))
+            part_titles.append("\n".join([part_title, *self._fit_context(part.context)]))
 
         return part_titles
 

@@ -1,5 +1,6 @@
 import re
 
+from core_service.domain.services.legal_structure_parser import SUPERSCRIPT_DIGITS
 from core_service.domain.value_objects.legal_units import BREADCRUMB_SEPARATOR
 from core_service.domain.value_objects.regulations import RegulationDescriptionSource, RegulationHeading, SectionContent
 
@@ -7,7 +8,7 @@ MAX_DESCRIPTION_HEADINGS = 300
 
 MAX_DESCRIPTION_BEGINNING_CHARS = 4000
 
-UNIT_CITATION_PATTERN = re.compile(r"^(Art\.|§)\s*\d[\d\s]*[a-z]?\s*\.?\s*")
+UNIT_CITATION_PATTERN = re.compile(rf"^(Art\.|§)\s*\d[\d\s]*[a-z]?[{SUPERSCRIPT_DIGITS}]*\s*\.?\s*")
 
 
 def create_description_source(presentation_name: str, sections: list[SectionContent]) -> RegulationDescriptionSource:

@@ -12,21 +12,27 @@ from core_service.domain.value_objects.legal_units import (
 NOISE_LABELS = frozenset({"page_header", "page_footer", "footnote"})
 PAGE_BREAK_LABELS = frozenset({"page_header", "page_footer"})
 
+SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+SUPERSCRIPT_TRANSLATION = str.maketrans("0123456789", SUPERSCRIPT_DIGITS)
+UNIT_NUMBER = rf"\d+[a-z]*[{SUPERSCRIPT_DIGITS}]*"
+
 DIVISION_PATTERN = re.compile(
     r"^(?i:(ZAŁĄCZNIK|CZĘŚĆ|KSIĘGA|TYTUŁ|DZIAŁ|ROZDZIAŁ|ODDZIAŁ))\s+(?i:nr\s*)?"
-    r"([IVXLCDM]+[A-Z]?\b|\d+[A-Za-z]*\b|[IVXLCDM]+?(?=[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]))"
+    rf"([IVXLCDM]+[A-Z]?[{SUPERSCRIPT_DIGITS}]*\b|\d+[A-Za-z]*[{SUPERSCRIPT_DIGITS}]*\b"
+    r"|[IVXLCDM]+?(?=[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]))"
 )
-ARTICLE_PATTERN = re.compile(r"^Art\.\s*(\d+[a-z]*)\s*\.")
-PARAGRAPH_PATTERN = re.compile(r"^§\s*(\d+[a-z]*)\s*\.?")
-ARTICLE_HEADER_PATTERN = re.compile(r"\bArt\.\s*(\d+[a-z]*)\s*\.?")
-PARAGRAPH_HEADER_PATTERN = re.compile(r"§\s*(\d+[a-z]*)\s*\.?")
-SUBSECTION_PATTERN = re.compile(r"^(\d+[a-z]*)\.\s")
+ARTICLE_PATTERN = re.compile(rf"^Art\.\s*({UNIT_NUMBER})\s*\.")
+PARAGRAPH_PATTERN = re.compile(rf"^§\s*({UNIT_NUMBER})\s*\.?")
+ARTICLE_HEADER_PATTERN = re.compile(rf"\bArt\.\s*({UNIT_NUMBER})\s*\.?")
+PARAGRAPH_HEADER_PATTERN = re.compile(rf"§\s*({UNIT_NUMBER})\s*\.?")
+SUBSECTION_PATTERN = re.compile(rf"^({UNIT_NUMBER})\.\s")
 POINT_PATTERN = re.compile(r"^<?\d+[a-z]*\)\s")
 LETTER_PATTERN = re.compile(r"^<?[a-z]\)\s")
 MARKED_SUBSECTION_PATTERN = re.compile(r"^[<\[]\d+[a-z]*\.\s")
 DASH_PATTERN = re.compile(r"^[-\u2013]")
 ATTACHMENT_MARKER_PATTERN = re.compile(r"^(Załącznik\s+nr\s*\d+[a-z]*)(?:\s\d+\))?(?:\s\1(?:\s\d+\))?)*$")
-GLUED_ARTICLE_PATTERN = re.compile(r"(?<=[.;:])\s+(?=Art\.\s*\d+[a-z]*\s*\.)")
+GLUED_ARTICLE_PATTERN = re.compile(rf"(?<=[.;:])\s+(?=Art\.\s*{UNIT_NUMBER}\s*\.)")
+BRACKETED_SUPERSCRIPT_PATTERN = re.compile(r"\b(\d+[a-z]*|[IVXLCDM]+[A-Z]?)\s*\[(\d+)\]")
 
 WHITESPACE_PATTERN = re.compile(r"[\s﻿]+")
 SPACE_BEFORE_PUNCTUATION_PATTERN = re.compile(r"\s+([.,;:)])")
@@ -216,6 +222,9 @@ class LegalStructureParser:
     @staticmethod
     def _normalize_text(text: str) -> str:
         normalized_text = WHITESPACE_PATTERN.sub(" ", text).strip()
+        normalized_text = BRACKETED_SUPERSCRIPT_PATTERN.sub(
+            lambda match: match.group(1) + match.group(2).translate(SUPERSCRIPT_TRANSLATION), normalized_text
+        )
         normalized_text = SPACE_BEFORE_PUNCTUATION_PATTERN.sub(r"\1", normalized_text)
         normalized_text = SPACE_AFTER_OPENING_BRACKET_PATTERN.sub("(", normalized_text)
         normalized_text = FOOTNOTE_MARKER_AFTER_NUMBER_PATTERN.sub(r"\1 ", normalized_text)
