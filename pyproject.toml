@@ -5,21 +5,28 @@ description = "Law acts search engine with AI features."
 license = "MIT"
 readme = "README.md"
 requires-python = "==3.14.*"
-dependencies = [
+
+[dependency-groups]
+lint = [
     "ruff==0.17.*",
-    "zensical==0.1.*",
-    "google-auth[requests]==2.62.*",
-    "zizmor==1.32.*",
     "ty==0.0.100",
     "complexipy==8.3.*",
 ]
-
-[dependency-groups]
+workflows = [
+    "zizmor==1.32.*",
+]
+docs = [
+    "zensical==0.1.*",
+]
+cloud = [
+    "google-auth[requests]==2.62.*",
+]
 deployment = [
     "checkov==3.4.*",
 ]
 
 [tool.uv]
+default-groups = ["lint", "workflows", "docs", "cloud"]
 override-dependencies = ["asteval>=1.0.9"]
 
 [tool.ruff]

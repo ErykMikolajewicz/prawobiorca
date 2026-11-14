@@ -1069,32 +1069,39 @@ wheels = [
 name = "prawobiorca"
 version = "0.1.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "complexipy" },
-    { name = "google-auth", extra = ["requests"] },
-    { name = "ruff" },
-    { name = "ty" },
-    { name = "zensical" },
-    { name = "zizmor" },
-]
+default-groups = ["cloud", "docs", "lint", "workflows"]
 
 [package.dev-dependencies]
+cloud = [
+    { name = "google-auth", extra = ["requests"] },
+]
 deployment = [
     { name = "checkov" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "complexipy", specifier = "==8.3.*" },
-    { name = "google-auth", extras = ["requests"], specifier = "==2.62.*" },
-    { name = "ruff", specifier = "==0.17.*" },
-    { name = "ty", specifier = "==0.0.100" },
-    { name = "zensical", specifier = "==0.1.*" },
-    { name = "zizmor", specifier = "==1.32.*" },
+docs = [
+    { name = "zensical" },
+]
+lint = [
+    { name = "complexipy" },
+    { name = "ruff" },
+    { name = "ty" },
+]
+workflows = [
+    { name = "zizmor" },
 ]
 
+[package.metadata]
+
 [package.metadata.requires-dev]
+cloud = [{ name = "google-auth", extras = ["requests"], specifier = "==2.62.*" }]
 deployment = [{ name = "checkov", specifier = "==3.4.*" }]
+docs = [{ name = "zensical", specifier = "==0.1.*" }]
+lint = [
+    { name = "complexipy", specifier = "==8.3.*" },
+    { name = "ruff", specifier = "==0.17.*" },
+    { name = "ty", specifier = "==0.0.100" },
+]
+workflows = [{ name = "zizmor", specifier = "==1.32.*" }]
 
 [[package]]
 name = "prettytable"

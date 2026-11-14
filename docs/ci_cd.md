@@ -18,8 +18,8 @@ Runs on PRs and pushes to `main` in the source repository. The `changes` job sel
 | `extraction` | `just type-check-extraction`, `just test-extraction` | ty and integration tests against the service image, built with Buildx and cached in Actions. Uses the runner's Docker socket. |
 | `frontend` | `just check-frontend` | `pnpm check`, type checking, Vitest with coverage thresholds from `vitest.config.ts`. |
 | `api-types` | `just api-types` | Regenerated OpenAPI schema and frontend client must match committed files. |
-| `workflows` | `just check-workflows` | zizmor security audit and actionlint. |
-| `containers` | `just check-containers` | hadolint for all `Containerfile` files. |
+| `workflows` | `just check-workflows` | zizmor security audit and actionlint (official image, pinned by digest in `justfile`). |
+| `containers` | `just check-containers` | hadolint for all `Containerfile` files (official image, pinned by digest in `justfile`). |
 | `deployment` | `just check-deployment` | checkov for `deploy/gcp/`, using the separate `deployment` dependency group. Local manifests are not checked; keep their security settings aligned. |
 
 When the API changes, commit the output of `just api-types`: `apps/core/openapi.json` and `apps/web/src/api/generated/`. The commit hook regenerates these for changes in `apps/core/src/`.
@@ -27,7 +27,7 @@ When the API changes, commit the output of `just api-types`: `apps/core/openapi.
 ## Documentation (`docs.yml`)
 
 Runs on PRs targeting `main` and pushes to `main` when `docs/`, `zensical.toml`, the root `pyproject.toml`,
-`uv.lock` or the documentation workflow changes. It builds the site with `uv run zensical build --clean --strict`;
+`uv.lock` or the documentation workflow changes. It builds the site with `uv run --locked --only-group docs zensical build --clean --strict`;
 warnings fail the check.
 
 PRs only build the documentation. On pushes to `main`, the workflow also uploads the site artifact and deploys it

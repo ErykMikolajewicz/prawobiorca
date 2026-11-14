@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-backend
+      - uses: ./.github/actions/setup-tools
       - run: |
           podman pull ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
           podman tag ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest localhost/prawobiorca/embedding:latest
