@@ -2907,6 +2907,8 @@
         "properties": {
           "caseName": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Casename"
           }
         },
@@ -3125,6 +3127,7 @@
         "properties": {
           "presentationName": {
             "type": "string",
+            "maxLength": 255,
             "minLength": 1,
             "title": "Presentationname"
           },

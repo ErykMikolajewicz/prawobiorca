@@ -46,9 +46,10 @@ jobs:
   frontend:
     if: github.repository_id == '1120768327'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,10 +57,33 @@ jobs:
       - uses: ./.github/actions/setup-frontend
       - name: Prepare report directory
         run: mkdir -p .cache/mutation/web/report
+      - name: Restore incremental results
+        id: incremental
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: frontend-mutation-incremental-${{ hashFiles('apps/web/pnpm-lock.yaml', 'apps/web/stryker.config.json', 'apps/web/vitest.config.ts', 'apps/web/scripts/stryker-vue-ignorer.mjs') }}
+        run: |
+          echo "artifact-name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$ARTIFACT_NAME&per_page=1" \
+            --jq '.artifacts[] | select(.expired | not) | .workflow_run.id')
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name "$ARTIFACT_NAME" --dir .cache/mutation/web
+          else
+            echo "No incremental results found, running all mutants."
+          fi
       - name: Run frontend mutation tests
         id: mutation
         shell: bash
-        run: just test-mutation-frontend --force 2>&1 | tee .cache/mutation/web/report/run.log
+        run: just test-mutation-frontend 2>&1 | tee .cache/mutation/web/report/run.log
+      - name: Upload incremental results
+        if: ${{ steps.mutation.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.incremental.outputs.artifact-name }}
+          path: .cache/mutation/web/incremental.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
       - name: Generate report
         if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
         run: |

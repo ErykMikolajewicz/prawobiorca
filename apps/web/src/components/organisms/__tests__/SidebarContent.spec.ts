@@ -148,6 +148,14 @@ describe('SidebarContent', () => {
       expect(addCase).not.toHaveBeenCalled()
     })
 
+    it('limits the case name to the length accepted by the API', async () => {
+      const { wrapper } = await mountSidebar(logInWithCases)
+
+      expect(wrapper.find('input[placeholder="Nowa sprawa..."]').attributes('maxlength')).toBe(
+        '255',
+      )
+    })
+
     it('does not create the same case twice when submitted again before the first ends', async () => {
       let finishCreation: ((caseId: string) => void) | undefined
       vi.mocked(addCase).mockImplementationOnce(

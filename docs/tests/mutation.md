@@ -80,8 +80,12 @@ tests for meaningful behavior gaps rather than internal calls that merely raise 
 
 ## Weekly report
 
-The `Mutation tests` workflow runs both suites from scratch in the source repository every Saturday
+The `Mutation tests` workflow runs both suites in the source repository every Saturday
 at 04:00 Europe/Warsaw, and through **Actions → Mutation tests → Run workflow**.
+The backend suite runs from scratch. The frontend suite reuses Stryker incremental results from the
+latest successful run, stored as the `frontend-mutation-incremental-<hash>` artifact for 90 days.
+The hash covers `pnpm-lock.yaml`, the Stryker and Vitest configuration and the Vue ignorer, so changing
+any of them starts a full run; a full frontend run takes about 2.5 hours.
 Summaries are displayed on the workflow run page. Download the `core-mutation-<run-id>-<attempt>`
 and `frontend-mutation-<run-id>-<attempt>` artifacts within 30 days for detailed results and logs.
 

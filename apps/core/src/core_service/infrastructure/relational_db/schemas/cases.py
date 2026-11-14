@@ -2,7 +2,7 @@ import sqlalchemy as sqla
 from sqlalchemy.dialects import postgresql
 
 from core_service.application.dtos.cases import CaseData, CaseDocument
-from core_service.domain.consts import MAX_FILENAME_LENGTH
+from core_service.domain.consts import MAX_CASE_NAME_LENGTH, MAX_FILENAME_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
 
 cases_table = sqla.Table(
@@ -11,7 +11,7 @@ cases_table = sqla.Table(
     sqla.Column("id", sqla.UUID, primary_key=True, server_default=sqla.text("gen_random_uuid()")),
     sqla.Column("create_date", sqla.DateTime(timezone=True), server_default=sqla.text("now()"), nullable=False),
     sqla.Column("user_id", sqla.UUID, sqla.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-    sqla.Column("name", sqla.String(MAX_FILENAME_LENGTH), nullable=False),
+    sqla.Column("name", sqla.String(MAX_CASE_NAME_LENGTH), nullable=False),
 )
 
 case_documents_table = sqla.Table(

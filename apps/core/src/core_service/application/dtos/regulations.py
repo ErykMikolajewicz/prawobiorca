@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
+from core_service.application.dtos.names import Name
 from core_service.domain.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH, MIN_FILENAME_LENGTH
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import (
@@ -18,7 +19,7 @@ class RegulationData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
     scope: RegulationScope
-    name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
+    name: Name = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     regulation_type: RegulationType | None = None
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
@@ -36,7 +37,7 @@ class RegulationData(BaseModel):
 class RegulationDetailsData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
-    name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
+    name: Name = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     description: str | None = Field(default=None, max_length=MAX_REGULATION_DESCRIPTION_LENGTH)
 
 
