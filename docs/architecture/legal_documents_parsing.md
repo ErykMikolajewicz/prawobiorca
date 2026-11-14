@@ -113,6 +113,8 @@ Before the structure is recovered, every element's text is cleaned of extraction
 - **Paragraph numbers split by OCR** (`§ 3 0. Przeniesienia…`) are joined (`§ 30.`). A paragraph number is never
   followed directly by a subsection number without a dot in between, so the space can only be an extraction artefact.
 - **Footnote markers closing a header** (`OBWIESZCZENIE MINISTRA … 1)`) are removed.
+- **Superscript numbers**, which Docling renders in brackets (`Art. 764 [1] .`, `§ 1 [1] .`, `TYTUŁ VI [1]`), are
+  converted to superscript digits (`Art. 764¹.`), so these units are recognised and shown as in the official text.
 - **Hyphenated words** split across lines (`złoże -nia`) are joined, but only on pages that also contain a spaced
   dash (` - `). Docling renders a dash as ` -` in some documents (`braku -numer`, `student -osoba`), so a hyphenation
   can be told apart from a dash only on a page whose dashes are demonstrably spaced. Pages are delimited by
@@ -135,7 +137,8 @@ chunking exists only so that a long article still embeds well.
   are balanced to similar sizes without increasing their number.
 - A chunk that starts inside a split subsection or point repeats its lead-in (e.g. *"2. Do zadań rektora
   należy w szczególności:"*) in `embed_title`, so only the embedding gets that context; `text` and `span`
-  still cover the original fragment.
+  still cover the original fragment. Lead-ins are limited to `MAX_CONTEXT_TOKENS_SHARE` of the limit; when they
+  exceed it, the outermost ones are left out first.
 - The limit applies to the whole text sent for embedding (`SectionChunk.embedding_text`): the prefix, the
   `embed_title` with its suffix, and the content. When a chunk still exceeds it after splitting, the whole
   section is split again with a smaller budget, down to `MIN_CONTENT_TOKENS`.
@@ -161,6 +164,15 @@ The weights come from the `PRIMARY_CHUNK_SCORE_WEIGHT` constant (the secondary w
 always sum to 1 and the score stays on the cosine scale — it is shown to the user as-is. `threshold` and
 `limit` of a search apply to this combined section score. The whole computation is one SQL statement in
 `SqlaSectionsRepository.search`.
+
+---
+
+## Known Limitations
+
+- **Books numbered with words are not recognised.** Division numbers must be Roman or Arabic numerals, so the
+  books of the Civil Code (`KSIĘGA PIERWSZA`, `KSIĘGA DRUGA`, …) become generic headers and are dropped from the
+  path by the next `TYTUŁ`. Titles are numbered from `I` again in every book, so breadcrumbs from different books
+  can look the same (`TYTUŁ I Przepisy wstępne > Art. 1`, `TYTUŁ I Własność > DZIAŁ I Przepisy ogólne > Art. 126`).
 
 ---
 

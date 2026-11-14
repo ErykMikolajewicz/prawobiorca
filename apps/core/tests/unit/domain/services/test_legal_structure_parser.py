@@ -647,3 +647,62 @@ def test_footnote_marker_is_removed_from_header():
     units = LegalStructureParser().parse(elements)
 
     assert units[0].path == ["OBWIESZCZENIE MINISTRA NAUKI"]
+
+
+def test_articles_with_superscript_numbers_are_separate_units():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 764. Umowę poczytuje się za zawartą."),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 764 [1] . § 1. Umowa może być wypowiedziana."),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 764 [2]. Umowa może być rozwiązana."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [unit.number for unit in units] == ["764", "764¹", "764²"]
+    assert units[1].breadcrumb == "Art. 764¹"
+    assert unit_text(units[1]) == "§ 1. Umowa może być wypowiedziana."
+
+
+def test_glued_article_with_superscript_number_is_split():
+    elements = [
+        RegulationElement(
+            label=UsefulLabels.TEXT, text="Art. 43. Przedsiębiorcą jest osoba. Art. 43 [1] . Firma przedsiębiorcy."
+        )
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert [unit.number for unit in units] == ["43", "43¹"]
+
+
+def test_superscript_numbers_in_text_are_normalized():
+    elements = [
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 37. § 1 [1] . Stosuje się art. 764 [3] i art. 764 [4]."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert unit_text(units[0]) == "§ 1¹. Stosuje się art. 764³ i art. 764⁴."
+
+
+def test_marked_subsection_is_not_treated_as_superscript():
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text="Art. 5. [1. Uczelnia prowadzi studia.]")]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert unit_text(units[0]) == "[1. Uczelnia prowadzi studia.]"
+
+
+def test_division_with_superscript_number_is_recognised():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="TYTUŁ VI"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Czyny niedozwolone"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 449. Przepis."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="TYTUŁ VI [1]"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Odpowiedzialność za produkt"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 449 [1] . Przepis."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[1].breadcrumb == "TYTUŁ VI¹ Odpowiedzialność za produkt > Art. 449¹"

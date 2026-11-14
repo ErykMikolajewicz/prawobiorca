@@ -489,3 +489,20 @@ def test_split_subsection_parts_are_balanced():
     points_per_chunk = [len(re.findall(r"\d+\) ", chunk.text)) for chunk in section.chunks]
     assert len(points_per_chunk) > 1
     assert max(points_per_chunk) - min(points_per_chunk) <= 1
+
+
+def test_long_point_lead_is_left_out_of_embed_title_to_fit_limit():
+    lead = " ".join(["wstęp"] * 40)
+    point = " ".join(["słowo"] * 20)
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text=f"Art. 110. {lead}:")]
+    elements.extend(
+        RegulationElement(label=UsefulLabels.LIST_ITEM, text=f"{number}) {point};") for number in range(1, 7)
+    )
+
+    section = create_sections(elements)[0]
+
+    assert len(section.chunks) > 1
+    assert section.chunks[0].text.startswith(lead)
+    for chunk in section.chunks:
+        assert WordTokenizer().count_tokens(chunk.embedding_text) <= CHUNK_MAX_TOKENS
+        assert lead not in chunk.embed_title

@@ -23,7 +23,8 @@ COPY uv.lock uv.lock
 
 RUN uv sync --locked --no-install-project --compile-bytecode --no-cache --no-default-groups
 
-RUN .venv/bin/docling-tools models download layout tableformer rapidocr -o /extraction/models
+RUN .venv/bin/docling-tools models download layout tableformer rapidocr \
+    --rapidocr-backend-lang torch:pl -o /extraction/models
 
 ENV DOCLING_ARTIFACTS_PATH=/extraction/models
 

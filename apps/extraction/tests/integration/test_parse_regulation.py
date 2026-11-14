@@ -40,3 +40,18 @@ def test_parse_regulation(parse_regulation_url, regulation_name):
     expected_regulation = json.loads(expected_response_path.read_text(encoding="utf-8"))
 
     assert parsed_regulation == expected_regulation
+
+
+def test_polish_scan(parse_regulation_url):
+    """The image-only fixture requires OCR, including Polish diacritics."""
+    with (DATA_DIR / "polish-scan.pdf").open("rb") as pdf_file:
+        response = httpx2.post(
+            parse_regulation_url,
+            files={"file": ("polish-scan.pdf", pdf_file, "application/pdf")},
+            timeout=PARSING_TIMEOUT,
+        )
+
+    assert response.status_code == HTTPStatus.OK
+    text = " ".join(item["text"] for item in response.json())
+    assert "Student może złożyć wniosek o przedłużenie terminu." in text
+    assert "Decyzję podejmuje dziekan wydziału." in text

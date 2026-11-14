@@ -15,6 +15,7 @@ def test_create_description_source_builds_table_of_contents():
         SectionContent(header="Rozdział IX Przepisy końcowe > § 40", text="§ 40."),
         SectionContent(header="Art. 5a", text="Art. 5a."),
         SectionContent(header="Art. 6 Zakres ustawy", text="Art. 6."),
+        SectionContent(header="Art. 6¹ Definicje", text="Art. 6¹."),
         SectionContent(header="Załącznik 6 > Rozdział 1 POSTANOWIENIA OGÓLNE", text="1. Zasady."),
         SectionContent(header=None, text="Wstęp"),
     ]
@@ -31,9 +32,12 @@ def test_create_description_source_builds_table_of_contents():
         RegulationHeading(text="Przeniesienia z innej uczelni", level=1),
         RegulationHeading(text="Rozdział IX Przepisy końcowe", level=0),
         RegulationHeading(text="Zakres ustawy", level=0),
+        RegulationHeading(text="Definicje", level=0),
         RegulationHeading(text="Załącznik 6 > Rozdział 1 POSTANOWIENIA OGÓLNE", level=0),
     ]
-    assert description_source.beginning == "§ 1.\n§ 2.\n§ 27.\n§ 30.\n§ 40.\nArt. 5a.\nArt. 6.\n1. Zasady.\nWstęp"
+    assert description_source.beginning == (
+        "§ 1.\n§ 2.\n§ 27.\n§ 30.\n§ 40.\nArt. 5a.\nArt. 6.\nArt. 6¹.\n1. Zasady.\nWstęp"
+    )
 
 
 def test_create_description_source_limits_size():

@@ -27,6 +27,8 @@ Legal structure parsing and chunking happen in `core`; embeddings are generated 
 
 See [Backend](backend.md#23-extraction) for deployment details and
 [Legal Documents Parsing](legal_documents_parsing.md) for the processing pipeline.
+[Extraction tuning](extraction_tuning.md) documents the OCR configuration and memory/timing measurements;
+[follow-ups](extraction_followups.md) track deferred limits and partial-result handling.
 
 ---
 
