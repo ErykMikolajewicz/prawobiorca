@@ -52,6 +52,7 @@ async function createCase() {
       v-model="newCaseName"
       name="case_name"
       placeholder="Nowa sprawa..."
+      :maxlength="255"
       required
       class="case-name-input"
     />

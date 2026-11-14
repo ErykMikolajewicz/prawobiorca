@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Path, status
 
 from core_service.application.dtos.applications import ApplicationRepresentation, NewApplication
 from core_service.application.dtos.cases import CaseData, CaseDocument, NewCaseDocument
+from core_service.application.dtos.names import Name
 from core_service.application.use_cases.applications import (
     AddApplication,
     DeleteApplication,
@@ -19,6 +20,7 @@ from core_service.application.use_cases.cases import (
     ListCaseDocuments,
     ListCases,
 )
+from core_service.domain.consts import MAX_CASE_NAME_LENGTH
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateNotFound,
     InvalidApplicationFieldValues,
@@ -60,7 +62,7 @@ async def get_cases_list(
 async def add_case(
     caller: Annotated[Caller, Depends(get_caller)],
     add_user_case_: Annotated[AddCase, Depends(get_add_user_case)],
-    case_name: Annotated[str, Form(..., alias="caseName")],
+    case_name: Annotated[Name, Form(..., alias="caseName", min_length=1, max_length=MAX_CASE_NAME_LENGTH)],
 ) -> UUID:
     case_id = await add_user_case_.execute(caller, case_name)
     return case_id

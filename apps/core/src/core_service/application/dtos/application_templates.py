@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
+from core_service.application.dtos.names import Name
 from core_service.domain.consts import (
     MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH,
     MAX_FILENAME_LENGTH,
@@ -19,13 +20,13 @@ from core_service.domain.value_objects.descriptions import DescriptionStatus
 
 
 class ApplicationTemplateData(BaseModel):
-    name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
+    name: Name = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
 
 
 class ApplicationTemplateDetailsData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
-    name: str = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
+    name: Name = Field(min_length=MIN_FILENAME_LENGTH, max_length=MAX_FILENAME_LENGTH)
     instructions: str | None = None
     fields: list[ApplicationTemplateField]
     description: str | None = Field(default=None, max_length=MAX_APPLICATION_TEMPLATE_DESCRIPTION_LENGTH)

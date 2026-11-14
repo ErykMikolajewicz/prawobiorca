@@ -19,7 +19,7 @@ env:
           pollUrl: http://localhost:8080/api/auth/me
           pollFrequency: 20
           pollUnits: requests
-          loggedInRegex: '"is_admin"\s*:\s*false'
+          loggedInRegex: '"isAdmin"\s*:\s*false'
           loggedOutRegex: '401 Unauthorized'
       sessionManagement:
         method: cookie

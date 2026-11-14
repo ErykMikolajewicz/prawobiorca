@@ -25,6 +25,16 @@ spec:
     enabled: true
 
 ---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: prawobiorca-backend-config
+spec:
+  customResponseHeaders:
+    headers:
+      - "X-Content-Type-Options: nosniff"
+
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

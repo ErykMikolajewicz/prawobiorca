@@ -4,18 +4,19 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
 
+from core_service.application.dtos.names import Name
 from core_service.domain.consts import MAX_ORGANIZATION_NAME_LENGTH, MAX_ORGANIZATION_SHORT_NAME_LENGTH
 
 
 class NewOrganization(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, validate_by_name=True)
 
-    name: str = Field(min_length=1, max_length=MAX_ORGANIZATION_NAME_LENGTH)
-    short_name: str = Field(min_length=1, max_length=MAX_ORGANIZATION_SHORT_NAME_LENGTH)
+    name: Name = Field(min_length=1, max_length=MAX_ORGANIZATION_NAME_LENGTH)
+    short_name: Name = Field(min_length=1, max_length=MAX_ORGANIZATION_SHORT_NAME_LENGTH)
 
 
 class NewSuborganization(BaseModel):
-    name: str = Field(min_length=1, max_length=MAX_ORGANIZATION_NAME_LENGTH)
+    name: Name = Field(min_length=1, max_length=MAX_ORGANIZATION_NAME_LENGTH)
 
 
 @dataclass
