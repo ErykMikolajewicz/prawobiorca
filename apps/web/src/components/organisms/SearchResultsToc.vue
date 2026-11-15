@@ -22,6 +22,7 @@ const { isMobile } = useBreakpoint()
 const anchor = ref<AnchorInstance>()
 
 const tableOfContents = computed(() => buildTableOfContents(groupResultsByHeader(props.results)))
+const hasSummaries = computed(() => props.results.some((result) => result.summary_label))
 
 function onLinkClick(event: MouseEvent) {
   event.preventDefault()
@@ -48,5 +49,18 @@ function navigateTo(href: string) {
         @navigate="navigateTo"
       />
     </el-anchor>
+    <p v-if="hasSummaries" class="toc-ai-note app-text-secondary">
+      Opis artykułu/punktu został wygenerowany przez AI.
+    </p>
   </nav>
 </template>
+
+<style scoped>
+.toc-ai-note {
+  position: sticky;
+  bottom: 0;
+  margin: var(--app-space-md) 0 0;
+  padding: var(--app-space-sm) 0;
+  background-color: var(--el-drawer-bg-color, var(--el-bg-color-page));
+}
+</style>

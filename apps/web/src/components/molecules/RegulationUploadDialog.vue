@@ -10,7 +10,7 @@ type Props = {
   isAdmin: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const visible = defineModel<boolean>({ required: true })
 
@@ -26,6 +26,7 @@ const {
   selectedOrganizationId,
   selectedSuborganizationId,
   generateDescription,
+  generateSectionSummaries,
   isSubmitting,
   resetForm,
   setFile,
@@ -34,7 +35,7 @@ const {
 
 watch(visible, (isVisible) => {
   if (isVisible) {
-    resetForm()
+    resetForm(props.isAdmin)
   }
 })
 
@@ -91,6 +92,12 @@ async function handleSubmit() {
         v-model:organization-id="selectedOrganizationId"
         v-model:suborganization-id="selectedSuborganizationId"
       />
+
+      <el-form-item v-if="isAdmin && target === 'PUBLIC'">
+        <el-checkbox v-model="generateSectionSummaries">
+          Wygeneruj podsumowania artykułów przez AI
+        </el-checkbox>
+      </el-form-item>
     </el-form>
 
     <template #footer>

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from core_service.application.use_cases.regulations import MAX_REGULATION_PREPARATION_DELIVERIES
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import RegulationPreparationStatus
+from core_service.domain.value_objects.sections import SectionSummary
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
 from core_service.infrastructure.tasks.connection import DEFAULT_TASK_RETRY_COUNT
 from core_service.infrastructure.tasks.regulations import (
@@ -130,3 +131,31 @@ async def test_generated_regulation_description_is_saved(
     assert regulation.description == "Prawa i obowiązki studentów."
     assert list(regulation.description_vector) == DESCRIPTION_VECTOR
     assert regulation.description_status == DescriptionStatus.GENERATED
+
+
+async def test_generated_section_summaries_are_listed_with_sections(
+    admin_client, client, session_maker, broker, mock_section_summaries_writer
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, preparation_status=RegulationPreparationStatus.PREPARED)
+        section_id = await insert_section(session, regulation_id, "Student ma prawo do urlopu.", [QUERY_VECTOR])
+        repealed_section_id = await insert_section(session, regulation_id, "(uchylony)", [QUERY_VECTOR], 1)
+    mock_section_summaries_writer.write.return_value = [
+        SectionSummary(section_id=section_id, label="Prawo do urlopu", summary="Student może wziąć urlop.")
+    ]
+
+    response = await admin_client.post(f"/api/regulations/{regulation_id}/section-summaries-generation")
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    (task,) = await get_scheduled_tasks(session_maker)
+
+    await execute_task(broker, task)
+
+    batch = get_awaited_argument(mock_section_summaries_writer.write, "batch")
+    assert [section.id for section in batch.sections] == [section_id]
+    regulation = await get_regulation(session_maker, regulation_id)
+    assert regulation.section_summaries_status == DescriptionStatus.GENERATED
+    response = await client.get(f"/api/regulations/{regulation_id}/sections")
+    assert [(section["id"], section["summary_label"], section["summary"]) for section in response.json()] == [
+        (str(section_id), "Prawo do urlopu", "Student może wziąć urlop."),
+        (str(repealed_section_id), "Uchylony", "Przepis został uchylony."),
+    ]

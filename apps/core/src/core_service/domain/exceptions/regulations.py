@@ -21,3 +21,7 @@ class RegulationNotFound(Exception):
 
 class RegulationContentNotFound(Exception):
     pass
+
+
+class SectionSummariesGenerationInProgress(Exception):
+    pass

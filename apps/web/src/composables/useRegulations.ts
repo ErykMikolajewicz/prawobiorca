@@ -16,7 +16,9 @@ const loadErrorMessages: Record<RegulationScope, string> = {
 function isPending(regulation: RegulationRepresentation): boolean {
   return (
     regulation.preparationStatus === 'IN_PROGRESS' ||
-    (regulation.preparationStatus === 'PREPARED' && regulation.descriptionStatus === 'IN_PROGRESS')
+    (regulation.preparationStatus === 'PREPARED' &&
+      (regulation.descriptionStatus === 'IN_PROGRESS' ||
+        regulation.sectionSummariesStatus === 'IN_PROGRESS'))
   )
 }
 
@@ -131,6 +133,13 @@ export function useRegulations(
     }
   }
 
+  function markSectionSummariesAsInProgress(regulationId: string) {
+    const regulation = fetchedRegulations.value.find((item) => item.id === regulationId)
+    if (regulation) {
+      regulation.sectionSummariesStatus = 'IN_PROGRESS'
+    }
+  }
+
   watch(typeFilter, load)
   if (scope === 'PUBLIC') {
     watch(
@@ -155,5 +164,6 @@ export function useRegulations(
     remove,
     markAsInProgress,
     markDescriptionAsInProgress,
+    markSectionSummariesAsInProgress,
   }
 }

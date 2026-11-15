@@ -11,12 +11,14 @@ from core_service.application.ports.regulations import (
     RegulationDescriptionWriter,
     RegulationSplitter,
     RegulationsStorage,
+    SectionSummariesWriter,
 )
 from core_service.application.ports.tasks import (
     ApplicationGenerationScheduler,
     ApplicationTemplateDescriptionGenerationScheduler,
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,
+    SectionSummariesGenerationScheduler,
 )
 from core_service.framework.dependencies.regulations import get_regulations_storage
 from core_service.main import prawobiorca
@@ -55,6 +57,11 @@ def mock_regulation_description_generation_scheduler():
 
 
 @pytest.fixture
+def mock_section_summaries_generation_scheduler():
+    return create_autospec(SectionSummariesGenerationScheduler)
+
+
+@pytest.fixture
 def mock_application_generation_scheduler():
     return create_autospec(ApplicationGenerationScheduler)
 
@@ -72,6 +79,11 @@ def mock_regulation_splitter():
 @pytest.fixture
 def mock_regulation_description_writer():
     return create_autospec(RegulationDescriptionWriter)
+
+
+@pytest.fixture
+def mock_section_summaries_writer():
+    return create_autospec(SectionSummariesWriter)
 
 
 @pytest.fixture

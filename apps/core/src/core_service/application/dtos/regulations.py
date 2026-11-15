@@ -24,11 +24,14 @@ class RegulationData(BaseModel):
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
     generate_description: bool = False
+    generate_section_summaries: bool = False
 
     @model_validator(mode="after")
     def validate_organization(self):
         if self.scope == RegulationScope.PRIVATE and self.organization_id is not None:
             raise ValueError("Private regulation can't belong to organization!")
+        if self.scope == RegulationScope.PRIVATE and self.generate_section_summaries:
+            raise ValueError("Section summaries can be generated only for public regulation!")
         if self.organization_id is None and self.suborganization_id is not None:
             raise ValueError("Suborganization given without organization!")
         return self
@@ -60,6 +63,7 @@ class RegulationRepresentation:
     regulation_type: RegulationType | None = None
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
+    section_summaries_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
 

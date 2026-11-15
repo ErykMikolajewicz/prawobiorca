@@ -3,7 +3,7 @@ from itertools import batched
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Table, case, func, insert, select
+from sqlalchemy import Table, bindparam, case, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession as SqlaAsyncSession
 
 from core_service.application.dtos.search import (
@@ -17,7 +17,7 @@ from core_service.application.dtos.search import (
 from core_service.application.ports.relational import AsyncSession
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
 from core_service.domain.value_objects.regulations import SectionContent
-from core_service.domain.value_objects.sections import SectionsCollection
+from core_service.domain.value_objects.sections import SectionsCollection, SectionSummary, SectionToSummarize
 from core_service.infrastructure.relational_db.schemas.sections import (
     regulations_chunks_table,
     regulations_sections_table,
@@ -93,6 +93,63 @@ class SqlaSectionsRepository:
         return [SectionContent(header=row.header, text=row.text) for row in result]
 
     @staticmethod
+    async def list_sections_to_summarize(
+        session: AsyncSession, user_id: UUID | None, regulation_id: UUID
+    ) -> list[SectionToSummarize]:
+        session = sqla_session(session)
+        statement = (
+            select(
+                regulations_sections_table.c.id,
+                regulations_sections_table.c.header,
+                regulations_sections_table.c.text,
+            )
+            .where(
+                regulations_sections_table.c.regulation_id == regulation_id,
+                regulations_sections_table.c.user_id == user_id,
+                regulations_sections_table.c.summary_label.is_(None),
+            )
+            .order_by(regulations_sections_table.c.section_order)
+        )
+        result = await session.execute(statement)
+
+        return [SectionToSummarize(id=row.id, header=row.header, text=row.text) for row in result]
+
+    @staticmethod
+    async def set_summaries(
+        session: AsyncSession, user_id: UUID | None, regulation_id: UUID, summaries: list[SectionSummary]
+    ) -> None:
+        session = sqla_session(session)
+        statement = (
+            update(regulations_sections_table)
+            .where(
+                regulations_sections_table.c.regulation_id == regulation_id,
+                regulations_sections_table.c.user_id == user_id,
+                regulations_sections_table.c.id == bindparam("section_id"),
+            )
+            .values(summary_label=bindparam("label"), summary=bindparam("summary_text"))
+        )
+        await session.execute(
+            statement,
+            [
+                {"section_id": summary.section_id, "label": summary.label, "summary_text": summary.summary}
+                for summary in summaries
+            ],
+        )
+
+    @staticmethod
+    async def clear_summaries(session: AsyncSession, user_id: UUID | None, regulation_id: UUID) -> None:
+        session = sqla_session(session)
+        statement = (
+            update(regulations_sections_table)
+            .where(
+                regulations_sections_table.c.regulation_id == regulation_id,
+                regulations_sections_table.c.user_id == user_id,
+            )
+            .values(summary_label=None, summary=None)
+        )
+        await session.execute(statement)
+
+    @staticmethod
     async def list_sections(
         session: AsyncSession, user_id: UUID | None, regulation_id: UUID
     ) -> list[SectionRepresentation]:
@@ -103,6 +160,8 @@ class SqlaSectionsRepository:
                 regulations_sections_table.c.header,
                 regulations_sections_table.c.text,
                 regulations_sections_table.c.elements,
+                regulations_sections_table.c.summary_label,
+                regulations_sections_table.c.summary,
             )
             .where(
                 regulations_sections_table.c.regulation_id == regulation_id,
@@ -121,6 +180,8 @@ class SqlaSectionsRepository:
                 header=row.header,
                 text=row.text,
                 elements=[SearchResultElement(**element) for element in row.elements],
+                summary_label=row.summary_label,
+                summary=row.summary,
             )
             for row in rows
         ]
@@ -204,6 +265,8 @@ class SqlaSectionsRepository:
                 regulations_sections_table.c.header,
                 regulations_sections_table.c.text,
                 regulations_sections_table.c.elements,
+                regulations_sections_table.c.summary_label,
+                regulations_sections_table.c.summary,
                 scored_sections.c.score,
                 *(scored_sections.c[column] for column in SPAN_COLUMNS),
             )
@@ -225,6 +288,8 @@ class SqlaSectionsRepository:
                 header=row.header,
                 text=row.text,
                 elements=[SearchResultElement(**element) for element in row.elements],
+                summary_label=row.summary_label,
+                summary=row.summary,
                 score=row.score,
                 highlight=SearchResultHighlight(
                     start_element=row.span_start_element,

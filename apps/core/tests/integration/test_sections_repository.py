@@ -3,7 +3,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from core_service.domain.value_objects.legal_units import LegalUnitElement
-from core_service.domain.value_objects.sections import ChunkSpan, RegulationSection, SectionChunk, SectionsCollection
+from core_service.domain.value_objects.sections import (
+    ChunkSpan,
+    RegulationSection,
+    SectionChunk,
+    SectionsCollection,
+    SectionSummary,
+)
 from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.repositories.regulations import SqlaRegulationsRepository
 from core_service.infrastructure.relational_db.repositories.sections import SqlaSectionsRepository
@@ -153,3 +159,32 @@ async def test_add_sections_saves_sections_over_query_arguments_limit(session_ma
 
     assert len(await get_sections(session_maker, regulation_id)) == SECTIONS_OVER_QUERY_ARGUMENTS_LIMIT
     assert len(await get_chunks(session_maker, regulation_id)) == SECTIONS_OVER_QUERY_ARGUMENTS_LIMIT
+
+
+async def test_summaries_are_saved_and_cleared(session_maker, regulation_id):
+    sections = create_sections_collection()
+    first_section, second_section = sections
+    async with session_maker.begin() as session:
+        await SqlaSectionsRepository.add_sections(session, USER_ID, regulation_id, sections)
+        await SqlaSectionsRepository.set_summaries(
+            session,
+            USER_ID,
+            regulation_id,
+            [SectionSummary(section_id=first_section.id, label="Etykieta", summary="Opis.")],
+        )
+
+    async with session_maker() as session:
+        sections_to_summarize = await SqlaSectionsRepository.list_sections_to_summarize(session, USER_ID, regulation_id)
+        listed_sections = await SqlaSectionsRepository.list_sections(session, USER_ID, regulation_id)
+
+    assert [section.id for section in sections_to_summarize] == [second_section.id]
+    assert [(section.summary_label, section.summary) for section in listed_sections] == [
+        ("Etykieta", "Opis."),
+        (None, None),
+    ]
+
+    async with session_maker.begin() as session:
+        await SqlaSectionsRepository.clear_summaries(session, USER_ID, regulation_id)
+        sections_to_summarize = await SqlaSectionsRepository.list_sections_to_summarize(session, USER_ID, regulation_id)
+
+    assert [section.id for section in sections_to_summarize] == [first_section.id, second_section.id]

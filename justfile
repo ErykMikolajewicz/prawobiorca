@@ -14,7 +14,7 @@ run-locally-down:
     kubectl --context kind-prawobiorca delete pod --all
     podman stop --time 0 prawobiorca-control-plane
 
-# Deletes the local database and object storage; downloaded LLM models stay in .llm-models.
+# Deletes the cluster; the database and object storage stay in the volumes shared with just dev, LLM models in .llm-models.
 run-locally-reset:
     kind delete cluster --name prawobiorca
 

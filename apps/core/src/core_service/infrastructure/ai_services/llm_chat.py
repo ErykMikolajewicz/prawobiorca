@@ -22,7 +22,7 @@ class LlmChat:
         self._max_tokens = max_tokens
         self._cost_limiter = cost_limiter
 
-    async def generate_text(self, system_prompt: str, user_prompt: str) -> str:
+    async def generate_text(self, system_prompt: str, user_prompt: str, max_tokens: int | None = None) -> str:
         if self._cost_limiter is not None:
             await self._cost_limiter.check()
 
@@ -34,7 +34,7 @@ class LlmChat:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=self._temperature,
-                max_tokens=self._max_tokens,
+                max_tokens=max_tokens or self._max_tokens,
                 top_p=self._top_p,
                 presence_penalty=0.1,
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},

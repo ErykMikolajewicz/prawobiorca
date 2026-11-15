@@ -54,6 +54,7 @@ describe('useRegulationUpload', () => {
       organizationId: null,
       suborganizationId: null,
       generateDescription: false,
+      generateSectionSummaries: false,
     })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
     expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-user-1')
@@ -65,6 +66,7 @@ describe('useRegulationUpload', () => {
       regulationType: 'STATUTE',
       preparationStatus: 'IN_PROGRESS',
       descriptionStatus: 'NOT_REQUESTED',
+      sectionSummariesStatus: 'NOT_REQUESTED',
       organizationId: null,
       suborganizationId: null,
     })
@@ -85,6 +87,7 @@ describe('useRegulationUpload', () => {
       organizationId: null,
       suborganizationId: null,
       generateDescription: false,
+      generateSectionSummaries: false,
     })
     expect(uploadFileToStorage).toHaveBeenCalledWith(uploadTarget, expect.any(File))
     expect(confirmRegulationUpload).toHaveBeenCalledWith('uuid-pub-1')
@@ -110,6 +113,7 @@ describe('useRegulationUpload', () => {
       organizationId: 'pwr',
       suborganizationId: 'w10',
       generateDescription: false,
+      generateSectionSummaries: false,
     })
     expect(result?.regulation.organizationId).toBe('pwr')
     expect(result?.regulation.suborganizationId).toBe('w10')
@@ -132,14 +136,40 @@ describe('useRegulationUpload', () => {
     expect(result?.regulation.descriptionStatus).toBe('IN_PROGRESS')
   })
 
-  it('resetForm restores the initial form', () => {
+  it.each([
+    ['PUBLIC', true],
+    ['PRIVATE', false],
+  ] as const)(
+    'submit requests section summaries of %s regulation: %s',
+    async (target, isRequested) => {
+      vi.mocked(addRegulation).mockResolvedValueOnce({
+        id: 'uuid-3',
+        url: 'https://s3.local/upload',
+        fields: {},
+      })
+
+      const upload = prepareUpload(target, 'Doc')
+      upload.generateSectionSummaries.value = true
+      const result = await upload.submit()
+
+      expect(addRegulation).toHaveBeenCalledWith(
+        expect.objectContaining({ generateSectionSummaries: isRequested }),
+      )
+      expect(result?.regulation.sectionSummariesStatus).toBe(
+        isRequested ? 'IN_PROGRESS' : 'NOT_REQUESTED',
+      )
+    },
+  )
+
+  it.each([false, true])('resetForm restores the initial form for admin: %s', (isAdmin) => {
     const upload = prepareUpload('PUBLIC', 'Public Doc')
     upload.selectedRegulationType.value = 'ACT'
     upload.selectedOrganizationId.value = 'pwr'
     upload.selectedSuborganizationId.value = 'w10'
-    upload.generateDescription.value = true
+    upload.generateDescription.value = !isAdmin
+    upload.generateSectionSummaries.value = !isAdmin
 
-    upload.resetForm()
+    upload.resetForm(isAdmin)
 
     expect(upload.selectedFile.value).toBeNull()
     expect(upload.presentationName.value).toBe('')
@@ -147,7 +177,8 @@ describe('useRegulationUpload', () => {
     expect(upload.target.value).toBe('PRIVATE')
     expect(upload.selectedOrganizationId.value).toBe('')
     expect(upload.selectedSuborganizationId.value).toBe('')
-    expect(upload.generateDescription.value).toBe(false)
+    expect(upload.generateDescription.value).toBe(isAdmin)
+    expect(upload.generateSectionSummaries.value).toBe(isAdmin)
   })
 
   it('setFile proposes the file name as the regulation name', () => {
@@ -297,6 +328,7 @@ describe('useRegulationUpload', () => {
       regulationType: null,
       preparationStatus: 'NOT_STARTED',
       descriptionStatus: 'NOT_REQUESTED',
+      sectionSummariesStatus: 'NOT_REQUESTED',
       organizationId: null,
       suborganizationId: null,
     })

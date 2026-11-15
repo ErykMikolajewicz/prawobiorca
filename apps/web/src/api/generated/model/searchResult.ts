@@ -6,6 +6,8 @@ export interface SearchResult {
   header: string | null
   text: string
   elements: SearchResultElement[]
+  summary_label: string | null
+  summary: string | null
   /**
    * @minimum -1
    * @maximum 1

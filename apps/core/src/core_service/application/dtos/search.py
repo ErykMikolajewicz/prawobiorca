@@ -21,6 +21,8 @@ class SectionRepresentation(BaseModel):
     header: str | None = None
     text: str
     elements: list[SearchResultElement]
+    summary_label: str | None = None
+    summary: str | None = None
 
 
 class SearchResult(SectionRepresentation):

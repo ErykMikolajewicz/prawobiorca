@@ -45,8 +45,22 @@ describe('SearchPage', () => {
     vi.mocked(getRegulationById).mockResolvedValue(createRegulation())
     vi.mocked(searchRegulationDocuments).mockResolvedValue([createSearchResult()])
     vi.mocked(listRegulationSections).mockResolvedValue([
-      { id: 'section-1', header: 'Rozdział 1 > § 1', text: 'Przepisy ogólne.', elements: [] },
-      { id: 'section-2', header: 'Rozdział 1 > § 2', text: 'Definicje.', elements: [] },
+      {
+        id: 'section-1',
+        header: 'Rozdział 1 > § 1',
+        text: 'Przepisy ogólne.',
+        elements: [],
+        summary_label: 'Zakres regulaminu',
+        summary: 'Regulamin określa organizację studiów.',
+      },
+      {
+        id: 'section-2',
+        header: 'Rozdział 1 > § 2',
+        text: 'Definicje.',
+        elements: [],
+        summary_label: null,
+        summary: null,
+      },
     ])
   })
 
@@ -75,7 +89,40 @@ describe('SearchPage', () => {
       'Rozdział 1 > § 2',
     ])
     expect(wrapper.find('.score').exists()).toBe(false)
-    expect(wrapper.find('.search-toc').text()).toBe('Rozdział 1§ 1§ 2')
+    expect(wrapper.findAll('.search-toc .el-anchor__link').map((link) => link.text())).toEqual([
+      'Rozdział 1',
+      '§ 1 · Zakres regulaminu',
+      '§ 2',
+    ])
+  })
+
+  it('mentions AI under the table of contents and keeps the results free of summaries', async () => {
+    const { wrapper } = await mountPage()
+
+    expect(wrapper.find('.toc-ai-note').text()).toBe(
+      'Opis artykułu/punktu został wygenerowany przez AI.',
+    )
+    expect(wrapper.find('.search-results').text()).not.toContain('Zakres regulaminu')
+    expect(wrapper.find('.search-results').text()).not.toContain(
+      'Regulamin określa organizację studiów.',
+    )
+  })
+
+  it('does not mention AI without summaries', async () => {
+    vi.mocked(listRegulationSections).mockResolvedValue([
+      {
+        id: 'section-1',
+        header: '§ 1',
+        text: 'Tekst.',
+        elements: [],
+        summary_label: null,
+        summary: null,
+      },
+    ])
+
+    const { wrapper } = await mountPage()
+
+    expect(wrapper.find('.toc-ai-note').exists()).toBe(false)
   })
 
   it('shows the whole regulation again when the query is cleared', async () => {

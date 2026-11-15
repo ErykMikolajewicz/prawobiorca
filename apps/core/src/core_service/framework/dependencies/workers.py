@@ -20,10 +20,14 @@ from core_service.application.ports.regulations import (
     RegulationSplitter,
     RegulationsRepository,
     RegulationsStorage,
+    SectionSummariesWriter,
 )
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.sections import SectionsRepository
-from core_service.application.ports.tasks import RegulationDescriptionGenerationScheduler
+from core_service.application.ports.tasks import (
+    RegulationDescriptionGenerationScheduler,
+    SectionSummariesGenerationScheduler,
+)
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.services.embedding import SectionsEmbedder
 from core_service.application.services.regulations import RegulationPreparator
@@ -35,7 +39,9 @@ from core_service.application.use_cases.applications import FailApplicationGener
 from core_service.application.use_cases.regulations import (
     FailRegulationDescriptionGeneration,
     FailRegulationPreparation,
+    FailSectionSummariesGeneration,
     GenerateRegulationDescription,
+    GenerateSectionSummaries,
     PrepareRegulation,
 )
 from core_service.domain.services.regulation_chunking import Tokenizer
@@ -63,10 +69,14 @@ from core_service.infrastructure.ai_services.regulation_description_writer impor
     LlmRegulationDescriptionWriter,
 )
 from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
+from core_service.infrastructure.ai_services.section_summaries_writer import LlmSectionSummariesWriter
 from core_service.infrastructure.docx.docx_renderer import DocxApplicationRenderer
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.repositories.llm_usage import SqlaLlmUsageRepository
-from core_service.infrastructure.tasks.regulations import PostgresRegulationDescriptionGenerationScheduler
+from core_service.infrastructure.tasks.regulations import (
+    PostgresRegulationDescriptionGenerationScheduler,
+    PostgresSectionSummariesGenerationScheduler,
+)
 from core_service.shared.settings.ai_services import (
     embedding_service_settings,
     extraction_service_settings,
@@ -112,6 +122,12 @@ def get_regulation_description_generation_scheduler(
     return PostgresRegulationDescriptionGenerationScheduler(broker)
 
 
+def get_section_summaries_generation_scheduler(
+    broker: AsyncBroker = TaskiqDepends(get_broker),
+) -> SectionSummariesGenerationScheduler:
+    return PostgresSectionSummariesGenerationScheduler(broker)
+
+
 def get_llm_chat(
     client: AsyncOpenAI = TaskiqDepends(get_llm_client),
     session_maker: DatabaseSessionMaker = TaskiqDepends(get_session_maker),
@@ -138,6 +154,10 @@ def get_llm_chat(
 
 def get_regulation_description_writer(llm_chat: LlmChat = TaskiqDepends(get_llm_chat)) -> RegulationDescriptionWriter:
     return LlmRegulationDescriptionWriter(llm_chat)
+
+
+def get_section_summaries_writer(llm_chat: LlmChat = TaskiqDepends(get_llm_chat)) -> SectionSummariesWriter:
+    return LlmSectionSummariesWriter(llm_chat)
 
 
 def get_application_template_description_writer(
@@ -180,6 +200,9 @@ def get_prepare_regulation(
     description_generation_scheduler: RegulationDescriptionGenerationScheduler = TaskiqDepends(
         get_regulation_description_generation_scheduler
     ),
+    section_summaries_generation_scheduler: SectionSummariesGenerationScheduler = TaskiqDepends(
+        get_section_summaries_generation_scheduler
+    ),
 ) -> PrepareRegulation:
     return PrepareRegulation(
         session_maker,
@@ -188,6 +211,7 @@ def get_prepare_regulation(
         regulations_repository,
         regulation_preparator,
         description_generation_scheduler,
+        section_summaries_generation_scheduler,
     )
 
 
@@ -207,6 +231,24 @@ def get_generate_regulation_description(
 ) -> GenerateRegulationDescription:
     return GenerateRegulationDescription(
         session_maker, regulations_repository, sections_repository, description_writer, texts_embedder
+    )
+
+
+def get_fail_section_summaries_generation(
+    session_maker: SessionMaker = TaskiqDepends(get_session_maker),
+    regulations_repository: RegulationsRepository = TaskiqDepends(get_regulation_repository),
+) -> FailSectionSummariesGeneration:
+    return FailSectionSummariesGeneration(session_maker, regulations_repository)
+
+
+def get_generate_section_summaries(
+    session_maker: SessionMaker = TaskiqDepends(get_session_maker),
+    regulations_repository: RegulationsRepository = TaskiqDepends(get_regulation_repository),
+    sections_repository: SectionsRepository = TaskiqDepends(get_sections_repository),
+    section_summaries_writer: SectionSummariesWriter = TaskiqDepends(get_section_summaries_writer),
+) -> GenerateSectionSummaries:
+    return GenerateSectionSummaries(
+        session_maker, regulations_repository, sections_repository, section_summaries_writer
     )
 
 

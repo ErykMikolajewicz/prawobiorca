@@ -8,6 +8,7 @@ from core_service.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationInInvalidState,
     RegulationPreparationInProgress,
+    SectionSummariesGenerationInProgress,
 )
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import RegulationDetails, RegulationPreparationStatus
@@ -18,12 +19,14 @@ REGULATION_ID = UUID("5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f")
 def create_regulation(
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED,
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED,
+    section_summaries_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED,
 ) -> Regulation:
     return Regulation(
         id=REGULATION_ID,
         presentation_name="Regulamin studiów",
         preparation_status=preparation_status,
         description_status=description_status,
+        section_summaries_status=section_summaries_status,
     )
 
 
@@ -160,6 +163,52 @@ def test_description_generation():
     assert generated_regulation.is_description_generated
     assert generated_regulation.description == "Opis regulaminu."
     assert failed_regulation.description_status == DescriptionStatus.FAILED
+
+
+@pytest.mark.parametrize(
+    "section_summaries_status",
+    [DescriptionStatus.NOT_REQUESTED, DescriptionStatus.GENERATED, DescriptionStatus.FAILED],
+)
+def test_request_section_summaries(section_summaries_status):
+    regulation = create_regulation(
+        RegulationPreparationStatus.PREPARED, section_summaries_status=section_summaries_status
+    )
+
+    regulation.request_section_summaries()
+
+    assert regulation.is_section_summaries_in_progress
+
+
+@pytest.mark.parametrize(
+    ("preparation_status", "section_summaries_status", "error"),
+    [
+        (RegulationPreparationStatus.IN_PROGRESS, DescriptionStatus.NOT_REQUESTED, RegulationInInvalidState),
+        (
+            RegulationPreparationStatus.PREPARED,
+            DescriptionStatus.IN_PROGRESS,
+            SectionSummariesGenerationInProgress,
+        ),
+    ],
+    ids=("not prepared", "generation in progress"),
+)
+def test_request_section_summaries_rejected(preparation_status, section_summaries_status, error):
+    regulation = create_regulation(preparation_status, section_summaries_status=section_summaries_status)
+
+    with pytest.raises(error):
+        regulation.request_section_summaries()
+
+    assert regulation.section_summaries_status == section_summaries_status
+
+
+def test_section_summaries_generation():
+    generated_regulation = create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS)
+    failed_regulation = create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS)
+
+    generated_regulation.complete_section_summaries_generation()
+    failed_regulation.fail_section_summaries_generation()
+
+    assert generated_regulation.section_summaries_status == DescriptionStatus.GENERATED
+    assert failed_regulation.section_summaries_status == DescriptionStatus.FAILED
 
 
 def test_update_details():

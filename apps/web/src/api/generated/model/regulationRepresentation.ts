@@ -14,6 +14,7 @@ export interface RegulationRepresentation {
   regulationType: RegulationType | null
   preparationStatus: RegulationPreparationStatus
   descriptionStatus: DescriptionStatus
+  sectionSummariesStatus: DescriptionStatus
   organizationId: string | null
   suborganizationId: string | null
 }

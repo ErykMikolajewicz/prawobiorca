@@ -69,6 +69,8 @@ This creates the `prawobiorca` cluster if it does not exist, builds the images o
 
 The first run takes a while: it loads about 4.5 GB of images, and the LLM downloads its model (about 20 GB) to `.llm-models` in the background. The model needs about 20 GB of RAM.
 
+The database and the object storage use the Podman volumes `pg-data` and `rustfs-data`, the same as `just dev`, so both see the same data. Only one of them can run at a time, the scripts refuse to start while the other one is running.
+
 Everything is served by the nginx gateway on [http://localhost:8080](http://localhost:8080):
 
 - [http://localhost:8080/](http://localhost:8080/) - the frontend application
@@ -80,7 +82,7 @@ Everything is served by the nginx gateway on [http://localhost:8080](http://loca
 The object storage is also available directly on [http://localhost:9000](http://localhost:9000).
 
 - `just run-locally-down` stops the cluster and keeps its data.
-- `just run-locally-reset` deletes the cluster with the database and object storage; downloaded LLM models stay.
+- `just run-locally-reset` deletes the cluster; the database, object storage and downloaded LLM models stay.
 
 ### Initialize databases
 The database and the compute services are not exposed on the host, so forward their ports first:

@@ -61,6 +61,19 @@ async def test_generate_text_returns_answer_and_records_usage(cost_limiter):
     cost_limiter.record.assert_awaited_once_with(120, 30)
 
 
+async def test_generate_text_with_max_tokens_override():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return Response(200, json=create_completion([create_choice("Odpowiedź.")]))
+
+    await create_llm_chat(handler).generate_text("Jesteś asystentem.", "Podaj etykiety.", max_tokens=2000)
+
+    (request,) = requests
+    assert json.loads(request.content)["max_tokens"] == 2000
+
+
 async def test_generate_text_over_cost_limit_does_not_call_llm(cost_limiter):
     requests = []
     cost_limiter.check.side_effect = ServiceUnavailable

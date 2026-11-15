@@ -11,7 +11,11 @@ from core_service.framework.workers.applications import (
     generate_application_task,
     generate_application_template_description_task,
 )
-from core_service.framework.workers.regulations import generate_regulation_description_task, prepare_regulation_task
+from core_service.framework.workers.regulations import (
+    generate_regulation_description_task,
+    generate_section_summaries_task,
+    prepare_regulation_task,
+)
 from core_service.infrastructure.relational_db.connection import DatabaseSessionMaker
 from core_service.infrastructure.relational_db.schemas.tasks import task_messages_table
 from core_service.infrastructure.tasks.broker import DELIVERY_ATTEMPT_LABEL, TASK_HEARTBEAT_SECONDS, PostgresBroker
@@ -22,6 +26,7 @@ WORKER_TASKS = {
     for task in (
         prepare_regulation_task,
         generate_regulation_description_task,
+        generate_section_summaries_task,
         generate_application_task,
         generate_application_template_description_task,
     )

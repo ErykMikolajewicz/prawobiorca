@@ -36,6 +36,7 @@ async function uploadRegulation(
   organizationId?: string,
   suborganizationId?: string,
   generateDescription = false,
+  generateSectionSummaries = false,
 ): Promise<RegulationUploadResult> {
   const isPublic = target === 'PUBLIC'
   const uploadTarget = await addRegulation({
@@ -45,6 +46,7 @@ async function uploadRegulation(
     organizationId: isPublic ? organizationId || null : null,
     suborganizationId: isPublic ? suborganizationId || null : null,
     generateDescription,
+    generateSectionSummaries: isPublic && generateSectionSummaries,
   })
 
   await uploadFileToStorage(uploadTarget, regulation)
@@ -60,16 +62,18 @@ export function useRegulationUpload() {
   const selectedOrganizationId = ref('')
   const selectedSuborganizationId = ref('')
   const generateDescription = ref(false)
+  const generateSectionSummaries = ref(false)
   const isSubmitting = ref(false)
 
-  function resetForm() {
+  function resetForm(isAdmin: boolean) {
     selectedFile.value = null
     presentationName.value = ''
     selectedRegulationType.value = ''
     target.value = 'PRIVATE'
     selectedOrganizationId.value = ''
     selectedSuborganizationId.value = ''
-    generateDescription.value = false
+    generateDescription.value = isAdmin
+    generateSectionSummaries.value = isAdmin
   }
 
   function setFile(file: File | null) {
@@ -104,6 +108,7 @@ export function useRegulationUpload() {
         selectedOrganizationId.value,
         selectedSuborganizationId.value,
         generateDescription.value,
+        generateSectionSummaries.value,
       )
 
       if (uploadResult.preparationStatus === 'IN_PROGRESS') {
@@ -121,6 +126,10 @@ export function useRegulationUpload() {
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
           descriptionStatus: generateDescription.value ? 'IN_PROGRESS' : 'NOT_REQUESTED',
+          sectionSummariesStatus:
+            target.value === 'PUBLIC' && generateSectionSummaries.value
+              ? 'IN_PROGRESS'
+              : 'NOT_REQUESTED',
           organizationId: target.value === 'PUBLIC' ? selectedOrganizationId.value || null : null,
           suborganizationId:
             target.value === 'PUBLIC' ? selectedSuborganizationId.value || null : null,
@@ -143,6 +152,7 @@ export function useRegulationUpload() {
     selectedOrganizationId,
     selectedSuborganizationId,
     generateDescription,
+    generateSectionSummaries,
     isSubmitting,
     resetForm,
     setFile,

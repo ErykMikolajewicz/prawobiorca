@@ -6,6 +6,9 @@ from pathlib import Path
 
 CLUSTER_CONFIG = Path("deploy/kind/cluster.yaml")
 LLM_MODELS_DIR = Path(".llm-models")
+DEV_VOLUMES = ("pg-data", "rustfs-data")
+DEV_VOLUMES_DIR = "/var/lib/dev-volumes"
+DEV_CONTAINERS = ("postgres_db_prawobiorca", "rustfs")
 API_READY_TIMEOUT = 120
 
 CLUSTERS = {"local": "prawobiorca", "e2e": "prawobiorca-e2e"}
@@ -14,6 +17,7 @@ IMAGES = {
     "local": ("core", "web", "embedding", "extraction"),
     "e2e": ("core", "web", "embedding"),
 }
+SHARES_DEV_VOLUMES = {"local": True, "e2e": False}
 
 
 def node(cluster: str) -> str:
@@ -46,15 +50,61 @@ def wait_for_api(cluster: str):
     raise RuntimeError(f"Cluster {cluster} is not ready.")
 
 
-def ensure_cluster(cluster: str):
+def running_dev_containers() -> list[str]:
+    result = subprocess.run(["podman", "ps", "--format", "{{.Names}}"], capture_output=True, text=True, check=True)
+    return [name for name in result.stdout.split() if name in DEV_CONTAINERS]
+
+
+def volume_mountpoint(volume: str) -> str:
+    subprocess.run(["podman", "volume", "create", "--ignore", volume], capture_output=True, check=True)
+    result = subprocess.run(
+        ["podman", "volume", "inspect", volume, "--format", "{{.Mountpoint}}"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def mounts_dev_volumes(cluster: str) -> bool:
+    result = subprocess.run(
+        ["podman", "container", "inspect", node(cluster), "--format", "{{range .Mounts}}{{.Destination}} {{end}}"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return all(f"{DEV_VOLUMES_DIR}/{volume}" in result.stdout.split() for volume in DEV_VOLUMES)
+
+
+def cluster_config(shares_dev_volumes: bool) -> str:
+    config = CLUSTER_CONFIG.read_text()
+    if not shares_dev_volumes:
+        return config
+    return config + "".join(
+        f"      - hostPath: {volume_mountpoint(volume)}\n        containerPath: {DEV_VOLUMES_DIR}/{volume}\n"
+        for volume in DEV_VOLUMES
+    )
+
+
+def ensure_cluster(cluster: str, shares_dev_volumes: bool):
     for other, stop_command in STOP_COMMANDS.items():
         if other != cluster and node_running(other):
             raise SystemExit(f"Cluster {other} is running and uses the same ports 8080 and 9000. Run: {stop_command}")
+    if shares_dev_volumes and (containers := running_dev_containers()):
+        raise SystemExit(f"just dev is running and uses the same volumes. Run: podman stop {' '.join(containers)}")
 
     LLM_MODELS_DIR.mkdir(exist_ok=True)
     if not cluster_exists(cluster):
-        subprocess.run(["kind", "create", "cluster", "--name", cluster, "--config", str(CLUSTER_CONFIG)], check=True)
-    elif not node_running(cluster):
+        subprocess.run(
+            ["kind", "create", "cluster", "--name", cluster, "--config", "/dev/stdin"],
+            input=cluster_config(shares_dev_volumes),
+            text=True,
+            check=True,
+        )
+        return
+    if shares_dev_volumes and not mounts_dev_volumes(cluster):
+        raise SystemExit(f"Cluster {cluster} was created without the volumes of just dev. Run: just run-locally-reset")
+    if not node_running(cluster):
         print(f"Starting cluster {cluster}...")
         subprocess.run(["podman", "start", node(cluster)], check=True)
         wait_for_api(cluster)
@@ -95,7 +145,7 @@ def main():
     environment = parser.parse_args().environment
     cluster = CLUSTERS[environment]
 
-    ensure_cluster(cluster)
+    ensure_cluster(cluster, SHARES_DEV_VOLUMES[environment])
 
     deploy = [sys.executable, "scripts/deploy.py", environment]
     for name in IMAGES[environment]:

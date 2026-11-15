@@ -15,7 +15,10 @@ from core_service.domain.value_objects.regulations import (
 from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.repositories.sections import PRIMARY_CHUNK_SCORE_WEIGHT
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
-from core_service.infrastructure.tasks.regulations import REGULATION_DESCRIPTION_GENERATION_TASK_NAME
+from core_service.infrastructure.tasks.regulations import (
+    REGULATION_DESCRIPTION_GENERATION_TASK_NAME,
+    SECTION_SUMMARIES_GENERATION_TASK_NAME,
+)
 from tests.consts import UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.ai_services import QUERY_VECTOR, UNRELATED_VECTOR
 from tests.integration.fixtures.organizations import insert_organization, insert_suborganization
@@ -60,6 +63,7 @@ async def test_get_public_regulation(client, session_maker, user):
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.PREPARED,
         "descriptionStatus": DescriptionStatus.NOT_REQUESTED,
+        "sectionSummariesStatus": DescriptionStatus.NOT_REQUESTED,
         "organizationId": None,
         "suborganizationId": None,
     }
@@ -90,6 +94,8 @@ async def test_search_regulation_documents(client, session_maker, user):
             "header": "Art. 1",
             "text": "Matching section",
             "elements": [{"text": "Matching section", "subsection": None}],
+            "summary_label": None,
+            "summary": None,
             "highlight": {"start_element": 0, "end_element": 0},
         }
     ]
@@ -199,12 +205,16 @@ async def test_list_regulation_sections_in_document_order(client, session_maker,
             "header": "Art. 1",
             "text": "First section",
             "elements": [{"text": "First section", "subsection": None}],
+            "summary_label": None,
+            "summary": None,
         },
         {
             "id": str(second_section_id),
             "header": "Art. 1",
             "text": "Second section",
             "elements": [{"text": "Second section", "subsection": None}],
+            "summary_label": None,
+            "summary": None,
         },
     ]
 
@@ -267,6 +277,7 @@ async def test_add_public_regulation(admin_client, session_maker, mock_regulatio
             "organizationId": str(organization_id),
             "suborganizationId": str(suborganization_id),
             "generateDescription": True,
+            "generateSectionSummaries": True,
         },
     )
 
@@ -289,6 +300,7 @@ async def test_add_public_regulation(admin_client, session_maker, mock_regulatio
     assert regulation.suborganization_id == suborganization_id
     assert regulation.preparation_status == RegulationPreparationStatus.NOT_STARTED
     assert regulation.description_status == DescriptionStatus.IN_PROGRESS
+    assert regulation.section_summaries_status == DescriptionStatus.IN_PROGRESS
 
 
 async def test_add_public_regulation_with_suborganization_of_other_organization(admin_client, session_maker):
@@ -409,5 +421,35 @@ async def test_regenerate_public_regulation_description_as_normal_user(user_clie
         regulation_id = await insert_regulation(session, None)
 
     response = await user_client.post(f"/api/regulations/{regulation_id}/description-generation")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_regenerate_public_regulation_section_summaries(admin_client, session_maker):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, preparation_status=RegulationPreparationStatus.PREPARED)
+
+    response = await admin_client.post(f"/api/regulations/{regulation_id}/section-summaries-generation")
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    assert await get_scheduled_task_names(session_maker) == [SECTION_SUMMARIES_GENERATION_TASK_NAME]
+
+    async with session_maker() as session:
+        section_summaries_status = await session.scalar(
+            select(regulations_table.c.section_summaries_status).where(regulations_table.c.id == regulation_id)
+        )
+
+    assert section_summaries_status == DescriptionStatus.IN_PROGRESS
+
+    response = await admin_client.post(f"/api/regulations/{regulation_id}/section-summaries-generation")
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_regenerate_public_regulation_section_summaries_as_normal_user(user_client, session_maker):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None, preparation_status=RegulationPreparationStatus.PREPARED)
+
+    response = await user_client.post(f"/api/regulations/{regulation_id}/section-summaries-generation")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN

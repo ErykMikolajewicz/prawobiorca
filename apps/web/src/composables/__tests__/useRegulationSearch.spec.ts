@@ -32,6 +32,8 @@ function result(id: string): SearchResult {
     header: null,
     text: `Tekst ${id}`,
     elements: [],
+    summary_label: null,
+    summary: null,
     highlight: null,
   }
 }
@@ -52,7 +54,14 @@ describe('useRegulationSearch', () => {
   })
 
   it('lists all sections of the regulation', async () => {
-    const section = { id: 'a', header: null, text: 'Tekst a', elements: [] }
+    const section = {
+      id: 'a',
+      header: null,
+      text: 'Tekst a',
+      elements: [],
+      summary_label: null,
+      summary: null,
+    }
     vi.mocked(listRegulationSections).mockResolvedValueOnce([section])
 
     const { results, browse } = useRegulationSearch('uuid-1')

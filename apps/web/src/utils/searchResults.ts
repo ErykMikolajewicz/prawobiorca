@@ -13,6 +13,8 @@ export type ResultGroup = {
 
 export type TocNode = {
   title: string
+  summaryLabel?: string
+  summary?: string
   groupId?: string
   firstGroupId: string
   children: Array<TocNode>
@@ -51,7 +53,12 @@ export function buildTableOfContents(groups: Array<ResultGroup>): Array<TocNode>
         undefined,
       )
 
-    if (node) node.groupId ??= group.id
+    if (node && node.groupId === undefined) {
+      const [firstItem] = group.items
+      node.groupId = group.id
+      node.summaryLabel = firstItem?.summary_label ?? undefined
+      node.summary = firstItem?.summary ?? undefined
+    }
   }
 
   return root

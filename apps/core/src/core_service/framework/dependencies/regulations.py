@@ -9,6 +9,7 @@ from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import (
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,
+    SectionSummariesGenerationScheduler,
 )
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.use_cases.regulations import (
@@ -20,6 +21,7 @@ from core_service.application.use_cases.regulations import (
     ListRegulations,
     ListRegulationSections,
     RegenerateRegulationDescription,
+    RegenerateSectionSummaries,
     RetryRegulationPreparation,
     SearchRegulation,
     SearchRegulations,
@@ -37,6 +39,7 @@ from core_service.infrastructure.relational_db.repositories.sections import Sqla
 from core_service.infrastructure.tasks.regulations import (
     PostgresRegulationDescriptionGenerationScheduler,
     PostgresRegulationPreparationScheduler,
+    PostgresSectionSummariesGenerationScheduler,
 )
 
 
@@ -69,6 +72,12 @@ def get_regulation_description_generation_scheduler(
     broker: Annotated[AsyncBroker, Depends(get_broker)],
 ) -> RegulationDescriptionGenerationScheduler:
     return PostgresRegulationDescriptionGenerationScheduler(broker)
+
+
+def get_section_summaries_generation_scheduler(
+    broker: Annotated[AsyncBroker, Depends(get_broker)],
+) -> SectionSummariesGenerationScheduler:
+    return PostgresSectionSummariesGenerationScheduler(broker)
 
 
 def get_list_regulations(
@@ -174,3 +183,16 @@ def get_regenerate_regulation_description(
     ],
 ) -> RegenerateRegulationDescription:
     return RegenerateRegulationDescription(session_maker, regulations_repository, description_generation_scheduler)
+
+
+def get_regenerate_section_summaries(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+    sections_repository: Annotated[SectionsRepository, Depends(get_sections_repository)],
+    section_summaries_generation_scheduler: Annotated[
+        SectionSummariesGenerationScheduler, Depends(get_section_summaries_generation_scheduler)
+    ],
+) -> RegenerateSectionSummaries:
+    return RegenerateSectionSummaries(
+        session_maker, regulations_repository, sections_repository, section_summaries_generation_scheduler
+    )

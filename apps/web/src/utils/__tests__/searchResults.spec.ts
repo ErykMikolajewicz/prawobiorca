@@ -5,8 +5,19 @@ import {
   type RegulationSearchResult,
 } from '@/utils/searchResults'
 
-function section(id: string, header: string | null): RegulationSearchResult {
-  return { id, header, text: `Tekst ${id}`, elements: [] }
+function section(
+  id: string,
+  header: string | null,
+  summaryLabel: string | null = null,
+): RegulationSearchResult {
+  return {
+    id,
+    header,
+    text: `Tekst ${id}`,
+    elements: [],
+    summary_label: summaryLabel,
+    summary: summaryLabel && `Opis ${id}`,
+  }
 }
 
 describe('groupResultsByHeader', () => {
@@ -105,6 +116,25 @@ describe('buildTableOfContents', () => {
           },
         ],
       },
+    ])
+  })
+
+  it('describes an entry with the summary of its first section', () => {
+    const groups = groupResultsByHeader([
+      section('1', 'Art. 1', 'Zakres ustawy'),
+      section('2', 'Art. 1', 'Inny zakres'),
+      section('3', 'Art. 2'),
+    ])
+
+    expect(
+      buildTableOfContents(groups).map(({ title, summaryLabel, summary }) => ({
+        title,
+        summaryLabel,
+        summary,
+      })),
+    ).toEqual([
+      { title: 'Art. 1', summaryLabel: 'Zakres ustawy', summary: 'Opis 1' },
+      { title: 'Art. 2', summaryLabel: undefined, summary: undefined },
     ])
   })
 

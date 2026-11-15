@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pg-data
+spec:
+  storageClassName: ""
+  volumeName: pg-data
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-data
+spec:
+  storageClassName: ""
+  volumeName: rustfs-data

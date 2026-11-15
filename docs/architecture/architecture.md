@@ -67,8 +67,9 @@ Every environment is deployed from the same Kustomize structure by `scripts/depl
 
 - `base/` – portable Kubernetes shared by all environments: `core`, `core-worker`, the migrations Job, `web` and PostgreSQL. It contains nothing specific to GKE.
 - `overlays/gcp` – GKE patches (Secret Manager CSI volume, service account, spot nodes, Ingress with managed certificates) and the Cloud Run, Vertex AI and Cloud Storage configuration.
-- `overlays/local` – the kind environment: an nginx gateway on `localhost:8080`, RustFS on `localhost:9000`, `embedding`, `extraction`, the LLM on CPU and a test `Secret`.
-- `overlays/e2e` – `local` with `extraction` and the LLM scaled to zero, plus the seed Job.
+- `overlays/kind` – shared by the kind environments: an nginx gateway on `localhost:8080`, RustFS on `localhost:9000`, `embedding`, `extraction`, the LLM on CPU and a test `Secret`.
+- `overlays/local` – `kind` with PostgreSQL and RustFS data in the Podman volumes of `just dev`, mounted into the cluster node by `scripts/local/run.py`.
+- `overlays/e2e` – `kind` with `extraction` and the LLM scaled to zero, plus the seed Job.
 - `kind/cluster.yaml` – the kind cluster: host ports 8080 and 9000, and the host directory with LLM models.
 
 Rules shared by the environments:
@@ -77,6 +78,6 @@ Rules shared by the environments:
 - **Configuration**: the `core-config` ConfigMap is generated from `config.env` files, overlays override single keys. Its name contains a content hash, so a configuration change rolls the pods.
 - **Secrets**: always files in `/mnt/secrets-store`, from Secret Manager on GCP and from a plain `Secret` elsewhere. No secrets are passed through environment variables.
 
-A deployment to another Kubernetes cluster is a new overlay over `base/`, reusing the service definitions from `overlays/local`.
+A deployment to another Kubernetes cluster is a new overlay over `base/`, reusing the service definitions from `overlays/kind`.
 
 See [CI/CD](../ci_cd.md) for deployment workflows, [Backend](backend.md) for service-specific deployment details, and [Frontend](frontend.md#6-build-and-deployment) for the frontend container and routing.

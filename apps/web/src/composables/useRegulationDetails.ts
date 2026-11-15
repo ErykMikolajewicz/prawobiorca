@@ -4,6 +4,7 @@ import {
   deleteRegulation,
   getRegulationDownloadUrlById,
   regenerateRegulationDescription,
+  regenerateSectionSummaries,
   updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { showApiError } from '@/utils/error'
@@ -17,6 +18,7 @@ export function useRegulationDetails() {
   const isDeleting = ref(false)
   const isLoadingPreview = ref(false)
   const isGeneratingDescription = ref(false)
+  const isGeneratingSectionSummaries = ref(false)
 
   function resetForm(regulation: RegulationRepresentation) {
     name.value = regulation.presentationName
@@ -76,6 +78,24 @@ export function useRegulationDetails() {
     }
   }
 
+  async function generateSectionSummaries(regulationId: string): Promise<boolean> {
+    try {
+      isGeneratingSectionSummaries.value = true
+      await regenerateSectionSummaries(regulationId)
+      ElMessage.success('Generowanie podsumowań artykułów zostało rozpoczęte')
+      return true
+    } catch (error) {
+      showApiError(error, {
+        defaultMessage: 'Nie udało się rozpocząć generowania podsumowań artykułów',
+        conflictMessage:
+          'Podsumowania są już generowane lub regulacja nie jest jeszcze przetworzona.',
+      })
+      return false
+    } finally {
+      isGeneratingSectionSummaries.value = false
+    }
+  }
+
   async function showPreview(regulationId: string) {
     const previewWindow = window.open('', '_blank')
     try {
@@ -100,10 +120,12 @@ export function useRegulationDetails() {
     isDeleting,
     isLoadingPreview,
     isGeneratingDescription,
+    isGeneratingSectionSummaries,
     resetForm,
     save,
     remove,
     generateDescription,
+    generateSectionSummaries,
     showPreview,
   }
 }

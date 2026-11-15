@@ -120,6 +120,9 @@ onBeforeMount(loadRegulations)
       @regulation-deleted="publicRegulations.remove"
       @regulation-preparation-retried="publicRegulations.markAsInProgress"
       @regulation-description-generation-started="publicRegulations.markDescriptionAsInProgress"
+      @regulation-section-summaries-generation-started="
+        publicRegulations.markSectionSummariesAsInProgress
+      "
     >
       <template v-if="isUserLogged" #actions>
         <el-button type="primary" @click="isUploadDialogVisible = true">Dodaj regulacje</el-button>

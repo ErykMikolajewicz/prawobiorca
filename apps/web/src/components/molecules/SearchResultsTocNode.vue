@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import type { TocNode } from '@/utils/searchResults'
 
 const props = defineProps<{ node: TocNode }>()
@@ -7,13 +8,26 @@ const emit = defineEmits<{
   (e: 'navigate', href: string): void
 }>()
 
+const { isMobile } = useBreakpoint()
+
 function navigateToFirstGroup() {
   emit('navigate', `#${props.node.firstGroupId}`)
 }
 </script>
 
 <template>
-  <el-anchor-link v-if="node.groupId" :href="`#${node.groupId}`" :title="node.title">
+  <el-anchor-link v-if="node.groupId" :href="`#${node.groupId}`">
+    <el-tooltip
+      :disabled="isMobile || !node.summary"
+      :content="node.summary"
+      placement="left"
+      :show-after="300"
+    >
+      <span>
+        {{ node.title }}
+        <span v-if="node.summaryLabel" class="toc-summary-label">· {{ node.summaryLabel }}</span>
+      </span>
+    </el-tooltip>
     <template v-if="node.children.length" #sub-link>
       <SearchResultsTocNode
         v-for="child in node.children"
@@ -45,5 +59,9 @@ function navigateToFirstGroup() {
 <style scoped>
 .toc-chapter {
   font-weight: 600;
+}
+
+.toc-summary-label {
+  color: var(--el-text-color-secondary);
 }
 </style>

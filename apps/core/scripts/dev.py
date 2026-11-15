@@ -6,6 +6,7 @@ import time
 RUSTFS_CORS_ALLOWED_ORIGINS = "http://localhost:4173,http://localhost:5173,http://localhost:8080"
 WORKER_SHUTDOWN_TIMEOUT = 3
 POSTGRES_READY_TIMEOUT = 60
+KIND_NODE = "prawobiorca-control-plane"
 
 
 def run_command(cmd):
@@ -84,6 +85,9 @@ def stop_worker(worker):
 
 
 def main():
+    if container_running(KIND_NODE):
+        raise SystemExit("The kind cluster of just run-locally uses the same volumes. Run: just run-locally-down")
+
     run_container_if_not_running(
         "postgres_db_prawobiorca",
         "-e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5432:5432"
@@ -95,7 +99,7 @@ def main():
     run_container_if_not_running(
         "rustfs",
         f"-e RUSTFS_CORS_ALLOWED_ORIGINS={RUSTFS_CORS_ALLOWED_ORIGINS}"
-        " -p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 -v rustfs-data:/data rustfs/rustfs:latest",
+        " -p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 -v rustfs-data:/data rustfs/rustfs:1.0.5",
     )
 
     run_container_if_not_running(

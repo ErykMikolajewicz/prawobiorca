@@ -50,3 +50,23 @@ class SectionsCollection:
         chunks_to_embed.sort(key=lambda chunk: len(chunk.text))
 
         return [list(batch) for batch in batched(chunks_to_embed, batch_size, strict=False)]
+
+
+@dataclass(frozen=True)
+class SectionToSummarize:
+    id: UUID
+    header: str | None
+    text: str
+
+
+@dataclass(frozen=True)
+class SectionSummariesBatch:
+    chapter: str | None
+    sections: list[SectionToSummarize]
+
+
+@dataclass(frozen=True)
+class SectionSummary:
+    section_id: UUID
+    label: str
+    summary: str

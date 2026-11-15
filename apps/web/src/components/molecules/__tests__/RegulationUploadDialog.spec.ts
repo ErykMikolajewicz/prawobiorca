@@ -70,6 +70,7 @@ describe('RegulationUploadDialog', () => {
       organizationId: null,
       suborganizationId: null,
       generateDescription: false,
+      generateSectionSummaries: false,
     })
     expect(vi.mocked(uploadFileToStorage).mock.calls[0]?.[0]).toEqual(uploadTarget)
     expect(confirmRegulationUpload).toHaveBeenCalledExactlyOnceWith('regulation-9')
@@ -99,6 +100,7 @@ describe('RegulationUploadDialog', () => {
     const wrapper = await mountDialog(false)
 
     expect(wrapper.text()).not.toContain('Wygeneruj opis przez AI')
+    expect(wrapper.text()).not.toContain('Wygeneruj podsumowania artykułów przez AI')
     expect(wrapper.text()).not.toContain('Widoczność pliku')
     expect(wrapper.text()).not.toContain('Organizacja')
   })
@@ -123,12 +125,20 @@ describe('RegulationUploadDialog', () => {
     expect(suborganizationSelect.classes()).not.toContain('is-disabled')
   })
 
-  it('uploads a public regulation of an organization with a generated description', async () => {
+  it('offers section summaries only for a public regulation', async () => {
+    const wrapper = await mountDialog(true)
+    expect(wrapper.text()).not.toContain('Wygeneruj podsumowania artykułów przez AI')
+
+    await wrapper.find('input[type="radio"][value="PUBLIC"]').setValue(true)
+
+    expect(wrapper.text()).toContain('Wygeneruj podsumowania artykułów przez AI')
+  })
+
+  it('uploads a public regulation of an organization with AI generation by default', async () => {
     const wrapper = await mountDialog(true)
 
     await selectFile(wrapper, 'statut.pdf')
     await wrapper.find('input[type="radio"][value="PUBLIC"]').setValue(true)
-    await wrapper.find('input[type="checkbox"]').setValue(true)
     await findOption('Politechnika Wrocławska')!.trigger('click')
     await findOption('Wydział Informatyki')!.trigger('click')
     await submit()
@@ -140,6 +150,7 @@ describe('RegulationUploadDialog', () => {
       organizationId: 'pwr',
       suborganizationId: 'w4',
       generateDescription: true,
+      generateSectionSummaries: true,
     })
     expect(wrapper.emitted('created')?.[0]?.[1]).toBe('PUBLIC')
   })

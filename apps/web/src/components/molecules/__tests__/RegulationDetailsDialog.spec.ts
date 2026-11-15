@@ -8,6 +8,7 @@ import {
   deleteRegulation,
   getRegulationDownloadUrlById,
   regenerateRegulationDescription,
+  regenerateSectionSummaries,
   updateRegulation,
 } from '@/api/generated/endpoints/regulations/regulations'
 import { useAuthStore } from '@/stores/auth'
@@ -27,6 +28,7 @@ const regulation = createRegulation({
 type DialogOptions = {
   canManage: boolean
   isAdmin?: boolean
+  isPublic?: boolean
   regulation?: Partial<RegulationRepresentation>
 }
 
@@ -39,6 +41,7 @@ async function mountDialog(options: DialogOptions) {
       'onUpdate:modelValue': (modelValue: boolean) => wrapper.setProps({ modelValue }),
       regulation: { ...regulation, ...options.regulation },
       canManage: options.canManage,
+      isPublic: options.isPublic ?? true,
     },
     global,
     attachTo: document.body,
@@ -389,5 +392,69 @@ describe('RegulationDetailsDialog', () => {
 
       expect(inputValue(DESCRIPTION_INPUT)).toBe('Wygenerowany opis')
     })
+  })
+
+  describe('section summaries generation', () => {
+    it('starts section summaries generation of a public regulation as admin', async () => {
+      const wrapper = await mountDialog({ canManage: true, isAdmin: true })
+
+      await clickButton('Wygeneruj podsumowania przez AI')
+
+      expect(regenerateSectionSummaries).toHaveBeenCalledExactlyOnceWith('uuid-1')
+      expect(wrapper.emitted('section-summaries-generation-started')).toEqual([['uuid-1']])
+      expect(shownMessages('success')).toEqual([
+        'Generowanie podsumowań artykułów zostało rozpoczęte',
+      ])
+    })
+
+    it('explains why section summaries generation could not be started', async () => {
+      const wrapper = await mountDialog({ canManage: true, isAdmin: true })
+      vi.mocked(regenerateSectionSummaries).mockRejectedValueOnce(createHttpError(409))
+
+      await clickButton('Wygeneruj podsumowania przez AI')
+
+      expect(shownMessages('error')).toEqual([
+        'Podsumowania są już generowane lub regulacja nie jest jeszcze przetworzona.',
+      ])
+      expect(wrapper.emitted('section-summaries-generation-started')).toBeUndefined()
+    })
+
+    it.each([
+      { canManage: true, isAdmin: false, isPublic: true },
+      { canManage: false, isAdmin: true, isPublic: true },
+      { canManage: true, isAdmin: true, isPublic: false },
+    ])('does not offer section summaries generation: %o', async (options) => {
+      await mountDialog({ ...options, regulation: { sectionSummariesStatus: 'FAILED' } })
+
+      expect(dialog().text()).not.toContain('Podsumowania artykułów')
+      expect(findButton('Wygeneruj podsumowania przez AI')).toBeUndefined()
+    })
+
+    it('does not offer section summaries generation before regulation is prepared', async () => {
+      await mountDialog({
+        canManage: true,
+        isAdmin: true,
+        regulation: { preparationStatus: 'IN_PROGRESS' },
+      })
+
+      expect(findButton('Wygeneruj podsumowania przez AI')).toBeUndefined()
+    })
+
+    it.each([
+      ['IN_PROGRESS', 'Generowanie podsumowań', false],
+      ['FAILED', 'Błąd generowania podsumowań', true],
+    ] as const)(
+      'shows section summaries status %s',
+      async (sectionSummariesStatus, label, canRetry) => {
+        await mountDialog({
+          canManage: true,
+          isAdmin: true,
+          regulation: { sectionSummariesStatus },
+        })
+
+        expect(dialog().find('.el-tag').text()).toBe(label)
+        expect(findButton('Wygeneruj podsumowania przez AI') !== undefined).toBe(canRetry)
+      },
+    )
   })
 })

@@ -2,6 +2,7 @@ import sqlalchemy as sqla
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
+from core_service.domain.consts import MAX_SECTION_SUMMARY_LABEL_LENGTH, MAX_SECTION_SUMMARY_LENGTH
 from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import metadata
 
@@ -14,6 +15,8 @@ regulations_sections_table = sqla.Table(
     sqla.Column("text", sqla.Text, nullable=False),
     sqla.Column("section_order", sqla.Integer, nullable=False),
     sqla.Column("elements", postgresql.JSONB(astext_type=sqla.Text()), nullable=False),
+    sqla.Column("summary_label", sqla.String(MAX_SECTION_SUMMARY_LABEL_LENGTH), nullable=True),
+    sqla.Column("summary", sqla.String(MAX_SECTION_SUMMARY_LENGTH), nullable=True),
     sqla.Column("regulation_id", sqla.UUID, nullable=False),
     sqla.Column("user_id", sqla.UUID, nullable=True),
     sqla.ForeignKeyConstraint(

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - gateway.yaml
+  - rustfs.yaml
+  - embedding.yaml
+  - extraction.yaml
+  - llm.yaml
+
+configMapGenerator:
+  - name: core-config
+    behavior: merge
+    envs:
+      - config.env
+  - name: nginx-config
+    files:
+      - nginx.conf
+  - name: rustfs-bucket
+    files:
+      - ../../../apps/core/scripts/create_bucket.py
+
+secretGenerator:
+  - name: prawobiorca-secrets
+    literals:
+      - RELATIONAL_DB_PASSWORD=postgres
+      - APP_JWT_SECRET_KEY=local-only-secret-not-for-production-use
+      - OBJECT_STORAGE_ACCESS_KEY=rustfsadmin
+      - OBJECT_STORAGE_SECRET_KEY=rustfsadmin
