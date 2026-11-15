@@ -38,12 +38,12 @@ jobs:
         run: uv run --locked --only-group docs zensical build --clean --strict
 
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.repository_id == '989302666'
         with:
           path: site
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.repository_id == '989302666'
     needs: build
     runs-on: ubuntu-latest
     permissions:
