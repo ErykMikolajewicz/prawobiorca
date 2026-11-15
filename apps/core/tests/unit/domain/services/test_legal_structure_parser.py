@@ -547,6 +547,26 @@ def test_division_number_with_letter_is_recognised():
     assert units[1].path == ["DZIAŁ XIVA Przetwarzanie danych osobowych"]
 
 
+def test_division_numbered_with_word_is_recognised():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="KSIĘGA PIERWSZA"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="CZĘŚĆ OGÓLNA"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="TYTUŁ I"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="PRZEPISY WSTĘPNE"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 1. Kodeks reguluje stosunki cywilnoprawne."),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="KSIĘGA DRUGA"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="WŁASNOŚĆ I INNE PRAWA RZECZOWE"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="TYTUŁ I"),
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="WŁASNOŚĆ"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 140. Właściciel może korzystać z rzeczy."),
+    ]
+
+    units = LegalStructureParser().parse(elements)
+
+    assert units[0].path == ["KSIĘGA PIERWSZA CZĘŚĆ OGÓLNA", "TYTUŁ I PRZEPISY WSTĘPNE"]
+    assert units[1].path == ["KSIĘGA DRUGA WŁASNOŚĆ I INNE PRAWA RZECZOWE", "TYTUŁ I WŁASNOŚĆ"]
+
+
 def test_division_number_glued_to_title_is_recognised():
     elements = [
         RegulationElement(label=UsefulLabels.SECTION_HEADER, text="Rozdział V -Realizacja studiów"),

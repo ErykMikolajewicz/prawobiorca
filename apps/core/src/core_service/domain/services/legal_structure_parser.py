@@ -15,10 +15,11 @@ PAGE_BREAK_LABELS = frozenset({"page_header", "page_footer"})
 SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹"
 SUPERSCRIPT_TRANSLATION = str.maketrans("0123456789", SUPERSCRIPT_DIGITS)
 UNIT_NUMBER = rf"\d+[a-z]*[{SUPERSCRIPT_DIGITS}]*"
+ORDINAL_NUMBER = r"(?i:PIERWSZA|DRUGA|TRZECIA|CZWARTA|PIĄTA|SZÓSTA|SIÓDMA|ÓSMA|DZIEWIĄTA|DZIESIĄTA)\b"
 
 DIVISION_PATTERN = re.compile(
     r"^(?i:(ZAŁĄCZNIK|CZĘŚĆ|KSIĘGA|TYTUŁ|DZIAŁ|ROZDZIAŁ|ODDZIAŁ))\s+(?i:nr\s*)?"
-    rf"([IVXLCDM]+[A-Z]?[{SUPERSCRIPT_DIGITS}]*\b|\d+[A-Za-z]*[{SUPERSCRIPT_DIGITS}]*\b"
+    rf"({ORDINAL_NUMBER}|[IVXLCDM]+[A-Z]?[{SUPERSCRIPT_DIGITS}]*\b|\d+[A-Za-z]*[{SUPERSCRIPT_DIGITS}]*\b"
     r"|[IVXLCDM]+?(?=[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]))"
 )
 ARTICLE_PATTERN = re.compile(rf"^Art\.\s*({UNIT_NUMBER})\s*\.")
