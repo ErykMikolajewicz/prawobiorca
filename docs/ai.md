@@ -106,7 +106,7 @@ The administrator can request an LLM-generated short description of an applicati
 | Environment | Model | Notes |
 | --- | --- | --- |
 | **GCP** | `google/gemini-3.5-flash-lite` (Vertex AI) | Serverless, billed per token. The `eu` multi-region (`aiplatform.eu.rep.googleapis.com`) processes data only within the EU. Requires `roles/aiplatform.user` (`scripts/cloud/cloud_inith.sh`). |
-| **On-premise** | `OpenVINO/Qwen3.6-35B-A3B-int4-ov` (OVMS, `qwen-3.6-35b`) | `deploy/local/llm.yaml`. Mixture of experts, about 3B active parameters. |
+| **On-premise** | `OpenVINO/Qwen3.6-35B-A3B-int4-ov` (OVMS, `qwen-3.6-35b`) | `deploy/overlays/local/llm.yaml`, on CPU in the local kind cluster. Mixture of experts, about 3B active parameters. |
 | **Local development** | `OpenVINO/Qwen3.5-9B-int4-ov` (OVMS, `qwen-3.5-9b`) | `apps/core/scripts/dev.py`, a lighter model for testing. |
 
 Previously tested: `OpenVINO/Qwen2.5-7B-Instruct-int4-ov`, `OpenVINO/gemma-2b-it-int8-ov` (no `system` role, limited Polish corpus), `OpenVINO/gemma-4-E4B-it-int8-ov` (`Segmentation fault` in OVMS 2026.3), `google/gemma-4-26b-a4b-it-maas` and `OpenVINO/gemma-4-26b-a4b-it-int4-ov` (replaced by Gemini 3.5 Flash-Lite and Qwen 3.6 35B A3B for better results).

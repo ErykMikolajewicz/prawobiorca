@@ -1,17 +1,32 @@
 export VIRTUAL_ENV := ""
+export KIND_EXPERIMENTAL_PROVIDER := "podman"
+export PYTHONUNBUFFERED := "1"
 
 [working-directory: 'apps/core']
 dev:
     uv run scripts/dev.py
 
 run-locally:
-    uv run --no-default-groups scripts/local/run.py
+    uv run --no-default-groups scripts/local/run.py local
 
 run-locally-down:
-    uv run --no-default-groups scripts/local/stop.py
+    kubectl --context kind-prawobiorca scale deployment --all --replicas=0
+    kubectl --context kind-prawobiorca delete pod --all
+    podman stop --time 0 prawobiorca-control-plane
+
+# Deletes the local database and object storage; downloaded LLM models stay in .llm-models.
+run-locally-reset:
+    kind delete cluster --name prawobiorca
 
 run-e2e-env:
-    uv run --no-default-groups scripts/local/run_e2e.py
+    uv run --no-default-groups scripts/local/run.py e2e
+
+run-e2e-env-down:
+    kind delete cluster --name prawobiorca-e2e
+
+[positional-arguments]
+deploy *args:
+    uv run --no-default-groups scripts/deploy.py "$@"
 
 # Active scan: use only with a disposable E2E database.
 dast:
@@ -131,7 +146,11 @@ check-containers:
     podman run --rm -v "$PWD:/repo:ro" -w /repo {{hadolint}} hadolint apps/*/Containerfile
 
 check-deployment:
-    uv run --only-group deployment checkov --directory deploy/gcp
+    mkdir -p .cache/deployment
+    just deploy local --render > /dev/null
+    just deploy e2e --render > /dev/null
+    just deploy gcp --render --image core=prawobiorca/core:check --image web=prawobiorca/web:check > .cache/deployment/gcp.yaml
+    uv run --only-group deployment checkov --file .cache/deployment/gcp.yaml
 
 [working-directory: 'apps/web']
 check-frontend:

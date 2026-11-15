@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
+  labels:
+    deploy-phase: app
 spec:
   replicas: 1
   selector:
@@ -14,8 +16,6 @@ spec:
         app: prawobiorca
         component: web
     spec:
-      nodeSelector:
-        cloud.google.com/gke-spot: "true"
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -25,7 +25,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: web
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/web:latest
+          image: prawobiorca/web
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -63,10 +63,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: web
-  annotations:
-    cloud.google.com/backend-config: '{"default": "prawobiorca-backend-config"}'
 spec:
-  type: NodePort
   selector:
     app: prawobiorca
     component: web

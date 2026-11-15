@@ -18,7 +18,6 @@ spec:
         app: prawobiorca
         component: postgres
     spec:
-      serviceAccountName: prawobiorca-runner
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -30,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: postgres
-          image: pgvector/pgvector:0.8.2-pg18-trixie
+          image: pgvector/pgvector:0.8.4-pg18-trixie
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -76,11 +75,8 @@ spec:
             failureThreshold: 6
       volumes:
         - name: secrets-store
-          csi:
-            driver: secrets-store-gke.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: prawobiorca-secrets
+          secret:
+            secretName: prawobiorca-secrets
         - name: pg-data
           persistentVolumeClaim:
             claimName: pg-data

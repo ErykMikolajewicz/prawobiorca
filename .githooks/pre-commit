@@ -47,7 +47,7 @@ if changed 'Containerfile$|^\.hadolint\.yaml$'; then
   just check-containers
 fi
 
-if changed '^deploy/gcp/|^\.checkov\.yaml$'; then
+if changed '^deploy/|^scripts/deploy\.py$|^\.checkov\.yaml$'; then
   just check-deployment
 fi
 

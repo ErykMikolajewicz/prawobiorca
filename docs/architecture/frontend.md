@@ -75,8 +75,10 @@ The image is built as `prawobiorca/web` by `just build-web` (and as part of `jus
 
 In both deployment environments the frontend is served at the root path, behind the same entry point as the API:
 
-* **On-Premise**: `deploy/local/web.yaml`, routed by the nginx ingress defined in `deploy/local/nginx-config.yaml` — `/` goes to the frontend, `/api` to `core`.
-* **Cloud (GCP)**: `deploy/gcp/web.yaml`, routed by `deploy/gcp/ingress.yaml`.
+Both use the same `deploy/base/web.yaml`:
+
+* **Local (kind)**: routed by the nginx gateway from `deploy/overlays/local` (`gateway.yaml`, `nginx.conf`) — `/` goes to the frontend, `/api` to `core`.
+* **Cloud (GCP)**: routed by `deploy/overlays/gcp/ingress.yaml`.
 
 ---
 

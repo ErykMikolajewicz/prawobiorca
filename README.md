@@ -24,7 +24,7 @@ The whole application lives in this repository:
 - `apps/extraction/` - extracts structured text from PDFs.
 - `apps/embedding/` - OpenVINO Model Server image with the embedding model baked in.
 - `apps/web/` - Vue 3 frontend application.
-- `deploy/` - Kubernetes manifests for the local (Podman) and GCP environments.
+- `deploy/` - Kubernetes manifests: a shared Kustomize base with overlays for GCP, the local kind cluster and E2E.
 - `scripts/` - helper scripts for running the app locally and deploying it to the cloud.
 - `docs/` - developer documentation.
 
@@ -60,26 +60,16 @@ The whole application lives in this repository:
     - If everything works, push your code to the repository (remember to do it on a feature branch) and contact **Eryk Mikołajewicz** for a code review.
 
 ## Running the Application
-To check how the application works, launch it using the script below. Note that you must have **Podman** installed for it to work!
+To check how the application works, run it in a local [kind](https://kind.sigs.k8s.io) cluster. You need **Podman**, **kind** and **kubectl** installed.
 
-Start with building images with:
-```sh
-just build-images
-```
-This builds the images of all services, including the frontend.
-
-Then run:
 ```sh
 just run-locally
 ```
+This creates the `prawobiorca` cluster if it does not exist, builds the images of all services, loads the changed ones into the cluster and deploys the application together with the LLM running on CPU.
 
-## Initialize databases
-```sh
-just init-db
-```
-This command may take a while, it is making some hard extraction from PDFs.
+The first run takes a while: it loads about 4.5 GB of images, and the LLM downloads its model (about 20 GB) to `.llm-models` in the background. The model needs about 20 GB of RAM.
 
-Everything is served by the nginx ingress on [http://localhost:8080](http://localhost:8080):
+Everything is served by the nginx gateway on [http://localhost:8080](http://localhost:8080):
 
 - [http://localhost:8080/](http://localhost:8080/) - the frontend application
 - [http://localhost:8080/api](http://localhost:8080/api) - the API
@@ -87,7 +77,21 @@ Everything is served by the nginx ingress on [http://localhost:8080](http://loca
 - [http://localhost:8080/openapi.json](http://localhost:8080/openapi.json) - the OpenAPI schema
 - [http://localhost:8080/storage/](http://localhost:8080/storage/) - the object storage
 
-To stop the deployment run `just run-locally-down`.
+The object storage is also available directly on [http://localhost:9000](http://localhost:9000).
+
+- `just run-locally-down` stops the cluster and keeps its data.
+- `just run-locally-reset` deletes the cluster with the database and object storage; downloaded LLM models stay.
+
+### Initialize databases
+The database and the compute services are not exposed on the host, so forward their ports first:
+```sh
+kubectl --context kind-prawobiorca port-forward service/postgres 5432:5432 &
+kubectl --context kind-prawobiorca port-forward service/embedding 8081:8080 &
+kubectl --context kind-prawobiorca port-forward service/extraction 8082:8080 &
+just init-db
+kill %1 %2 %3
+```
+This command may take a while, it is making some hard extraction from PDFs. It reads the configuration from `apps/core/.env` (see `apps/core/.env.example`).
 
 ## Development Mode
 For day-to-day development, run the backend and the frontend from the sources, with hot reload.

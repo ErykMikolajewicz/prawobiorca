@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels:
+    deploy-phase: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prawobiorca
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app: prawobiorca
+        component: gateway
+    spec:
+      containers:
+        - name: nginx
+          image: docker.io/library/nginx:alpine
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 5
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+spec:
+  type: NodePort
+  selector:
+    app: prawobiorca
+    component: gateway
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080

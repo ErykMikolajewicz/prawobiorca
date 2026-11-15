@@ -63,7 +63,10 @@ jobs:
               - .github/workflows/ci.yml
               - .github/actions/setup-tools/**
             deployment:
-              - deploy/gcp/**
+              - deploy/**
+              - scripts/deploy.py
+              - apps/core/scripts/create_bucket.py
+              - apps/core/scripts/init_e2e_regulation.py
               - .checkov.yaml
               - pyproject.toml
               - uv.lock
