@@ -1,14 +1,9 @@
-import re
-
-from core_service.domain.services.legal_structure_parser import SUPERSCRIPT_DIGITS
-from core_service.domain.value_objects.legal_units import BREADCRUMB_SEPARATOR
+from core_service.domain.services.breadcrumbs import UNIT_CITATION_PATTERN, split_unit_segment
 from core_service.domain.value_objects.regulations import RegulationDescriptionSource, RegulationHeading, SectionContent
 
 MAX_DESCRIPTION_HEADINGS = 300
 
 MAX_DESCRIPTION_BEGINNING_CHARS = 4000
-
-UNIT_CITATION_PATTERN = re.compile(rf"^(Art\.|§)\s*\d[\d\s]*[a-z]?[{SUPERSCRIPT_DIGITS}]*\s*\.?\s*")
 
 
 def create_description_source(presentation_name: str, sections: list[SectionContent]) -> RegulationDescriptionSource:
@@ -17,10 +12,7 @@ def create_description_source(presentation_name: str, sections: list[SectionCont
     for section in sections:
         if section.header is None:
             continue
-        segments = section.header.split(BREADCRUMB_SEPARATOR)
-        unit_segment = segments.pop() if UNIT_CITATION_PATTERN.match(segments[-1]) else None
-
-        chapter = BREADCRUMB_SEPARATOR.join(segments)
+        chapter, unit_segment = split_unit_segment(section.header)
         if chapter and chapter != last_chapter:
             headings.append(RegulationHeading(text=chapter, level=0))
             last_chapter = chapter

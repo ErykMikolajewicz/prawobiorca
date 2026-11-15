@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import SearchResultItem from '@/components/molecules/SearchResultItem.vue'
-import type {
-  SearchResult,
-  SearchResultElement,
-  SearchResultHighlight,
-} from '@/api/generated/model'
+import type { SearchResultElement, SearchResultHighlight } from '@/api/generated/model'
+import { groupResultsByHeader, type RegulationSearchResult } from '@/utils/searchResults'
 
 const props = defineProps<{
-  results: Array<SearchResult>
+  results: Array<RegulationSearchResult>
   selectedCaseId?: string
   canAddToCase: boolean
   query: string
@@ -29,26 +26,7 @@ function onAddToCase(payload: AddToCasePayload) {
   emit('add-to-case', payload)
 }
 
-type ResultGroup = {
-  header: string | null
-  items: Array<SearchResult>
-}
-
-const groupedResults = computed<Array<ResultGroup>>(() => {
-  const groups: Array<ResultGroup> = []
-
-  for (const result of props.results) {
-    const lastGroup = groups[groups.length - 1]
-
-    if (lastGroup && lastGroup.header === result.header) {
-      lastGroup.items.push(result)
-    } else {
-      groups.push({ header: result.header, items: [result] })
-    }
-  }
-
-  return groups
-})
+const groupedResults = computed(() => groupResultsByHeader(props.results))
 </script>
 
 <template>
@@ -56,8 +34,8 @@ const groupedResults = computed<Array<ResultGroup>>(() => {
     <el-divider />
 
     <div v-if="results.length">
-      <h2 class="section-title">Wyniki:</h2>
-      <div v-for="(group, groupIndex) in groupedResults" :key="groupIndex" class="result-group">
+      <h2 v-if="query" class="section-title">Wyniki:</h2>
+      <div v-for="group in groupedResults" :id="group.id" :key="group.id" class="result-group">
         <h3 class="result-group-header">{{ group.header }}</h3>
         <SearchResultItem
           v-for="{ id, text, score, elements, highlight } in group.items"

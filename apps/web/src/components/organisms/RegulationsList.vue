@@ -26,6 +26,7 @@ const emit = defineEmits<{
   (e: 'regulation-deleted', regulationId: string): void
   (e: 'regulation-preparation-retried', regulationId: string): void
   (e: 'regulation-description-generation-started', regulationId: string): void
+  (e: 'regulation-section-summaries-generation-started', regulationId: string): void
 }>()
 
 const isDetailsDialogVisible = ref(false)
@@ -82,10 +83,14 @@ function openDetails(regulationId: string) {
       v-model="isDetailsDialogVisible"
       :regulation="selectedRegulation"
       :can-manage="canManage"
+      :is-public="target === 'PUBLIC'"
       @updated="(updatedRegulation) => emit('regulation-updated', updatedRegulation)"
       @deleted="(regulationId) => emit('regulation-deleted', regulationId)"
       @description-generation-started="
         (regulationId) => emit('regulation-description-generation-started', regulationId)
+      "
+      @section-summaries-generation-started="
+        (regulationId) => emit('regulation-section-summaries-generation-started', regulationId)
       "
     />
   </div>

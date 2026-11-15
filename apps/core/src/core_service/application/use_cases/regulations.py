@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import NoReturn
 from uuid import UUID
 
 from core_service.application.dtos.regulations import (
@@ -9,17 +10,19 @@ from core_service.application.dtos.regulations import (
     RegulationSearchResult,
     RegulationUploadTarget,
 )
-from core_service.application.dtos.search import SearchParams, SearchResult
+from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation
 from core_service.application.ports.regulations import (
     RegulationDescriptionWriter,
     RegulationsRepository,
     RegulationsStorage,
+    SectionSummariesWriter,
 )
-from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.relational import AsyncSession, SessionMaker
 from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import (
     RegulationDescriptionGenerationScheduler,
     RegulationPreparationScheduler,
+    SectionSummariesGenerationScheduler,
 )
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.services.embedding import embed_description
@@ -35,15 +38,18 @@ from core_service.domain.exceptions.regulations import (
     RegulationNotFound,
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
+    SectionSummariesGenerationInProgress,
 )
 from core_service.domain.services.regulation_access import (
     check_can_add_regulation,
     check_can_generate_regulation_description,
+    check_can_generate_section_summaries,
     check_can_manage_regulation,
     check_can_read_regulation,
     resolve_scope_owner,
 )
 from core_service.domain.services.regulation_description import create_description_source
+from core_service.domain.services.section_summaries import create_summary_batches, summarize_repealed_sections
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.regulations import (
@@ -53,7 +59,7 @@ from core_service.domain.value_objects.regulations import (
     RegulationScope,
     RegulationType,
 )
-from core_service.domain.value_objects.sections import SectionsCollection
+from core_service.domain.value_objects.sections import SectionsCollection, SectionSummary
 from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
@@ -61,6 +67,8 @@ logger = logging.getLogger(__name__)
 MAX_REGULATION_PREPARATION_DELIVERIES = 3
 
 MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES = 3
+
+MAX_SECTION_SUMMARIES_GENERATION_DELIVERIES = 3
 
 PREPARATION_SCHEDULING_ERRORS = (
     RegulationAlreadyInitialized,
@@ -109,6 +117,27 @@ async def _fail_description_generation(
         await regulations_repository.save(session, regulation)
 
 
+async def _fail_section_summaries_generation(
+    session_maker: SessionMaker,
+    regulations_repository: RegulationsRepository,
+    user_id: UUID | None,
+    regulation_id: UUID,
+) -> None:
+    async with session_maker.begin() as session:
+        regulation = await regulations_repository.get_for_update(session, user_id, regulation_id)
+        if regulation is None:
+            logger.warning("Regulation removed during section summaries generation! regulation id: %s", regulation_id)
+            return
+        if not regulation.is_section_summaries_in_progress:
+            logger.warning(
+                "Section summaries generation already finished, skipping failure! regulation id: %s", regulation_id
+            )
+            return
+
+        regulation.fail_section_summaries_generation()
+        await regulations_repository.save(session, regulation)
+
+
 @dataclass
 class PrepareRegulation:
     session_maker: SessionMaker
@@ -117,6 +146,7 @@ class PrepareRegulation:
     regulations_repository: RegulationsRepository
     regulation_preparator: RegulationPreparator
     description_generation_scheduler: RegulationDescriptionGenerationScheduler
+    section_summaries_generation_scheduler: SectionSummariesGenerationScheduler
 
     async def execute(self, user_id: UUID | None, regulation_id: UUID, is_last_attempt: bool) -> None:
         async with self.session_maker.begin() as session:
@@ -159,6 +189,10 @@ class PrepareRegulation:
             await self.regulations_repository.save(session, regulation)
             if regulation.is_description_in_progress:
                 await self.description_generation_scheduler.schedule_regulation_description_generation(
+                    session, user_id, regulation_id
+                )
+            if regulation.is_section_summaries_in_progress:
+                await self.section_summaries_generation_scheduler.schedule_section_summaries_generation(
                     session, user_id, regulation_id
                 )
 
@@ -308,6 +342,111 @@ class RegenerateRegulationDescription:
 
 
 @dataclass
+class GenerateSectionSummaries:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+    sections_repository: SectionsRepository
+    section_summaries_writer: SectionSummariesWriter
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, is_last_attempt: bool) -> None:
+        async with self.session_maker.begin() as session:
+            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+            if regulation is None:
+                logger.warning("Regulation to generate section summaries not found! regulation id: %s", regulation_id)
+                return
+
+            if not regulation.is_section_summaries_in_progress:
+                logger.warning("Section summaries generation not requested! regulation id: %s", regulation_id)
+                return
+
+            sections = await self.sections_repository.list_sections_to_summarize(session, user_id, regulation_id)
+
+        try:
+            await self._save_summaries(user_id, regulation_id, summarize_repealed_sections(sections))
+            for batch in create_summary_batches(sections):
+                summaries = await self.section_summaries_writer.write(batch)
+                await self._save_summaries(user_id, regulation_id, summaries)
+            await self._complete_section_summaries_generation(user_id, regulation_id)
+        except Exception as error:
+            logger.exception("Section summaries generation failed! regulation id: %s", regulation_id)
+            if not is_retried(error, is_last_attempt):
+                await _fail_section_summaries_generation(
+                    self.session_maker, self.regulations_repository, user_id, regulation_id
+                )
+            raise
+
+    async def _save_summaries(self, user_id: UUID | None, regulation_id: UUID, summaries: list[SectionSummary]) -> None:
+        if not summaries:
+            return
+        async with self.session_maker.begin() as session:
+            await self.sections_repository.set_summaries(session, user_id, regulation_id, summaries)
+
+    async def _complete_section_summaries_generation(self, user_id: UUID | None, regulation_id: UUID) -> None:
+        async with self.session_maker.begin() as session:
+            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+            if regulation is None:
+                logger.warning(
+                    "Regulation removed during section summaries generation! regulation id: %s", regulation_id
+                )
+                return
+
+            regulation.complete_section_summaries_generation()
+            await self.regulations_repository.save(session, regulation)
+
+
+@dataclass
+class FailSectionSummariesGeneration:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+
+    async def execute(self, user_id: UUID | None, regulation_id: UUID, delivery_attempt: int) -> bool:
+        if delivery_attempt <= MAX_SECTION_SUMMARIES_GENERATION_DELIVERIES:
+            return False
+
+        logger.error("Section summaries generation exceeded deliveries limit! regulation id: %s", regulation_id)
+        await _fail_section_summaries_generation(
+            self.session_maker, self.regulations_repository, user_id, regulation_id
+        )
+        return True
+
+
+@dataclass
+class RegenerateSectionSummaries:
+    session_maker: SessionMaker
+    regulations_repository: RegulationsRepository
+    sections_repository: SectionsRepository
+    section_summaries_generation_scheduler: SectionSummariesGenerationScheduler
+
+    async def execute(self, caller: Caller, regulation_id: UUID) -> None:
+        async with self.session_maker.begin() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_manage_regulation(caller, owner)
+            check_can_generate_section_summaries(caller, owner.scope)
+            user_id = owner.user_id
+
+            regulation = await self.regulations_repository.get_for_update(session, user_id, regulation_id)
+            if regulation is None:
+                logger.warning("Regulation to generate section summaries not found! regulation id: %s", regulation_id)
+                raise RegulationNotFound
+
+            try:
+                regulation.request_section_summaries()
+            except (RegulationInInvalidState, SectionSummariesGenerationInProgress) as error:
+                logger.warning(
+                    "Can't generate section summaries! regulation id: %s, reason: %s",
+                    regulation_id,
+                    type(error).__name__,
+                )
+                raise
+
+            await self.regulations_repository.save(session, regulation)
+            await self.sections_repository.clear_summaries(session, user_id, regulation_id)
+            await self.section_summaries_generation_scheduler.schedule_section_summaries_generation(
+                session, user_id, regulation_id
+            )
+
+
+@dataclass
 class AddRegulation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
@@ -317,6 +456,8 @@ class AddRegulation:
         check_can_add_regulation(caller, regulation_data.scope)
         if regulation_data.generate_description:
             check_can_generate_regulation_description(caller)
+        if regulation_data.generate_section_summaries:
+            check_can_generate_section_summaries(caller, regulation_data.scope)
         user_id = resolve_scope_owner(caller, regulation_data.scope)
 
         regulation_registration_data = RegulationRegistrationData(
@@ -327,6 +468,11 @@ class AddRegulation:
             description_status=(
                 DescriptionStatus.IN_PROGRESS
                 if regulation_data.generate_description
+                else DescriptionStatus.NOT_REQUESTED
+            ),
+            section_summaries_status=(
+                DescriptionStatus.IN_PROGRESS
+                if regulation_data.generate_section_summaries
                 else DescriptionStatus.NOT_REQUESTED
             ),
         )
@@ -555,24 +701,45 @@ class SearchRegulation:
 
         async with self.session_maker() as session:
             try:
-                results = await self.sections_repository.search(
+                return await self.sections_repository.search(
                     session, user_id, regulation_id, query_vector, search_params
                 )
             except RegulationDocumentsNotFound:
-                logger.warning("Regulation to search has no prepared documents! regulation id: %s", regulation_id)
+                await _raise_missing_sections_error(session, self.regulations_repository, user_id, regulation_id)
 
-                regulation_representation = await self.regulations_repository.get_regulation_representation(
-                    session, user_id, regulation_id
-                )
 
-                if regulation_representation is None:
-                    logger.warning("Regulation not found! regulation id: %s", regulation_id)
-                    raise RegulationNotFound
+@dataclass
+class ListRegulationSections:
+    session_maker: SessionMaker
+    sections_repository: SectionsRepository
+    regulations_repository: RegulationsRepository
 
-                if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
-                    logger.warning("Regulation to search not prepared! regulation id: %s", regulation_id)
-                    raise RegulationsNotPreparedToSearch(regulations_name=regulation_representation.presentation_name)
+    async def execute(self, caller: Caller, regulation_id: UUID) -> list[SectionRepresentation]:
+        async with self.session_maker() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_read_regulation(caller, owner)
+            try:
+                return await self.sections_repository.list_sections(session, owner.user_id, regulation_id)
+            except RegulationDocumentsNotFound:
+                await _raise_missing_sections_error(session, self.regulations_repository, owner.user_id, regulation_id)
 
-                logger.error("Regulation prepared, but documents not found!")
-                raise RegulationInInvalidState
-        return results
+
+async def _raise_missing_sections_error(
+    session: AsyncSession, regulations_repository: RegulationsRepository, user_id: UUID | None, regulation_id: UUID
+) -> NoReturn:
+    logger.warning("Regulation has no prepared documents! regulation id: %s", regulation_id)
+
+    regulation_representation = await regulations_repository.get_regulation_representation(
+        session, user_id, regulation_id
+    )
+
+    if regulation_representation is None:
+        logger.warning("Regulation not found! regulation id: %s", regulation_id)
+        raise RegulationNotFound
+
+    if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
+        logger.warning("Regulation not prepared! regulation id: %s", regulation_id)
+        raise RegulationsNotPreparedToSearch(regulations_name=regulation_representation.presentation_name)
+
+    logger.error("Regulation prepared, but documents not found!")
+    raise RegulationInInvalidState

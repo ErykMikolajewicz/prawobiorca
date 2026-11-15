@@ -30,6 +30,7 @@ class RegulationRegistrationData:
     organization_id: UUID | None = None
     suborganization_id: UUID | None = None
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
+    section_summaries_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,10 @@ class RegulationDetails:
 @dataclass(frozen=True)
 class RegulationOwner:
     user_id: UUID | None
+
+    @property
+    def scope(self) -> RegulationScope:
+        return RegulationScope.PUBLIC if self.user_id is None else RegulationScope.PRIVATE
 
 
 @dataclass(frozen=True)

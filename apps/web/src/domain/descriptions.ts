@@ -12,3 +12,11 @@ export const descriptionStatusOptions: Record<
   IN_PROGRESS: { label: 'Generowanie opisu', tagType: 'warning' },
   FAILED: { label: 'Błąd generowania opisu', tagType: 'danger' },
 }
+
+export const sectionSummariesStatusOptions: Record<
+  Extract<DescriptionStatus, 'IN_PROGRESS' | 'FAILED'>,
+  DescriptionStatusOption
+> = {
+  IN_PROGRESS: { label: 'Generowanie podsumowań', tagType: 'warning' },
+  FAILED: { label: 'Błąd generowania podsumowań', tagType: 'danger' },
+}

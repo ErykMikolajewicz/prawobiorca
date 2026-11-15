@@ -8,19 +8,25 @@ from core_service.application.dtos.search import SearchParams
 from core_service.application.use_cases.regulations import (
     MAX_REGULATION_DESCRIPTION_GENERATION_DELIVERIES,
     MAX_REGULATION_PREPARATION_DELIVERIES,
+    MAX_SECTION_SUMMARIES_GENERATION_DELIVERIES,
     AddRegulation,
     ConfirmRegulationUpload,
     DeleteRegulation,
     FailRegulationDescriptionGeneration,
     FailRegulationPreparation,
+    FailSectionSummariesGeneration,
     GenerateRegulationDescription,
+    GenerateSectionSummaries,
+    ListRegulationSections,
     PrepareRegulation,
     RegenerateRegulationDescription,
+    RegenerateSectionSummaries,
     RetryRegulationPreparation,
     SearchRegulation,
     UpdateRegulation,
 )
 from core_service.domain.entities.regulation import Regulation
+from core_service.domain.exceptions.access import AccessForbidden
 from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
 from core_service.domain.exceptions.regulations import (
@@ -30,6 +36,7 @@ from core_service.domain.exceptions.regulations import (
     RegulationNotFound,
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
+    SectionSummariesGenerationInProgress,
 )
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import (
@@ -39,6 +46,7 @@ from core_service.domain.value_objects.regulations import (
     RegulationScope,
     RegulationType,
 )
+from core_service.domain.value_objects.sections import SectionSummary, SectionToSummarize
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, TASK_FAILURES, TASK_FAILURES_IDS
@@ -53,6 +61,7 @@ def create_regulation(
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED,
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED,
     description: str | None = None,
+    section_summaries_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED,
 ) -> Regulation:
     return Regulation(
         id=REGULATION_ID,
@@ -60,6 +69,7 @@ def create_regulation(
         preparation_status=preparation_status,
         description=description,
         description_status=description_status,
+        section_summaries_status=section_summaries_status,
     )
 
 
@@ -92,6 +102,10 @@ def record_description_statuses(regulations_repository) -> list[DescriptionStatu
     return record_saved_states(regulations_repository.save, "regulation", "description_status")
 
 
+def record_section_summaries_statuses(regulations_repository) -> list[DescriptionStatus]:
+    return record_saved_states(regulations_repository.save, "regulation", "section_summaries_status")
+
+
 @pytest.fixture
 def regulations_repository(mock_regulations_repo):
     mock_regulations_repo.get_regulation_owner.return_value = RegulationOwner(user_id=None)
@@ -114,6 +128,7 @@ def prepare_regulation(
     regulations_repository,
     mock_regulation_preparator,
     mock_regulation_description_generation_scheduler,
+    mock_section_summaries_generation_scheduler,
 ):
     return PrepareRegulation(
         session_maker=mock_session_maker,
@@ -122,6 +137,7 @@ def prepare_regulation(
         regulations_repository=regulations_repository,
         regulation_preparator=mock_regulation_preparator,
         description_generation_scheduler=mock_regulation_description_generation_scheduler,
+        section_summaries_generation_scheduler=mock_section_summaries_generation_scheduler,
     )
 
 
@@ -187,6 +203,37 @@ def regenerate_regulation_description(
 
 
 @pytest.fixture
+def generate_section_summaries(
+    mock_session_maker, regulations_repository, sections_repository, mock_section_summaries_writer
+):
+    return GenerateSectionSummaries(
+        session_maker=mock_session_maker,
+        regulations_repository=regulations_repository,
+        sections_repository=sections_repository,
+        section_summaries_writer=mock_section_summaries_writer,
+    )
+
+
+@pytest.fixture
+def fail_section_summaries_generation(mock_session_maker, regulations_repository):
+    return FailSectionSummariesGeneration(
+        session_maker=mock_session_maker, regulations_repository=regulations_repository
+    )
+
+
+@pytest.fixture
+def regenerate_section_summaries(
+    mock_session_maker, regulations_repository, sections_repository, mock_section_summaries_generation_scheduler
+):
+    return RegenerateSectionSummaries(
+        session_maker=mock_session_maker,
+        regulations_repository=regulations_repository,
+        sections_repository=sections_repository,
+        section_summaries_generation_scheduler=mock_section_summaries_generation_scheduler,
+    )
+
+
+@pytest.fixture
 def add_regulation(mock_session_maker, regulations_repository, mock_regulations_storage):
     return AddRegulation(
         session_maker=mock_session_maker,
@@ -218,6 +265,15 @@ def search_regulation(mock_session_maker, mock_texts_embedder, sections_reposito
     return SearchRegulation(
         session_maker=mock_session_maker,
         embedding_port=mock_texts_embedder,
+        sections_repository=sections_repository,
+        regulations_repository=regulations_repository,
+    )
+
+
+@pytest.fixture
+def list_regulation_sections(mock_session_maker, sections_repository, regulations_repository):
+    return ListRegulationSections(
+        session_maker=mock_session_maker,
         sections_repository=sections_repository,
         regulations_repository=regulations_repository,
     )
@@ -373,6 +429,25 @@ async def test_prepare_regulation_schedules_requested_description_generation(
 
     scheduler = mock_regulation_description_generation_scheduler
     assert scheduler.schedule_regulation_description_generation.await_count == expected_schedules
+
+
+@pytest.mark.parametrize(
+    ("section_summaries_status", "expected_schedules"),
+    [(DescriptionStatus.IN_PROGRESS, 1), (DescriptionStatus.NOT_REQUESTED, 0)],
+)
+async def test_prepare_regulation_schedules_requested_section_summaries_generation(
+    prepare_regulation,
+    regulations_repository,
+    mock_section_summaries_generation_scheduler,
+    section_summaries_status,
+    expected_schedules,
+):
+    store_regulation(regulations_repository, create_regulation(section_summaries_status=section_summaries_status))
+
+    await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=True)
+
+    scheduler = mock_section_summaries_generation_scheduler
+    assert scheduler.schedule_section_summaries_generation.await_count == expected_schedules
 
 
 @pytest.mark.parametrize(
@@ -688,8 +763,221 @@ async def test_regenerate_regulation_description_rejected(
     scheduler.schedule_regulation_description_generation.assert_not_awaited()
 
 
+def create_section_to_summarize(index: int, text: str = "Student może otrzymać urlop.") -> SectionToSummarize:
+    return SectionToSummarize(id=UUID(int=index), header=f"Rozdział 1 > § {index}", text=text)
+
+
+def create_section_summary(index: int) -> SectionSummary:
+    return SectionSummary(section_id=UUID(int=index), label="Urlop dziekański", summary="Student może dostać urlop.")
+
+
+async def test_generate_section_summaries_saves_summaries(
+    generate_section_summaries, regulations_repository, sections_repository, mock_section_summaries_writer
+):
+    regulation = create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS)
+    store_regulation(regulations_repository, regulation)
+    sections_repository.list_sections_to_summarize.return_value = [
+        create_section_to_summarize(1, "(uchylony)"),
+        create_section_to_summarize(2),
+    ]
+    mock_section_summaries_writer.write.return_value = [create_section_summary(2)]
+
+    await generate_section_summaries.execute(None, REGULATION_ID, is_last_attempt=True)
+
+    batch = get_awaited_argument(mock_section_summaries_writer.write, "batch")
+    assert batch.chapter == "Rozdział 1"
+    assert batch.sections == [create_section_to_summarize(2)]
+    saved_summaries = get_awaited_arguments(sections_repository.set_summaries, "summaries")
+    assert [[summary.section_id for summary in summaries] for summaries in saved_summaries] == [
+        [UUID(int=1)],
+        [UUID(int=2)],
+    ]
+    assert regulation.section_summaries_status == DescriptionStatus.GENERATED
+
+
+@pytest.mark.parametrize(
+    "regulation",
+    [
+        None,
+        create_regulation(section_summaries_status=DescriptionStatus.NOT_REQUESTED),
+        create_regulation(section_summaries_status=DescriptionStatus.GENERATED),
+    ],
+    ids=("not found", "not requested", "already generated"),
+)
+async def test_generate_section_summaries_skipped(
+    generate_section_summaries, regulations_repository, mock_section_summaries_writer, regulation
+):
+    store_regulation(regulations_repository, regulation)
+
+    await generate_section_summaries.execute(None, REGULATION_ID, is_last_attempt=True)
+
+    mock_section_summaries_writer.write.assert_not_awaited()
+    regulations_repository.save.assert_not_awaited()
+
+
+@pytest.mark.parametrize(("error", "is_last_attempt"), TASK_FAILURES, ids=TASK_FAILURES_IDS)
+async def test_generate_section_summaries_failure_marks_failed(
+    generate_section_summaries,
+    regulations_repository,
+    sections_repository,
+    mock_section_summaries_writer,
+    error,
+    is_last_attempt,
+):
+    section_summaries_statuses = record_section_summaries_statuses(regulations_repository)
+    store_regulation(regulations_repository, create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS))
+    sections_repository.list_sections_to_summarize.return_value = [create_section_to_summarize(1)]
+    mock_section_summaries_writer.write.side_effect = error
+
+    with pytest.raises(error):
+        await generate_section_summaries.execute(None, REGULATION_ID, is_last_attempt)
+
+    sections_repository.set_summaries.assert_not_awaited()
+    assert section_summaries_statuses == [DescriptionStatus.FAILED]
+
+
+async def test_generate_section_summaries_retried_failure_keeps_saved_summaries(
+    generate_section_summaries, regulations_repository, sections_repository, mock_section_summaries_writer
+):
+    section_summaries_statuses = record_section_summaries_statuses(regulations_repository)
+    store_regulation(regulations_repository, create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS))
+    sections_repository.list_sections_to_summarize.return_value = [
+        create_section_to_summarize(1),
+        SectionToSummarize(id=UUID(int=2), header="Rozdział 2 > § 2", text="Student może zmienić kierunek."),
+    ]
+    mock_section_summaries_writer.write.side_effect = [[create_section_summary(1)], ServiceUnavailable]
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_section_summaries.execute(None, REGULATION_ID, is_last_attempt=False)
+
+    sections_repository.set_summaries.assert_awaited_once()
+    assert section_summaries_statuses == []
+
+
+async def test_generate_section_summaries_of_removed_regulation(
+    generate_section_summaries, regulations_repository, sections_repository
+):
+    section_summaries_statuses = record_section_summaries_statuses(regulations_repository)
+    regulations_repository.get_for_update.side_effect = [
+        create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS),
+        None,
+    ]
+    sections_repository.list_sections_to_summarize.return_value = []
+
+    await generate_section_summaries.execute(None, REGULATION_ID, is_last_attempt=True)
+
+    assert section_summaries_statuses == []
+
+
+@pytest.mark.parametrize(
+    ("delivery_attempt", "expected_failed", "expected_statuses"),
+    [
+        (MAX_SECTION_SUMMARIES_GENERATION_DELIVERIES, False, []),
+        (MAX_SECTION_SUMMARIES_GENERATION_DELIVERIES + 1, True, [DescriptionStatus.FAILED]),
+    ],
+    ids=("within limit", "limit exceeded"),
+)
+async def test_fail_section_summaries_generation(
+    fail_section_summaries_generation,
+    regulations_repository,
+    delivery_attempt,
+    expected_failed,
+    expected_statuses,
+):
+    section_summaries_statuses = record_section_summaries_statuses(regulations_repository)
+    store_regulation(regulations_repository, create_regulation(section_summaries_status=DescriptionStatus.IN_PROGRESS))
+
+    failed = await fail_section_summaries_generation.execute(None, REGULATION_ID, delivery_attempt)
+
+    assert failed is expected_failed
+    assert section_summaries_statuses == expected_statuses
+
+
+@pytest.mark.parametrize(
+    "regulation",
+    [None, create_regulation(section_summaries_status=DescriptionStatus.GENERATED)],
+    ids=("not found", "already generated"),
+)
+async def test_fail_section_summaries_generation_skipped(
+    fail_section_summaries_generation, regulations_repository, regulation
+):
+    store_regulation(regulations_repository, regulation)
+
+    failed = await fail_section_summaries_generation.execute(
+        None, REGULATION_ID, MAX_SECTION_SUMMARIES_GENERATION_DELIVERIES + 1
+    )
+
+    assert failed is True
+    regulations_repository.save.assert_not_awaited()
+
+
+async def test_regenerate_section_summaries_schedules_generation(
+    regenerate_section_summaries,
+    regulations_repository,
+    sections_repository,
+    mock_section_summaries_generation_scheduler,
+):
+    section_summaries_statuses = record_section_summaries_statuses(regulations_repository)
+    store_regulation(
+        regulations_repository,
+        create_regulation(RegulationPreparationStatus.PREPARED, section_summaries_status=DescriptionStatus.GENERATED),
+    )
+
+    await regenerate_section_summaries.execute(ADMIN, REGULATION_ID)
+
+    assert section_summaries_statuses == [DescriptionStatus.IN_PROGRESS]
+    sections_repository.clear_summaries.assert_awaited_once()
+    scheduler = mock_section_summaries_generation_scheduler
+    scheduler.schedule_section_summaries_generation.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("owner", "regulation", "error"),
+    [
+        (RegulationOwner(user_id=None), None, RegulationNotFound),
+        (
+            RegulationOwner(user_id=None),
+            create_regulation(RegulationPreparationStatus.IN_PROGRESS),
+            RegulationInInvalidState,
+        ),
+        (
+            RegulationOwner(user_id=None),
+            create_regulation(
+                RegulationPreparationStatus.PREPARED, section_summaries_status=DescriptionStatus.IN_PROGRESS
+            ),
+            SectionSummariesGenerationInProgress,
+        ),
+        (RegulationOwner(user_id=ADMIN_ID), create_regulation(RegulationPreparationStatus.PREPARED), AccessForbidden),
+    ],
+    ids=("not found", "not prepared", "generation in progress", "private regulation"),
+)
+async def test_regenerate_section_summaries_rejected(
+    regenerate_section_summaries,
+    regulations_repository,
+    sections_repository,
+    mock_section_summaries_generation_scheduler,
+    owner,
+    regulation,
+    error,
+):
+    regulations_repository.get_regulation_owner.return_value = owner
+    store_regulation(regulations_repository, regulation)
+
+    with pytest.raises(error):
+        await regenerate_section_summaries.execute(ADMIN, REGULATION_ID)
+
+    regulations_repository.save.assert_not_awaited()
+    sections_repository.clear_summaries.assert_not_awaited()
+    scheduler = mock_section_summaries_generation_scheduler
+    scheduler.schedule_section_summaries_generation.assert_not_awaited()
+
+
 @pytest.mark.parametrize(
     ("generate_description", "description_status"),
+    [(False, DescriptionStatus.NOT_REQUESTED), (True, DescriptionStatus.IN_PROGRESS)],
+)
+@pytest.mark.parametrize(
+    ("generate_section_summaries", "section_summaries_status"),
     [(False, DescriptionStatus.NOT_REQUESTED), (True, DescriptionStatus.IN_PROGRESS)],
 )
 async def test_add_regulation_registers_regulation(
@@ -698,6 +986,8 @@ async def test_add_regulation_registers_regulation(
     mock_regulations_storage,
     generate_description,
     description_status,
+    generate_section_summaries,
+    section_summaries_status,
 ):
     regulations_repository.register_regulation.return_value = REGULATION_ID
     regulation_data = RegulationData(
@@ -707,6 +997,7 @@ async def test_add_regulation_registers_regulation(
         organization_id=ORGANIZATION_ID,
         suborganization_id=SUBORGANIZATION_ID,
         generate_description=generate_description,
+        generate_section_summaries=generate_section_summaries,
     )
 
     upload_target = await add_regulation.execute(ADMIN, regulation_data)
@@ -718,6 +1009,7 @@ async def test_add_regulation_registers_regulation(
         organization_id=ORGANIZATION_ID,
         suborganization_id=SUBORGANIZATION_ID,
         description_status=description_status,
+        section_summaries_status=section_summaries_status,
     )
     mock_regulations_storage.get_upload_target.assert_awaited_once_with(REGULATION_ID)
     assert upload_target == mock_regulations_storage.get_upload_target.return_value
@@ -820,3 +1112,22 @@ async def test_search_regulation_without_sections(
 
     with pytest.raises(error):
         await search_regulation.execute(ADMIN, REGULATION_ID, SearchParams(threshold=0, query="urlop"))
+
+
+@pytest.mark.parametrize(
+    ("regulation", "error"),
+    [
+        (None, RegulationNotFound),
+        (create_regulation_representation(RegulationPreparationStatus.NOT_STARTED), RegulationsNotPreparedToSearch),
+        (create_regulation_representation(RegulationPreparationStatus.PREPARED), RegulationInInvalidState),
+    ],
+    ids=("not found", "not prepared", "prepared without sections"),
+)
+async def test_list_regulation_sections_without_sections(
+    list_regulation_sections, regulations_repository, sections_repository, regulation, error
+):
+    sections_repository.list_sections.side_effect = RegulationDocumentsNotFound
+    store_regulation_representation(regulations_repository, regulation)
+
+    with pytest.raises(error):
+        await list_regulation_sections.execute(ADMIN, REGULATION_ID)

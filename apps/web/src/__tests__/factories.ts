@@ -57,6 +57,7 @@ export function createRegulation(
     regulationType: 'STATUTE',
     preparationStatus: 'PREPARED',
     descriptionStatus: 'NOT_REQUESTED',
+    sectionSummariesStatus: 'NOT_REQUESTED',
     organizationId: null,
     suborganizationId: null,
     ...overrides,
@@ -143,6 +144,8 @@ export function createSearchResult(overrides: Partial<SearchResult> = {}): Searc
     header: '§ 12',
     text: '1. Student ma prawo do urlopu.',
     elements: [{ text: '1. Student ma prawo do urlopu.', subsection: '1' }],
+    summary_label: null,
+    summary: null,
     highlight: null,
     ...overrides,
   }

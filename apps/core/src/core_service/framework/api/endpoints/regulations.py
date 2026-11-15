@@ -10,7 +10,7 @@ from core_service.application.dtos.regulations import (
     RegulationSearchResult,
     RegulationUploadTarget,
 )
-from core_service.application.dtos.search import SearchParams, SearchResult
+from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation
 from core_service.application.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
@@ -18,7 +18,9 @@ from core_service.application.use_cases.regulations import (
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
+    ListRegulationSections,
     RegenerateRegulationDescription,
+    RegenerateSectionSummaries,
     RetryRegulationPreparation,
     SearchRegulation,
     SearchRegulations,
@@ -33,6 +35,7 @@ from core_service.domain.exceptions.regulations import (
     RegulationNotFound,
     RegulationPreparationInProgress,
     RegulationsNotPreparedToSearch,
+    SectionSummariesGenerationInProgress,
 )
 from core_service.domain.exceptions.users import UserNotFound
 from core_service.domain.value_objects.organizations import OrganizationFilter
@@ -44,8 +47,10 @@ from core_service.framework.dependencies.regulations import (
     get_add_regulation,
     get_confirm_regulation_upload,
     get_delete_regulation,
+    get_list_regulation_sections,
     get_list_regulations,
     get_regenerate_regulation_description,
+    get_regenerate_section_summaries,
     get_regulation,
     get_regulation_download_url,
     get_retry_regulation_preparation,
@@ -146,6 +151,33 @@ async def search_regulation_documents(
         )
 
     return results
+
+
+@regulations_router.get(
+    "/regulations/{regulationId}/sections",
+    response_model=list[SectionRepresentation],
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Regulation not prepared, normally should not occur."},
+        status.HTTP_404_NOT_FOUND: {"description": "Regulation not found."},
+    },
+)
+async def list_regulation_sections(
+    list_regulation_sections_: Annotated[ListRegulationSections, Depends(get_list_regulation_sections)],
+    caller: Annotated[Caller, Depends(get_caller)],
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
+) -> list[SectionRepresentation]:
+    try:
+        return await list_regulation_sections_.execute(caller, regulation_id)
+    except RegulationNotFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation with id {regulation_id} not found."
+        )
+    except RegulationsNotPreparedToSearch as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Regulation {e.regulations_name}, not prepared to search,"
+            f" report problem to application administrator.",
+        )
 
 
 @regulations_router.post(
@@ -333,4 +365,35 @@ async def regenerate_regulation_description(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Regulation description generation already in progress!",
+        )
+
+
+@regulations_router.post(
+    "/regulations/{regulationId}/section-summaries-generation",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Regulation not found!"},
+        status.HTTP_409_CONFLICT: {
+            "description": "Regulation not prepared, or its section summaries generation already in progress!"
+        },
+    },
+)
+async def regenerate_section_summaries(
+    regenerate_section_summaries: Annotated[RegenerateSectionSummaries, Depends(get_regenerate_section_summaries)],
+    caller: Annotated[Caller, Depends(get_caller)],
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
+):
+    try:
+        await regenerate_section_summaries.execute(caller, regulation_id)
+    except RegulationNotFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regulation not found!")
+    except RegulationInInvalidState:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Regulation not prepared!",
+        )
+    except SectionSummariesGenerationInProgress:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Section summaries generation already in progress!",
         )

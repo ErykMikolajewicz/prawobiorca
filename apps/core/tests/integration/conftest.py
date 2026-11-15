@@ -88,6 +88,7 @@ def override_dependencies(
     mock_application_templates_storage,
     mock_regulation_splitter,
     mock_regulation_description_writer,
+    mock_section_summaries_writer,
     mock_application_writer,
     mock_application_template_description_writer,
 ) -> Generator[None]:
@@ -115,6 +116,7 @@ def override_dependencies(
             workers.get_applications_storage: lambda: mock_applications_storage,
             workers.get_application_templates_storage: lambda: mock_application_templates_storage,
             workers.get_regulation_description_writer: lambda: mock_regulation_description_writer,
+            workers.get_section_summaries_writer: lambda: mock_section_summaries_writer,
             workers.get_application_writer: lambda: mock_application_writer,
             workers.get_application_template_description_writer: lambda: mock_application_template_description_writer,
         }

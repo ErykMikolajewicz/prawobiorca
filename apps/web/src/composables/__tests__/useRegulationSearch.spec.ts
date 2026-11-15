@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ElMessage } from 'element-plus'
 import { createHttpError } from '@/__tests__/factories'
-import { searchRegulationDocuments } from '@/api/generated/endpoints/regulations/regulations'
+import {
+  listRegulationSections,
+  searchRegulationDocuments,
+} from '@/api/generated/endpoints/regulations/regulations'
 import { useRegulationSearch } from '@/composables/useRegulationSearch'
 import type { SearchRegulationDocumentsParams, SearchResult } from '@/api/generated/model'
 
 vi.mock('@/api/generated/endpoints/regulations/regulations', () => ({
+  listRegulationSections: vi.fn(),
   searchRegulationDocuments: vi.fn(),
 }))
 
@@ -28,6 +32,8 @@ function result(id: string): SearchResult {
     header: null,
     text: `Tekst ${id}`,
     elements: [],
+    summary_label: null,
+    summary: null,
     highlight: null,
   }
 }
@@ -45,6 +51,41 @@ describe('useRegulationSearch', () => {
 
     expect(searchRegulationDocuments).toHaveBeenCalledWith('uuid-1', params)
     expect(results.value).toEqual([result('a')])
+  })
+
+  it('lists all sections of the regulation', async () => {
+    const section = {
+      id: 'a',
+      header: null,
+      text: 'Tekst a',
+      elements: [],
+      summary_label: null,
+      summary: null,
+    }
+    vi.mocked(listRegulationSections).mockResolvedValueOnce([section])
+
+    const { results, browse } = useRegulationSearch('uuid-1')
+    await browse()
+
+    expect(listRegulationSections).toHaveBeenCalledWith('uuid-1')
+    expect(results.value).toEqual([section])
+  })
+
+  it('ignores sections listed before a newer search', async () => {
+    let resolveSections: ((value: Array<SearchResult>) => void) | undefined
+    vi.mocked(listRegulationSections).mockImplementationOnce(
+      () => new Promise((resolve) => (resolveSections = resolve)),
+    )
+    vi.mocked(searchRegulationDocuments).mockResolvedValueOnce([result('fresh')])
+
+    const { results, browse, search } = useRegulationSearch('uuid-1')
+
+    const staleBrowse = browse()
+    await search(params)
+    resolveSections?.([result('stale')])
+    await staleBrowse
+
+    expect(results.value).toEqual([result('fresh')])
   })
 
   it('ignores a response that arrives after a newer search', async () => {

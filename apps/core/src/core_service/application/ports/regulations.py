@@ -17,6 +17,7 @@ from core_service.domain.value_objects.regulations import (
     RegulationRegistrationData,
     RegulationType,
 )
+from core_service.domain.value_objects.sections import SectionSummariesBatch, SectionSummary
 
 
 class RegulationsStorage(Protocol):
@@ -79,3 +80,7 @@ class RegulationSplitter(Protocol):
 
 class RegulationDescriptionWriter(Protocol):
     async def write(self, description_source: RegulationDescriptionSource) -> str: ...
+
+
+class SectionSummariesWriter(Protocol):
+    async def write(self, batch: SectionSummariesBatch) -> list[SectionSummary]: ...

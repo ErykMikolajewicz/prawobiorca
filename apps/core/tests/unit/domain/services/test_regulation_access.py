@@ -5,6 +5,7 @@ from core_service.domain.exceptions.regulations import RegulationNotFound
 from core_service.domain.services.regulation_access import (
     check_can_add_regulation,
     check_can_generate_regulation_description,
+    check_can_generate_section_summaries,
     check_can_manage_regulation,
     check_can_read_regulation,
     resolve_scope_owner,
@@ -122,3 +123,29 @@ def test_can_generate_regulation_description():
 def test_cannot_generate_regulation_description(caller, error):
     with pytest.raises(error):
         check_can_generate_regulation_description(caller)
+
+
+def test_can_generate_section_summaries():
+    check_can_generate_section_summaries(ADMIN, RegulationScope.PUBLIC)
+
+
+@pytest.mark.parametrize(
+    ("caller", "scope", "error"),
+    [
+        (ANONYMOUS, RegulationScope.PUBLIC, LoginRequired),
+        (USER, RegulationScope.PUBLIC, AccessForbidden),
+        (ADMIN, RegulationScope.PRIVATE, AccessForbidden),
+    ],
+    ids=("anonymous", "user", "private regulation"),
+)
+def test_cannot_generate_section_summaries(caller, scope, error):
+    with pytest.raises(error):
+        check_can_generate_section_summaries(caller, scope)
+
+
+@pytest.mark.parametrize(
+    ("owner", "scope"),
+    [(PUBLIC_REGULATION, RegulationScope.PUBLIC), (USER_REGULATION, RegulationScope.PRIVATE)],
+)
+def test_regulation_owner_scope(owner, scope):
+    assert owner.scope == scope

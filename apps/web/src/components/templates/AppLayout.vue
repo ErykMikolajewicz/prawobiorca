@@ -14,9 +14,15 @@ const { isMobile } = useBreakpoint()
     <div class="content-column">
       <AppTopBar v-if="isMobile" />
 
-      <main class="main-content">
-        <slot />
-      </main>
+      <div class="content-row">
+        <main class="main-content">
+          <slot />
+        </main>
+
+        <aside v-if="$slots.aside" class="page-aside">
+          <slot name="aside" />
+        </aside>
+      </div>
 
       <AppFooter />
     </div>
@@ -36,14 +42,29 @@ const { isMobile } = useBreakpoint()
   flex-direction: column;
 }
 
+.content-row {
+  flex-grow: 1;
+  display: flex;
+}
+
 .main-content {
   flex-grow: 1;
+  min-width: 0;
   padding: var(--app-space-lg);
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   box-sizing: border-box;
   overflow-x: hidden;
+}
+
+.page-aside {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex: 0 0 18rem;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 @media (width <= 768px) {

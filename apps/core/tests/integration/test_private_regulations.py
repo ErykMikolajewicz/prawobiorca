@@ -239,3 +239,15 @@ async def test_retry_private_regulation_preparation_already_prepared(user_client
     response = await user_client.post(f"/api/regulations/{regulation_id}/preparation-retry")
 
     assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_regenerate_private_regulation_section_summaries_as_admin(admin_client, session_maker, admin):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(
+            session, ADMIN_ID, preparation_status=RegulationPreparationStatus.PREPARED
+        )
+
+    response = await admin_client.post(f"/api/regulations/{regulation_id}/section-summaries-generation")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert await get_scheduled_task_names(session_maker) == []

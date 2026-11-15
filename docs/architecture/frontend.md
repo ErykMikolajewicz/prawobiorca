@@ -77,7 +77,7 @@ In both deployment environments the frontend is served at the root path, behind 
 
 Both use the same `deploy/base/web.yaml`:
 
-* **Local (kind)**: routed by the nginx gateway from `deploy/overlays/local` (`gateway.yaml`, `nginx.conf`) — `/` goes to the frontend, `/api` to `core`.
+* **Local (kind)**: routed by the nginx gateway from `deploy/overlays/kind` (`gateway.yaml`, `nginx.conf`) — `/` goes to the frontend, `/api` to `core`.
 * **Cloud (GCP)**: routed by `deploy/overlays/gcp/ingress.yaml`.
 
 ---

@@ -39,3 +39,9 @@ def check_can_generate_regulation_description(caller: Caller) -> None:
         raise LoginRequired
     if not caller.is_admin:
         raise AccessForbidden
+
+
+def check_can_generate_section_summaries(caller: Caller, scope: RegulationScope) -> None:
+    check_can_generate_regulation_description(caller)
+    if scope != RegulationScope.PUBLIC:
+        raise AccessForbidden

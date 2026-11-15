@@ -657,6 +657,68 @@
         }
       }
     },
+    "/api/regulations/{regulationId}/sections": {
+      "get": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "List Regulation Sections",
+        "operationId": "list_regulation_sections",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SectionRepresentation"
+                  },
+                  "title": "Response List Regulation Sections"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
+          "400": {
+            "description": "Regulation not prepared, normally should not occur."
+          },
+          "404": {
+            "description": "Regulation not found."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/regulations/{regulationId}/confirm-upload": {
       "post": {
         "tags": [
@@ -867,6 +929,62 @@
           },
           "409": {
             "description": "Regulation not prepared, or its description generation already in progress!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/regulations/{regulationId}/section-summaries-generation": {
+      "post": {
+        "tags": [
+          "regulations"
+        ],
+        "summary": "Regenerate Section Summaries",
+        "operationId": "regenerate_section_summaries",
+        "parameters": [
+          {
+            "name": "regulationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Regulationid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "401": {
+            "description": "Login required!"
+          },
+          "403": {
+            "description": "Permission required!"
+          },
+          "404": {
+            "description": "Regulation not found!"
+          },
+          "409": {
+            "description": "Regulation not prepared, or its section summaries generation already in progress!"
           },
           "422": {
             "description": "Validation Error",
@@ -3409,6 +3527,11 @@
             "type": "boolean",
             "title": "Generatedescription",
             "default": false
+          },
+          "generateSectionSummaries": {
+            "type": "boolean",
+            "title": "Generatesectionsummaries",
+            "default": false
           }
         },
         "type": "object",
@@ -3502,6 +3625,10 @@
             "$ref": "#/components/schemas/DescriptionStatus",
             "default": "NOT_REQUESTED"
           },
+          "sectionSummariesStatus": {
+            "$ref": "#/components/schemas/DescriptionStatus",
+            "default": "NOT_REQUESTED"
+          },
           "organizationId": {
             "anyOf": [
               {
@@ -3536,6 +3663,7 @@
           "regulationType",
           "preparationStatus",
           "descriptionStatus",
+          "sectionSummariesStatus",
           "organizationId",
           "suborganizationId"
         ],
@@ -3617,12 +3745,6 @@
             "format": "uuid",
             "title": "Id"
           },
-          "score": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": -1.0,
-            "title": "Score"
-          },
           "header": {
             "anyOf": [
               {
@@ -3645,6 +3767,34 @@
             "type": "array",
             "title": "Elements"
           },
+          "summary_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Label"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Score"
+          },
           "highlight": {
             "anyOf": [
               {
@@ -3659,10 +3809,12 @@
         "type": "object",
         "required": [
           "id",
-          "score",
           "header",
           "text",
           "elements",
+          "summary_label",
+          "summary",
+          "score",
           "highlight"
         ],
         "title": "SearchResult"
@@ -3709,6 +3861,69 @@
           "end_element"
         ],
         "title": "SearchResultHighlight"
+      },
+      "SectionRepresentation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultElement"
+            },
+            "type": "array",
+            "title": "Elements"
+          },
+          "summary_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Label"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "header",
+          "text",
+          "elements",
+          "summary_label",
+          "summary"
+        ],
+        "title": "SectionRepresentation"
       },
       "SuborganizationData": {
         "properties": {

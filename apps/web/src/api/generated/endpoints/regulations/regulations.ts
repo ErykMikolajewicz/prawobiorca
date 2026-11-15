@@ -8,6 +8,7 @@ import type {
   SearchRegulationDocumentsParams,
   SearchRegulationsParams,
   SearchResult,
+  SectionRepresentation,
 } from '../../model'
 
 import { prawobiorcaRequest } from '../../../axios'
@@ -111,6 +112,18 @@ export const searchRegulationDocuments = (
   )
 }
 /**
+ * @summary List Regulation Sections
+ */
+export const listRegulationSections = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<SectionRepresentation[]>>,
+) => {
+  return prawobiorcaRequest<SectionRepresentation[]>(
+    { url: `/api/regulations/${regulationId}/sections`, method: 'GET' },
+    options,
+  )
+}
+/**
  * @summary Confirm Regulation Upload
  */
 export const confirmRegulationUpload = (
@@ -158,6 +171,18 @@ export const regenerateRegulationDescription = (
     options,
   )
 }
+/**
+ * @summary Regenerate Section Summaries
+ */
+export const regenerateSectionSummaries = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<unknown>>,
+) => {
+  return prawobiorcaRequest<unknown>(
+    { url: `/api/regulations/${regulationId}/section-summaries-generation`, method: 'POST' },
+    options,
+  )
+}
 export type GetRegulationsResult = NonNullable<Awaited<ReturnType<typeof getRegulations>>>
 export type AddRegulationResult = NonNullable<Awaited<ReturnType<typeof addRegulation>>>
 export type SearchRegulationsResult = NonNullable<Awaited<ReturnType<typeof searchRegulations>>>
@@ -166,6 +191,9 @@ export type UpdateRegulationResult = NonNullable<Awaited<ReturnType<typeof updat
 export type DeleteRegulationResult = NonNullable<Awaited<ReturnType<typeof deleteRegulation>>>
 export type SearchRegulationDocumentsResult = NonNullable<
   Awaited<ReturnType<typeof searchRegulationDocuments>>
+>
+export type ListRegulationSectionsResult = NonNullable<
+  Awaited<ReturnType<typeof listRegulationSections>>
 >
 export type ConfirmRegulationUploadResult = NonNullable<
   Awaited<ReturnType<typeof confirmRegulationUpload>>
@@ -178,4 +206,7 @@ export type RetryRegulationPreparationResult = NonNullable<
 >
 export type RegenerateRegulationDescriptionResult = NonNullable<
   Awaited<ReturnType<typeof regenerateRegulationDescription>>
+>
+export type RegenerateSectionSummariesResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateSectionSummaries>>
 >

@@ -35,6 +35,12 @@ regulations_table = sqla.Table(
         nullable=False,
         default=DescriptionStatus.NOT_REQUESTED,
     ),
+    sqla.Column(
+        "section_summaries_status",
+        sqla.Enum(DescriptionStatus, name="regulationdescriptionstatus"),
+        nullable=False,
+        default=DescriptionStatus.NOT_REQUESTED,
+    ),
     sqla.Column("regulation_type", sqla.Enum(RegulationType, name="regulationtype"), nullable=True, default=None),
     sqla.Column(
         "preparation_status",
@@ -71,5 +77,12 @@ mapper_registry.map_imperatively(RegulationRepresentation, regulations_table, ex
 mapper_registry.map_imperatively(
     Regulation,
     regulations_table,
-    include_properties=["id", "presentation_name", "preparation_status", "description", "description_status"],
+    include_properties=[
+        "id",
+        "presentation_name",
+        "preparation_status",
+        "description",
+        "description_status",
+        "section_summaries_status",
+    ],
 )

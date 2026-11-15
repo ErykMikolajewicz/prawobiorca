@@ -54,7 +54,7 @@ The structure is therefore recovered from the **text itself**, using the numberi
 | Unit | Notation | Recognised as |
 |------|----------|---------------|
 | załącznik | `Załącznik 6`, `Załącznik nr 1` | top-level breadcrumb segment, closes every division before it |
-| dział / rozdział / oddział / część / księga / tytuł | `Rozdział 4`, `DZIAŁ VII`, `DZIAŁ XIVA` | breadcrumb segment (`LegalUnit.path`) |
+| dział / rozdział / oddział / część / księga / tytuł | `Rozdział 4`, `DZIAŁ VII`, `DZIAŁ XIVA`, `KSIĘGA PIERWSZA` | breadcrumb segment (`LegalUnit.path`) |
 | artykuł | `Art. 107.` | presentation unit (`UnitType.ARTICLE`) |
 | paragraf | `§ 6 .` | presentation unit (`UnitType.PARAGRAPH`) or content, see below |
 | ustęp | `1.` | element boundary, kept in `LegalUnitElement.subsection` |
@@ -78,7 +78,8 @@ Divisions are recognised only on elements labelled `section_header` — in Polis
 headings, and Docling detects those reliably. The only exception is an attachment marker (`Załącznik nr 1`), which
 Docling labels as `text`; an element is promoted to a header only when it consists of the marker alone (possibly
 repeated, with a footnote marker), so a sentence such as `Załącznik nr 1 określa wzór…` stays content. A division
-number may carry a letter (`DZIAŁ XIVA`) or be glued to the title by the extraction (`Rozdział VIIndywidualna…`).
+number may carry a letter (`DZIAŁ XIVA`), be glued to the title by the extraction (`Rozdział VIIndywidualna…`),
+or be written as a feminine ordinal word, as the books and parts of codes are (`KSIĘGA PIERWSZA`, `CZĘŚĆ DRUGA`).
 A division repeated on a later page (`Załącznik nr 1` on every page of the attachment) is ignored.
 
 A `section_header` that carries no division keyword becomes a breadcrumb segment of the lowest rank, which keeps
@@ -164,15 +165,6 @@ The weights come from the `PRIMARY_CHUNK_SCORE_WEIGHT` constant (the secondary w
 always sum to 1 and the score stays on the cosine scale — it is shown to the user as-is. `threshold` and
 `limit` of a search apply to this combined section score. The whole computation is one SQL statement in
 `SqlaSectionsRepository.search`.
-
----
-
-## Known Limitations
-
-- **Books numbered with words are not recognised.** Division numbers must be Roman or Arabic numerals, so the
-  books of the Civil Code (`KSIĘGA PIERWSZA`, `KSIĘGA DRUGA`, …) become generic headers and are dropped from the
-  path by the next `TYTUŁ`. Titles are numbered from `I` again in every book, so breadcrumbs from different books
-  can look the same (`TYTUŁ I Przepisy wstępne > Art. 1`, `TYTUŁ I Własność > DZIAŁ I Przepisy ogólne > Art. 126`).
 
 ---
 
