@@ -157,6 +157,28 @@ async def test_search_orders_results(client, session_maker, order_by, expected_t
     assert [result["text"] for result in response.json()] == expected_texts
 
 
+@pytest.mark.parametrize(
+    ("order_by", "expected_texts"),
+    [
+        ("document", ["Lower score section"]),
+        ("score", ["Higher score section"]),
+    ],
+)
+async def test_search_limits_results_after_ordering(client, session_maker, order_by, expected_texts):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None)
+        await insert_section(session, regulation_id, "Lower score section", [QUERY_VECTOR, UNRELATED_VECTOR])
+        await insert_section(session, regulation_id, "Higher score section", [QUERY_VECTOR], section_order=1)
+
+    response = await client.get(
+        f"/api/regulations/{regulation_id}/documents",
+        params={"threshold": 0.5, "limit": 1, "query": "zapytanie", "order_by": order_by},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [result["text"] for result in response.json()] == expected_texts
+
+
 async def test_search_public_regulations_by_description(client, session_maker, user):
     async with session_maker.begin() as session:
         matching_id = await insert_regulation(

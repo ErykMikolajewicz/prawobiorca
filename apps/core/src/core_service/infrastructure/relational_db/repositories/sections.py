@@ -156,8 +156,6 @@ class SqlaSectionsRepository:
             .where(ranked_chunks.c.chunk_rank <= 2)
             .group_by(ranked_chunks.c.section_id)
             .having(score >= search_params.threshold)
-            .order_by(score.desc())
-            .limit(search_params.limit)
             .subquery()
         )
 
@@ -181,6 +179,7 @@ class SqlaSectionsRepository:
                 )
             )
             .order_by(result_order)
+            .limit(search_params.limit)
         )
 
         result = await session.execute(query)
