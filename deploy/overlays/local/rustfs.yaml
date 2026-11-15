@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prawobiorca
+      component: rustfs
+  template:
+    metadata:
+      labels:
+        app: prawobiorca
+        component: rustfs
+    spec:
+      containers:
+        - name: rustfs
+          image: docker.io/rustfs/rustfs:1.0.5
+          env:
+            - name: RUSTFS_CORS_ALLOWED_ORIGINS
+              value: "http://localhost:4173,http://localhost:5173,http://localhost:8080"
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prawobiorca-secrets
+                  key: OBJECT_STORAGE_ACCESS_KEY
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prawobiorca-secrets
+                  key: OBJECT_STORAGE_SECRET_KEY
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 5
+          volumeMounts:
+            - name: rustfs-data
+              mountPath: /data
+      volumes:
+        - name: rustfs-data
+          persistentVolumeClaim:
+            claimName: rustfs-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+spec:
+  type: NodePort
+  selector:
+    app: prawobiorca
+    component: rustfs
+  ports:
+    - port: 9000
+      targetPort: 9000
+      nodePort: 30900
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rustfs-bucket
+  labels:
+    deploy-phase: bucket
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: prawobiorca
+        component: rustfs-bucket
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: rustfs-bucket
+          image: prawobiorca/core
+          command: ["python", "/scripts/create_bucket.py"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: core-config
+      volumes:
+        - name: secrets-store
+          secret:
+            secretName: prawobiorca-secrets
+        - name: scripts
+          configMap:
+            name: rustfs-bucket

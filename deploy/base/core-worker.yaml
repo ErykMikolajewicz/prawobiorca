@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: core-worker
+  labels:
+    deploy-phase: app
   annotations:
     checkov.io/skip1: CKV_K8S_8=The worker has no HTTP endpoint to probe
     checkov.io/skip2: CKV_K8S_9=The worker does not receive traffic
@@ -17,9 +19,6 @@ spec:
         app: prawobiorca
         component: core-worker
     spec:
-      nodeSelector:
-        cloud.google.com/gke-spot: "true"
-      serviceAccountName: prawobiorca-runner
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -29,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: core-worker
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/core:latest
+          image: prawobiorca/core
           command: ["taskiq", "worker", "core_service.framework.workers.main:broker", "core_service.framework.workers.regulations", "core_service.framework.workers.applications"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -50,15 +49,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: core-config
-          env:
-            - name: EMBEDDING_SERVICE_URL
-              value: "https://embedding-batch-296630821006.europe-central2.run.app"
-            - name: EMBEDDING_SERVICE_BATCH_SIZE
-              value: "32"
       volumes:
         - name: secrets-store
-          csi:
-            driver: secrets-store-gke.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: prawobiorca-secrets
+          secret:
+            secretName: prawobiorca-secrets

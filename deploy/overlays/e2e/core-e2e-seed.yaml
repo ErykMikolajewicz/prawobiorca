@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: core-e2e-seed
+  labels:
+    deploy-phase: seed
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: prawobiorca
+        component: core-e2e-seed
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: core-e2e-seed
+          image: prawobiorca/core
+          command: ["python", "init_e2e_regulation.py"]
+          workingDir: /seed
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+            - name: seed
+              mountPath: /seed
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: core-config
+      volumes:
+        - name: secrets-store
+          secret:
+            secretName: prawobiorca-secrets
+        - name: seed
+          configMap:
+            name: core-e2e-seed
+            items:
+              - key: init_e2e_regulation.py
+                path: init_e2e_regulation.py
+              - key: ustawa-nauka_slice_30-31.json
+                path: tests/data/ustawa-nauka_slice_30-31.json

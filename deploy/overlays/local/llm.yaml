@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prawobiorca
+      component: llm
+  template:
+    metadata:
+      labels:
+        app: prawobiorca
+        component: llm
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+        - name: llm
+          image: docker.io/openvino/model_server:2026.4.1
+          args:
+            - --source_model=OpenVINO/Qwen3.6-35B-A3B-int4-ov
+            - --model_name=qwen-3.6-35b
+            - --model_repository_path=/models
+            - --task=text_generation
+            - --target_device=CPU
+            - --rest_port=8080
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: llm-models
+              mountPath: /models
+      volumes:
+        - name: llm-models
+          hostPath:
+            path: /var/lib/llm-models
+            type: Directory
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm
+spec:
+  selector:
+    app: prawobiorca
+    component: llm
+  ports:
+    - port: 8080
+      targetPort: 8080

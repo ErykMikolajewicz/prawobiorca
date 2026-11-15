@@ -10,6 +10,9 @@ concurrency:
   group: dast-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  EMBEDDING_IMAGE: ghcr.io/erykmikolajewicz/prawobiorca/embedding@sha256:fc4c022543c8f6c41c826b5238e287fad84ed825e3afe20c75c1da91e42f0ddf
+
 jobs:
   api:
     if: github.repository_id == '1120768327'
@@ -22,16 +25,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-tools
-      - run: |
-          podman pull ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
-          podman tag ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest localhost/prawobiorca/embedding:latest
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: apps/core
           file: apps/core/Containerfile
           load: true
-          tags: localhost/prawobiorca/core:latest
+          tags: localhost/prawobiorca/core:e2e
           cache-from: type=gha,scope=dast-core
           cache-to: type=gha,scope=dast-core,mode=max
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -39,13 +39,20 @@ jobs:
           context: apps/web
           file: apps/web/Containerfile
           load: true
-          tags: localhost/prawobiorca/web:latest
+          tags: localhost/prawobiorca/web:e2e
           cache-from: type=gha,scope=dast-web
           cache-to: type=gha,scope=dast-web,mode=max
-      - run: docker save localhost/prawobiorca/core:latest localhost/prawobiorca/web:latest | podman load
+      - run: |
+          mkdir -p .llm-models
+          kind create cluster --name prawobiorca-e2e --config deploy/kind/cluster.yaml
+          kind load docker-image --name prawobiorca-e2e localhost/prawobiorca/core:e2e localhost/prawobiorca/web:e2e
       - name: Start disposable application
         id: environment
-        run: just run-e2e-env
+        run: >
+          just deploy e2e
+          --image core=localhost/prawobiorca/core:e2e
+          --image web=localhost/prawobiorca/web:e2e
+          --image "embedding=$EMBEDDING_IMAGE"
       - name: Scan API as guest and authenticated user
         shell: bash
         run: |
@@ -58,8 +65,8 @@ jobs:
           if [ -f .cache/dast/scan.log ]; then
             cp .cache/dast/scan.log .cache/dast/report/scan.log
           fi
-          podman logs core-core > .cache/dast/report/core.log 2>&1 || true
-          podman logs nginx-nginx > .cache/dast/report/nginx.log 2>&1 || true
+          kubectl --context kind-prawobiorca-e2e logs deployment/core > .cache/dast/report/core.log 2>&1 || true
+          kubectl --context kind-prawobiorca-e2e logs deployment/gateway > .cache/dast/report/gateway.log 2>&1 || true
       - name: Upload private DAST reports
         if: ${{ !cancelled() && steps.environment.outcome != 'skipped' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -71,4 +78,4 @@ jobs:
           retention-days: 30
       - name: Stop application
         if: ${{ always() && steps.environment.outcome != 'skipped' }}
-        run: just run-locally-down
+        run: kind delete cluster --name prawobiorca-e2e

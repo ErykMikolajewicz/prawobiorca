@@ -12,7 +12,7 @@ The whole application lives in a single repository. Its implementation is descri
 ## 2. Repository Layout
 
 - `apps/` – deployable applications, each built into its own container image: `core` (main API and Taskiq worker), `extraction`, `embedding` and `web` (frontend).
-- `deploy/` – Kubernetes manifests for the local (Podman) and GCP environments.
+- `deploy/` – Kubernetes manifests: a shared Kustomize base with overlays for GCP, the local kind cluster and E2E.
 - `scripts/` – scripts for running the application locally and deploying it to the cloud.
 - `docs/` – this documentation.
 
@@ -57,8 +57,26 @@ See [Backend](backend.md#2-services-and-communication) for the detailed service 
 ## 4. Deployment Environments
 
 - **Cloud (GCP / Google Cloud Platform)**: containerized workloads, with scale-to-zero for compute services to limit resource use when idle.
-- **On-Premise**: containerized services run with Podman / Docker.
+- **Local**: the same workloads in a [kind](https://kind.sigs.k8s.io) cluster, with PostgreSQL, RustFS and the compute services running inside it. E2E tests use a second, disposable cluster.
 
 The frontend is served at `/` behind the same ingress as the API. It is stateless from the deployment point of view; session cookies are issued by `core`.
+
+### Manifests (`deploy/`)
+
+Every environment is deployed from the same Kustomize structure by `scripts/deploy.py`:
+
+- `base/` – portable Kubernetes shared by all environments: `core`, `core-worker`, the migrations Job, `web` and PostgreSQL. It contains nothing specific to GKE.
+- `overlays/gcp` – GKE patches (Secret Manager CSI volume, service account, spot nodes, Ingress with managed certificates) and the Cloud Run, Vertex AI and Cloud Storage configuration.
+- `overlays/local` – the kind environment: an nginx gateway on `localhost:8080`, RustFS on `localhost:9000`, `embedding`, `extraction`, the LLM on CPU and a test `Secret`.
+- `overlays/e2e` – `local` with `extraction` and the LLM scaled to zero, plus the seed Job.
+- `kind/cluster.yaml` – the kind cluster: host ports 8080 and 9000, and the host directory with LLM models.
+
+Rules shared by the environments:
+
+- **Images**: manifests use the logical names `prawobiorca/<app>` without a registry or tag; the deployment script always replaces them.
+- **Configuration**: the `core-config` ConfigMap is generated from `config.env` files, overlays override single keys. Its name contains a content hash, so a configuration change rolls the pods.
+- **Secrets**: always files in `/mnt/secrets-store`, from Secret Manager on GCP and from a plain `Secret` elsewhere. No secrets are passed through environment variables.
+
+A deployment to another Kubernetes cluster is a new overlay over `base/`, reusing the service definitions from `overlays/local`.
 
 See [CI/CD](../ci_cd.md) for deployment workflows, [Backend](backend.md) for service-specific deployment details, and [Frontend](frontend.md#6-build-and-deployment) for the frontend container and routing.

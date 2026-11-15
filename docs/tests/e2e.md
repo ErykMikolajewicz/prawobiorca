@@ -10,31 +10,32 @@ use the [manual E2E scenario](manual_e2e_test.md).
 
 ## Environment
 
-Tests use built `core` and `web` images through the local ingress at `http://localhost:8080`.
-Real embedding and object storage services support the search flow. The environment prepares a public
-legal act from stored extraction output, avoiding a dependency on live extraction, LLM generation
-or background workers for this smoke test. A one-off `core-e2e-seed` pod runs the seeding script
-from the built `core` image, so no backend Python environment is needed on the host.
+Tests use built `core` and `web` images in a dedicated kind cluster, `prawobiorca-e2e`, through the
+gateway at `http://localhost:8080`. The cluster is deployed from the `e2e` overlay: the local
+environment with `extraction` and the LLM scaled to zero. Real embedding and object storage services
+support the search flow. The environment prepares a public legal act from stored extraction output,
+avoiding a dependency on live extraction and LLM generation for this smoke test. The `core-e2e-seed`
+Job runs the seeding script from the built `core` image, so no backend Python environment is needed
+on the host.
 
-Each run registers a uniquely named user. The environment shares volumes with `just run-locally`,
-so the prepared legal act remains in the local database between runs.
-See the [environment setup](https://github.com/WMS-DEV/prawobiorca/blob/main/scripts/local/run_e2e.py)
+Each run registers a uniquely named user. The cluster has its own database and object storage,
+separate from `just run-locally`. Both clusters use ports 8080 and 9000, so only one of them can
+run at a time. See the [E2E overlay](https://github.com/WMS-DEV/prawobiorca/blob/main/deploy/overlays/e2e/kustomization.yaml)
 for service configuration.
 
 ## Running locally
 
-Install frontend dependencies with `pnpm install` in `apps/web` and ensure Podman is available.
-From the repository root:
+Install frontend dependencies with `pnpm install` in `apps/web` and ensure Podman, kind and kubectl
+are available. From the repository root:
 
 ```bash
-just build-core
-just build-web
 just run-e2e-env
 cd apps/web
 pnpm test:e2e
 ```
 
-After the run, return to the repository root and stop the environment with `just run-locally-down`.
+`just run-e2e-env` creates the cluster if needed, builds the images and loads the changed ones.
+After the run, return to the repository root and delete the cluster with `just run-e2e-env-down`.
 
 ## CI
 

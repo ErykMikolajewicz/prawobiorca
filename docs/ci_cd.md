@@ -20,7 +20,7 @@ Runs on PRs and pushes to `main` in the source repository. The `changes` job sel
 | `api-types` | `just api-types` | Regenerated OpenAPI schema and frontend client must match committed files. |
 | `workflows` | `just check-workflows` | zizmor security audit and actionlint (official image, pinned by digest in `justfile`). |
 | `containers` | `just check-containers` | hadolint for all `Containerfile` files (official image, pinned by digest in `justfile`). |
-| `deployment` | `just check-deployment` | checkov for `deploy/gcp/`, using the separate `deployment` dependency group. Local manifests are not checked; keep their security settings aligned. |
+| `deployment` | `just check-deployment` | Renders the `local`, `e2e` and `gcp` overlays, which detects broken patches, then runs checkov on the rendered `gcp` manifests, using the separate `deployment` dependency group. The security settings of `core`, the worker, `web`, migrations and PostgreSQL come from the shared base. |
 
 When the API changes, commit the output of `just api-types`: `apps/core/openapi.json` and `apps/web/src/api/generated/`. The commit hook regenerates these for changes in `apps/core/src/`.
 
@@ -45,8 +45,8 @@ See [Working on documentation](index.md#working-on-documentation) for local prev
 ## DAST (`dast.yml`)
 
 Runs every Saturday at 04:00 Europe/Warsaw and on demand in the **private source repository**.
-It builds `core` and `web`, starts a disposable `just run-e2e-env` on the runner, then runs
-`just dast`. No production credentials or external scan targets are used.
+It builds `core` and `web`, deploys the `e2e` overlay to a disposable kind cluster on the runner,
+then runs `just dast`. No production credentials or external scan targets are used.
 
 The [ZAP Automation Framework](https://www.zaproxy.org/docs/automate/automation-framework/)
 plan lives in `scripts/dast/plan.yaml`; `scripts/dast/run.py` prepares a filtered copy of
@@ -71,9 +71,9 @@ DAST is independent of the release workflow and does not block deployments.
 - Login, refresh, logout and registration are excluded from attack traffic to preserve scan
   sessions; registration and login still run as setup steps.
 - Upload confirmation, processing retries, description generation and case applications are
-  excluded because E2E does not run extraction, LLM or workers. These paths are removed before
+  excluded because E2E does not run extraction or the LLM. These paths are removed before
   OpenAPI import as well as excluded from the scan context.
-- The scan covers API traffic through the local nginx ingress. It does not crawl the Vue UI,
+- The scan covers API traffic through the local nginx gateway. It does not crawl the Vue UI,
   check production TLS/GCP configuration, or exercise administrator-only functionality.
 - Generated OpenAPI inputs do not guarantee valid IDs for existing objects. Some object routes
   will return validation or not-found responses. DAST does not replace integration tests for
@@ -82,16 +82,13 @@ DAST is independent of the release workflow and does not block deployments.
 ### Local use
 
 Use a **disposable database and object storage**: active scanning can create, modify and delete
-records. The ordinary local E2E environment shares volumes with `just run-locally`, so do not
-scan a developer environment containing data you want to keep. Prefer a fresh VM or CI runner.
-
-On that disposable Linux environment, build `core` and `web`, prepare the embedding image as
-in E2E, then run:
+records. `just run-e2e-env` uses its own `prawobiorca-e2e` cluster, so the data of
+`just run-locally` is not affected; never scan the `just run-locally` environment itself.
 
 ```bash
 just run-e2e-env
 just dast
-just run-locally-down
+just run-e2e-env-down
 ```
 
 Reports are written to `.cache/dast/report/`. The temporary credentials file is removed after the
@@ -101,9 +98,9 @@ and validate the plan when upgrading ZAP.
 
 ## E2E (`e2e.yml`)
 
-Runs in the release repository on pushes to `main` and before each deployment. It builds `core` and `web`, starts `just run-e2e-env` and runs Playwright. Failures include backend/nginx logs and a Playwright report artifact. Results are visible in the public repository and are not reported back to the source repository. See [E2E tests](tests/e2e.md).
+Runs in the release repository on pushes to `main` and before each deployment. It builds `core` and `web`, loads them into a kind cluster running on the runner's Docker, deploys the `e2e` overlay with `just deploy e2e` and runs Playwright. A failed deployment prints pod states, events and logs; failed tests add `core` and gateway logs and a Playwright report artifact. Results are visible in the public repository and are not reported back to the source repository. See [E2E tests](tests/e2e.md).
 
-The `embedding` image is pulled from GHCR; see [Manually maintained images](#manually-maintained-images) when updating it.
+The cluster node pulls the `embedding` image from GHCR, pinned by digest in `EMBEDDING_IMAGE`; see [Manually maintained images](#manually-maintained-images) when updating it.
 
 ## CD (`cd.yml`)
 
@@ -118,11 +115,30 @@ The command requires both repositories' `main` branches to point to the same com
 1. Run E2E on the released commit.
 2. Wait for the repository owner's approval in the `production` environment (only `v*` tags allowed).
 3. Build `core` and `web`, then push them to Artifact Registry with commit SHA and `latest` tags.
-4. Run database migrations, then roll out `core`, `core-worker` and `web` using the SHA tags.
+4. Run `just deploy gcp` with the SHA tags, see [Deployment script](#deployment-script). Deployments do not run in parallel (`concurrency` group).
 
 Production approval is the deployment safeguard: source repository administrators can read `MIRROR_TOKEN` and create releases, but cannot approve deployments. GCP authentication uses Workload Identity Federation restricted to `production`, configured by `scripts/cloud/github_cicd_init.sh`.
 
-Configuration and PostgreSQL are deployed separately with `scripts/cloud/deploy_app.sh`; Cloud Run services (`extraction`, `embedding`, `embedding-batch`) use their own scripts in `scripts/cloud/`.
+Cloud Run services (`extraction`, `embedding`, `embedding-batch`) are deployed separately with their own scripts in `scripts/cloud/`.
+
+### Deployment script
+
+`scripts/deploy.py` deploys every environment (`gcp`, `local`, `e2e`) from `deploy/overlays/`; see [Manifests](architecture/architecture.md#manifests-deploy):
+
+```bash
+just deploy gcp --context <kubectl context> --image core=<image> --image web=<image>
+```
+
+1. Render the overlay once with the given images; all later steps use the same output.
+2. Apply configuration and dependencies (ConfigMap, Ingress, PostgreSQL, Services) and wait for their rollouts.
+3. Run Jobs one by one (migrations; the bucket and seed Jobs in the kind environments): delete the previous Job, apply the new one and wait until it succeeds or fails.
+4. Apply `core`, `core-worker` and `web` (and the gateway in the kind environments) and wait for their rollouts.
+
+Steps are selected by the `deploy-phase` label of a resource; resources without it belong to step 2. On failure the script prints pod states, events and logs, and exits with a non-zero code. Applications are not updated when a Job fails.
+
+The kubectl context is never taken from the current one: `local` and `e2e` deploy only to their kind clusters, `gcp` requires an explicit `--context`. `--render` prints the manifests without deploying, for example for `kubectl diff -f -`.
+
+CD and manual deployments use the same script, so a release also applies configuration, Ingress and PostgreSQL changes. A configuration change creates a new `core-config-<hash>` ConfigMap; delete old ones manually when no rollback needs them.
 
 ### Rollback
 
@@ -159,7 +175,7 @@ Pin external actions to full commit SHAs with exact versions in comments; update
 Other accepted findings:
 
 - **hadolint** (`.hadolint.yaml`): `DL3008` — Debian removes old apt versions; `DL3059` — separate `RUN` layers for caching; `DL3066` — non-numeric usernames.
-- **checkov** (`.checkov.yaml`): `CKV_K8S_14`/`43` — CD replaces `latest` with SHA tags; `CKV_K8S_15` — default pull policy with immutable tags; `CKV_K8S_21` — `default` namespace; `CKV2_K8S_6` — no network policies. Resource annotations explain worker probe exemptions (no HTTP endpoint) and PostgreSQL UID 999 (owns existing data).
+- **checkov** (`.checkov.yaml`): `CKV_K8S_43` — images are deployed by immutable SHA tags, not digests; `CKV_K8S_15` — default pull policy with immutable tags; `CKV_K8S_21` — `default` namespace; `CKV2_K8S_6` — no network policies. Resource annotations explain worker probe exemptions (no HTTP endpoint) and PostgreSQL UID 999 (owns existing data).
 - **Dependency audit**: checkov's `asteval` is overridden to a fixed version in `pyproject.toml`. `ecdsa` (`PYSEC-2026-1325`) is ignored with `--ignore-until-fixed`: it affects signing, while checkov only verifies external-check signatures. The audit reports it again once a fix exists.
 
 ### Manually maintained images
@@ -178,5 +194,7 @@ E2E uses a public `embedding` image. Rebuild and publish it whenever `apps/embed
 just build-embedding
 podman login ghcr.io -u ErykMikolajewicz
 podman tag localhost/prawobiorca/embedding:latest ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
-podman push ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
+podman push --digestfile embedding.digest ghcr.io/erykmikolajewicz/prawobiorca/embedding:latest
 ```
+
+Then set `EMBEDDING_IMAGE` in `e2e.yml` and `dast.yml` to the digest saved in `embedding.digest`.

@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: core
+  labels:
+    deploy-phase: app
 spec:
   replicas: 1
   selector:
@@ -14,9 +16,6 @@ spec:
         app: prawobiorca
         component: core
     spec:
-      nodeSelector:
-        cloud.google.com/gke-spot: "true"
-      serviceAccountName: prawobiorca-runner
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -26,7 +25,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: core
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/core:latest
+          image: prawobiorca/core
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -62,21 +61,15 @@ spec:
                 name: core-config
       volumes:
         - name: secrets-store
-          csi:
-            driver: secrets-store-gke.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: prawobiorca-secrets
+          secret:
+            secretName: prawobiorca-secrets
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: core
-  annotations:
-    cloud.google.com/backend-config: '{"default": "prawobiorca-backend-config"}'
 spec:
-  type: NodePort
   selector:
     app: prawobiorca
     component: core

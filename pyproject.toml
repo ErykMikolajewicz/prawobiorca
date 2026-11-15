@@ -38,6 +38,3 @@ exclude = ["apps/core/alembic/**"]
 
 [tool.ty.src]
 include = ["scripts"]
-
-[tool.ty.environment]
-root = ["scripts/local"]

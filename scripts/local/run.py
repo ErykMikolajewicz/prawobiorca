@@ -1,133 +1,119 @@
+import argparse
 import subprocess
+import sys
 import time
 from pathlib import Path
 
-from manifests import MANIFESTS, MIGRATIONS
+CLUSTER_CONFIG = Path("deploy/kind/cluster.yaml")
+LLM_MODELS_DIR = Path(".llm-models")
+API_READY_TIMEOUT = 120
 
-IGNORED_DIRS = {".venv", "__pycache__"}
-POSTGRES_CONTAINER = "postgres-postgres"
-MIGRATIONS_CONTAINER = "core-migrations-core-migrations"
-POSTGRES_READY_TIMEOUT = 60
-
-IMAGES = (
-    (
-        "prawobiorca/core",
-        "apps/core",
-        (
-            "apps/core/Containerfile",
-            "apps/core/pyproject.toml",
-            "apps/core/uv.lock",
-            "apps/core/src",
-            "apps/core/alembic",
-            "apps/core/alembic.ini",
-        ),
-    ),
-    ("prawobiorca/extraction", "apps/extraction", ("apps/extraction",)),
-    ("prawobiorca/embedding", "apps/embedding", ("apps/embedding/Containerfile",)),
-    (
-        "prawobiorca/web",
-        "apps/web",
-        (
-            "apps/web/Containerfile",
-            "apps/web/package.json",
-            "apps/web/pnpm-lock.yaml",
-            "apps/web/src",
-        ),
-    ),
-)
+CLUSTERS = {"local": "prawobiorca", "e2e": "prawobiorca-e2e"}
+STOP_COMMANDS = {"prawobiorca": "just run-locally-down", "prawobiorca-e2e": "just run-e2e-env-down"}
+IMAGES = {
+    "local": ("core", "web", "embedding", "extraction"),
+    "e2e": ("core", "web", "embedding"),
+}
 
 
-def image_created_at(name: str) -> float | None:
+def node(cluster: str) -> str:
+    return f"{cluster}-control-plane"
+
+
+def node_running(cluster: str) -> bool:
     result = subprocess.run(
-        ["podman", "image", "inspect", name, "--format", "{{.Created.Unix}}"],
+        ["podman", "container", "inspect", node(cluster), "--format", "{{.State.Running}}"],
         capture_output=True,
         text=True,
         check=False,
     )
-    if result.returncode != 0:
-        return None
-    return float(result.stdout.strip())
+    return result.stdout.strip() == "true"
 
 
-def newest_source_change(sources: tuple[str, ...]) -> float:
-    newest = 0.0
-    for source in sources:
-        path = Path(source)
-        if path.is_file():
-            newest = max(newest, path.stat().st_mtime)
-            continue
-        for entry in path.rglob("*"):
-            if IGNORED_DIRS & set(entry.parts) or not entry.is_file():
-                continue
-            newest = max(newest, entry.stat().st_mtime)
-    return newest
+def cluster_exists(cluster: str) -> bool:
+    result = subprocess.run(["kind", "get", "clusters"], capture_output=True, text=True, check=True)
+    return cluster in result.stdout.split()
 
 
-def build_images():
-    for name, context, sources in IMAGES:
-        created_at = image_created_at(f"localhost/{name}:latest") or image_created_at(f"{name}:latest")
-        if created_at is None:
-            print(f"Building {name} image...")
-        elif newest_source_change(sources) > created_at:
-            print(f"Sources changed since {name} image was built, rebuilding...")
-        else:
-            continue
-        subprocess.run(["podman", "image", "build", f"--tag={name}", context], check=True)
-
-
-def wait_for_postgres():
-    for _ in range(POSTGRES_READY_TIMEOUT):
+def wait_for_api(cluster: str):
+    for _ in range(API_READY_TIMEOUT):
         result = subprocess.run(
-            ["podman", "exec", POSTGRES_CONTAINER, "pg_isready", "-h", "localhost", "-U", "postgres"],
-            capture_output=True,
-            check=False,
+            ["kubectl", "--context", f"kind-{cluster}", "get", "--raw=/readyz"], capture_output=True, check=False
         )
         if result.returncode == 0:
             return
         time.sleep(1)
-    raise RuntimeError("Postgres is not ready.")
+    raise RuntimeError(f"Cluster {cluster} is not ready.")
 
 
-def wait_for_completion(container: str):
-    result = subprocess.run(["podman", "wait", container], capture_output=True, text=True, check=True)
-    if result.stdout.strip() != "0":
-        raise RuntimeError(f"{container} failed, check logs: podman logs {container}")
+def ensure_cluster(cluster: str):
+    for other, stop_command in STOP_COMMANDS.items():
+        if other != cluster and node_running(other):
+            raise SystemExit(f"Cluster {other} is running and uses the same ports 8080 and 9000. Run: {stop_command}")
+
+    LLM_MODELS_DIR.mkdir(exist_ok=True)
+    if not cluster_exists(cluster):
+        subprocess.run(["kind", "create", "cluster", "--name", cluster, "--config", str(CLUSTER_CONFIG)], check=True)
+    elif not node_running(cluster):
+        print(f"Starting cluster {cluster}...")
+        subprocess.run(["podman", "start", node(cluster)], check=True)
+        wait_for_api(cluster)
 
 
-def wait_for_migrations():
-    wait_for_completion(MIGRATIONS_CONTAINER)
+def build_image(name: str) -> tuple[str, str]:
+    repository = f"localhost/prawobiorca/{name}"
+    subprocess.run(["podman", "image", "build", f"--tag={repository}", f"apps/{name}"], check=True)
+    image_id = subprocess.run(
+        ["podman", "image", "inspect", repository, "--format", "{{.Id}}"], capture_output=True, text=True, check=True
+    ).stdout
+    return repository, f"{repository}:{image_id[:12]}"
 
 
-def play_manifest(manifest: Path, configmaps: tuple[Path, ...]):
-    print(f"Applying {manifest.name}...")
-    command = ["podman", "kube", "play", "--replace", "--network", "prawobiorca-net"]
-    for configmap in configmaps:
-        command += ["--configmap", str(configmap)]
-    command.append(str(manifest))
-    subprocess.run(command, check=True)
+def load_image(cluster: str, repository: str, reference: str):
+    loaded = subprocess.run(
+        ["podman", "exec", node(cluster), "crictl", "inspecti", "--quiet", reference], capture_output=True, check=False
+    )
+    if loaded.returncode == 0:
+        return
+
+    print(f"Loading {reference} into cluster {cluster}...")
+    subprocess.run(["podman", "tag", repository, reference], check=True)
+    try:
+        with subprocess.Popen(["podman", "save", reference], stdout=subprocess.PIPE) as save:
+            subprocess.run(
+                ["kind", "load", "image-archive", "/dev/stdin", "--name", cluster], stdin=save.stdout, check=True
+            )
+        if save.returncode != 0:
+            raise RuntimeError(f"Saving {reference} failed.")
+    finally:
+        subprocess.run(["podman", "untag", reference], check=True)
 
 
 def main():
-    build_images()
+    parser = argparse.ArgumentParser(description="Run the application in a local kind cluster.")
+    parser.add_argument("environment", choices=CLUSTERS)
+    environment = parser.parse_args().environment
+    cluster = CLUSTERS[environment]
 
-    subprocess.run(["podman", "network", "create", "--ignore", "prawobiorca-net"], check=True)
+    ensure_cluster(cluster)
 
-    print("Deploying local environment with podman kube play...")
-    for manifest, configmaps in MANIFESTS:
-        if manifest == MIGRATIONS:
-            wait_for_postgres()
-        play_manifest(manifest, configmaps)
-        if manifest == MIGRATIONS:
-            wait_for_migrations()
+    deploy = [sys.executable, "scripts/deploy.py", environment]
+    for name in IMAGES[environment]:
+        repository, reference = build_image(name)
+        load_image(cluster, repository, reference)
+        deploy += ["--image", f"{name}={reference}"]
 
-    print("\nLocal deployment is running.")
-    print("Nginx Ingress available at http://localhost:8080")
+    result = subprocess.run(deploy, check=False)
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
+
+    print("\nThe application is running at http://localhost:8080")
     print("  - Frontend: http://localhost:8080/")
     print("  - API:      http://localhost:8080/api")
     print("  - Docs:     http://localhost:8080/docs")
     print("  - OpenAPI:  http://localhost:8080/openapi.json")
     print("  - Storage:  http://localhost:8080/storage/")
-    print("\nTo stop the deployment run: just run-locally-down")
+    print(f"\nTo stop it run: {STOP_COMMANDS[cluster]}")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: core-migrations
+  labels:
+    deploy-phase: migrations
 spec:
   backoffLimit: 3
   template:
@@ -10,7 +12,6 @@ spec:
         app: prawobiorca
         component: core-migrations
     spec:
-      serviceAccountName: prawobiorca-runner
       automountServiceAccountToken: false
       restartPolicy: Never
       securityContext:
@@ -21,7 +22,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: core-migrations
-          image: europe-central2-docker.pkg.dev/prawobiorca/prawobiorca-repo/core:latest
+          image: prawobiorca/core
           command: ["alembic", "upgrade", "head"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -44,8 +45,5 @@ spec:
                 name: core-config
       volumes:
         - name: secrets-store
-          csi:
-            driver: secrets-store-gke.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: prawobiorca-secrets
+          secret:
+            secretName: prawobiorca-secrets
