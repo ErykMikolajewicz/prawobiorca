@@ -10,7 +10,7 @@ from core_service.application.dtos.regulations import (
     RegulationSearchResult,
     RegulationUploadTarget,
 )
-from core_service.application.dtos.search import SearchParams, SearchResult
+from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation
 from core_service.application.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
@@ -18,6 +18,7 @@ from core_service.application.use_cases.regulations import (
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
+    ListRegulationSections,
     RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
@@ -44,6 +45,7 @@ from core_service.framework.dependencies.regulations import (
     get_add_regulation,
     get_confirm_regulation_upload,
     get_delete_regulation,
+    get_list_regulation_sections,
     get_list_regulations,
     get_regenerate_regulation_description,
     get_regulation,
@@ -146,6 +148,33 @@ async def search_regulation_documents(
         )
 
     return results
+
+
+@regulations_router.get(
+    "/regulations/{regulationId}/sections",
+    response_model=list[SectionRepresentation],
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Regulation not prepared, normally should not occur."},
+        status.HTTP_404_NOT_FOUND: {"description": "Regulation not found."},
+    },
+)
+async def list_regulation_sections(
+    list_regulation_sections_: Annotated[ListRegulationSections, Depends(get_list_regulation_sections)],
+    caller: Annotated[Caller, Depends(get_caller)],
+    regulation_id: Annotated[UUID, Path(alias="regulationId")],
+) -> list[SectionRepresentation]:
+    try:
+        return await list_regulation_sections_.execute(caller, regulation_id)
+    except RegulationNotFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation with id {regulation_id} not found."
+        )
+    except RegulationsNotPreparedToSearch as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Regulation {e.regulations_name}, not prepared to search,"
+            f" report problem to application administrator.",
+        )
 
 
 @regulations_router.post(

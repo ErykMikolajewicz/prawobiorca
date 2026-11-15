@@ -14,6 +14,7 @@ from core_service.application.use_cases.regulations import (
     FailRegulationDescriptionGeneration,
     FailRegulationPreparation,
     GenerateRegulationDescription,
+    ListRegulationSections,
     PrepareRegulation,
     RegenerateRegulationDescription,
     RetryRegulationPreparation,
@@ -218,6 +219,15 @@ def search_regulation(mock_session_maker, mock_texts_embedder, sections_reposito
     return SearchRegulation(
         session_maker=mock_session_maker,
         embedding_port=mock_texts_embedder,
+        sections_repository=sections_repository,
+        regulations_repository=regulations_repository,
+    )
+
+
+@pytest.fixture
+def list_regulation_sections(mock_session_maker, sections_repository, regulations_repository):
+    return ListRegulationSections(
+        session_maker=mock_session_maker,
         sections_repository=sections_repository,
         regulations_repository=regulations_repository,
     )
@@ -820,3 +830,22 @@ async def test_search_regulation_without_sections(
 
     with pytest.raises(error):
         await search_regulation.execute(ADMIN, REGULATION_ID, SearchParams(threshold=0, query="urlop"))
+
+
+@pytest.mark.parametrize(
+    ("regulation", "error"),
+    [
+        (None, RegulationNotFound),
+        (create_regulation_representation(RegulationPreparationStatus.NOT_STARTED), RegulationsNotPreparedToSearch),
+        (create_regulation_representation(RegulationPreparationStatus.PREPARED), RegulationInInvalidState),
+    ],
+    ids=("not found", "not prepared", "prepared without sections"),
+)
+async def test_list_regulation_sections_without_sections(
+    list_regulation_sections, regulations_repository, sections_repository, regulation, error
+):
+    sections_repository.list_sections.side_effect = RegulationDocumentsNotFound
+    store_regulation_representation(regulations_repository, regulation)
+
+    with pytest.raises(error):
+        await list_regulation_sections.execute(ADMIN, REGULATION_ID)

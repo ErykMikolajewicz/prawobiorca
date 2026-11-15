@@ -18,6 +18,7 @@ from core_service.application.use_cases.regulations import (
     GetRegulation,
     GetRegulationDownloadUrl,
     ListRegulations,
+    ListRegulationSections,
     RegenerateRegulationDescription,
     RetryRegulationPreparation,
     SearchRegulation,
@@ -118,6 +119,14 @@ def get_search_regulation(
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
 ) -> SearchRegulation:
     return SearchRegulation(session_maker, texts_embedder, sections_repository, regulations_repository)
+
+
+def get_list_regulation_sections(
+    session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
+    sections_repository: Annotated[SectionsRepository, Depends(get_sections_repository)],
+    regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+) -> ListRegulationSections:
+    return ListRegulationSections(session_maker, sections_repository, regulations_repository)
 
 
 def get_search_regulations(

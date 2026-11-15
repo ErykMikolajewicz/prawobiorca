@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter, type RouteRecordRaw } from 'vue-rout
 import appRouter from '@/router'
 
 const EmptyPage = { render: () => null }
-const LayoutStub = { template: '<div><slot /></div>' }
+const LayoutStub = { template: '<div><slot /><slot name="aside" /></div>' }
 
 function withoutPage(route: RouteRecordRaw): RouteRecordRaw {
   return route.component ? { ...route, component: EmptyPage } : route

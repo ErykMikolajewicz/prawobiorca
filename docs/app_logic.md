@@ -69,7 +69,10 @@ This is the starting point of the application.
 This view opens after selecting a specific document (both public and private).
 
 **Common Functions (Guest and Logged):**
+- **Whole Document**: Without a query, the view shows all editorial units of the document in its order, without similarity scores (`GET /api/regulations/{regulationId}/sections`). Clearing the query returns to this view.
 - **Semantic Search**: Search bar supporting natural language (e.g., *"Regulations regarding student rights"*).
+- **Result Order and Limit**: Search results are ordered by relevance by default and limited to the 10 best. Ordering by the document returns, by default, all units above the threshold in the document's order; a limit set by the user then keeps the first units in that order.
+- **Table of Contents**: When units are shown in the document's order, a table of contents built from their breadcrumbs is shown on the right (behind a button on mobile). Clicking an entry scrolls to the unit; a chapter scrolls to its first unit, and the entry of the visible unit is highlighted.
 - **Search Scope**: Only the **current, open document** is searched.
 - **Search Results**: List of most matching articles/text fragments obtained through vector search. A result is always a whole editorial unit (an article, or a `§` in university regulations) together with its breadcrumb, for example *"Rozdział 4 Samorząd studencki i organizacje studenckie > Art. 110"*. Long units are chunked for retrieval only — the chunks are never shown, and the unit's score combines its two best-matching chunks.
 

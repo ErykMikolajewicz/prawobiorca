@@ -109,4 +109,17 @@ describe('SearchResultItem', () => {
     expect(wrapper.find('.result-block.is-highlighted').exists()).toBe(false)
     expect(wrapper.find('.result-line').text()).toBe('1. Ustęp pierwszy')
   })
+
+  it('shows the similarity only for a scored result', () => {
+    const elements: Array<SearchResultElement> = [{ text: 'Treść', subsection: null }]
+
+    const scored = mountItem('Treść', elements)
+    const unscored = mount(SearchResultItem, {
+      props: { result: 'Treść', elements, canAddToCase: false },
+      global: { plugins: [ElementPlus] },
+    })
+
+    expect(scored.find('.score').text()).toBe('Podobieństwo: 0.500')
+    expect(unscored.find('.score').exists()).toBe(false)
+  })
 })

@@ -14,14 +14,17 @@ class SearchResultHighlight(BaseModel):
     end_element: int
 
 
-class SearchResult(BaseModel):
+class SectionRepresentation(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: UUID
-    score: float = Field(ge=-1, le=1)
     header: str | None = None
     text: str
     elements: list[SearchResultElement]
+
+
+class SearchResult(SectionRepresentation):
+    score: float = Field(ge=-1, le=1)
     highlight: SearchResultHighlight | None = None
 
 

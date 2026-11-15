@@ -6,7 +6,7 @@ const props = defineProps<{
   result: string
   elements: Array<SearchResultElement>
   highlight?: SearchResultHighlight | null
-  score: number
+  score?: number
   selectedCaseId?: string
   canAddToCase: boolean
 }>()
@@ -35,7 +35,7 @@ function handleAddToCase() {
   <el-card shadow="never" class="app-card">
     <RegulationElements :elements="elements" :highlight="highlight" />
     <div class="result-footer">
-      <span class="score">Podobieństwo: {{ score.toFixed(3) }}</span>
+      <span v-if="score !== undefined" class="score">Podobieństwo: {{ score.toFixed(3) }}</span>
       <div class="app-card-actions">
         <el-tooltip
           v-if="canAddToCase"

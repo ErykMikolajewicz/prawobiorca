@@ -14,11 +14,14 @@ vi.mock('@/api/generated/endpoints/auth/auth')
 vi.mock('@/api/generated/endpoints/cases/cases')
 vi.mock('@/api/generated/endpoints/organizations/organizations')
 
-async function mountLayout(prepareStores: () => void = () => {}) {
+async function mountLayout(
+  prepareStores: () => void = () => {},
+  slots: Record<string, string> = {},
+) {
   const { global } = await createTestApp()
   prepareStores()
   const wrapper = mount(AppLayout, {
-    slots: { default: '<p class="page-content">Treść strony</p>' },
+    slots: { default: '<p class="page-content">Treść strony</p>', ...slots },
     global,
     attachTo: document.body,
   })
@@ -42,6 +45,15 @@ describe('AppLayout', () => {
     expect(wrapper.find('aside .sidebar-content').exists()).toBe(true)
     expect(wrapper.find('footer').text()).toContain('Prawobiorca.')
     expect(wrapper.find('.app-top-bar').exists()).toBe(false)
+  })
+
+  it('shows the aside of the page next to its content only when given', async () => {
+    const withoutAside = await mountLayout()
+    expect(withoutAside.find('.page-aside').exists()).toBe(false)
+    withoutAside.unmount()
+
+    const withAside = await mountLayout(() => {}, { aside: '<nav>Spis treści</nav>' })
+    expect(withAside.find('.content-row > .page-aside').text()).toBe('Spis treści')
   })
 
   it('loads organizations but not cases for a guest', async () => {

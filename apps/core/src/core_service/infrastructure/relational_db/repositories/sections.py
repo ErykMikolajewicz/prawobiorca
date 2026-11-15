@@ -12,6 +12,7 @@ from core_service.application.dtos.search import (
     SearchResult,
     SearchResultElement,
     SearchResultHighlight,
+    SectionRepresentation,
 )
 from core_service.application.ports.relational import AsyncSession
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
@@ -90,6 +91,39 @@ class SqlaSectionsRepository:
         result = await session.execute(statement)
 
         return [SectionContent(header=row.header, text=row.text) for row in result]
+
+    @staticmethod
+    async def list_sections(
+        session: AsyncSession, user_id: UUID | None, regulation_id: UUID
+    ) -> list[SectionRepresentation]:
+        session = sqla_session(session)
+        statement = (
+            select(
+                regulations_sections_table.c.id,
+                regulations_sections_table.c.header,
+                regulations_sections_table.c.text,
+                regulations_sections_table.c.elements,
+            )
+            .where(
+                regulations_sections_table.c.regulation_id == regulation_id,
+                regulations_sections_table.c.user_id == user_id,
+            )
+            .order_by(regulations_sections_table.c.section_order)
+        )
+        result = await session.execute(statement)
+        rows = result.all()
+        if not rows:
+            raise RegulationDocumentsNotFound()
+
+        return [
+            SectionRepresentation(
+                id=row.id,
+                header=row.header,
+                text=row.text,
+                elements=[SearchResultElement(**element) for element in row.elements],
+            )
+            for row in rows
+        ]
 
     @staticmethod
     async def search(

@@ -8,6 +8,7 @@ import type {
   SearchRegulationDocumentsParams,
   SearchRegulationsParams,
   SearchResult,
+  SectionRepresentation,
 } from '../../model'
 
 import { prawobiorcaRequest } from '../../../axios'
@@ -111,6 +112,18 @@ export const searchRegulationDocuments = (
   )
 }
 /**
+ * @summary List Regulation Sections
+ */
+export const listRegulationSections = (
+  regulationId: string,
+  options?: SecondParameter<typeof prawobiorcaRequest<SectionRepresentation[]>>,
+) => {
+  return prawobiorcaRequest<SectionRepresentation[]>(
+    { url: `/api/regulations/${regulationId}/sections`, method: 'GET' },
+    options,
+  )
+}
+/**
  * @summary Confirm Regulation Upload
  */
 export const confirmRegulationUpload = (
@@ -166,6 +179,9 @@ export type UpdateRegulationResult = NonNullable<Awaited<ReturnType<typeof updat
 export type DeleteRegulationResult = NonNullable<Awaited<ReturnType<typeof deleteRegulation>>>
 export type SearchRegulationDocumentsResult = NonNullable<
   Awaited<ReturnType<typeof searchRegulationDocuments>>
+>
+export type ListRegulationSectionsResult = NonNullable<
+  Awaited<ReturnType<typeof listRegulationSections>>
 >
 export type ConfirmRegulationUploadResult = NonNullable<
   Awaited<ReturnType<typeof confirmRegulationUpload>>

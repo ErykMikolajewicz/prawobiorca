@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import NoReturn
 from uuid import UUID
 
 from core_service.application.dtos.regulations import (
@@ -9,13 +10,13 @@ from core_service.application.dtos.regulations import (
     RegulationSearchResult,
     RegulationUploadTarget,
 )
-from core_service.application.dtos.search import SearchParams, SearchResult
+from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation
 from core_service.application.ports.regulations import (
     RegulationDescriptionWriter,
     RegulationsRepository,
     RegulationsStorage,
 )
-from core_service.application.ports.relational import SessionMaker
+from core_service.application.ports.relational import AsyncSession, SessionMaker
 from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.tasks import (
     RegulationDescriptionGenerationScheduler,
@@ -555,24 +556,45 @@ class SearchRegulation:
 
         async with self.session_maker() as session:
             try:
-                results = await self.sections_repository.search(
+                return await self.sections_repository.search(
                     session, user_id, regulation_id, query_vector, search_params
                 )
             except RegulationDocumentsNotFound:
-                logger.warning("Regulation to search has no prepared documents! regulation id: %s", regulation_id)
+                await _raise_missing_sections_error(session, self.regulations_repository, user_id, regulation_id)
 
-                regulation_representation = await self.regulations_repository.get_regulation_representation(
-                    session, user_id, regulation_id
-                )
 
-                if regulation_representation is None:
-                    logger.warning("Regulation not found! regulation id: %s", regulation_id)
-                    raise RegulationNotFound
+@dataclass
+class ListRegulationSections:
+    session_maker: SessionMaker
+    sections_repository: SectionsRepository
+    regulations_repository: RegulationsRepository
 
-                if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
-                    logger.warning("Regulation to search not prepared! regulation id: %s", regulation_id)
-                    raise RegulationsNotPreparedToSearch(regulations_name=regulation_representation.presentation_name)
+    async def execute(self, caller: Caller, regulation_id: UUID) -> list[SectionRepresentation]:
+        async with self.session_maker() as session:
+            owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+            check_can_read_regulation(caller, owner)
+            try:
+                return await self.sections_repository.list_sections(session, owner.user_id, regulation_id)
+            except RegulationDocumentsNotFound:
+                await _raise_missing_sections_error(session, self.regulations_repository, owner.user_id, regulation_id)
 
-                logger.error("Regulation prepared, but documents not found!")
-                raise RegulationInInvalidState
-        return results
+
+async def _raise_missing_sections_error(
+    session: AsyncSession, regulations_repository: RegulationsRepository, user_id: UUID | None, regulation_id: UUID
+) -> NoReturn:
+    logger.warning("Regulation has no prepared documents! regulation id: %s", regulation_id)
+
+    regulation_representation = await regulations_repository.get_regulation_representation(
+        session, user_id, regulation_id
+    )
+
+    if regulation_representation is None:
+        logger.warning("Regulation not found! regulation id: %s", regulation_id)
+        raise RegulationNotFound
+
+    if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
+        logger.warning("Regulation not prepared! regulation id: %s", regulation_id)
+        raise RegulationsNotPreparedToSearch(regulations_name=regulation_representation.presentation_name)
+
+    logger.error("Regulation prepared, but documents not found!")
+    raise RegulationInInvalidState

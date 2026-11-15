@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
+import { computed, ref, onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
+import { Memo } from '@element-plus/icons-vue'
 import { showApiError } from '@/utils/error'
 
 import AppLayout from '@/components/templates/AppLayout.vue'
 import SearchForm from '@/components/organisms/SearchForm.vue'
 import SearchResultsList from '@/components/organisms/SearchResultsList.vue'
-import { useRegulationSearch } from '@/composables/useRegulationSearch'
+import SearchResultsToc from '@/components/organisms/SearchResultsToc.vue'
+import { defaultSearchLimit, useRegulationSearch } from '@/composables/useRegulationSearch'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 import { useAuthStore } from '@/stores/auth'
 import { useCasesStore } from '@/stores/cases'
@@ -28,21 +31,32 @@ const { isUserLogged } = storeToRefs(authStore)
 
 const regulationId = route.params.regulationId as string
 const regulationName = ref('')
+const initialOrder = (route.query.order_by as SearchOrder | undefined) || 'score'
 const searchParams = ref<SearchRegulationDocumentsParams>({
   query: (route.query.query as string) || '',
   threshold: route.query.threshold !== undefined ? Number(route.query.threshold) : 0.5,
-  limit: route.query.limit ? Number(route.query.limit) : 10,
-  order_by: (route.query.order_by as SearchOrder | undefined) || 'score',
+  limit: route.query.limit ? Number(route.query.limit) : defaultSearchLimit(initialOrder),
+  order_by: initialOrder,
 })
 
 const { activeCaseId, activeCase } = storeToRefs(useCasesStore())
-const { results, isSearching, search: performSearch } = useRegulationSearch(regulationId)
+const { results, isSearching, search: performSearch, browse } = useRegulationSearch(regulationId)
+const { isMobile } = useBreakpoint()
+const isTocOpen = ref(false)
+
+const isTocShown = computed(
+  () =>
+    results.value.length > 0 &&
+    (!searchParams.value.query || searchParams.value.order_by === 'document'),
+)
 
 onBeforeMount(() => {
   void loadRegulationName()
 
   if (searchParams.value.query) {
     void performSearch(searchParams.value)
+  } else {
+    void browse()
   }
 })
 
@@ -57,6 +71,12 @@ async function loadRegulationName() {
 
 async function handleSearch(newSearchParams: SearchRegulationDocumentsParams) {
   searchParams.value = newSearchParams
+
+  if (!newSearchParams.query) {
+    await router.replace({ query: {} })
+    await browse()
+    return
+  }
 
   await router.replace({
     query: newSearchParams,
@@ -113,6 +133,33 @@ async function handleAddToCase(payload: {
       />
     </div>
 
+    <template v-if="isTocShown && !isMobile" #aside>
+      <SearchResultsToc class="search-toc" :results="results" />
+    </template>
+
+    <template v-if="isTocShown && isMobile">
+      <el-button
+        class="toc-button"
+        type="primary"
+        circle
+        :icon="Memo"
+        aria-label="Spis treści"
+        @click="isTocOpen = true"
+      />
+      <el-drawer v-model="isTocOpen" title="Spis treści" direction="rtl" size="min(20rem, 85vw)">
+        <SearchResultsToc :results="results" @navigate="isTocOpen = false" />
+      </el-drawer>
+    </template>
+
     <el-backtop />
   </AppLayout>
 </template>
+
+<style scoped>
+.toc-button {
+  position: fixed;
+  right: 40px;
+  bottom: 96px;
+  z-index: 5;
+}
+</style>

@@ -179,6 +179,42 @@ async def test_search_limits_results_after_ordering(client, session_maker, order
     assert [result["text"] for result in response.json()] == expected_texts
 
 
+async def test_list_regulation_sections_in_document_order(client, session_maker, user):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(session, None)
+        other_regulation_id = await insert_regulation(session, USER_ID)
+
+        second_section_id = await insert_section(
+            session, regulation_id, "Second section", [QUERY_VECTOR], section_order=1
+        )
+        first_section_id = await insert_section(session, regulation_id, "First section", [QUERY_VECTOR])
+        await insert_section(session, other_regulation_id, "Other regulation section", [QUERY_VECTOR], user_id=USER_ID)
+
+    response = await client.get(f"/api/regulations/{regulation_id}/sections")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == [
+        {
+            "id": str(first_section_id),
+            "header": "Art. 1",
+            "text": "First section",
+            "elements": [{"text": "First section", "subsection": None}],
+        },
+        {
+            "id": str(second_section_id),
+            "header": "Art. 1",
+            "text": "Second section",
+            "elements": [{"text": "Second section", "subsection": None}],
+        },
+    ]
+
+
+async def test_list_sections_of_unknown_regulation(client):
+    response = await client.get(f"/api/regulations/{UNKNOWN_ID}/sections")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
 async def test_search_public_regulations_by_description(client, session_maker, user):
     async with session_maker.begin() as session:
         matching_id = await insert_regulation(
