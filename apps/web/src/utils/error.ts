@@ -10,6 +10,22 @@ export type ApiErrorMessageOptions = {
   unauthorizedMessage?: string
 }
 
+const limitMessages = new Map([
+  [
+    'ANONYMOUS_USAGE_LIMIT_EXCEEDED',
+    'Wykorzystano dzienny limit dla niezalogowanych użytkowników. Zaloguj się lub załóż konto, aby korzystać dalej.',
+  ],
+  ['ACCOUNT_USAGE_LIMIT_EXCEEDED', 'Wykorzystano dzienny limit konta. Limit odnowi się jutro.'],
+  ['TOO_MANY_ATTEMPTS', 'Zbyt wiele prób. Spróbuj ponownie później.'],
+])
+
+function getLimitMessage(data: unknown): string {
+  const code = typeof data === 'object' && data !== null && 'code' in data ? data.code : undefined
+  const message = typeof code === 'string' ? limitMessages.get(code) : undefined
+
+  return message ?? 'Zbyt wiele żądań. Spróbuj ponownie później.'
+}
+
 export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOptions): string {
   const conflictMsg = options?.conflictMessage ?? 'Zasób jest już zajęty.'
   const serviceUnavailableMsg =
@@ -25,6 +41,7 @@ export function getApiErrorMessage(error: unknown, options?: ApiErrorMessageOpti
     const status = error.response.status
     if (status === 401) return unauthorizedMsg
     if (status === 409) return conflictMsg
+    if (status === 429) return getLimitMessage(error.response.data)
     if (status === 503) return serviceUnavailableMsg
     if (options?.defaultMessage) return options.defaultMessage
     if (status >= 500) return 'Wystąpił błąd po stronie serwera. Spróbuj ponownie później.'

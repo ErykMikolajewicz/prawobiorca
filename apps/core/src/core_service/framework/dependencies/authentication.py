@@ -5,12 +5,15 @@ from fastapi import Depends, Request
 
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
+from core_service.application.services.attempts import AttemptLimiter
 from core_service.application.use_cases.auth import AuthTokensConfig, LogoutUser, LogUser, RefreshTokens
 from core_service.domain.exceptions.users import InvalidAccessToken
 from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token
 from core_service.domain.value_objects.auth import AccessTokenClaims
 from core_service.domain.value_objects.users import Caller
 from core_service.framework.consts import ACCESS_COOKIE_NAME
+from core_service.framework.dependencies.attempts import get_login_attempt_limiter
+from core_service.framework.dependencies.client_address import get_client_ip
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.users import get_users_repository, get_users_sessions_repository
 from core_service.shared.settings.application import app_settings
@@ -40,11 +43,14 @@ async def get_access_token_claims(
         return None
 
 
-async def get_caller(claims: Annotated[AccessTokenClaims | None, Depends(get_access_token_claims)]) -> Caller:
+async def get_caller(
+    claims: Annotated[AccessTokenClaims | None, Depends(get_access_token_claims)],
+    ip_address: Annotated[str, Depends(get_client_ip)],
+) -> Caller:
     if claims is None:
-        return Caller(user_id=None)
+        return Caller(user_id=None, ip_address=ip_address)
 
-    return Caller(user_id=claims.user_id, is_admin=claims.is_admin)
+    return Caller(user_id=claims.user_id, is_admin=claims.is_admin, ip_address=ip_address)
 
 
 def get_log_user(
@@ -52,8 +58,9 @@ def get_log_user(
     users_repo: Annotated[UsersRepository, Depends(get_users_repository)],
     sessions_repo: Annotated[UsersSessionsRepository, Depends(get_users_sessions_repository)],
     tokens_config: Annotated[AuthTokensConfig, Depends(get_auth_tokens_config)],
+    login_attempt_limiter: Annotated[AttemptLimiter, Depends(get_login_attempt_limiter)],
 ) -> LogUser:
-    return LogUser(session_maker, users_repo, sessions_repo, tokens_config)
+    return LogUser(session_maker, users_repo, sessions_repo, tokens_config, login_attempt_limiter)
 
 
 def get_logout_user(

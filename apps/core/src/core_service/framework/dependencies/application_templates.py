@@ -12,6 +12,7 @@ from core_service.application.ports.application_templates import (
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationTemplateDescriptionGenerationScheduler
 from core_service.application.ports.texts import TextsEmbedder
+from core_service.application.services.usage import UsageCharger
 from core_service.application.use_cases.application_templates import (
     AddApplicationTemplate,
     ConfirmApplicationTemplateUpload,
@@ -34,6 +35,7 @@ from core_service.framework.dependencies.file_storage import (
 )
 from core_service.framework.dependencies.regulations import get_broker
 from core_service.framework.dependencies.relational import get_session_maker
+from core_service.framework.dependencies.usage import get_usage_charger
 from core_service.infrastructure.ai_services.application_template_instructions import (
     PromptsApplicationTemplateInstructionsProvider,
 )
@@ -96,8 +98,9 @@ def get_search_published_application_templates(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
     application_templates_repo: Annotated[ApplicationTemplatesRepository, Depends(get_application_templates_repo)],
+    usage_charger: Annotated[UsageCharger, Depends(get_usage_charger)],
 ) -> SearchPublishedApplicationTemplates:
-    return SearchPublishedApplicationTemplates(session_maker, texts_embedder, application_templates_repo)
+    return SearchPublishedApplicationTemplates(session_maker, texts_embedder, application_templates_repo, usage_charger)
 
 
 def get_add_application_template(

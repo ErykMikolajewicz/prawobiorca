@@ -12,6 +12,7 @@ from core_service.application.ports.tasks import (
     SectionSummariesGenerationScheduler,
 )
 from core_service.application.ports.texts import TextsEmbedder
+from core_service.application.services.usage import UsageCharger
 from core_service.application.use_cases.regulations import (
     AddRegulation,
     ConfirmRegulationUpload,
@@ -34,6 +35,7 @@ from core_service.framework.dependencies.file_storage import (
     get_file_storage_presign_client,
 )
 from core_service.framework.dependencies.relational import get_session_maker
+from core_service.framework.dependencies.usage import get_usage_charger
 from core_service.infrastructure.relational_db.repositories.regulations import SqlaRegulationsRepository
 from core_service.infrastructure.relational_db.repositories.sections import SqlaSectionsRepository
 from core_service.infrastructure.tasks.regulations import (
@@ -101,8 +103,11 @@ def get_retry_regulation_preparation(
     regulation_preparation_scheduler: Annotated[
         RegulationPreparationScheduler, Depends(get_regulations_preparation_scheduler)
     ],
+    usage_charger: Annotated[UsageCharger, Depends(get_usage_charger)],
 ) -> RetryRegulationPreparation:
-    return RetryRegulationPreparation(session_maker, regulations_repository, regulation_preparation_scheduler)
+    return RetryRegulationPreparation(
+        session_maker, regulations_repository, regulation_preparation_scheduler, usage_charger
+    )
 
 
 def get_update_regulation(
@@ -126,8 +131,9 @@ def get_search_regulation(
     texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
     sections_repository: Annotated[SectionsRepository, Depends(get_sections_repository)],
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+    usage_charger: Annotated[UsageCharger, Depends(get_usage_charger)],
 ) -> SearchRegulation:
-    return SearchRegulation(session_maker, texts_embedder, sections_repository, regulations_repository)
+    return SearchRegulation(session_maker, texts_embedder, sections_repository, regulations_repository, usage_charger)
 
 
 def get_list_regulation_sections(
@@ -142,8 +148,9 @@ def get_search_regulations(
     session_maker: Annotated[SessionMaker, Depends(get_session_maker)],
     texts_embedder: Annotated[TextsEmbedder, Depends(get_texts_embedder)],
     regulations_repository: Annotated[RegulationsRepository, Depends(get_regulation_repository)],
+    usage_charger: Annotated[UsageCharger, Depends(get_usage_charger)],
 ) -> SearchRegulations:
-    return SearchRegulations(session_maker, texts_embedder, regulations_repository)
+    return SearchRegulations(session_maker, texts_embedder, regulations_repository, usage_charger)
 
 
 def get_add_regulation(
@@ -161,9 +168,10 @@ def get_confirm_regulation_upload(
     regulation_preparation_scheduler: Annotated[
         RegulationPreparationScheduler, Depends(get_regulations_preparation_scheduler)
     ],
+    usage_charger: Annotated[UsageCharger, Depends(get_usage_charger)],
 ) -> ConfirmRegulationUpload:
     return ConfirmRegulationUpload(
-        session_maker, regulations_repository, regulations_storage, regulation_preparation_scheduler
+        session_maker, regulations_repository, regulations_storage, regulation_preparation_scheduler, usage_charger
     )
 
 

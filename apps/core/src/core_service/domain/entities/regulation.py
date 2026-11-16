@@ -26,6 +26,10 @@ class Regulation(Describable):
         return self.preparation_status == RegulationPreparationStatus.PREPARED
 
     @property
+    def is_preparation_failed(self) -> bool:
+        return self.preparation_status == RegulationPreparationStatus.FAILED
+
+    @property
     def is_section_summaries_in_progress(self) -> bool:
         return self.section_summaries_status == DescriptionStatus.IN_PROGRESS
 

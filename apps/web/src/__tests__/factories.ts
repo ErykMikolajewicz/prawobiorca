@@ -10,11 +10,11 @@ import type {
   SearchResult,
 } from '@/api/generated/model'
 
-export function createHttpError(status: number): AxiosError {
+export function createHttpError(status: number, data: unknown = null): AxiosError {
   return new AxiosError('Request failed', undefined, undefined, undefined, {
     status,
     statusText: '',
-    data: null,
+    data,
     headers: {},
     config: { headers: new AxiosHeaders() },
   })

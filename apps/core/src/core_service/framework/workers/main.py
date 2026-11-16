@@ -1,6 +1,10 @@
 from taskiq import TaskiqEvents, TaskiqState
 
+from core_service.application.use_cases.limits import DeleteExpiredLimits
+from core_service.framework.dependencies.attempts import get_attempts_repo
 from core_service.framework.dependencies.file_storage import init_file_storage_client
+from core_service.framework.dependencies.relational import get_session_maker
+from core_service.framework.dependencies.usage import get_usage_budgets_repo
 from core_service.infrastructure.ai_services.initialization import init_ai_services_client
 from core_service.infrastructure.ai_services.openai_client.connection import init_llm_client
 from core_service.infrastructure.tasks.connection import broker
@@ -22,6 +26,8 @@ async def on_worker_startup(state: TaskiqState) -> None:
     state.file_storage_client = file_storage_client
     state.file_storage_presign_client = file_storage_presign_client
     state.closing_callbacks.insert(0, close_file_storage_client)
+
+    await DeleteExpiredLimits(get_session_maker(), get_usage_budgets_repo(), get_attempts_repo()).execute()
 
 
 @broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)

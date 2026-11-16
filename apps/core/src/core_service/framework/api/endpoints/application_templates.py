@@ -84,6 +84,7 @@ async def get_published_application_templates(
     response_model=list[PublishedApplicationTemplate],
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Usage limit exceeded!"},
     },
 )
 async def search_published_application_templates(

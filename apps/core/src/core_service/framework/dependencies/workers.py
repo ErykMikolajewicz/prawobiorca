@@ -29,8 +29,10 @@ from core_service.application.ports.tasks import (
     SectionSummariesGenerationScheduler,
 )
 from core_service.application.ports.texts import TextsEmbedder
+from core_service.application.ports.usage import UsageBudgetsRepository
 from core_service.application.services.embedding import SectionsEmbedder
 from core_service.application.services.regulations import RegulationPreparator
+from core_service.application.services.usage import UsageCharger
 from core_service.application.use_cases.application_templates import (
     FailApplicationTemplateDescriptionGeneration,
     GenerateApplicationTemplateDescription,
@@ -45,6 +47,7 @@ from core_service.application.use_cases.regulations import (
     PrepareRegulation,
 )
 from core_service.domain.services.regulation_chunking import Tokenizer
+from core_service.domain.value_objects.usage import UsageTariff
 from core_service.framework.dependencies.ai_services import create_texts_embedder
 from core_service.framework.dependencies.application_templates import (
     get_application_template_inspector,
@@ -59,6 +62,7 @@ from core_service.framework.dependencies.file_storage import (
 from core_service.framework.dependencies.regulations import get_regulation_repository, get_sections_repository
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.tokenizer import get_tokenizer
+from core_service.framework.dependencies.usage import get_usage_budgets_repo, get_usage_tariff
 from core_service.infrastructure.ai_services.application_template_description_writer import (
     LlmApplicationTemplateDescriptionWriter,
 )
@@ -184,11 +188,19 @@ def get_regulation_preparator(
     )
 
 
+def get_usage_charger(
+    usage_budgets_repo: UsageBudgetsRepository = TaskiqDepends(get_usage_budgets_repo),
+    tariff: UsageTariff = TaskiqDepends(get_usage_tariff),
+) -> UsageCharger:
+    return UsageCharger(usage_budgets_repo, tariff)
+
+
 def get_fail_regulation_preparation(
     session_maker: SessionMaker = TaskiqDepends(get_session_maker),
     regulations_repository: RegulationsRepository = TaskiqDepends(get_regulation_repository),
+    usage_charger: UsageCharger = TaskiqDepends(get_usage_charger),
 ) -> FailRegulationPreparation:
-    return FailRegulationPreparation(session_maker, regulations_repository)
+    return FailRegulationPreparation(session_maker, regulations_repository, usage_charger)
 
 
 def get_prepare_regulation(
@@ -203,6 +215,7 @@ def get_prepare_regulation(
     section_summaries_generation_scheduler: SectionSummariesGenerationScheduler = TaskiqDepends(
         get_section_summaries_generation_scheduler
     ),
+    usage_charger: UsageCharger = TaskiqDepends(get_usage_charger),
 ) -> PrepareRegulation:
     return PrepareRegulation(
         session_maker,
@@ -212,6 +225,7 @@ def get_prepare_regulation(
         regulation_preparator,
         description_generation_scheduler,
         section_summaries_generation_scheduler,
+        usage_charger,
     )
 
 
@@ -255,8 +269,9 @@ def get_generate_section_summaries(
 def get_fail_application_generation(
     session_maker: SessionMaker = TaskiqDepends(get_session_maker),
     applications_repo: ApplicationsRepository = TaskiqDepends(get_applications_repo),
+    usage_charger: UsageCharger = TaskiqDepends(get_usage_charger),
 ) -> FailApplicationGeneration:
-    return FailApplicationGeneration(session_maker, applications_repo)
+    return FailApplicationGeneration(session_maker, applications_repo, usage_charger)
 
 
 def get_generate_application(
@@ -268,6 +283,7 @@ def get_generate_application(
     application_templates_storage: ApplicationTemplatesStorage = TaskiqDepends(get_application_templates_storage),
     application_writer: ApplicationWriter = TaskiqDepends(get_application_writer),
     application_renderer: ApplicationRenderer = TaskiqDepends(get_application_renderer),
+    usage_charger: UsageCharger = TaskiqDepends(get_usage_charger),
 ) -> GenerateApplication:
     return GenerateApplication(
         session_maker,
@@ -278,6 +294,7 @@ def get_generate_application(
         application_templates_storage,
         application_writer,
         application_renderer,
+        usage_charger,
     )
 
 

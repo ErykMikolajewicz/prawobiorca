@@ -22,6 +22,7 @@ from core_service.application.ports.tasks import ApplicationTemplateDescriptionG
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.services.embedding import embed_description
 from core_service.application.services.tasks import is_retried
+from core_service.application.services.usage import UsageCharger
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateContentNotFound,
     ApplicationTemplateInInvalidState,
@@ -40,6 +41,7 @@ from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateStatus,
 )
 from core_service.domain.value_objects.organizations import OrganizationFilter
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
@@ -138,6 +140,7 @@ class SearchPublishedApplicationTemplates:
     session_maker: SessionMaker
     embedding_port: TextsEmbedder
     application_templates_repo: ApplicationTemplatesRepository
+    usage_charger: UsageCharger
 
     async def execute(
         self, caller: Caller, organization_filter: OrganizationFilter | None, query: str, ai_assisted: bool
@@ -147,6 +150,9 @@ class SearchPublishedApplicationTemplates:
         stripped_query = query.strip()
 
         if ai_assisted and is_semantic_search_query(query):
+            async with self.session_maker.begin() as session:
+                await self.usage_charger.charge(session, caller, PaidOperation.SEMANTIC_SEARCH)
+
             embeddings = await self.embedding_port.embed_queries([stripped_query])
             async with self.session_maker() as session:
                 templates = await self.application_templates_repo.hybrid_search_templates(

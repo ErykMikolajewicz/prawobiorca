@@ -11,3 +11,4 @@ class UserPrivileges:
 class Caller:
     user_id: UUID | None
     is_admin: bool = False
+    ip_address: str | None = None

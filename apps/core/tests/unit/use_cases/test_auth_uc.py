@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
 from pydantic import SecretStr
@@ -7,12 +7,25 @@ from pydantic import SecretStr
 from core_service.application.dtos.account import LoginData
 from core_service.application.use_cases.auth import LogoutUser, LogUser, RefreshTokens
 from core_service.domain.entities.user import User
+from core_service.domain.exceptions.limits import TooManyAttempts
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
+from core_service.domain.services.attempts import get_login_attempts_key
 from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token, hash_password, hash_refresh_token
 from core_service.domain.value_objects.auth import UserSession
 from core_service.domain.value_objects.users import UserPrivileges
-from tests.consts import AUTH_TOKENS_CONFIG, REFRESH_TOKEN, SESSION_ID, STRONG_PASSWORD, USER_ID, VALID_USERNAME
+from tests.consts import (
+    AUTH_TOKENS_CONFIG,
+    IP_ADDRESS,
+    REFRESH_TOKEN,
+    SESSION_ID,
+    STRONG_PASSWORD,
+    USER_ID,
+    VALID_USERNAME,
+)
 from tests.mocks import get_awaited_argument
+
+LOGIN_DATA = LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD))
+LOGIN_ATTEMPTS_KEY = get_login_attempts_key(VALID_USERNAME, IP_ADDRESS)
 
 STORED_USER = User(id=USER_ID, username=VALID_USERNAME, hashed_password=hash_password(SecretStr(STRONG_PASSWORD)))
 
@@ -44,12 +57,13 @@ def mock_prevent_timing_attack():
 
 
 @pytest.fixture
-def log_user(mock_session_maker, users_repository, sessions_repository):
+def log_user(mock_session_maker, users_repository, sessions_repository, mock_attempt_limiter):
     return LogUser(
         session_maker=mock_session_maker,
         users_repo=users_repository,
         sessions_repo=sessions_repository,
         tokens_config=AUTH_TOKENS_CONFIG,
+        login_attempt_limiter=mock_attempt_limiter,
     )
 
 
@@ -70,7 +84,7 @@ def logout_user(mock_session_maker, sessions_repository):
 
 async def test_log_user_creates_session(log_user, sessions_repository):
     started_at = datetime.now(UTC)
-    tokens = await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD)))
+    tokens = await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(STRONG_PASSWORD)), IP_ADDRESS)
     finished_at = datetime.now(UTC)
 
     claims = decode(tokens.access_token)
@@ -94,7 +108,7 @@ async def test_log_user_rejected(
     users_repository.get_by_username.return_value = stored_user
 
     with pytest.raises(UserCantLog):
-        await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(password)))
+        await log_user.execute(LoginData(username=VALID_USERNAME, password=SecretStr(password)), IP_ADDRESS)
 
     mock_prevent_timing_attack.assert_awaited_once()
     sessions_repository.create_session.assert_not_awaited()
@@ -152,3 +166,31 @@ async def test_logout_user_without_credentials(logout_user, sessions_repository)
 
     sessions_repository.delete_session.assert_not_awaited()
     sessions_repository.delete_session_by_refresh_token_hash.assert_not_awaited()
+
+
+async def test_log_user_does_not_record_successful_attempt(log_user, mock_attempt_limiter):
+    await log_user.execute(LOGIN_DATA, IP_ADDRESS)
+
+    mock_attempt_limiter.check.assert_awaited_once_with(ANY, LOGIN_ATTEMPTS_KEY)
+    mock_attempt_limiter.record.assert_not_awaited()
+
+
+async def test_log_user_records_failed_attempt(
+    log_user, users_repository, mock_attempt_limiter, mock_prevent_timing_attack
+):
+    users_repository.get_by_username.return_value = None
+
+    with pytest.raises(UserCantLog):
+        await log_user.execute(LOGIN_DATA, IP_ADDRESS)
+
+    mock_attempt_limiter.record.assert_awaited_once_with(ANY, LOGIN_ATTEMPTS_KEY)
+
+
+async def test_log_user_with_too_many_failed_attempts(log_user, users_repository, mock_attempt_limiter):
+    mock_attempt_limiter.check.side_effect = TooManyAttempts(60)
+
+    with pytest.raises(TooManyAttempts):
+        await log_user.execute(LOGIN_DATA, IP_ADDRESS)
+
+    users_repository.get_by_username.assert_not_awaited()
+    mock_attempt_limiter.record.assert_not_awaited()

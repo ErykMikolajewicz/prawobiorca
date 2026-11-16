@@ -142,6 +142,7 @@ async def delete_case_document(
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "No case or published application template with that id!"},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Invalid application field values!"},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Usage limit exceeded!"},
     },
 )
 async def generate_application(

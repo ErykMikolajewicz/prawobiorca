@@ -18,6 +18,7 @@ from core_service.application.ports.cases import CaseDocumentsRepository
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationGenerationScheduler
 from core_service.application.services.tasks import is_retried
+from core_service.application.services.usage import UsageCharger
 from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import (
     ApplicationTemplateNotFound,
@@ -27,6 +28,7 @@ from core_service.domain.exceptions.applications import ApplicationNotFound, App
 from core_service.domain.exceptions.cases import CaseNotFound
 from core_service.domain.services.case_access import resolve_case_owner
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,11 @@ MAX_APPLICATION_GENERATION_DELIVERIES = 3
 
 
 async def _fail_generation(
-    session_maker: SessionMaker, applications_repo: ApplicationsRepository, user_id: UUID, application_id: UUID
+    session_maker: SessionMaker,
+    applications_repo: ApplicationsRepository,
+    usage_charger: UsageCharger,
+    user_id: UUID,
+    application_id: UUID,
 ) -> None:
     async with session_maker.begin() as session:
         application = await applications_repo.get_for_update(session, user_id, application_id)
@@ -45,9 +51,13 @@ async def _fail_generation(
         if application.is_generated:
             logger.warning("Application already generated, skipping failure! application id: %s", application_id)
             return
+        if application.is_generation_failed:
+            logger.warning("Application generation already failed! application id: %s", application_id)
+            return
 
         application.fail_generation()
         await applications_repo.save(session, application)
+        await usage_charger.refund(session, user_id, PaidOperation.APPLICATION_GENERATION)
 
 
 @dataclass
@@ -56,6 +66,7 @@ class AddApplication:
     applications_repo: ApplicationsRepository
     application_templates_repo: ApplicationTemplatesRepository
     application_generation_scheduler: ApplicationGenerationScheduler
+    usage_charger: UsageCharger
 
     async def execute(self, caller: Caller, case_id: UUID, new_application: NewApplication) -> UUID:
         user_id = resolve_case_owner(caller)
@@ -73,6 +84,7 @@ class AddApplication:
                 raise
             new_application = replace(new_application, field_values=field_values)
 
+            await self.usage_charger.charge(session, caller, PaidOperation.APPLICATION_GENERATION)
             try:
                 application_id = await self.applications_repo.add(session, user_id, case_id, template.id, template.name)
             except CaseNotFound:
@@ -94,6 +106,7 @@ class GenerateApplication:
     application_templates_storage: ApplicationTemplatesStorage
     application_writer: ApplicationWriter
     application_renderer: ApplicationRenderer
+    usage_charger: UsageCharger
 
     async def execute(
         self, user_id: UUID, application_id: UUID, new_application: NewApplication, is_last_attempt: bool
@@ -113,6 +126,7 @@ class GenerateApplication:
                 logger.warning("Application template changed before generation! application id: %s", application_id)
                 application.fail_generation()
                 await self.applications_repo.save(session, application)
+                await self.usage_charger.refund(session, user_id, PaidOperation.APPLICATION_GENERATION)
                 return
 
             application.start_generation()
@@ -128,7 +142,9 @@ class GenerateApplication:
         except Exception as error:
             logger.exception("Application generation failed! application id: %s", application_id)
             if not is_retried(error, is_last_attempt):
-                await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
+                await _fail_generation(
+                    self.session_maker, self.applications_repo, self.usage_charger, user_id, application_id
+                )
             raise
 
     async def _complete_generation(self, user_id: UUID, application_id: UUID, name: str, document: bytes) -> None:
@@ -161,13 +177,14 @@ class GenerateApplication:
 class FailApplicationGeneration:
     session_maker: SessionMaker
     applications_repo: ApplicationsRepository
+    usage_charger: UsageCharger
 
     async def execute(self, user_id: UUID, application_id: UUID, delivery_attempt: int) -> bool:
         if delivery_attempt <= MAX_APPLICATION_GENERATION_DELIVERIES:
             return False
 
         logger.error("Application generation exceeded deliveries limit! application id: %s", application_id)
-        await _fail_generation(self.session_maker, self.applications_repo, user_id, application_id)
+        await _fail_generation(self.session_maker, self.applications_repo, self.usage_charger, user_id, application_id)
         return True
 
 

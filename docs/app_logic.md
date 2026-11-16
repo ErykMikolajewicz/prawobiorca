@@ -25,6 +25,27 @@ For logged-in users, the application offers a "Cases" management function, which
 - Can generate AI summaries of the articles (or `§` units) of a public document, either when adding it (selected by default) or after it has been prepared. Each unit gets a label of 2–4 words and a short description, shown in the Document Search View. Private documents do not get summaries.
 - Manages application templates used to generate DOCX applications. A template can be assigned to an organization and optionally to one of its suborganizations.
 - Manages organizations and their suborganizations.
+### 2.4. Usage Limits
+Operations that use AI services are paid from a daily budget, expressed in conventional złoty (the prices do not reflect real costs). The budget is renewed at midnight, Polish time.
+
+| Operation | Price |
+| --- | --- |
+| Semantic search (regulations, sections of a regulation, AI-assisted application template search) | 0.03 zł |
+| Application generation | 0.50 zł |
+| Preparation of a private document (also when retried) | 1.00 zł |
+
+| Payer | Daily budget |
+| --- | --- |
+| Guest | 2 zł per IP address, and 50 zł shared by all guests |
+| Logged User | 5 zł per account |
+| Administrator | unlimited – never charged |
+
+- A guest who shares an address with many people (e.g. a university network) should create an account to get an own budget.
+- A failed application generation or document preparation is refunded; a failed search is not.
+- When the budget is used up, the operation is rejected and the user is told to log in (guest) or to come back the next day (logged user).
+- Regardless of the budgets, the real LLM cost of the whole system is capped monthly (`LLM_SERVICE_MONTHLY_COST_LIMIT_PLN`).
+- To protect accounts, logging in is blocked for 15 minutes after 5 failed attempts for the same username from the same IP address, and one IP address can make 20 registration attempts a day.
+
 ---
 
 ## 3. Views and Functionalities

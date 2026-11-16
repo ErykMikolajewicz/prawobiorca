@@ -7,6 +7,7 @@ from core_service.application.ports.application_templates import ApplicationTemp
 from core_service.application.ports.applications import ApplicationsRepository, ApplicationsStorage
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.tasks import ApplicationGenerationScheduler
+from core_service.application.services.usage import UsageCharger
 from core_service.application.use_cases.applications import (
     AddApplication,
     DeleteApplication,
@@ -17,6 +18,7 @@ from core_service.framework.dependencies.application_templates import get_applic
 from core_service.framework.dependencies.cases import get_applications_repo, get_applications_storage
 from core_service.framework.dependencies.regulations import get_broker
 from core_service.framework.dependencies.relational import get_session_maker
+from core_service.framework.dependencies.usage import get_usage_charger
 from core_service.infrastructure.tasks.applications import PostgresApplicationGenerationScheduler
 
 
@@ -33,9 +35,10 @@ def get_add_application(
     application_generation_scheduler: Annotated[
         ApplicationGenerationScheduler, Depends(get_application_generation_scheduler)
     ],
+    usage_charger: Annotated[UsageCharger, Depends(get_usage_charger)],
 ) -> AddApplication:
     return AddApplication(
-        session_maker, applications_repo, application_templates_repo, application_generation_scheduler
+        session_maker, applications_repo, application_templates_repo, application_generation_scheduler, usage_charger
     )
 
 
