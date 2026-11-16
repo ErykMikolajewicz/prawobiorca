@@ -91,6 +91,7 @@ async def get_regulations(
     response_model=list[RegulationSearchResult],
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Suborganization given without organization!"},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Usage limit exceeded!"},
     },
 )
 async def search_regulations(
@@ -129,6 +130,7 @@ async def get_regulation_by_id(
     responses={
         status.HTTP_400_BAD_REQUEST: {"description": "Regulation not prepared, normally should not occur."},
         status.HTTP_404_NOT_FOUND: {"description": "Regulation not found."},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Usage limit exceeded!"},
     },
 )
 async def search_regulation_documents(
@@ -211,6 +213,7 @@ async def add_regulation(
         status.HTTP_409_CONFLICT: {
             "description": "Regulation upload already confirmed, or its content not found on storage!"
         },
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Usage limit exceeded!"},
     },
 )
 async def confirm_regulation_upload(
@@ -306,6 +309,7 @@ async def delete_regulation(
         status.HTTP_409_CONFLICT: {
             "description": "Regulation already prepared, preparation in progress, or its content not uploaded!"
         },
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Usage limit exceeded!"},
     },
 )
 async def retry_regulation_preparation(

@@ -18,6 +18,7 @@ from core_service.framework.dependencies.authentication import (
     get_logout_user,
     get_refresh_tokens,
 )
+from core_service.framework.dependencies.client_address import get_client_ip
 from core_service.shared.settings.application import app_settings
 
 auth_router = APIRouter(tags=["auth"], prefix="/api")
@@ -66,16 +67,20 @@ def clear_auth_cookies(response: Response) -> None:
 
 @auth_router.post(
     "/auth/login",
-    responses={status.HTTP_401_UNAUTHORIZED: {"description": "Incorrect logging data!"}},
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Incorrect logging data!"},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Too many failed login attempts!"},
+    },
 )
 async def log_user(
     log_user_: Annotated[LogUser, Depends(get_log_user)],
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    ip_address: Annotated[str, Depends(get_client_ip)],
 ):
     login_data = LoginData(username=form_data.username, password=form_data.password)
 
     try:
-        tokens = await log_user_.execute(login_data)
+        tokens = await log_user_.execute(login_data, ip_address)
     except UserCantLog:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="incorrect logging data!")
 

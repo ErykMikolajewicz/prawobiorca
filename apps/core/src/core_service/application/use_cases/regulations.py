@@ -28,6 +28,7 @@ from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.services.embedding import embed_description
 from core_service.application.services.regulations import RegulationPreparator
 from core_service.application.services.tasks import is_retried
+from core_service.application.services.usage import UsageCharger
 from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
 from core_service.domain.exceptions.organizations import OrganizationNotFound
@@ -60,6 +61,7 @@ from core_service.domain.value_objects.regulations import (
     RegulationType,
 )
 from core_service.domain.value_objects.sections import SectionsCollection, SectionSummary
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,7 @@ PREPARATION_SCHEDULING_ERRORS = (
 async def _fail_preparation(
     session_maker: SessionMaker,
     regulations_repository: RegulationsRepository,
+    usage_charger: UsageCharger,
     user_id: UUID | None,
     regulation_id: UUID,
 ) -> None:
@@ -91,9 +94,14 @@ async def _fail_preparation(
         if regulation.is_prepared:
             logger.warning("Regulation already prepared, skipping failure! regulation id: %s", regulation_id)
             return
+        if regulation.is_preparation_failed:
+            logger.warning("Regulation preparation already failed! regulation id: %s", regulation_id)
+            return
 
         regulation.fail_preparation()
         await regulations_repository.save(session, regulation)
+        if user_id is not None:
+            await usage_charger.refund(session, user_id, PaidOperation.REGULATION_PREPARATION)
 
 
 async def _fail_description_generation(
@@ -147,6 +155,7 @@ class PrepareRegulation:
     regulation_preparator: RegulationPreparator
     description_generation_scheduler: RegulationDescriptionGenerationScheduler
     section_summaries_generation_scheduler: SectionSummariesGenerationScheduler
+    usage_charger: UsageCharger
 
     async def execute(self, user_id: UUID | None, regulation_id: UUID, is_last_attempt: bool) -> None:
         async with self.session_maker.begin() as session:
@@ -169,7 +178,9 @@ class PrepareRegulation:
         except Exception as error:
             logger.exception("Regulation preparation failed! regulation id: %s", regulation_id)
             if not is_retried(error, is_last_attempt):
-                await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
+                await _fail_preparation(
+                    self.session_maker, self.regulations_repository, self.usage_charger, user_id, regulation_id
+                )
             raise
 
     async def _complete_preparation(
@@ -201,13 +212,16 @@ class PrepareRegulation:
 class FailRegulationPreparation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
+    usage_charger: UsageCharger
 
     async def execute(self, user_id: UUID | None, regulation_id: UUID, delivery_attempt: int) -> bool:
         if delivery_attempt <= MAX_REGULATION_PREPARATION_DELIVERIES:
             return False
 
         logger.error("Regulation preparation exceeded deliveries limit! regulation id: %s", regulation_id)
-        await _fail_preparation(self.session_maker, self.regulations_repository, user_id, regulation_id)
+        await _fail_preparation(
+            self.session_maker, self.regulations_repository, self.usage_charger, user_id, regulation_id
+        )
         return True
 
 
@@ -216,6 +230,7 @@ class RetryRegulationPreparation:
     session_maker: SessionMaker
     regulations_repository: RegulationsRepository
     regulation_preparation_scheduler: RegulationPreparationScheduler
+    usage_charger: UsageCharger
 
     async def execute(self, caller: Caller, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
@@ -238,6 +253,7 @@ class RetryRegulationPreparation:
                 )
                 raise
 
+            await self.usage_charger.charge(session, caller, PaidOperation.REGULATION_PREPARATION)
             await self.regulations_repository.save(session, regulation)
             await self.regulation_preparation_scheduler.schedule_regulation_preparation(session, user_id, regulation_id)
 
@@ -495,6 +511,7 @@ class ConfirmRegulationUpload:
     regulations_repository: RegulationsRepository
     regulations_storage: RegulationsStorage
     regulation_preparation_scheduler: RegulationPreparationScheduler
+    usage_charger: UsageCharger
 
     async def execute(self, caller: Caller, regulation_id: UUID) -> None:
         async with self.session_maker.begin() as session:
@@ -524,6 +541,7 @@ class ConfirmRegulationUpload:
                 )
                 raise RegulationContentNotFound
 
+            await self.usage_charger.charge(session, caller, PaidOperation.REGULATION_PREPARATION)
             await self.regulations_repository.save(session, regulation)
             await self.regulation_preparation_scheduler.schedule_regulation_preparation(session, user_id, regulation_id)
 
@@ -596,6 +614,7 @@ class SearchRegulations:
     session_maker: SessionMaker
     embedding_port: TextsEmbedder
     regulations_repository: RegulationsRepository
+    usage_charger: UsageCharger
 
     async def execute(
         self,
@@ -607,6 +626,9 @@ class SearchRegulations:
         threshold: float,
     ) -> list[RegulationSearchResult]:
         user_id = resolve_scope_owner(caller, scope)
+
+        async with self.session_maker.begin() as session:
+            await self.usage_charger.charge(session, caller, PaidOperation.SEMANTIC_SEARCH)
 
         embeddings = await self.embedding_port.embed_queries([query])
         query_vector = embeddings[0]
@@ -689,12 +711,16 @@ class SearchRegulation:
     embedding_port: TextsEmbedder
     sections_repository: SectionsRepository
     regulations_repository: RegulationsRepository
+    usage_charger: UsageCharger
 
     async def execute(self, caller: Caller, regulation_id: UUID, search_params: SearchParams) -> list[SearchResult]:
         async with self.session_maker() as session:
             owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
         check_can_read_regulation(caller, owner)
         user_id = owner.user_id
+
+        async with self.session_maker.begin() as session:
+            await self.usage_charger.charge(session, caller, PaidOperation.SEMANTIC_SEARCH)
 
         embeddings = await self.embedding_port.embed_queries([search_params.query])
         query_vector = embeddings[0]

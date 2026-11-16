@@ -15,6 +15,10 @@ class Application:
     def is_generated(self) -> bool:
         return self.generation_status == ApplicationGenerationStatus.GENERATED
 
+    @property
+    def is_generation_failed(self) -> bool:
+        return self.generation_status == ApplicationGenerationStatus.FAILED
+
     def start_generation(self) -> None:
         self.generation_status = ApplicationGenerationStatus.IN_PROGRESS
 

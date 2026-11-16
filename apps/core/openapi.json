@@ -37,6 +37,9 @@
           "401": {
             "description": "Incorrect logging data!"
           },
+          "429": {
+            "description": "Too many failed login attempts!"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -381,6 +384,9 @@
           },
           "422": {
             "description": "Suborganization given without organization!"
+          },
+          "429": {
+            "description": "Usage limit exceeded!"
           }
         }
       }
@@ -644,6 +650,9 @@
           "404": {
             "description": "Regulation not found."
           },
+          "429": {
+            "description": "Usage limit exceeded!"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -762,6 +771,9 @@
           "409": {
             "description": "Regulation upload already confirmed, or its content not found on storage!"
           },
+          "429": {
+            "description": "Usage limit exceeded!"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -873,6 +885,9 @@
           },
           "409": {
             "description": "Regulation already prepared, preparation in progress, or its content not uploaded!"
+          },
+          "429": {
+            "description": "Usage limit exceeded!"
           },
           "422": {
             "description": "Validation Error",
@@ -1030,6 +1045,9 @@
           },
           "409": {
             "description": "User with that login already exists."
+          },
+          "429": {
+            "description": "Too many registration attempts!"
           },
           "422": {
             "description": "Validation Error",
@@ -1365,6 +1383,9 @@
           },
           "422": {
             "description": "Invalid application field values!"
+          },
+          "429": {
+            "description": "Usage limit exceeded!"
           }
         }
       },
@@ -1694,6 +1715,9 @@
           },
           "422": {
             "description": "Suborganization given without organization!"
+          },
+          "429": {
+            "description": "Usage limit exceeded!"
           }
         }
       }

@@ -22,6 +22,16 @@ class ApplicationSettings(BaseSettings):
 
     CORS_ORIGINS: list[str] = Field(default_factory=list)
 
+    TRUSTED_PROXIES_COUNT: int = Field(default=0, ge=0)
+
+    LOGIN_MAX_FAILED_ATTEMPTS: int = Field(default=5, gt=0)
+
+    LOGIN_ATTEMPTS_WINDOW_SECONDS: int = Field(default=900, gt=0)
+
+    REGISTRATION_MAX_ATTEMPTS: int = Field(default=20, gt=0)
+
+    REGISTRATION_ATTEMPTS_WINDOW_SECONDS: int = Field(default=86400, gt=0)
+
     model_config = SettingsConfigDict(
         env_file=Path(".env"),
         secrets_dir=_SECRETS_DIR if _SECRETS_DIR.exists() else None,

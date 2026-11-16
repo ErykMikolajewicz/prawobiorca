@@ -64,6 +64,28 @@ describe('error utils', () => {
     expect(getApiErrorMessage(createHttpError(status), options)).toBe(message)
   })
 
+  it.each([
+    [
+      'ANONYMOUS_USAGE_LIMIT_EXCEEDED',
+      'Wykorzystano dzienny limit dla niezalogowanych użytkowników. Zaloguj się lub załóż konto, aby korzystać dalej.',
+    ],
+    ['ACCOUNT_USAGE_LIMIT_EXCEEDED', 'Wykorzystano dzienny limit konta. Limit odnowi się jutro.'],
+    ['TOO_MANY_ATTEMPTS', 'Zbyt wiele prób. Spróbuj ponownie później.'],
+  ])('getApiErrorMessage explains the exceeded limit %s', (code, message) => {
+    expect(
+      getApiErrorMessage(createHttpError(429, { code }), { defaultMessage: 'Nie udało się.' }),
+    ).toBe(message)
+  })
+
+  it.each([null, {}, { code: 'UNKNOWN' }, { code: 7 }])(
+    'getApiErrorMessage reports too many requests for 429 with body %j',
+    (data) => {
+      expect(getApiErrorMessage(createHttpError(429, data))).toBe(
+        'Zbyt wiele żądań. Spróbuj ponownie później.',
+      )
+    },
+  )
+
   it('getApiErrorMessage reports a connection problem when there is no response', () => {
     expect(getApiErrorMessage(createNetworkError(), { defaultMessage: 'Nie udało się.' })).toBe(
       'Nie można połączyć się z serwerem. Sprawdź połączenie sieciowe.',

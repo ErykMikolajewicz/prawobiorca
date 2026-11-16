@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from unittest.mock import ANY
 from uuid import UUID
 
 import pytest
@@ -31,6 +32,7 @@ from core_service.domain.exceptions.application_templates import (
     InvalidApplicationTemplate,
 )
 from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
+from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.value_objects.application_templates import (
     ApplicationFieldType,
@@ -38,6 +40,7 @@ from core_service.domain.value_objects.application_templates import (
     ApplicationTemplateStatus,
 )
 from core_service.domain.value_objects.descriptions import DescriptionStatus
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, TASK_FAILURES, TASK_FAILURES_IDS, USER_ID
@@ -155,11 +158,14 @@ def template_inspector(mock_application_template_inspector):
 
 
 @pytest.fixture
-def search_published_templates(mock_session_maker, mock_texts_embedder, application_templates_repository):
+def search_published_templates(
+    mock_session_maker, mock_texts_embedder, application_templates_repository, mock_usage_charger
+):
     return SearchPublishedApplicationTemplates(
         session_maker=mock_session_maker,
         embedding_port=mock_texts_embedder,
         application_templates_repo=application_templates_repository,
+        usage_charger=mock_usage_charger,
     )
 
 
@@ -767,3 +773,35 @@ async def test_get_application_template_download_url_rejected(
         await get_template_download_url.execute(ADMIN, TEMPLATE_ID)
 
     mock_application_templates_storage.get_download_url.assert_not_awaited()
+
+
+async def test_search_published_application_templates_ai_assisted_charges_caller(
+    search_published_templates, application_templates_repository, mock_texts_embedder, mock_usage_charger
+):
+    mock_texts_embedder.embed_queries.return_value = [[0.1, 0.2]]
+    application_templates_repository.hybrid_search_templates.return_value = []
+
+    await search_published_templates.execute(USER, None, "urlop dziekański", True)
+
+    mock_usage_charger.charge.assert_awaited_once_with(ANY, USER, PaidOperation.SEMANTIC_SEARCH)
+
+
+async def test_search_published_application_templates_by_name_is_free(
+    search_published_templates, application_templates_repository, mock_usage_charger
+):
+    application_templates_repository.fuzzy_search_templates.return_value = []
+
+    await search_published_templates.execute(USER, None, "urlop dziekański", False)
+
+    mock_usage_charger.charge.assert_not_awaited()
+
+
+async def test_search_published_application_templates_over_usage_limit(
+    search_published_templates, mock_texts_embedder, mock_usage_charger
+):
+    mock_usage_charger.charge.side_effect = UsageLimitExceeded(is_anonymous=False, retry_after_seconds=60)
+
+    with pytest.raises(UsageLimitExceeded):
+        await search_published_templates.execute(USER, None, "urlop dziekański", True)
+
+    mock_texts_embedder.embed_queries.assert_not_awaited()

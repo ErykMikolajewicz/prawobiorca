@@ -13,7 +13,9 @@ from core_service.application.ports.relational import AsyncSession, SessionMaker
 from core_service.application.ports.sections import SectionsRepository
 from core_service.application.ports.texts import TextsEmbedder
 from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
+from core_service.application.services.attempts import AttemptLimiter
 from core_service.application.services.regulations import RegulationPreparator
+from core_service.application.services.usage import UsageCharger
 
 
 @pytest.fixture
@@ -107,3 +109,13 @@ def mock_application_templates_repo():
 def mock_application_template_inspector():
     port = create_autospec(ApplicationTemplateInspector)
     return port
+
+
+@pytest.fixture
+def mock_usage_charger():
+    return create_autospec(UsageCharger)
+
+
+@pytest.fixture
+def mock_attempt_limiter():
+    return create_autospec(AttemptLimiter)

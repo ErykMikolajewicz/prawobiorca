@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from unittest.mock import ANY
 from uuid import UUID
 
 import pytest
@@ -17,8 +18,10 @@ from core_service.domain.entities.application import Application
 from core_service.domain.entities.application_template import ApplicationTemplate
 from core_service.domain.exceptions.application_templates import ApplicationTemplateNotFound
 from core_service.domain.exceptions.applications import ApplicationNotFound, ApplicationNotGenerated
+from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.value_objects.application_templates import ApplicationTemplateField, ApplicationTemplateStatus
 from core_service.domain.value_objects.applications import ApplicationGenerationStatus
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
 from tests.consts import TASK_FAILURES, TASK_FAILURES_IDS, USER_ID
@@ -91,13 +94,18 @@ def application_templates_repository(mock_application_templates_repo):
 
 @pytest.fixture
 def add_application(
-    mock_session_maker, applications_repository, application_templates_repository, mock_application_generation_scheduler
+    mock_session_maker,
+    applications_repository,
+    application_templates_repository,
+    mock_application_generation_scheduler,
+    mock_usage_charger,
 ):
     return AddApplication(
         session_maker=mock_session_maker,
         applications_repo=applications_repository,
         application_templates_repo=application_templates_repository,
         application_generation_scheduler=mock_application_generation_scheduler,
+        usage_charger=mock_usage_charger,
     )
 
 
@@ -111,6 +119,7 @@ def generate_application(
     mock_application_templates_storage,
     mock_application_writer,
     mock_application_renderer,
+    mock_usage_charger,
 ):
     return GenerateApplication(
         session_maker=mock_session_maker,
@@ -121,12 +130,15 @@ def generate_application(
         application_templates_storage=mock_application_templates_storage,
         application_writer=mock_application_writer,
         application_renderer=mock_application_renderer,
+        usage_charger=mock_usage_charger,
     )
 
 
 @pytest.fixture
-def fail_application_generation(mock_session_maker, applications_repository):
-    return FailApplicationGeneration(session_maker=mock_session_maker, applications_repo=applications_repository)
+def fail_application_generation(mock_session_maker, applications_repository, mock_usage_charger):
+    return FailApplicationGeneration(
+        session_maker=mock_session_maker, applications_repo=applications_repository, usage_charger=mock_usage_charger
+    )
 
 
 @pytest.fixture
@@ -423,3 +435,70 @@ async def test_delete_application_ignores_storage_error(
     await delete_application.execute(USER, CASE_ID, APPLICATION_ID)
 
     applications_repository.delete.assert_awaited_once()
+
+
+async def test_add_application_charges_caller(add_application, mock_usage_charger):
+    await add_application.execute(USER, CASE_ID, NEW_APPLICATION)
+
+    mock_usage_charger.charge.assert_awaited_once_with(ANY, USER, PaidOperation.APPLICATION_GENERATION)
+
+
+async def test_add_application_over_usage_limit(
+    add_application, applications_repository, mock_application_generation_scheduler, mock_usage_charger
+):
+    mock_usage_charger.charge.side_effect = UsageLimitExceeded(is_anonymous=False, retry_after_seconds=60)
+
+    with pytest.raises(UsageLimitExceeded):
+        await add_application.execute(USER, CASE_ID, NEW_APPLICATION)
+
+    applications_repository.add.assert_not_awaited()
+    mock_application_generation_scheduler.schedule_application_generation.assert_not_awaited()
+
+
+async def test_generate_application_failure_refunds_generation(
+    generate_application, mock_application_writer, mock_usage_charger
+):
+    mock_application_writer.write.side_effect = RuntimeError
+
+    with pytest.raises(RuntimeError):
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=False)
+
+    mock_usage_charger.refund.assert_awaited_once_with(ANY, USER_ID, PaidOperation.APPLICATION_GENERATION)
+
+
+async def test_generate_application_retried_failure_is_not_refunded(
+    generate_application, mock_application_writer, mock_usage_charger
+):
+    mock_application_writer.write.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=False)
+
+    mock_usage_charger.refund.assert_not_awaited()
+
+
+async def test_generate_application_with_changed_template_refunds_generation(
+    generate_application, application_templates_repository, mock_usage_charger
+):
+    application_templates_repository.get_for_update.return_value = None
+
+    await generate_application.execute(USER_ID, APPLICATION_ID, NEW_APPLICATION, is_last_attempt=True)
+
+    mock_usage_charger.refund.assert_awaited_once_with(ANY, USER_ID, PaidOperation.APPLICATION_GENERATION)
+
+
+async def test_fail_application_generation_refunds_generation(fail_application_generation, mock_usage_charger):
+    await fail_application_generation.execute(USER_ID, APPLICATION_ID, MAX_APPLICATION_GENERATION_DELIVERIES + 1)
+
+    mock_usage_charger.refund.assert_awaited_once_with(ANY, USER_ID, PaidOperation.APPLICATION_GENERATION)
+
+
+async def test_fail_application_generation_already_failed_is_not_refunded_again(
+    fail_application_generation, applications_repository, mock_usage_charger
+):
+    applications_repository.get_for_update.return_value = create_application(ApplicationGenerationStatus.FAILED)
+
+    await fail_application_generation.execute(USER_ID, APPLICATION_ID, MAX_APPLICATION_GENERATION_DELIVERIES + 1)
+
+    applications_repository.save.assert_not_awaited()
+    mock_usage_charger.refund.assert_not_awaited()

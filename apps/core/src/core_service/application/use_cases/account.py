@@ -7,7 +7,9 @@ from core_service.application.dtos.account import RegistrationData
 from core_service.application.dtos.user import CreateUserData
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.users import UsersRepository
+from core_service.application.services.attempts import AttemptLimiter
 from core_service.domain.exceptions.users import UserExists
+from core_service.domain.services.attempts import get_registration_attempts_key
 from core_service.domain.services.security import hash_password
 from core_service.shared.exceptions import ObjectExists
 
@@ -18,8 +20,14 @@ logger = logging.getLogger(__name__)
 class CreateAccount:
     session_maker: SessionMaker
     users_repo: UsersRepository
+    registration_attempt_limiter: AttemptLimiter
 
-    async def execute(self, registration_data: RegistrationData) -> None:
+    async def execute(self, registration_data: RegistrationData, ip_address: str) -> None:
+        attempts_key = get_registration_attempts_key(ip_address)
+        async with self.session_maker.begin() as session:
+            await self.registration_attempt_limiter.check(session, attempts_key)
+            await self.registration_attempt_limiter.record(session, attempts_key)
+
         hashed_password = await run_in_threadpool(hash_password, registration_data.password)
         create_user_data = CreateUserData(registration_data.username, hashed_password)
 

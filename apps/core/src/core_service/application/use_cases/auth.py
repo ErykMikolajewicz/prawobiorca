@@ -11,8 +11,10 @@ from core_service.application.dtos.auth import AuthTokens
 from core_service.application.ports.relational import SessionMaker
 from core_service.application.ports.users import UsersRepository, UsersSessionsRepository
 from core_service.application.services.accounts import check_user_can_log
+from core_service.application.services.attempts import AttemptLimiter
 from core_service.application.services.security import prevent_timing_attack
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
+from core_service.domain.services.attempts import get_login_attempts_key
 from core_service.domain.services.security import (
     JWT_ALGORITHM,
     create_access_token,
@@ -54,16 +56,21 @@ class LogUser:
     users_repo: UsersRepository
     sessions_repo: UsersSessionsRepository
     tokens_config: AuthTokensConfig
+    login_attempt_limiter: AttemptLimiter
 
-    async def execute(self, login_data: LoginData) -> AuthTokens:
+    async def execute(self, login_data: LoginData, ip_address: str) -> AuthTokens:
         execution_start_time = asyncio.get_running_loop().time()
+        attempts_key = get_login_attempts_key(login_data.username, ip_address)
 
         user_privileges = None
         async with self.session_maker() as session:
+            await self.login_attempt_limiter.check(session, attempts_key)
             user_id = await check_user_can_log(session, self.users_repo, login_data)
             if user_id is not None:
                 user_privileges = await self.users_repo.get_user_privileges(session, user_id)
         if user_id is None or user_privileges is None:
+            async with self.session_maker.begin() as session:
+                await self.login_attempt_limiter.record(session, attempts_key)
             await prevent_timing_attack(execution_start_time)
             raise UserCantLog
 

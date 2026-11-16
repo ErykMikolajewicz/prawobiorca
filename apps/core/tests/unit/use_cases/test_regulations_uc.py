@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from unittest.mock import ANY
 from uuid import UUID
 
 import pytest
@@ -29,6 +30,7 @@ from core_service.domain.entities.regulation import Regulation
 from core_service.domain.exceptions.access import AccessForbidden
 from core_service.domain.exceptions.descriptions import DescriptionGenerationInProgress
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
+from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
@@ -47,12 +49,15 @@ from core_service.domain.value_objects.regulations import (
     RegulationType,
 )
 from core_service.domain.value_objects.sections import SectionSummary, SectionToSummarize
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 from core_service.shared.exceptions import ServiceUnavailable
-from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, TASK_FAILURES, TASK_FAILURES_IDS
+from tests.consts import ADMIN_ID, ORGANIZATION_ID, SUBORGANIZATION_ID, TASK_FAILURES, TASK_FAILURES_IDS, USER_ID
 from tests.mocks import get_awaited_argument, get_awaited_arguments, record_saved_states
 
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True)
+
+USAGE_LIMIT_EXCEEDED = UsageLimitExceeded(is_anonymous=False, retry_after_seconds=60)
 
 REGULATION_ID = UUID("5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f")
 
@@ -129,6 +134,7 @@ def prepare_regulation(
     mock_regulation_preparator,
     mock_regulation_description_generation_scheduler,
     mock_section_summaries_generation_scheduler,
+    mock_usage_charger,
 ):
     return PrepareRegulation(
         session_maker=mock_session_maker,
@@ -138,32 +144,45 @@ def prepare_regulation(
         regulation_preparator=mock_regulation_preparator,
         description_generation_scheduler=mock_regulation_description_generation_scheduler,
         section_summaries_generation_scheduler=mock_section_summaries_generation_scheduler,
+        usage_charger=mock_usage_charger,
     )
 
 
 @pytest.fixture
-def fail_regulation_preparation(mock_session_maker, regulations_repository):
-    return FailRegulationPreparation(session_maker=mock_session_maker, regulations_repository=regulations_repository)
+def fail_regulation_preparation(mock_session_maker, regulations_repository, mock_usage_charger):
+    return FailRegulationPreparation(
+        session_maker=mock_session_maker,
+        regulations_repository=regulations_repository,
+        usage_charger=mock_usage_charger,
+    )
 
 
 @pytest.fixture
-def retry_regulation_preparation(mock_session_maker, regulations_repository, mock_regulation_preparation_scheduler):
+def retry_regulation_preparation(
+    mock_session_maker, regulations_repository, mock_regulation_preparation_scheduler, mock_usage_charger
+):
     return RetryRegulationPreparation(
         session_maker=mock_session_maker,
         regulations_repository=regulations_repository,
         regulation_preparation_scheduler=mock_regulation_preparation_scheduler,
+        usage_charger=mock_usage_charger,
     )
 
 
 @pytest.fixture
 def confirm_regulation_upload(
-    mock_session_maker, regulations_repository, mock_regulations_storage, mock_regulation_preparation_scheduler
+    mock_session_maker,
+    regulations_repository,
+    mock_regulations_storage,
+    mock_regulation_preparation_scheduler,
+    mock_usage_charger,
 ):
     return ConfirmRegulationUpload(
         session_maker=mock_session_maker,
         regulations_repository=regulations_repository,
         regulations_storage=mock_regulations_storage,
         regulation_preparation_scheduler=mock_regulation_preparation_scheduler,
+        usage_charger=mock_usage_charger,
     )
 
 
@@ -261,12 +280,15 @@ def delete_regulation(mock_session_maker, regulations_repository, mock_regulatio
 
 
 @pytest.fixture
-def search_regulation(mock_session_maker, mock_texts_embedder, sections_repository, regulations_repository):
+def search_regulation(
+    mock_session_maker, mock_texts_embedder, sections_repository, regulations_repository, mock_usage_charger
+):
     return SearchRegulation(
         session_maker=mock_session_maker,
         embedding_port=mock_texts_embedder,
         sections_repository=sections_repository,
         regulations_repository=regulations_repository,
+        usage_charger=mock_usage_charger,
     )
 
 
@@ -1131,3 +1153,114 @@ async def test_list_regulation_sections_without_sections(
 
     with pytest.raises(error):
         await list_regulation_sections.execute(ADMIN, REGULATION_ID)
+
+
+async def test_confirm_regulation_upload_charges_caller(
+    confirm_regulation_upload, mock_regulations_storage, mock_usage_charger
+):
+    mock_regulations_storage.check_regulation_exists.return_value = True
+
+    await confirm_regulation_upload.execute(ADMIN, REGULATION_ID)
+
+    mock_usage_charger.charge.assert_awaited_once_with(ANY, ADMIN, PaidOperation.REGULATION_PREPARATION)
+
+
+async def test_confirm_regulation_upload_over_usage_limit(
+    confirm_regulation_upload,
+    regulations_repository,
+    mock_regulations_storage,
+    mock_regulation_preparation_scheduler,
+    mock_usage_charger,
+):
+    mock_regulations_storage.check_regulation_exists.return_value = True
+    mock_usage_charger.charge.side_effect = USAGE_LIMIT_EXCEEDED
+
+    with pytest.raises(UsageLimitExceeded):
+        await confirm_regulation_upload.execute(ADMIN, REGULATION_ID)
+
+    regulations_repository.save.assert_not_awaited()
+    mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_not_awaited()
+
+
+async def test_retry_regulation_preparation_charges_caller(
+    retry_regulation_preparation, regulations_repository, mock_usage_charger
+):
+    store_regulation(regulations_repository, create_regulation(RegulationPreparationStatus.FAILED))
+
+    await retry_regulation_preparation.execute(ADMIN, REGULATION_ID)
+
+    mock_usage_charger.charge.assert_awaited_once_with(ANY, ADMIN, PaidOperation.REGULATION_PREPARATION)
+
+
+async def test_retry_regulation_preparation_over_usage_limit(
+    retry_regulation_preparation, regulations_repository, mock_regulation_preparation_scheduler, mock_usage_charger
+):
+    store_regulation(regulations_repository, create_regulation(RegulationPreparationStatus.FAILED))
+    mock_usage_charger.charge.side_effect = USAGE_LIMIT_EXCEEDED
+
+    with pytest.raises(UsageLimitExceeded):
+        await retry_regulation_preparation.execute(ADMIN, REGULATION_ID)
+
+    regulations_repository.save.assert_not_awaited()
+    mock_regulation_preparation_scheduler.schedule_regulation_preparation.assert_not_awaited()
+
+
+async def test_prepare_private_regulation_failure_refunds_preparation(
+    prepare_regulation, mock_regulation_preparator, mock_usage_charger
+):
+    mock_regulation_preparator.prepare_regulation.side_effect = RuntimeError
+
+    with pytest.raises(RuntimeError):
+        await prepare_regulation.execute(USER_ID, REGULATION_ID, is_last_attempt=False)
+
+    mock_usage_charger.refund.assert_awaited_once_with(ANY, USER_ID, PaidOperation.REGULATION_PREPARATION)
+
+
+async def test_prepare_public_regulation_failure_is_not_refunded(
+    prepare_regulation, mock_regulation_preparator, mock_usage_charger
+):
+    mock_regulation_preparator.prepare_regulation.side_effect = RuntimeError
+
+    with pytest.raises(RuntimeError):
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=False)
+
+    mock_usage_charger.refund.assert_not_awaited()
+
+
+async def test_prepare_private_regulation_retried_failure_is_not_refunded(
+    prepare_regulation, mock_regulation_preparator, mock_usage_charger
+):
+    mock_regulation_preparator.prepare_regulation.side_effect = ServiceUnavailable
+
+    with pytest.raises(ServiceUnavailable):
+        await prepare_regulation.execute(USER_ID, REGULATION_ID, is_last_attempt=False)
+
+    mock_usage_charger.refund.assert_not_awaited()
+
+
+async def test_fail_regulation_preparation_already_failed_is_not_refunded_again(
+    fail_regulation_preparation, regulations_repository, mock_usage_charger
+):
+    store_regulation(regulations_repository, create_regulation(RegulationPreparationStatus.FAILED))
+
+    await fail_regulation_preparation.execute(USER_ID, REGULATION_ID, MAX_REGULATION_PREPARATION_DELIVERIES + 1)
+
+    regulations_repository.save.assert_not_awaited()
+    mock_usage_charger.refund.assert_not_awaited()
+
+
+async def test_search_regulation_charges_caller(search_regulation, mock_texts_embedder, mock_usage_charger):
+    mock_texts_embedder.embed_queries.return_value = [[0.1, 0.2]]
+
+    await search_regulation.execute(ADMIN, REGULATION_ID, SearchParams(threshold=0, query="urlop"))
+
+    mock_usage_charger.charge.assert_awaited_once_with(ANY, ADMIN, PaidOperation.SEMANTIC_SEARCH)
+
+
+async def test_search_regulation_over_usage_limit(search_regulation, mock_texts_embedder, mock_usage_charger):
+    mock_usage_charger.charge.side_effect = USAGE_LIMIT_EXCEEDED
+
+    with pytest.raises(UsageLimitExceeded):
+        await search_regulation.execute(ADMIN, REGULATION_ID, SearchParams(threshold=0, query="urlop"))
+
+    mock_texts_embedder.embed_queries.assert_not_awaited()
