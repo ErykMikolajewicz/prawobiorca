@@ -65,14 +65,17 @@ def test_page_headers_and_footers_are_dropped():
     assert "Strona 7 z 48" not in parsed_text
 
 
-def test_elements_before_first_unit_become_unnumbered_unit():
-    elements = load_regulation_elements(ACT_FIXTURE)
+def test_elements_before_first_numbered_unit_are_dropped():
+    elements = [
+        RegulationElement(label=UsefulLabels.SECTION_HEADER, text="OBWIESZCZENIE MARSZAŁKA SEJMU"),
+        RegulationElement(label=UsefulLabels.TEXT, text="1) ustawą z dnia 6 grudnia 2024 r. (Dz. U. poz. 1871);"),
+        RegulationElement(label=UsefulLabels.TEXT, text="Art. 1. Ustawa określa zasady."),
+    ]
 
     units = LegalStructureParser().parse(elements)
 
-    assert units[0].unit_type == UnitType.UNNUMBERED
-    assert units[0].number is None
-    assert unit_text(units[0]).startswith("7. Podmiot, o którym mowa w ust. 2")
+    assert [unit.number for unit in units] == ["1"]
+    assert unit_text(units[0]) == "Ustawa określa zasady."
 
 
 def test_article_reference_inside_text_does_not_start_new_unit():

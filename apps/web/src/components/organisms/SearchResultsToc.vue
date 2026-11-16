@@ -39,6 +39,7 @@ function navigateTo(href: string) {
   <nav class="search-results-toc" aria-label="Spis treści">
     <el-anchor
       ref="anchor"
+      class="toc-anchor"
       :offset="isMobile ? MOBILE_SCROLL_OFFSET : DESKTOP_SCROLL_OFFSET"
       @click="onLinkClick"
     >
@@ -56,6 +57,11 @@ function navigateTo(href: string) {
 </template>
 
 <style scoped>
+.toc-anchor {
+  --el-anchor-font-size: 14px;
+  --el-anchor-line-height: 26px;
+}
+
 .toc-ai-note {
   position: sticky;
   bottom: 0;

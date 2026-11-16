@@ -62,8 +62,9 @@ const { isMobile } = useBreakpoint()
   position: sticky;
   top: 0;
   align-self: flex-start;
-  flex: 0 0 18rem;
+  flex: 0 0 26rem;
   height: 100vh;
+  margin-right: var(--app-space-md);
   overflow-y: auto;
 }
 
