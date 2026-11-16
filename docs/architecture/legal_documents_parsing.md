@@ -99,6 +99,10 @@ current unit:
 
 The cost is that a genuinely numbered heading such as `1. Postanowienia ogólne` is treated as content too.
 
+**The preamble of an act is dropped.** In documents with articles, everything before the first numbered unit —
+  a promulgation notice, a list of amending acts, directives implemented by the act — is not part of the act's
+  provisions and is discarded. Documents numbered with `§` keep their leading content.
+
 ---
 
 ## Text Normalization

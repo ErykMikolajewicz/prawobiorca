@@ -154,7 +154,9 @@ class LegalStructureParser:
         prepared_elements = self._prepare_elements(elements)
         unit_type = self._detect_unit_type(prepared_elements)
 
-        return self._build_units(prepared_elements, unit_type)
+        units = self._build_units(prepared_elements, unit_type)
+
+        return self._drop_preamble(units) if unit_type == UnitType.ARTICLE else units
 
     def _prepare_elements(self, elements: Iterable[RegulationElement]) -> list[RegulationElement]:
         prepared_elements = []
@@ -266,6 +268,14 @@ class LegalStructureParser:
             breadcrumbs.mark_content()
 
         return [unit for unit in units if unit.elements or unit.title]
+
+    @staticmethod
+    def _drop_preamble(units: list[LegalUnit]) -> list[LegalUnit]:
+        """Everything before the first article of an act is a title page: a promulgation notice, a list of
+        amending acts or a footnote spilling over. Regulations numbered with paragraphs keep their preamble.
+        """
+        first_numbered_index = next((i for i, unit in enumerate(units) if unit.unit_type != UnitType.UNNUMBERED), 0)
+        return units[first_numbered_index:]
 
     def _open_unit(
         self, element: RegulationElement, unit_match: re.Match, unit_type: UnitType, breadcrumbs: _BreadcrumbTracker
