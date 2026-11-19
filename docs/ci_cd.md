@@ -15,7 +15,7 @@ Runs on PRs and pushes to `main` in the source repository. The `changes` job sel
 | --- | --- | --- |
 | `backend` | `just check-backend` | Ruff lint/format, complexipy, import boundaries, ty for `core` and `scripts/`, unit tests. |
 | `integration` | `just cov` | Unit and integration tests; at least 90% coverage of `apps/core/src`; Alembic/SQLAlchemy schema consistency. |
-| `extraction` | `just type-check-extraction`, `just scan-image prawobiorca/extraction docker`, `just test-extraction` | ty, [image vulnerability scan](#image-vulnerability-scan) and integration tests against the service image, built with Buildx and cached in Actions. Uses the runner's Docker socket. |
+| `extraction` | `just type-check-extraction`, `just scan-image prawobiorca/extraction docker`, `just test-extraction` | ty, [image vulnerability scan](#image-vulnerability-scan) and integration tests against the service image, built with Buildx and cached in Actions. The local Buildx cache is pruned before the scan to free disk space. Uses the runner's Docker socket. |
 | `frontend` | `just check-frontend` | `pnpm check`, type checking, Vitest with coverage thresholds from `vitest.config.ts`. |
 | `api-types` | `just api-types` | Regenerated OpenAPI schema and frontend client must match committed files. |
 | `workflows` | `just check-workflows` | zizmor security audit and actionlint (official image, pinned by digest in `justfile`). |
