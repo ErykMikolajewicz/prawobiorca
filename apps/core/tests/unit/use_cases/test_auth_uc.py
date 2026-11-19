@@ -168,11 +168,11 @@ async def test_logout_user_without_credentials(logout_user, sessions_repository)
     sessions_repository.delete_session_by_refresh_token_hash.assert_not_awaited()
 
 
-async def test_log_user_does_not_record_successful_attempt(log_user, mock_attempt_limiter):
+async def test_log_user_releases_successful_attempt(log_user, mock_attempt_limiter):
     await log_user.execute(LOGIN_DATA, IP_ADDRESS)
 
-    mock_attempt_limiter.check.assert_awaited_once_with(ANY, LOGIN_ATTEMPTS_KEY)
-    mock_attempt_limiter.record.assert_not_awaited()
+    mock_attempt_limiter.acquire.assert_awaited_once_with(ANY, LOGIN_ATTEMPTS_KEY)
+    mock_attempt_limiter.release.assert_awaited_once_with(ANY, mock_attempt_limiter.acquire.return_value)
 
 
 async def test_log_user_records_failed_attempt(
@@ -183,14 +183,15 @@ async def test_log_user_records_failed_attempt(
     with pytest.raises(UserCantLog):
         await log_user.execute(LOGIN_DATA, IP_ADDRESS)
 
-    mock_attempt_limiter.record.assert_awaited_once_with(ANY, LOGIN_ATTEMPTS_KEY)
+    mock_attempt_limiter.acquire.assert_awaited_once_with(ANY, LOGIN_ATTEMPTS_KEY)
+    mock_attempt_limiter.release.assert_not_awaited()
 
 
 async def test_log_user_with_too_many_failed_attempts(log_user, users_repository, mock_attempt_limiter):
-    mock_attempt_limiter.check.side_effect = TooManyAttempts(60)
+    mock_attempt_limiter.acquire.side_effect = TooManyAttempts(60)
 
     with pytest.raises(TooManyAttempts):
         await log_user.execute(LOGIN_DATA, IP_ADDRESS)
 
     users_repository.get_by_username.assert_not_awaited()
-    mock_attempt_limiter.record.assert_not_awaited()
+    mock_attempt_limiter.release.assert_not_awaited()

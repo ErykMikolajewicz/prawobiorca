@@ -62,15 +62,15 @@ class LogUser:
         execution_start_time = asyncio.get_running_loop().time()
         attempts_key = get_login_attempts_key(login_data.username, ip_address)
 
+        async with self.session_maker.begin() as session:
+            reservation = await self.login_attempt_limiter.acquire(session, attempts_key)
+
         user_privileges = None
         async with self.session_maker() as session:
-            await self.login_attempt_limiter.check(session, attempts_key)
             user_id = await check_user_can_log(session, self.users_repo, login_data)
             if user_id is not None:
                 user_privileges = await self.users_repo.get_user_privileges(session, user_id)
         if user_id is None or user_privileges is None:
-            async with self.session_maker.begin() as session:
-                await self.login_attempt_limiter.record(session, attempts_key)
             await prevent_timing_attack(execution_start_time)
             raise UserCantLog
 
@@ -80,6 +80,7 @@ class LogUser:
             session_id = await self.sessions_repo.create_session(
                 session, user_id, hash_refresh_token(refresh_token), build_refresh_token_validity(self.tokens_config)
             )
+            await self.login_attempt_limiter.release(session, reservation)
 
         claims = AccessTokenClaims(user_id=user_id, session_id=session_id, is_admin=user_privileges.is_admin)
 
