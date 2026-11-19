@@ -43,6 +43,7 @@ jobs:
               - .github/actions/setup-tools/**
             extraction:
               - apps/extraction/**
+              - .trivyignore.yaml
               - justfile
               - .github/workflows/ci.yml
               - .github/actions/setup-tools/**
@@ -127,6 +128,7 @@ jobs:
           tags: prawobiorca/extraction:latest
           cache-from: type=gha,scope=extraction
           cache-to: type=gha,scope=extraction,mode=max
+      - run: just scan-image prawobiorca/extraction docker
       - run: just test-extraction
 
   frontend:

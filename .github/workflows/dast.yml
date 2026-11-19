@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  EMBEDDING_IMAGE: ghcr.io/erykmikolajewicz/prawobiorca/embedding@sha256:fc4c022543c8f6c41c826b5238e287fad84ed825e3afe20c75c1da91e42f0ddf
+  EMBEDDING_IMAGE: ghcr.io/erykmikolajewicz/prawobiorca/embedding@sha256:a5cc0d0c432e7f6ecbc2568d8fe558c410f8780428a2bf121d4a7fa3589dd16c
 
 jobs:
   api:

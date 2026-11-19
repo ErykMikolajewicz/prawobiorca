@@ -6,7 +6,7 @@ on:
   workflow_call:
 
 env:
-  EMBEDDING_IMAGE: ghcr.io/erykmikolajewicz/prawobiorca/embedding@sha256:fc4c022543c8f6c41c826b5238e287fad84ed825e3afe20c75c1da91e42f0ddf
+  EMBEDDING_IMAGE: ghcr.io/erykmikolajewicz/prawobiorca/embedding@sha256:a5cc0d0c432e7f6ecbc2568d8fe558c410f8780428a2bf121d4a7fa3589dd16c
 
 jobs:
   e2e:
@@ -43,6 +43,7 @@ jobs:
           tags: localhost/prawobiorca/core:e2e
           cache-from: type=gha,scope=core
           cache-to: type=gha,scope=core,mode=max
+      - run: just scan-image localhost/prawobiorca/core:e2e docker
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: apps/web
