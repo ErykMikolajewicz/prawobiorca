@@ -91,7 +91,7 @@ def main():
     run_container_if_not_running(
         "postgres_db_prawobiorca",
         "-e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5432:5432"
-        " -v pg-data:/var/lib/postgresql pgvector:0.8.4-pg18-trixie",
+        " -v pg-data:/var/lib/postgresql docker.io/pgvector/pgvector:0.8.7-pg18-trixie",
     )
     wait_for_postgres("postgres_db_prawobiorca")
     run_migrations()
