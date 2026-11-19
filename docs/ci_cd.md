@@ -15,7 +15,7 @@ Runs on PRs and pushes to `main` in the source repository. The `changes` job sel
 | --- | --- | --- |
 | `backend` | `just check-backend` | Ruff lint/format, complexipy, import boundaries, ty for `core` and `scripts/`, unit tests. |
 | `integration` | `just cov` | Unit and integration tests; at least 90% coverage of `apps/core/src`; Alembic/SQLAlchemy schema consistency. |
-| `extraction` | `just type-check-extraction`, `just test-extraction` | ty and integration tests against the service image, built with Buildx and cached in Actions. Uses the runner's Docker socket. |
+| `extraction` | `just type-check-extraction`, `just scan-image prawobiorca/extraction docker`, `just test-extraction` | ty, [image vulnerability scan](#image-vulnerability-scan) and integration tests against the service image, built with Buildx and cached in Actions. The local Buildx cache is pruned before the scan to free disk space. Uses the runner's Docker socket. |
 | `frontend` | `just check-frontend` | `pnpm check`, type checking, Vitest with coverage thresholds from `vitest.config.ts`. |
 | `api-types` | `just api-types` | Regenerated OpenAPI schema and frontend client must match committed files. |
 | `workflows` | `just check-workflows` | zizmor security audit and actionlint (official image, pinned by digest in `justfile`). |
@@ -98,7 +98,7 @@ and validate the plan when upgrading ZAP.
 
 ## E2E (`e2e.yml`)
 
-Runs in the release repository on pushes to `main` and before each deployment. It builds `core` and `web`, loads them into a kind cluster running on the runner's Docker, deploys the `e2e` overlay with `just deploy e2e` and runs Playwright. A failed deployment prints pod states, events and logs; failed tests add `core` and gateway logs and a Playwright report artifact. Results are visible in the public repository and are not reported back to the source repository. See [E2E tests](tests/e2e.md).
+Runs in the release repository on pushes to `main` and before each deployment. It builds `core` and `web`, scans the `core` image (see [Image vulnerability scan](#image-vulnerability-scan)), loads them into a kind cluster running on the runner's Docker, deploys the `e2e` overlay with `just deploy e2e` and runs Playwright. A failed deployment prints pod states, events and logs; failed tests add `core` and gateway logs and a Playwright report artifact. Results are visible in the public repository and are not reported back to the source repository. See [E2E tests](tests/e2e.md).
 
 The cluster node pulls the `embedding` image from GHCR, pinned by digest in `EMBEDDING_IMAGE`; see [Manually maintained images](#manually-maintained-images) when updating it.
 
@@ -177,6 +177,20 @@ Other accepted findings:
 - **hadolint** (`.hadolint.yaml`): `DL3008` — Debian removes old apt versions; `DL3059` — separate `RUN` layers for caching; `DL3066` — non-numeric usernames.
 - **checkov** (`.checkov.yaml`): `CKV_K8S_43` — images are deployed by immutable SHA tags, not digests; `CKV_K8S_15` — default pull policy with immutable tags; `CKV_K8S_21` — `default` namespace; `CKV2_K8S_6` — no network policies. Resource annotations explain worker probe exemptions (no HTTP endpoint) and PostgreSQL UID 999 (owns existing data).
 - **Dependency audit**: checkov's `asteval` is overridden to a fixed version in `pyproject.toml`. `ecdsa` (`PYSEC-2026-1325`) is ignored with `--ignore-until-fixed`: it affects signing, while checkov only verifies external-check signatures. The audit reports it again once a fix exists.
+- **Trivy** (`.trivyignore.yaml`): unfixed Debian packages of the Python base image; see [Image vulnerability scan](#image-vulnerability-scan).
+
+### Image vulnerability scan
+
+`just scan-image <image> [engine]` saves the image to `.cache/trivy/image.tar` with `podman` (default) or `docker` and scans its packages with Trivy (official image, pinned by digest in `justfile`). HIGH and CRITICAL findings fail the scan, including those without a fix. The `extraction` image is scanned in CI on PRs, the `core` image in E2E, so a vulnerable `core` image blocks the release. `web`, `embedding` and pgvector are not scanned.
+
+```bash
+just build-core
+just scan-image prawobiorca/core
+```
+
+Exceptions live in `.trivyignore.yaml`. Add one only for a finding without a fix whose vulnerable code the services do not reach. Each entry needs a `statement` explaining why and an `expired_at` date, at most three months ahead. An expired entry fails the scan again: check whether Debian has released a fix, then remove the entry or extend it with a reviewed statement. The file is shared by all scanned images, so a statement must hold for each of them.
+
+The `core` and `extraction` images are multi-stage: `uv`, the build and model downloads stay in the first stage, and the runtime image contains only the virtual environment (and models), without `pip`. The runtime stage runs `apt-get upgrade` to pick up Debian security fixes not yet in the base image. Buildx caches this layer until the base image changes; to apply newer fixes locally, rebuild with `podman image build --pull=always --no-cache`.
 
 ### Manually maintained images
 

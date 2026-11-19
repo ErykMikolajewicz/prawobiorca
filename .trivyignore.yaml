@@ -1,0 +1,34 @@
+vulnerabilities:
+  - id: CVE-2025-69720
+    statement: ncurses from the python:3.14-slim-trixie base image, no Debian fix. The service runs no interactive terminal programs.
+    expired_at: 2027-02-19
+  - id: CVE-2026-119373
+    statement: libsqlite3-0 from the base image, no Debian fix. The service does not process SQLite databases or SQL from requests and does not use FTS5.
+    expired_at: 2027-02-19
+  - id: CVE-2026-119374
+    statement: libsqlite3-0 from the base image, no Debian fix. The service does not process SQLite databases or SQL from requests and does not use FTS5.
+    expired_at: 2027-02-19
+  - id: CVE-2026-119379
+    statement: libsqlite3-0 from the base image, no Debian fix. The service does not use the SQLite session extension or apply changesets.
+    expired_at: 2027-02-19
+  - id: CVE-2026-16742
+    statement: libsystemd0 and libudev1 from the base image, no Debian fix. systemd-homed is not installed in the image.
+    expired_at: 2027-02-19
+  - id: CVE-2026-54369
+    statement: libacl1 from the base image, no Debian fix. Requires a local attacker; the service runs as an unprivileged user and does not change ACLs.
+    expired_at: 2027-02-19
+  - id: CVE-2026-76642
+    statement: util-linux from the base image, no Debian fix. The service runs as an unprivileged user and never calls mount.
+    expired_at: 2027-02-19
+  - id: CVE-2026-78408
+    statement: util-linux from the base image, no Debian fix. The service never calls nsenter.
+    expired_at: 2027-02-19
+  - id: CVE-2026-78409
+    statement: util-linux from the base image, no Debian fix. The service runs as an unprivileged user and never calls mount.
+    expired_at: 2027-02-19
+  - id: CVE-2026-78410
+    statement: util-linux from the base image, no Debian fix. The service runs as an unprivileged user and never calls mount.
+    expired_at: 2027-02-19
+  - id: CVE-2026-9538
+    statement: perl-base from the base image, no Debian fix. Archive::Tar is not installed and the service never runs Perl.
+    expired_at: 2027-02-19

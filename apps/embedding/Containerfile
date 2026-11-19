@@ -12,4 +12,8 @@ RUN convert_tokenizer -o /models/mmlw-retrieval-roberta-large-v2 sdadas/mmlw-ret
 
 FROM docker.io/openvino/model_server:2026.4.1
 
+USER root
+RUN apt-get update && apt-get upgrade --yes && rm -rf /var/lib/apt/lists/*
+USER ovms
+
 COPY --from=export /models /models

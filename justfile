@@ -137,6 +137,7 @@ check-backend: && lint-imports-backend type-check-backend type-check-scripts tes
 
 actionlint := "docker.io/rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667"
 hadolint := "docker.io/hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d"
+trivy := "docker.io/aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb"
 
 check-workflows:
     uv run --only-group workflows zizmor --offline .github
@@ -144,6 +145,14 @@ check-workflows:
 
 check-containers:
     podman run --rm -v "$PWD:/repo:ro" -w /repo {{hadolint}} hadolint apps/*/Containerfile
+
+scan-image image engine="podman":
+    mkdir -p .cache/trivy
+    rm -f .cache/trivy/image.tar
+    {{engine}} image save --output .cache/trivy/image.tar {{image}}
+    podman run --rm -v "$PWD:/repo:ro" -v "$PWD/.cache/trivy:/repo/.cache/trivy" -w /repo {{trivy}} image \
+        --cache-dir .cache/trivy/cache --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+        --ignorefile .trivyignore.yaml --input .cache/trivy/image.tar
 
 check-deployment:
     mkdir -p .cache/deployment
