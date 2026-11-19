@@ -183,10 +183,24 @@ Other accepted findings:
 Integration tests pull a public pgvector copy from GHCR to avoid Docker Hub's unauthenticated pull limit. When upgrading, publish the new tag and update `POSTGRES_IMAGE_VERSION` in `apps/core/tests/integration/conftest.py`:
 
 ```bash
-podman pull docker.io/pgvector/pgvector:0.8.4-pg18-trixie
-podman tag docker.io/pgvector/pgvector:0.8.4-pg18-trixie ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
-podman push ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie
+podman manifest create --all localhost/pgvector-mirror:0.8.7-pg18-trixie docker://docker.io/pgvector/pgvector:0.8.7-pg18-trixie
+podman manifest push --all localhost/pgvector-mirror:0.8.7-pg18-trixie docker://ghcr.io/erykmikolajewicz/pgvector:0.8.7-pg18-trixie
 ```
+
+The mirror preserves all upstream architectures. Keep `deploy/base/postgres.yaml`,
+`apps/core/scripts/dev.py` and the integration test image on the same pgvector version;
+GCP inherits the base image without a separate version override.
+
+The `0.8.7-pg18-trixie` update stays on PostgreSQL 18. Deploy the new database image before
+running migrations: migration `d9e2f7a1b6c4` updates the installed `vector` extension to `0.8.7`
+in existing databases. Its downgrade leaves the extension at `0.8.7`, since pgvector provides
+no downgrade scripts. Reverting application migrations does not make an older database image
+safe to restore; keep the updated image when rolling back application code.
+
+For `just dev`, an existing `postgres_db_prawobiorca` container keeps its original image.
+Stop the development processes and recreate that container with the new image before running
+migrations, preserving the named `pg-data` volume. The kind and GCP deployments replace the
+PostgreSQL pod when its image changes and keep the existing data volume.
 
 E2E uses a public `embedding` image. Rebuild and publish it whenever `apps/embedding/Containerfile` changes:
 

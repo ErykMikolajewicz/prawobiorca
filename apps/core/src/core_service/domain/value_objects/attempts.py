@@ -3,6 +3,12 @@ from datetime import UTC, datetime, timedelta
 
 
 @dataclass(frozen=True)
+class AttemptReservation:
+    key: str
+    window_start: datetime
+
+
+@dataclass(frozen=True)
 class AttemptLimit:
     max_attempts: int
     window: timedelta

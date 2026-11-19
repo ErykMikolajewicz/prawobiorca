@@ -22,10 +22,6 @@ patches:
       name: core|web
   - path: patches/worker-embedding-batch.yaml
 
-images:
-  - name: pgvector/pgvector
-    newTag: 0.8.2-pg18-trixie
-
 configMapGenerator:
   - name: core-config
     behavior: merge

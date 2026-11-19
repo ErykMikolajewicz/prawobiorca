@@ -26,7 +26,7 @@ from core_service.framework.dependencies.relational import get_session_maker
 from core_service.main import prawobiorca
 from tests.consts import AUTH_TOKENS_CONFIG
 
-POSTGRES_IMAGE_VERSION = "ghcr.io/erykmikolajewicz/pgvector:0.8.4-pg18-trixie"
+POSTGRES_IMAGE_VERSION = "ghcr.io/erykmikolajewicz/pgvector:0.8.7-pg18-trixie"
 
 SELECT_TABLES = text("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'alembic_version'")
 

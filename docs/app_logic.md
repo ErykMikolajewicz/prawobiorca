@@ -44,7 +44,7 @@ Operations that use AI services are paid from a daily budget, expressed in conve
 - A failed application generation or document preparation is refunded; a failed search is not.
 - When the budget is used up, the operation is rejected and the user is told to log in (guest) or to come back the next day (logged user).
 - Regardless of the budgets, the real LLM cost of the whole system is capped monthly (`LLM_SERVICE_MONTHLY_COST_LIMIT_PLN`).
-- To protect accounts, logging in is blocked for 15 minutes after 5 failed attempts for the same username from the same IP address, and one IP address can make 20 registration attempts a day.
+- To protect accounts, a fixed 15-minute window allows 5 failed or pending login attempts for the same username from the same IP address. Successful logins release their reserved attempt; interrupted requests retain it until the window ends. Once the limit is reached, further attempts are blocked until capacity becomes available or the window ends. One IP address can make 20 registration attempts a day.
 
 ---
 

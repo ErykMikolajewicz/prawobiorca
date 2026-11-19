@@ -6,7 +6,7 @@ import pytest
 from core_service.application.ports.attempts import AttemptsRepository
 from core_service.application.services.attempts import AttemptLimiter
 from core_service.domain.exceptions.limits import TooManyAttempts
-from core_service.domain.value_objects.attempts import AttemptLimit
+from core_service.domain.value_objects.attempts import AttemptLimit, AttemptReservation
 
 KEY = "login:key"
 MAX_ATTEMPTS = 5
@@ -39,24 +39,30 @@ def attempt_limiter(mock_attempts_repo):
     return AttemptLimiter(attempts_repo=mock_attempts_repo, limit=limit)
 
 
-async def test_check_allows_attempts_below_limit(attempt_limiter, mock_attempts_repo, mock_opened_session):
-    mock_attempts_repo.count.return_value = MAX_ATTEMPTS - 1
+async def test_acquire_reserves_attempt_in_current_window(attempt_limiter, mock_attempts_repo, mock_opened_session):
+    mock_attempts_repo.try_acquire.return_value = True
 
-    await attempt_limiter.check(mock_opened_session, KEY)
+    reservation = await attempt_limiter.acquire(mock_opened_session, KEY)
 
-    mock_attempts_repo.count.assert_awaited_once_with(mock_opened_session, KEY, WINDOW_START)
+    assert reservation == AttemptReservation(KEY, WINDOW_START)
+    mock_attempts_repo.try_acquire.assert_awaited_once_with(
+        mock_opened_session, KEY, WINDOW_START, WINDOW_END, MAX_ATTEMPTS
+    )
 
 
-async def test_check_rejects_attempts_reaching_limit(attempt_limiter, mock_attempts_repo, mock_opened_session):
-    mock_attempts_repo.count.return_value = MAX_ATTEMPTS
+async def test_acquire_rejects_attempts_reaching_limit(attempt_limiter, mock_attempts_repo, mock_opened_session):
+    mock_attempts_repo.try_acquire.return_value = False
 
     with pytest.raises(TooManyAttempts) as error:
-        await attempt_limiter.check(mock_opened_session, KEY)
+        await attempt_limiter.acquire(mock_opened_session, KEY)
 
     assert error.value.retry_after_seconds == SECONDS_TO_WINDOW_END
 
 
-async def test_record_adds_attempt_to_current_window(attempt_limiter, mock_attempts_repo, mock_opened_session):
-    await attempt_limiter.record(mock_opened_session, KEY)
+async def test_release_uses_original_window(attempt_limiter, mock_attempts_repo, mock_opened_session):
+    original_window = WINDOW_START - timedelta(minutes=15)
+    reservation = AttemptReservation(KEY, original_window)
 
-    mock_attempts_repo.add.assert_awaited_once_with(mock_opened_session, KEY, WINDOW_START, WINDOW_END)
+    await attempt_limiter.release(mock_opened_session, reservation)
+
+    mock_attempts_repo.release.assert_awaited_once_with(mock_opened_session, KEY, original_window)

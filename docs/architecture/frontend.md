@@ -69,7 +69,7 @@ The organization and suborganization selected in the `organizations` store form 
 
 ## 6. Build and Deployment
 
-`apps/web/Containerfile` defines a two-stage build: the first stage installs dependencies with pnpm and runs `pnpm run build`, the second copies the resulting `dist/` into an **nginx:alpine** image listening on port `8000`. The bundled `nginx.conf` falls back to `index.html` for unknown paths, which is what the history-mode router requires.
+`apps/web/Containerfile` defines a two-stage build: the first stage installs dependencies with pnpm and runs `pnpm run build`, the second copies the resulting `dist/` into an **nginx/nginx-unprivileged:1.31.9-alpine** image pinned by digest and listening on port `8000`. The bundled `nginx.conf` falls back to `index.html` for unknown paths, which is what the history-mode router requires.
 
 The image is built as `prawobiorca/web` by `just build-web` (and as part of `just build-images`).
 

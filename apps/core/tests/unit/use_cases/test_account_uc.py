@@ -44,15 +44,13 @@ async def test_create_account_records_attempt(create_account, mock_attempt_limit
     await create_account.execute(REGISTRATION_DATA, IP_ADDRESS)
 
     attempts_key = get_registration_attempts_key(IP_ADDRESS)
-    mock_attempt_limiter.check.assert_awaited_once_with(ANY, attempts_key)
-    mock_attempt_limiter.record.assert_awaited_once_with(ANY, attempts_key)
+    mock_attempt_limiter.acquire.assert_awaited_once_with(ANY, attempts_key)
 
 
 async def test_create_account_with_too_many_attempts(create_account, mock_users_repo, mock_attempt_limiter):
-    mock_attempt_limiter.check.side_effect = TooManyAttempts(60)
+    mock_attempt_limiter.acquire.side_effect = TooManyAttempts(60)
 
     with pytest.raises(TooManyAttempts):
         await create_account.execute(REGISTRATION_DATA, IP_ADDRESS)
 
-    mock_attempt_limiter.record.assert_not_awaited()
     mock_users_repo.add.assert_not_awaited()

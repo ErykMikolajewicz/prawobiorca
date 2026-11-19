@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, update
 from sqlalchemy.dialects.postgresql import insert
 
 from core_service.application.ports.relational import AsyncSession
@@ -10,21 +10,31 @@ from core_service.infrastructure.relational_db.session import sqla_session
 
 class SqlaAttemptsRepository:
     @staticmethod
-    async def count(session: AsyncSession, key: str, window_start: datetime) -> int:
+    async def try_acquire(
+        session: AsyncSession, key: str, window_start: datetime, expires_at: datetime, max_attempts: int
+    ) -> bool:
         session = sqla_session(session)
-        statement = select(attempts_table.c.count).where(
-            attempts_table.c.key == key, attempts_table.c.window_start == window_start
-        )
-        attempts = await session.scalar(statement)
-        return attempts or 0
-
-    @staticmethod
-    async def add(session: AsyncSession, key: str, window_start: datetime, expires_at: datetime) -> None:
-        session = sqla_session(session)
+        if max_attempts <= 0:
+            return False
         statement = insert(attempts_table).values(key=key, window_start=window_start, expires_at=expires_at, count=1)
         statement = statement.on_conflict_do_update(
             index_elements=[attempts_table.c.key, attempts_table.c.window_start],
             set_={"count": attempts_table.c.count + 1},
+            where=attempts_table.c.count < max_attempts,
+        ).returning(attempts_table.c.count)
+        return await session.scalar(statement) is not None
+
+    @staticmethod
+    async def release(session: AsyncSession, key: str, window_start: datetime) -> None:
+        session = sqla_session(session)
+        statement = (
+            update(attempts_table)
+            .where(
+                attempts_table.c.key == key,
+                attempts_table.c.window_start == window_start,
+                attempts_table.c.count > 0,
+            )
+            .values(count=attempts_table.c.count - 1)
         )
         await session.execute(statement)
 
