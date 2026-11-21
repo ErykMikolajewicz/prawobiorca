@@ -10,10 +10,8 @@ from core_service.application.services.usage import get_usage_day
 from core_service.domain.services.usage import ANONYMOUS_TOTAL_BUDGET_KEY
 from core_service.domain.value_objects.application_templates import ApplicationTemplateStatus
 from core_service.domain.value_objects.regulations import RegulationPreparationStatus
-from core_service.domain.value_objects.usage import PaidOperation, UsageTariff
 from core_service.framework.consts import ACCOUNT_USAGE_LIMIT_EXCEEDED_CODE, ANONYMOUS_USAGE_LIMIT_EXCEEDED_CODE
 from core_service.framework.dependencies.client_address import get_trusted_proxies_count
-from core_service.framework.dependencies.usage import get_usage_tariff
 from core_service.infrastructure.relational_db.repositories.usage_budgets import SqlaUsageBudgetsRepository
 from core_service.infrastructure.relational_db.schemas.applications import applications_table
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
@@ -24,6 +22,7 @@ from tests.integration.fixtures.application_templates import insert_application_
 from tests.integration.fixtures.cases import insert_case
 from tests.integration.fixtures.regulations import insert_regulation
 from tests.integration.fixtures.tasks import execute_task, get_scheduled_tasks
+from tests.integration.fixtures.usage import insert_usage_tariff
 
 OTHER_IP_ADDRESS = "198.51.100.4"
 
@@ -31,16 +30,6 @@ SEARCH_PRICE = Decimal("0.03")
 GENERATION_PRICE = Decimal("0.50")
 PREPARATION_PRICE = Decimal("1.00")
 
-TARIFF = UsageTariff(
-    prices={
-        PaidOperation.SEMANTIC_SEARCH: SEARCH_PRICE,
-        PaidOperation.APPLICATION_GENERATION: GENERATION_PRICE,
-        PaidOperation.REGULATION_PREPARATION: PREPARATION_PRICE,
-    },
-    account_daily_limit=Decimal("1.00"),
-    anonymous_ip_daily_limit=Decimal("0.06"),
-    anonymous_total_daily_limit=Decimal("0.09"),
-)
 
 IP_BUDGET_KEY = f"ip:{IP_ADDRESS}"
 OTHER_IP_BUDGET_KEY = f"ip:{OTHER_IP_ADDRESS}"
@@ -48,10 +37,22 @@ ACCOUNT_BUDGET_KEY = f"account:{USER_ID}"
 
 
 @pytest.fixture(autouse=True)
-def override_usage_tariff(override_dependencies, broker) -> None:
-    prawobiorca.dependency_overrides[get_usage_tariff] = lambda: TARIFF
+async def default_usage_tariff(clean_database, session_maker) -> None:
+    async with session_maker.begin() as session:
+        await insert_usage_tariff(
+            session,
+            semantic_search_price=SEARCH_PRICE,
+            application_generation_price=GENERATION_PRICE,
+            regulation_preparation_price=PREPARATION_PRICE,
+            account_daily_limit=Decimal("1.00"),
+            anonymous_ip_daily_limit=Decimal("0.06"),
+            anonymous_total_daily_limit=Decimal("0.09"),
+        )
+
+
+@pytest.fixture(autouse=True)
+def override_trusted_proxies_count(override_dependencies) -> None:
     prawobiorca.dependency_overrides[get_trusted_proxies_count] = lambda: 1
-    broker.dependency_overrides[get_usage_tariff] = lambda: TARIFF
 
 
 async def get_spent_budgets(session_maker) -> dict[str, Decimal]:

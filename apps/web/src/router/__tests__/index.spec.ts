@@ -14,6 +14,7 @@ vi.mock('@/pages/CasePage.vue', () => emptyPage)
 vi.mock('@/pages/ApplicationTemplatesPage.vue', () => emptyPage)
 vi.mock('@/pages/ApplicationTemplatePage.vue', () => emptyPage)
 vi.mock('@/pages/OrganizationsPage.vue', () => emptyPage)
+vi.mock('@/pages/UsageTariffPage.vue', () => emptyPage)
 
 const DEFAULT_TITLE = 'Prawobiorca'
 
@@ -50,6 +51,7 @@ describe('router', () => {
     '/admin/application-templates',
     '/admin/application-templates/template-1',
     '/admin/organizations',
+    '/admin/usage-tariff',
   ])('redirects a guest from %s to the login page and remembers the path', async (path) => {
     await router.push(path)
 
@@ -72,6 +74,7 @@ describe('router', () => {
     '/admin/application-templates',
     '/admin/application-templates/template-1',
     '/admin/organizations',
+    '/admin/usage-tariff',
   ])('redirects a user without admin rights from %s to the main page', async (path) => {
     logIn()
 
@@ -84,6 +87,7 @@ describe('router', () => {
     ['/admin/application-templates', 'ApplicationTemplatesPage'],
     ['/admin/application-templates/template-1', 'ApplicationTemplatePage'],
     ['/admin/organizations', 'OrganizationsPage'],
+    ['/admin/usage-tariff', 'UsageTariffPage'],
   ])('lets an administrator open %s', async (path, routeName) => {
     logIn(true)
 

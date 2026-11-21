@@ -86,6 +86,7 @@ describe('SidebarContent', () => {
     it.each([
       ['Szablony wniosków', '/admin/application-templates'],
       ['Organizacje', '/admin/organizations'],
+      ['Limity i cennik', '/admin/usage-tariff'],
       ['Strona główna', '/'],
     ])('opens "%s" from the menu of an administrator', async (label, path) => {
       const { router, wrapper } = await mountSidebar(() => logIn(true), '/features')

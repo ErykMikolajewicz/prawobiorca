@@ -25,8 +25,9 @@ For logged-in users, the application offers a "Cases" management function, which
 - Can generate AI summaries of the articles (or `§` units) of a public document, either when adding it (selected by default) or after it has been prepared. Each unit gets a label of 2–4 words and a short description, shown in the Document Search View. Private documents do not get summaries.
 - Manages application templates used to generate DOCX applications. A template can be assigned to an organization and optionally to one of its suborganizations.
 - Manages organizations and their suborganizations.
+- Sets the prices of paid operations and the daily budgets.
 ### 2.4. Usage Limits
-Operations that use AI services are paid from a daily budget, expressed in conventional złoty (the prices do not reflect real costs). The budget is renewed at midnight, Polish time.
+Operations that use AI services are paid from a daily budget, expressed in conventional złoty (the prices do not reflect real costs). The budget is renewed at midnight, Polish time. The Administrator sets the prices and budgets in the **Usage Tariff View**; the values below are the initial ones.
 
 | Operation | Price |
 | --- | --- |
@@ -83,7 +84,7 @@ This is the starting point of the application.
     - Ability to set a case as "active" (pin icon). The active case is used in the **Search View**.
     - Ability to delete a case (with confirmation). Deleting the currently opened case redirects to the Main Screen.
     - Clicking on a case redirects to the **Case View**.
-- **Administration** menu item, visible only for the Administrator, expands in place and contains **Application Templates** (redirects to the **Application Templates View**) and **Organizations** (redirects to the **Organizations View**).
+- **Administration** menu item, visible only for the Administrator, expands in place and contains **Application Templates** (redirects to the **Application Templates View**), **Organizations** (redirects to the **Organizations View**) and **Limits and Prices** (redirects to the **Usage Tariff View**).
 ---
 
 ### 3.2. Document Search View
@@ -177,3 +178,11 @@ View available exclusively for the **Administrator**, serving to manage organiza
 - List of organizations (name and short name). Each organization expands to show its suborganizations.
 - Adding, editing and deleting an organization. Deleting an organization (with confirmation) deletes its suborganizations and public documents as well. Its application templates are kept and become general.
 - Adding, editing and deleting a suborganization (with confirmation). Deleting a suborganization deletes its public documents as well. Its application templates are kept and stay assigned to the whole organization.
+
+### 3.6. Usage Tariff View
+
+View available exclusively for the **Administrator**, serving to set the prices of paid operations and the daily budgets described in [Usage Limits](#24-usage-limits).
+
+**Functionalities:**
+- Form with the prices of semantic search, application generation and document preparation, and with the daily budgets of an account, of a guest IP address and of all guests together. All values are in złoty and cannot be negative.
+- Saving the form changes the values immediately for all users. A new budget applies to the amounts already spent on the current day; a refund uses the current price.

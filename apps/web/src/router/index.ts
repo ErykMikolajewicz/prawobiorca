@@ -80,6 +80,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
+      path: '/admin/usage-tariff',
+      name: 'UsageTariffPage',
+      component: () => import('@/pages/UsageTariffPage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: { name: 'MainPage' },
     },

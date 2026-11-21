@@ -4,7 +4,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 
-from core_service.application.ports.usage import UsageBudgetsRepository
+from core_service.application.ports.usage import UsageBudgetsRepository, UsageTariffRepository
 from core_service.application.services.usage import UsageCharger
 from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.services.usage import ANONYMOUS_TOTAL_BUDGET_KEY
@@ -51,8 +51,15 @@ def mock_usage_budgets_repo():
 
 
 @pytest.fixture
-def usage_charger(mock_usage_budgets_repo):
-    return UsageCharger(usage_budgets_repo=mock_usage_budgets_repo, tariff=TARIFF)
+def mock_usage_tariff_repo():
+    repo = create_autospec(UsageTariffRepository)
+    repo.get.return_value = TARIFF
+    return repo
+
+
+@pytest.fixture
+def usage_charger(mock_usage_budgets_repo, mock_usage_tariff_repo):
+    return UsageCharger(usage_budgets_repo=mock_usage_budgets_repo, usage_tariff_repo=mock_usage_tariff_repo)
 
 
 async def test_charge_spends_price_from_account_budget(usage_charger, mock_usage_budgets_repo, mock_opened_session):
