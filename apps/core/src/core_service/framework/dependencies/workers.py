@@ -29,7 +29,7 @@ from core_service.application.ports.tasks import (
     SectionSummariesGenerationScheduler,
 )
 from core_service.application.ports.texts import TextsEmbedder
-from core_service.application.ports.usage import UsageBudgetsRepository
+from core_service.application.ports.usage import UsageBudgetsRepository, UsageTariffRepository
 from core_service.application.services.embedding import SectionsEmbedder
 from core_service.application.services.regulations import RegulationPreparator
 from core_service.application.services.usage import UsageCharger
@@ -47,7 +47,6 @@ from core_service.application.use_cases.regulations import (
     PrepareRegulation,
 )
 from core_service.domain.services.regulation_chunking import Tokenizer
-from core_service.domain.value_objects.usage import UsageTariff
 from core_service.framework.dependencies.ai_services import create_texts_embedder
 from core_service.framework.dependencies.application_templates import (
     get_application_template_inspector,
@@ -62,7 +61,7 @@ from core_service.framework.dependencies.file_storage import (
 from core_service.framework.dependencies.regulations import get_regulation_repository, get_sections_repository
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.tokenizer import get_tokenizer
-from core_service.framework.dependencies.usage import get_usage_budgets_repo, get_usage_tariff
+from core_service.framework.dependencies.usage import get_usage_budgets_repo, get_usage_tariff_repo
 from core_service.infrastructure.ai_services.application_template_description_writer import (
     LlmApplicationTemplateDescriptionWriter,
 )
@@ -190,9 +189,9 @@ def get_regulation_preparator(
 
 def get_usage_charger(
     usage_budgets_repo: UsageBudgetsRepository = TaskiqDepends(get_usage_budgets_repo),
-    tariff: UsageTariff = TaskiqDepends(get_usage_tariff),
+    usage_tariff_repo: UsageTariffRepository = TaskiqDepends(get_usage_tariff_repo),
 ) -> UsageCharger:
-    return UsageCharger(usage_budgets_repo, tariff)
+    return UsageCharger(usage_budgets_repo, usage_tariff_repo)
 
 
 def get_fail_regulation_preparation(

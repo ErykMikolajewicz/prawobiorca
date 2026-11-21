@@ -1,8 +1,8 @@
 """Common pytest fixtures for integration tests.
 
 These fixtures handle container initialization (PostgresSQL), connect the application and the worker tasks
-to the test database and replace external services with mocks. Every test starts with empty tables, so it does not
-need to clean up after itself.
+to the test database and replace external services with mocks. Every test starts with empty tables, except for the
+default usage tariff, so it does not need to clean up after itself.
 """
 
 import os
@@ -25,6 +25,7 @@ from core_service.framework.dependencies.regulations import get_broker, get_regu
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.main import prawobiorca
 from tests.consts import AUTH_TOKENS_CONFIG
+from tests.integration.fixtures.usage import insert_usage_tariff
 
 POSTGRES_IMAGE_VERSION = "ghcr.io/erykmikolajewicz/pgvector:0.8.7-pg18-trixie"
 
@@ -76,6 +77,12 @@ async def clean_database(session_maker: async_sessionmaker) -> None:
     async with session_maker.begin() as session:
         tables = await session.scalars(SELECT_TABLES)
         await session.execute(text(f"TRUNCATE {', '.join(tables)} CASCADE"))
+
+
+@pytest.fixture(autouse=True)
+async def default_usage_tariff(clean_database, session_maker: async_sessionmaker) -> None:
+    async with session_maker.begin() as session:
+        await insert_usage_tariff(session)
 
 
 @pytest.fixture(autouse=True)

@@ -2583,6 +2583,65 @@
         }
       }
     },
+    "/api/usage-tariff": {
+      "get": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "Get Usage Tariff",
+        "operationId": "get_usage_tariff",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageTariffData"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "Update Usage Tariff",
+        "operationId": "update_usage_tariff",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageTariffData"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/liveness": {
       "get": {
         "tags": [
@@ -3967,6 +4026,50 @@
           "name"
         ],
         "title": "SuborganizationData"
+      },
+      "UsageTariffData": {
+        "properties": {
+          "semanticSearchPrice": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Semanticsearchprice"
+          },
+          "applicationGenerationPrice": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Applicationgenerationprice"
+          },
+          "regulationPreparationPrice": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Regulationpreparationprice"
+          },
+          "accountDailyLimit": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Accountdailylimit"
+          },
+          "anonymousIpDailyLimit": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Anonymousipdailylimit"
+          },
+          "anonymousTotalDailyLimit": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Anonymoustotaldailylimit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "semanticSearchPrice",
+          "applicationGenerationPrice",
+          "regulationPreparationPrice",
+          "accountDailyLimit",
+          "anonymousIpDailyLimit",
+          "anonymousTotalDailyLimit"
+        ],
+        "title": "UsageTariffData"
       },
       "ValidationError": {
         "properties": {

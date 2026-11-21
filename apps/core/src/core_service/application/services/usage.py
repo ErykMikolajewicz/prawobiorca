@@ -6,10 +6,10 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from core_service.application.ports.relational import AsyncSession
-from core_service.application.ports.usage import UsageBudgetsRepository
+from core_service.application.ports.usage import UsageBudgetsRepository, UsageTariffRepository
 from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.services.usage import get_account_budget, resolve_budgets
-from core_service.domain.value_objects.usage import PaidOperation, UsageTariff
+from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
@@ -30,18 +30,20 @@ def get_seconds_to_next_usage_day() -> int:
 @dataclass
 class UsageCharger:
     usage_budgets_repo: UsageBudgetsRepository
-    tariff: UsageTariff
+    usage_tariff_repo: UsageTariffRepository
 
     async def charge(self, session: AsyncSession, caller: Caller, operation: PaidOperation) -> None:
-        price = self.tariff.prices[operation]
+        tariff = await self.usage_tariff_repo.get(session)
+        price = tariff.prices[operation]
         day = get_usage_day()
 
-        for budget in resolve_budgets(caller, self.tariff):
+        for budget in resolve_budgets(caller, tariff):
             is_spent = await self.usage_budgets_repo.spend(session, budget.key, day, price, budget.daily_limit)
             if not is_spent:
                 logger.warning("Usage limit exceeded! budget: %s, operation: %s", budget.key, operation)
                 raise UsageLimitExceeded(budget.is_anonymous, get_seconds_to_next_usage_day())
 
     async def refund(self, session: AsyncSession, user_id: UUID, operation: PaidOperation) -> None:
-        budget = get_account_budget(user_id, self.tariff)
-        await self.usage_budgets_repo.refund(session, budget.key, get_usage_day(), self.tariff.prices[operation])
+        tariff = await self.usage_tariff_repo.get(session)
+        budget = get_account_budget(user_id, tariff)
+        await self.usage_budgets_repo.refund(session, budget.key, get_usage_day(), tariff.prices[operation])

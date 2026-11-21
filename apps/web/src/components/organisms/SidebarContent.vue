@@ -8,6 +8,7 @@ import FolderRoundedIcon from '@iconify-vue/material-symbols/folder-rounded'
 import DescriptionRoundedIcon from '@iconify-vue/material-symbols/description-rounded'
 import AdminPanelSettingsRoundedIcon from '@iconify-vue/material-symbols/admin-panel-settings-rounded'
 import CorporateFareRoundedIcon from '@iconify-vue/material-symbols/corporate-fare-rounded'
+import PaymentsRoundedIcon from '@iconify-vue/material-symbols/payments-rounded'
 import SidebarContextMenu from '@/components/molecules/SidebarContextMenu.vue'
 import SidebarCasesList from '@/components/organisms/SidebarCasesList.vue'
 import { useSidebar } from '@/composables/useSidebar'
@@ -56,6 +57,10 @@ const { isUserLogged, isAdmin } = storeToRefs(useAuthStore())
         <el-menu-item index="/admin/organizations">
           <el-icon><CorporateFareRoundedIcon /></el-icon>
           <template #title>Organizacje</template>
+        </el-menu-item>
+        <el-menu-item index="/admin/usage-tariff">
+          <el-icon><PaymentsRoundedIcon /></el-icon>
+          <template #title>Limity i cennik</template>
         </el-menu-item>
       </el-sub-menu>
     </el-menu>
