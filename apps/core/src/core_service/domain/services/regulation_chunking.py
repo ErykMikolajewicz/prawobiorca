@@ -1,7 +1,8 @@
 import re
-from collections.abc import Iterable
-from dataclasses import dataclass, field
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass, field, replace
 from functools import cached_property
+from itertools import groupby
 from typing import Protocol
 
 from core_service.domain.services.legal_structure_parser import (
@@ -190,9 +191,31 @@ class RegulationAct:
         for element_index in indices:
             atoms.extend(self._split_long_element(elements[element_index], element_index, content_budget))
 
-        atoms_tokens = [self._count_content_tokens(atom.text) for atom in atoms]
+        weighted_atoms = [(atom, self._count_content_tokens(atom.text)) for atom in atoms]
+        parts = []
+        for oversized, group in groupby(weighted_atoms, key=lambda entry: entry[1] > content_budget):
+            entries = list(group)
+            if oversized:
+                parts.extend(self._split_oversized_atoms(entries, content_budget))
+            else:
+                parts.extend(self._pack_atoms(entries, content_budget))
 
-        return [ChunkPart([atoms[atom] for atom in group]) for group in self._pack_evenly(atoms_tokens, content_budget)]
+        return parts
+
+    def _split_oversized_atoms(self, entries: list[tuple[ChunkAtom, int]], content_budget: int) -> list[ChunkPart]:
+        return [
+            ChunkPart([replace(atom, text=fragment)])
+            for atom, _ in entries
+            for fragment in self._split_by_characters(atom.text, content_budget)
+        ]
+
+    def _pack_atoms(self, entries: list[tuple[ChunkAtom, int]], content_budget: int) -> list[ChunkPart]:
+        token_counts = [tokens for _, tokens in entries]
+
+        return [
+            ChunkPart([entries[index][0] for index in part_indices])
+            for part_indices in self._pack_evenly(token_counts, content_budget)
+        ]
 
     @staticmethod
     def _group_indices(elements: list[LegalUnitElement], indices: list[int], pattern: re.Pattern) -> list[list[int]]:
@@ -280,9 +303,18 @@ class RegulationAct:
             return [text]
 
         words = text.split(" ")
-        words_tokens = [self._count_content_tokens(f" {word}") for word in words]
+        words_tokens = [min(self._count_content_tokens(f" {word}"), content_budget) for word in words]
 
         return [" ".join(words[word] for word in group) for group in self._pack_evenly(words_tokens, content_budget)]
+
+    def _split_by_characters(self, text: str, content_budget: int) -> Iterator[str]:
+        if len(text) <= 1 or self._count_content_tokens(text) <= content_budget:
+            yield text
+            return
+
+        middle = len(text) // 2
+        yield from self._split_by_characters(text[:middle], content_budget)
+        yield from self._split_by_characters(text[middle:], content_budget)
 
     def _fit_context(self, context: list[str]) -> list[str]:
         max_context_tokens = int(CHUNK_MAX_TOKENS * MAX_CONTEXT_TOKENS_SHARE)
