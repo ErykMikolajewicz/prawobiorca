@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import RegulationItem from '../RegulationItem.vue'
 import { shownMessages } from '@/__tests__/dom'
-import { createHttpError } from '@/__tests__/factories'
+import { createHttpError, createOrganizations } from '@/__tests__/factories'
 import {
   confirmRegulationUpload,
   retryRegulationPreparation,
@@ -87,18 +87,11 @@ describe('RegulationItem', () => {
   })
 
   it('renders only the organization of a regulation not assigned to a suborganization', () => {
-    useOrganizationsStore().organizations = [
-      {
-        id: 'pwr',
-        name: 'Politechnika Wrocławska',
-        shortName: 'PWr',
-        suborganizations: [{ id: 'w10', name: 'Wydział Mechaniczny' }],
-      },
-    ]
+    useOrganizationsStore().organizations = createOrganizations()
 
-    const wrapper = mountItem('PREPARED', false, { organizationId: 'pwr' })
+    const wrapper = mountItem('PREPARED', false, { organizationId: 'uwr' })
 
-    expect(wrapper.find('.regulation-organization').text()).toBe('PWr')
+    expect(wrapper.find('.regulation-organization').text()).toBe('UWr')
   })
 
   it.each([

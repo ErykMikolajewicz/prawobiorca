@@ -125,6 +125,15 @@ describe('RegulationUploadDialog', () => {
     expect(suborganizationSelect.classes()).not.toContain('is-disabled')
   })
 
+  it('offers only suborganizations of the chosen organization', async () => {
+    const wrapper = await mountDialog(true)
+    await wrapper.find('input[type="radio"][value="PUBLIC"]').setValue(true)
+
+    await findOption('Uniwersytet Wrocławski')!.trigger('click')
+
+    expect(findOption('Wydział Informatyki')).toBeUndefined()
+  })
+
   it('offers section summaries only for a public regulation', async () => {
     const wrapper = await mountDialog(true)
     expect(wrapper.text()).not.toContain('Wygeneruj podsumowania artykułów przez AI')

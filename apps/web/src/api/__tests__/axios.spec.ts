@@ -73,6 +73,7 @@ describe('prawobiorcaRequest', () => {
       method: 'get',
       params: { limit: 5 },
       withCredentials: true,
+      timeout: 0,
     })
   })
 })

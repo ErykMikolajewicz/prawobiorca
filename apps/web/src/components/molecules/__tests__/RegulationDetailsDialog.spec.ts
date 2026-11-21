@@ -188,6 +188,11 @@ describe('RegulationDetailsDialog', () => {
         (request: Promise<never>) =>
           vi.mocked(regenerateRegulationDescription).mockReturnValueOnce(request),
       ],
+      [
+        'Wygeneruj podsumowania przez AI',
+        (request: Promise<never>) =>
+          vi.mocked(regenerateSectionSummaries).mockReturnValueOnce(request),
+      ],
     ])('shows "%s" as busy until its request ends', async (label, mockRequest) => {
       const { request, fail } = createFailingRequest()
       mockRequest(request)

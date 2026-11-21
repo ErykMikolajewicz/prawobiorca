@@ -62,9 +62,11 @@ describe('LoginPage', () => {
       const { router, wrapper } = await mountPage(
         `/auth/login?redirect=${encodeURIComponent(redirect)}`,
       )
+      const push = vi.spyOn(router, 'push')
 
       await submitCredentials(wrapper, 'jan', 'StrongPassword12;')
 
+      expect(push).toHaveBeenCalledExactlyOnceWith('/')
       expect(router.currentRoute.value.fullPath).toBe('/')
     },
   )
