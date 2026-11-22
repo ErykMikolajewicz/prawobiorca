@@ -32,3 +32,6 @@ vulnerabilities:
   - id: CVE-2026-9538
     statement: perl-base from the base image, no Debian fix. Archive::Tar is not installed and the service never runs Perl.
     expired_at: 2027-02-19
+  - id: CVE-2026-124709
+    statement: libssl3t64, openssl and openssl-provider-legacy from the base image, no Debian fix. The service does not use OpenSSL QUIC; Python's ssl module and the HTTP stack use TLS over TCP only.
+    expired_at: 2027-02-19
