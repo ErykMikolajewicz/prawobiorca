@@ -67,6 +67,29 @@ describe('useRegulations', () => {
     expect(regulations.value.map((item) => item.id)).toEqual(['fresh'])
   })
 
+  it('ignores search results that arrive after a newer search', async () => {
+    let resolveStale:
+      | ((value: Array<{ regulation: RegulationRepresentation; score: number }>) => void)
+      | undefined
+    vi.mocked(searchRegulations)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)))
+      .mockResolvedValueOnce([{ regulation: regulation('fresh'), score: 0.8 }])
+
+    const { regulations, scores, fetch } = useRegulations('PUBLIC', () => ({
+      query: 'stypendium',
+      threshold: 0.5,
+      orderBy: 'score',
+    }))
+
+    const staleRequest = fetch()
+    await fetch()
+    resolveStale?.([{ regulation: regulation('stale'), score: 0.9 }])
+    await staleRequest
+
+    expect(regulations.value.map((item) => item.id)).toEqual(['fresh'])
+    expect(scores.value).toEqual({ fresh: 0.8 })
+  })
+
   it('reports loading while regulations are being loaded', async () => {
     let resolveRequest: ((value: Array<RegulationRepresentation>) => void) | undefined
     vi.mocked(getRegulations).mockImplementationOnce(
@@ -115,6 +138,38 @@ describe('useRegulations', () => {
     markDescriptionAsInProgress('a')
 
     expect(pendingIds.value).toEqual(['a'])
+  })
+
+  it('treats a prepared regulation with section summaries in progress as pending', async () => {
+    vi.mocked(getRegulations).mockResolvedValueOnce([
+      regulation('a'),
+      { ...regulation('b'), sectionSummariesStatus: 'IN_PROGRESS' },
+    ])
+
+    const { pendingIds, fetch } = useRegulations('PUBLIC', withoutQuery)
+    await fetch()
+
+    expect(pendingIds.value).toEqual(['b'])
+  })
+
+  it.each([
+    ['markAsInProgress', { preparationStatus: 'IN_PROGRESS' }],
+    ['markDescriptionAsInProgress', { descriptionStatus: 'IN_PROGRESS' }],
+    ['markSectionSummariesAsInProgress', { sectionSummariesStatus: 'IN_PROGRESS' }],
+  ] as const)('%s marks only the given regulation as pending', async (mark, changedStatus) => {
+    vi.mocked(getRegulations).mockResolvedValueOnce([regulation('a'), regulation('b')])
+
+    const composable = useRegulations('PUBLIC', withoutQuery)
+    await composable.fetch()
+
+    composable[mark]('missing')
+    composable[mark]('b')
+
+    expect(composable.regulations.value).toEqual([
+      regulation('a'),
+      { ...regulation('b'), ...changedStatus },
+    ])
+    expect(composable.pendingIds.value).toEqual(['b'])
   })
 
   it('replaces an updated regulation', async () => {

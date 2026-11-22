@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import MainPage from '../MainPage.vue'
 import RegulationUploadDialog from '@/components/molecules/RegulationUploadDialog.vue'
+import RegulationsSearchForm from '@/components/organisms/RegulationsSearchForm.vue'
 import { createTestApp } from '@/__tests__/app'
 import { confirmPopconfirm, findButton, findOption, page, shownMessages } from '@/__tests__/dom'
 import { createHttpError, createOrganizations, createRegulation } from '@/__tests__/factories'
@@ -390,6 +391,19 @@ describe('MainPage', () => {
       expect(regulationNames(wrapper)).toEqual(['Statut', 'Regulamin'])
       expect(router.currentRoute.value.query.orderBy).toBe('score')
       expect(searchRegulations).toHaveBeenCalledTimes(1)
+    })
+
+    it('searches again after only the threshold was changed', async () => {
+      const { wrapper } = await mountPage('/?query=urlop&threshold=0.5&orderBy=score')
+
+      wrapper
+        .findComponent(RegulationsSearchForm)
+        .vm.$emit('search', { query: 'urlop', threshold: 0.7, orderBy: 'score' })
+      await flushPromises()
+
+      expect(searchRegulations).toHaveBeenLastCalledWith(
+        expect.objectContaining({ query: 'urlop', threshold: 0.7 }),
+      )
     })
 
     it('informs that no regulation matches the query', async () => {

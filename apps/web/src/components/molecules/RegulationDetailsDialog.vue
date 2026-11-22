@@ -50,8 +50,9 @@ const createDate = computed(() =>
 const canPreview = computed(() => props.regulation.preparationStatus !== 'NOT_STARTED')
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
 const isDescriptionInProgress = computed(() => props.regulation.descriptionStatus === 'IN_PROGRESS')
+const canManageDescription = computed(() => isAdmin.value && props.canManage)
 const canGenerateDescription = computed(
-  () => isAdmin.value && props.canManage && isPrepared.value && !isDescriptionInProgress.value,
+  () => canManageDescription.value && isPrepared.value && !isDescriptionInProgress.value,
 )
 const descriptionStatus = computed(() => {
   const status = props.regulation.descriptionStatus
@@ -155,7 +156,7 @@ function handlePreview() {
           regulation.description || 'Brak opisu'
         }}</span>
 
-        <div v-if="canManage && isAdmin" class="description-generation">
+        <div v-if="canManageDescription" class="description-generation">
           <el-tag
             v-if="descriptionStatus"
             size="small"

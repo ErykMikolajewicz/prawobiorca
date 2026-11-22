@@ -285,6 +285,25 @@ def test_element_split_by_tokens_fills_chunks_with_real_tokenizer():
         assert 0.9 * CHUNK_MAX_TOKENS <= tokenizer.count_tokens(chunk.embedding_text) <= CHUNK_MAX_TOKENS
 
 
+def test_element_with_long_word_is_split_without_losing_content():
+    word = "RegulaminStudiów" * 500
+    text = f"Wstęp {word} zakończenie."
+    elements = [RegulationElement(label=UsefulLabels.TEXT, text=f"Art. 110. {text}")]
+    tokenizer = MmlwTokenizer()
+
+    section = create_sections(elements, tokenizer)[0]
+
+    assert section.text == text
+    assert len(section.chunks) > 1
+    remaining_text = text
+    for chunk in section.chunks:
+        assert tokenizer.count_tokens(chunk.embedding_text) <= CHUNK_MAX_TOKENS
+        assert chunk.span.start_element == chunk.span.end_element == 0
+        assert remaining_text.startswith(chunk.text)
+        remaining_text = remaining_text.removeprefix(chunk.text).lstrip(" ")
+    assert not remaining_text
+
+
 def test_chunks_of_subsection_without_points_cover_whole_elements():
     paragraph = " ".join(["słowo"] * 20)
     elements = [RegulationElement(label=UsefulLabels.TEXT, text=f"Art. 110. 1. {paragraph}")]

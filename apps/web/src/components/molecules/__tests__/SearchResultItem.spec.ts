@@ -37,14 +37,14 @@ describe('SearchResultItem', () => {
       { text: '1. Ustęp pierwszy', subsection: '1' },
       { text: '1) punkt pierwszy', subsection: '1' },
       { text: 'a) litera pierwsza', subsection: '1' },
+      { text: '10) punkt dziesiąty', subsection: '1' },
+      { text: '2. Przepis pkt 3) stosuje się odpowiednio.', subsection: '2' },
     ]
 
     const wrapper = mountItem('irrelevant', elements)
 
-    const lines = wrapper.findAll('.result-line')
-    expect(lines[0]!.classes()).not.toContain('is-sub')
-    expect(lines[1]!.classes()).toContain('is-sub')
-    expect(lines[2]!.classes()).toContain('is-sub')
+    const isSub = wrapper.findAll('.result-line').map((line) => line.classes().includes('is-sub'))
+    expect(isSub).toEqual([false, true, true, true, false])
   })
 
   it('emits add-to-case with the flat text, elements and highlight', async () => {

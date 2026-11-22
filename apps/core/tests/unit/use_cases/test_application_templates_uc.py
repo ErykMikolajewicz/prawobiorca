@@ -307,6 +307,7 @@ async def test_confirm_application_template_upload_creates_fields(
 
     result = await confirm_template_upload.execute(ADMIN, TEMPLATE_ID)
 
+    mock_application_templates_storage.get_template.assert_awaited_once_with(TEMPLATE_ID)
     mock_application_template_inspector.get_variables.assert_awaited_once_with(b"docx")
     assert template.status == ApplicationTemplateStatus.DRAFT
     assert template.fields == [ApplicationTemplateField(name="student_id", label="student_id")]
