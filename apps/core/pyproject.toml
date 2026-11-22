@@ -27,6 +27,7 @@ dependencies = [
     "taskiq==0.13.*",
     "tokenizers==0.23.*",
     "regex==2026.11.*",
+    "mcp==2.3.*",
 ]
 
 [build-system]
@@ -87,6 +88,7 @@ forbidden_modules = [
     "httpx2",
     "jinja2",
     "jwt",
+    "mcp",
     "openai",
     "pgvector",
     "sqlalchemy",

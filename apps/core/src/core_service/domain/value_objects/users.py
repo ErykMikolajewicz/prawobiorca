@@ -12,3 +12,4 @@ class Caller:
     user_id: UUID | None
     is_admin: bool = False
     ip_address: str | None = None
+    mcp_client_id: UUID | None = None

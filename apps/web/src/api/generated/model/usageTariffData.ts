@@ -11,4 +11,6 @@ export interface UsageTariffData {
   anonymousIpDailyLimit: number
   /** @minimum 0 */
   anonymousTotalDailyLimit: number
+  /** @minimum 0 */
+  mcpMonthlyLimit: number
 }

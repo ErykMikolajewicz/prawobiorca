@@ -13,6 +13,7 @@ NEW_TARIFF = {
     "accountDailyLimit": 10,
     "anonymousIpDailyLimit": 3.25,
     "anonymousTotalDailyLimit": 100,
+    "mcpMonthlyLimit": 45.5,
 }
 
 
@@ -27,6 +28,7 @@ async def test_get_usage_tariff(admin_client):
         "accountDailyLimit": 5.0,
         "anonymousIpDailyLimit": 2.0,
         "anonymousTotalDailyLimit": 50.0,
+        "mcpMonthlyLimit": 30.0,
     }
 
 
@@ -44,6 +46,7 @@ async def test_update_usage_tariff(admin_client, session_maker):
     assert tariff.account_daily_limit == Decimal("10")
     assert tariff.anonymous_ip_daily_limit == Decimal("3.25")
     assert tariff.anonymous_total_daily_limit == Decimal("100")
+    assert tariff.mcp_monthly_limit == Decimal("45.5")
 
 
 @pytest.mark.parametrize("value", [-0.01, 0.00001, 100_000_000], ids=("negative", "too precise", "too large"))

@@ -25,7 +25,7 @@ The system combines a modular monolith for core business logic with specialized 
 | Component | Role |
 | --- | --- |
 | `web` | Vue single-page application, built into static assets and served by nginx. |
-| `core` API | Authentication, cases, documents, search and application generation requests. |
+| `core` API | Authentication, cases, documents, search and application generation requests, and the MCP server for AI assistants. |
 | `core` Taskiq worker | Background document processing, indexing and application generation. |
 | `embedding`, `extraction`, LLM inference | Text embeddings, PDF text extraction and AI-generated content. |
 | PostgreSQL + pgvector | Application data, search vectors and the background task queue. |

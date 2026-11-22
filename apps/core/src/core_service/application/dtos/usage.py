@@ -23,6 +23,7 @@ class UsageTariffData(BaseModel):
     account_daily_limit: Amount
     anonymous_ip_daily_limit: Amount
     anonymous_total_daily_limit: Amount
+    mcp_monthly_limit: Amount
 
     @classmethod
     def from_tariff(cls, tariff: UsageTariff) -> UsageTariffData:
@@ -33,6 +34,7 @@ class UsageTariffData(BaseModel):
             account_daily_limit=tariff.account_daily_limit,
             anonymous_ip_daily_limit=tariff.anonymous_ip_daily_limit,
             anonymous_total_daily_limit=tariff.anonymous_total_daily_limit,
+            mcp_monthly_limit=tariff.mcp_monthly_limit,
         )
 
     def to_tariff(self) -> UsageTariff:
@@ -45,4 +47,5 @@ class UsageTariffData(BaseModel):
             account_daily_limit=self.account_daily_limit,
             anonymous_ip_daily_limit=self.anonymous_ip_daily_limit,
             anonymous_total_daily_limit=self.anonymous_total_daily_limit,
+            mcp_monthly_limit=self.mcp_monthly_limit,
         )

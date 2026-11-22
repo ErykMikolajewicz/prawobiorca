@@ -22,6 +22,7 @@ class SqlaUsageTariffRepository:
             account_daily_limit=row.account_daily_limit,
             anonymous_ip_daily_limit=row.anonymous_ip_daily_limit,
             anonymous_total_daily_limit=row.anonymous_total_daily_limit,
+            mcp_monthly_limit=row.mcp_monthly_limit,
         )
 
     @staticmethod
@@ -37,6 +38,7 @@ class SqlaUsageTariffRepository:
                 account_daily_limit=tariff.account_daily_limit,
                 anonymous_ip_daily_limit=tariff.anonymous_ip_daily_limit,
                 anonymous_total_daily_limit=tariff.anonymous_total_daily_limit,
+                mcp_monthly_limit=tariff.mcp_monthly_limit,
             )
         )
         await session.execute(statement)

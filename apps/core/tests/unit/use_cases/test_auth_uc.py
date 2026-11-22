@@ -10,7 +10,7 @@ from core_service.domain.entities.user import User
 from core_service.domain.exceptions.limits import TooManyAttempts
 from core_service.domain.exceptions.users import InvalidRefreshToken, UserCantLog
 from core_service.domain.services.attempts import get_login_attempts_key
-from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token, hash_password, hash_refresh_token
+from core_service.domain.services.security import JWT_ALGORITHM, decode_access_token, hash_password, hash_token
 from core_service.domain.value_objects.auth import UserSession
 from core_service.domain.value_objects.users import UserPrivileges
 from tests.consts import (
@@ -90,7 +90,7 @@ async def test_log_user_creates_session(log_user, sessions_repository):
     claims = decode(tokens.access_token)
     assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, True)
     stored_hash = get_awaited_argument(sessions_repository.create_session, "refresh_token_hash")
-    assert stored_hash == hash_refresh_token(tokens.refresh_token)
+    assert stored_hash == hash_token(tokens.refresh_token)
     valid_until = get_awaited_argument(sessions_repository.create_session, "valid_until")
     validity = timedelta(seconds=AUTH_TOKENS_CONFIG.refresh_token_expiration_seconds)
     assert valid_until.tzinfo == UTC
@@ -125,8 +125,8 @@ async def test_refresh_tokens_rotates_session(refresh_tokens, users_repository, 
     assert (claims.user_id, claims.session_id, claims.is_admin) == (USER_ID, SESSION_ID, False)
     assert tokens.refresh_token != REFRESH_TOKEN
     rotate_session = sessions_repository.rotate_session
-    assert get_awaited_argument(rotate_session, "old_refresh_token_hash") == hash_refresh_token(REFRESH_TOKEN)
-    assert get_awaited_argument(rotate_session, "new_refresh_token_hash") == hash_refresh_token(tokens.refresh_token)
+    assert get_awaited_argument(rotate_session, "old_refresh_token_hash") == hash_token(REFRESH_TOKEN)
+    assert get_awaited_argument(rotate_session, "new_refresh_token_hash") == hash_token(tokens.refresh_token)
     valid_until = get_awaited_argument(rotate_session, "valid_until")
     validity = timedelta(seconds=AUTH_TOKENS_CONFIG.refresh_token_expiration_seconds)
     assert valid_until.tzinfo == UTC
@@ -157,7 +157,7 @@ async def test_logout_user_by_refresh_token(logout_user, sessions_repository):
     await logout_user.execute(None, REFRESH_TOKEN)
 
     delete_session_by_hash = sessions_repository.delete_session_by_refresh_token_hash
-    assert get_awaited_argument(delete_session_by_hash, "refresh_token_hash") == hash_refresh_token(REFRESH_TOKEN)
+    assert get_awaited_argument(delete_session_by_hash, "refresh_token_hash") == hash_token(REFRESH_TOKEN)
     sessions_repository.delete_session.assert_not_awaited()
 
 

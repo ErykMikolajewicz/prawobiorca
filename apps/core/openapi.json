@@ -2642,6 +2642,259 @@
         }
       }
     },
+    "/api/oauth-clients": {
+      "get": {
+        "tags": [
+          "oauth-clients"
+        ],
+        "summary": "Get Oauth Clients",
+        "operationId": "get_oauth_clients",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OAuthClientData"
+                  },
+                  "type": "array",
+                  "title": "Response Get Oauth Clients"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "oauth-clients"
+        ],
+        "summary": "Create Oauth Client",
+        "operationId": "create_oauth_client",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewOAuthClient"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedOAuthClient"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth-clients/{clientId}": {
+      "delete": {
+        "tags": [
+          "oauth-clients"
+        ],
+        "summary": "Delete Oauth Client",
+        "operationId": "delete_oauth_client",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Clientid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "404": {
+            "description": "OAuth client not found!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/consent": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "summary": "Get Consent Details",
+        "operationId": "get_consent_details",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Clientid"
+            }
+          },
+          {
+            "name": "redirectUri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "title": "Redirecturi"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource"
+            }
+          },
+          {
+            "name": "codeChallenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9\\-._~]{43,128}$",
+              "title": "Codechallenge"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizationRequestDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "400": {
+            "description": "Invalid authorization request!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "oauth"
+        ],
+        "summary": "Grant Consent",
+        "operationId": "grant_consent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizationRedirect"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable!"
+          },
+          "400": {
+            "description": "Invalid authorization request!"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/liveness": {
       "get": {
         "tags": [
@@ -3104,6 +3357,76 @@
         ],
         "title": "ApplicationTemplateUploadTarget"
       },
+      "AuthorizationRedirect": {
+        "properties": {
+          "redirectUrl": {
+            "type": "string",
+            "title": "Redirecturl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "redirectUrl"
+        ],
+        "title": "AuthorizationRedirect"
+      },
+      "AuthorizationRequest": {
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Clientid"
+          },
+          "redirectUri": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Redirecturi"
+          },
+          "resource": {
+            "type": "string",
+            "title": "Resource"
+          },
+          "codeChallenge": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9\\-._~]{43,128}$",
+            "title": "Codechallenge"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clientId",
+          "redirectUri",
+          "resource",
+          "codeChallenge"
+        ],
+        "title": "AuthorizationRequest"
+      },
+      "AuthorizationRequestDetails": {
+        "properties": {
+          "clientName": {
+            "type": "string",
+            "title": "Clientname"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clientName"
+        ],
+        "title": "AuthorizationRequestDetails"
+      },
       "Body_add_case": {
         "properties": {
           "caseName": {
@@ -3261,6 +3584,25 @@
         ],
         "title": "CaseDocument"
       },
+      "CreatedOAuthClient": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "secret": {
+            "type": "string",
+            "title": "Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "secret"
+        ],
+        "title": "CreatedOAuthClient"
+      },
       "CurrentUser": {
         "properties": {
           "isAdmin": {
@@ -3373,6 +3715,21 @@
         ],
         "title": "NewCaseDocument"
       },
+      "NewOAuthClient": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NewOAuthClient"
+      },
       "NewOrganization": {
         "properties": {
           "name": {
@@ -3409,6 +3766,31 @@
           "name"
         ],
         "title": "NewSuborganization"
+      },
+      "OAuthClientData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "createDate": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "createDate"
+        ],
+        "title": "OAuthClientData"
       },
       "OrganizationData": {
         "properties": {
@@ -4058,6 +4440,11 @@
             "type": "number",
             "minimum": 0.0,
             "title": "Anonymoustotaldailylimit"
+          },
+          "mcpMonthlyLimit": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mcpmonthlylimit"
           }
         },
         "type": "object",
@@ -4067,7 +4454,8 @@
           "regulationPreparationPrice",
           "accountDailyLimit",
           "anonymousIpDailyLimit",
-          "anonymousTotalDailyLimit"
+          "anonymousTotalDailyLimit",
+          "mcpMonthlyLimit"
         ],
         "title": "UsageTariffData"
       },

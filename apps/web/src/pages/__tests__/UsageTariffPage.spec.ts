@@ -17,6 +17,7 @@ const TARIFF: UsageTariffData = {
   accountDailyLimit: 5,
   anonymousIpDailyLimit: 2,
   anonymousTotalDailyLimit: 50,
+  mcpMonthlyLimit: 30,
 }
 
 async function mountPage() {
@@ -43,9 +44,12 @@ describe('UsageTariffPage', () => {
     vi.mocked(getUsageTariff).mockResolvedValue({ ...TARIFF })
   })
 
-  it('shows the current prices and daily budgets', async () => {
+  it('shows the current prices and budgets', async () => {
     const wrapper = await mountPage()
 
+    expect(
+      (findField(wrapper, 'Wszyscy klienci MCP łącznie').element as HTMLInputElement).value,
+    ).toBe('30.00')
     expect((findField(wrapper, 'Wyszukiwanie semantyczne').element as HTMLInputElement).value).toBe(
       '0.03',
     )

@@ -12,7 +12,7 @@ from core_service.domain.services.security import (
     decode_access_token,
     generate_authorization_token,
     hash_password,
-    hash_refresh_token,
+    hash_token,
     url_safe_authorization_token_length,
     verify_password,
 )
@@ -87,9 +87,9 @@ def test_decode_access_token_without_required_claim(missing_claim):
 def test_hash_refresh_token_is_deterministic():
     refresh_token = generate_authorization_token()
 
-    assert hash_refresh_token(refresh_token) == hash_refresh_token(refresh_token)
-    assert hash_refresh_token(refresh_token) != refresh_token
-    assert len(hash_refresh_token(refresh_token)) == 64
+    assert hash_token(refresh_token) == hash_token(refresh_token)
+    assert hash_token(refresh_token) != refresh_token
+    assert len(hash_token(refresh_token)) == 64
 
 
 def test_generate_authorization_token_length():

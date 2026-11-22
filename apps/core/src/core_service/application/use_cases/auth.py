@@ -19,7 +19,7 @@ from core_service.domain.services.security import (
     JWT_ALGORITHM,
     create_access_token,
     generate_authorization_token,
-    hash_refresh_token,
+    hash_token,
 )
 from core_service.domain.value_objects.auth import AccessTokenClaims
 
@@ -78,7 +78,7 @@ class LogUser:
 
         async with self.session_maker.begin() as session:
             session_id = await self.sessions_repo.create_session(
-                session, user_id, hash_refresh_token(refresh_token), build_refresh_token_validity(self.tokens_config)
+                session, user_id, hash_token(refresh_token), build_refresh_token_validity(self.tokens_config)
             )
             await self.login_attempt_limiter.release(session, reservation)
 
@@ -100,8 +100,8 @@ class RefreshTokens:
         async with self.session_maker.begin() as session:
             user_session = await self.sessions_repo.rotate_session(
                 session,
-                hash_refresh_token(refresh_token),
-                hash_refresh_token(new_refresh_token),
+                hash_token(refresh_token),
+                hash_token(new_refresh_token),
                 build_refresh_token_validity(self.tokens_config),
             )
             if user_session is None:
@@ -133,6 +133,4 @@ class LogoutUser:
             if session_id is not None:
                 await self.sessions_repo.delete_session(session, session_id)
             elif refresh_token is not None:
-                await self.sessions_repo.delete_session_by_refresh_token_hash(
-                    session, hash_refresh_token(refresh_token)
-                )
+                await self.sessions_repo.delete_session_by_refresh_token_hash(session, hash_token(refresh_token))

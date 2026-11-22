@@ -86,6 +86,18 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
+      path: '/admin/mcp-clients',
+      name: 'McpClientsPage',
+      component: () => import('@/pages/McpClientsPage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/oauth/consent',
+      name: 'OAuthConsentPage',
+      component: () => import('@/pages/OAuthConsentPage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: { name: 'MainPage' },
     },

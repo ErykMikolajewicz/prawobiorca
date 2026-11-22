@@ -4,7 +4,7 @@ import pytest
 from fastapi import status
 from sqlalchemy import select
 
-from core_service.domain.services.security import hash_refresh_token
+from core_service.domain.services.security import hash_token
 from core_service.framework.consts import ACCESS_COOKIE_NAME, AUTH_COOKIE_PATH, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from core_service.infrastructure.relational_db.schemas.users import users_sessions_table
 from core_service.shared.settings.application import app_settings
@@ -51,7 +51,7 @@ async def test_login_sets_both_cookies(client, session_maker, user):
 
     async with session_maker() as session:
         statement = select(users_sessions_table).where(
-            users_sessions_table.c.refresh_token_hash == hash_refresh_token(refresh_cookie.value)
+            users_sessions_table.c.refresh_token_hash == hash_token(refresh_cookie.value)
         )
         result = await session.execute(statement)
         stored_session = result.one_or_none()

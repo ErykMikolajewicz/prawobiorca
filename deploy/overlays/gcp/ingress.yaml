@@ -55,6 +55,20 @@ spec:
                 name: core
                 port:
                   number: 8000
+          - path: /.well-known/oauth-authorization-server
+            pathType: Prefix
+            backend:
+              service:
+                name: core
+                port:
+                  number: 8000
+          - path: /.well-known/oauth-protected-resource
+            pathType: Prefix
+            backend:
+              service:
+                name: core
+                port:
+                  number: 8000
           - path: /
             pathType: Prefix
             backend:

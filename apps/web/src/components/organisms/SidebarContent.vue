@@ -9,6 +9,7 @@ import DescriptionRoundedIcon from '@iconify-vue/material-symbols/description-ro
 import AdminPanelSettingsRoundedIcon from '@iconify-vue/material-symbols/admin-panel-settings-rounded'
 import CorporateFareRoundedIcon from '@iconify-vue/material-symbols/corporate-fare-rounded'
 import PaymentsRoundedIcon from '@iconify-vue/material-symbols/payments-rounded'
+import HubRoundedIcon from '@iconify-vue/material-symbols/hub-rounded'
 import SidebarContextMenu from '@/components/molecules/SidebarContextMenu.vue'
 import SidebarCasesList from '@/components/organisms/SidebarCasesList.vue'
 import { useSidebar } from '@/composables/useSidebar'
@@ -61,6 +62,10 @@ const { isUserLogged, isAdmin } = storeToRefs(useAuthStore())
         <el-menu-item index="/admin/usage-tariff">
           <el-icon><PaymentsRoundedIcon /></el-icon>
           <template #title>Limity i cennik</template>
+        </el-menu-item>
+        <el-menu-item index="/admin/mcp-clients">
+          <el-icon><HubRoundedIcon /></el-icon>
+          <template #title>Klienci MCP</template>
         </el-menu-item>
       </el-sub-menu>
     </el-menu>

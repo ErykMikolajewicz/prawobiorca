@@ -10,11 +10,17 @@ class PaidOperation(StrEnum):
     REGULATION_PREPARATION = "REGULATION_PREPARATION"
 
 
+class BudgetPeriod(StrEnum):
+    DAILY = "DAILY"
+    MONTHLY = "MONTHLY"
+
+
 @dataclass(frozen=True)
 class UsageBudget:
     key: str
-    daily_limit: Decimal
+    limit: Decimal
     is_anonymous: bool
+    period: BudgetPeriod = BudgetPeriod.DAILY
 
 
 @dataclass(frozen=True)
@@ -23,3 +29,4 @@ class UsageTariff:
     account_daily_limit: Decimal
     anonymous_ip_daily_limit: Decimal
     anonymous_total_daily_limit: Decimal
+    mcp_monthly_limit: Decimal
