@@ -5,10 +5,16 @@ from importlib.metadata import version
 
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.routing import Route
 
 from core_service.framework.api.exception_handlers import include_exception_handlers
 from core_service.framework.api.router import include_all_routers
+from core_service.framework.consts import MCP_PATH
+from core_service.framework.dependencies.ai_services import create_texts_embedder
 from core_service.framework.dependencies.file_storage import init_file_storage_client
+from core_service.framework.dependencies.relational import get_session_maker
+from core_service.framework.mcp.dependencies import McpDependencies
+from core_service.framework.mcp.server import McpTransportHeaders, init_mcp_server, mcp_app
 from core_service.infrastructure.ai_services.initialization import init_ai_services_client
 from core_service.infrastructure.relational_db.connection import check_relational_db_connection
 from core_service.infrastructure.tasks.connection import init_broker
@@ -44,6 +50,10 @@ async def lifespan(app: FastAPI):
         broker, broker_closing_callback = await init_broker()
         app.state.broker = broker
         closing_callbacks.insert(0, broker_closing_callback)
+
+        mcp_dependencies = McpDependencies(get_session_maker(), create_texts_embedder(http_client))
+        mcp_closing_callback = await init_mcp_server(mcp_dependencies)
+        closing_callbacks.insert(0, mcp_closing_callback)
 
     except Exception as e:
         logger.critical("Can not connect to external service: %s", e)
@@ -82,6 +92,12 @@ prawobiorca.add_middleware(
 
 include_all_routers(prawobiorca)
 include_exception_handlers(prawobiorca)
+prawobiorca.router.routes.extend(
+    [
+        Route(MCP_PATH, McpTransportHeaders(mcp_app), include_in_schema=False),
+        Route(f"/.well-known/oauth-protected-resource{MCP_PATH}", mcp_app, include_in_schema=False),
+    ]
+)
 
 
 if __name__ == "__main__":

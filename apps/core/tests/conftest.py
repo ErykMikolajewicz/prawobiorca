@@ -11,6 +11,7 @@ pytest_plugins = [
     "tests.fixtures.clients",
     "tests.fixtures.dependencies",
     "tests.integration.fixtures.ai_services",
+    "tests.integration.fixtures.oauth",
     "tests.integration.fixtures.tasks",
     "tests.integration.fixtures.users",
 ]

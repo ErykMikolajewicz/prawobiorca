@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 from math import ceil
@@ -39,8 +40,12 @@ def verify_password(password: SecretStr, hashed_password: bytes) -> bool:
     return bcrypt.checkpw(password_bytes, hashed_password)
 
 
-def hash_refresh_token(refresh_token: str) -> str:
-    return hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def verify_token_hash(token: str, token_hash: str) -> bool:
+    return hmac.compare_digest(hash_token(token), token_hash)
 
 
 def create_access_token(claims: AccessTokenClaims, secret: SecretStr, algorithm: str, expires_in: int) -> str:

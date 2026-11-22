@@ -8,7 +8,7 @@ from core_service.domain.value_objects.usage import UsageTariff
 
 class UsageBudgetsRepository(Protocol):
     async def spend(
-        self, session: AsyncSession, budget_key: str, day: date, amount: Decimal, daily_limit: Decimal
+        self, session: AsyncSession, budget_key: str, day: date, amount: Decimal, limit: Decimal
     ) -> bool: ...
 
     async def refund(self, session: AsyncSession, budget_key: str, day: date, amount: Decimal) -> None: ...

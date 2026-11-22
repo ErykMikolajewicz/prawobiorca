@@ -11,9 +11,9 @@ from core_service.infrastructure.relational_db.session import sqla_session
 
 class SqlaUsageBudgetsRepository:
     @staticmethod
-    async def spend(session: AsyncSession, budget_key: str, day: date, amount: Decimal, daily_limit: Decimal) -> bool:
+    async def spend(session: AsyncSession, budget_key: str, day: date, amount: Decimal, limit: Decimal) -> bool:
         session = sqla_session(session)
-        if amount > daily_limit:
+        if amount > limit:
             return False
 
         statement = insert(usage_budgets_table).values(budget_key=budget_key, day=day, spent=amount)
@@ -21,7 +21,7 @@ class SqlaUsageBudgetsRepository:
         statement = statement.on_conflict_do_update(
             index_elements=[usage_budgets_table.c.budget_key, usage_budgets_table.c.day],
             set_={"spent": spent},
-            where=spent <= daily_limit,
+            where=spent <= limit,
         ).returning(usage_budgets_table.c.spent)
 
         result = await session.execute(statement)

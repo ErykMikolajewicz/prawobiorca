@@ -14,5 +14,6 @@ usage_tariff_table = sqla.Table(
     sqla.Column("account_daily_limit", sqla.Numeric(12, 4), nullable=False),
     sqla.Column("anonymous_ip_daily_limit", sqla.Numeric(12, 4), nullable=False),
     sqla.Column("anonymous_total_daily_limit", sqla.Numeric(12, 4), nullable=False),
+    sqla.Column("mcp_monthly_limit", sqla.Numeric(12, 4), nullable=False),
     sqla.CheckConstraint(f"id = {USAGE_TARIFF_ID}", name="ck_usage_tariff_single_row"),
 )

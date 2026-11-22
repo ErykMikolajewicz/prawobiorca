@@ -5,9 +5,12 @@ from core_service.framework.api.endpoints.application_templates import applicati
 from core_service.framework.api.endpoints.auth import auth_router
 from core_service.framework.api.endpoints.cases import cases_router
 from core_service.framework.api.endpoints.health import health_router
+from core_service.framework.api.endpoints.oauth import oauth_router
+from core_service.framework.api.endpoints.oauth_clients import oauth_clients_router
 from core_service.framework.api.endpoints.organizations import organizations_router
 from core_service.framework.api.endpoints.regulations import regulations_router
 from core_service.framework.api.endpoints.usage import usage_router
+from core_service.framework.api.endpoints.well_known import well_known_router
 
 
 def include_all_routers(app: FastAPI):
@@ -18,4 +21,7 @@ def include_all_routers(app: FastAPI):
     app.include_router(application_templates_router)
     app.include_router(organizations_router)
     app.include_router(usage_router)
+    app.include_router(oauth_clients_router)
+    app.include_router(oauth_router)
+    app.include_router(well_known_router)
     app.include_router(health_router)

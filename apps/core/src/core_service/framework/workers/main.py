@@ -1,8 +1,10 @@
 from taskiq import TaskiqEvents, TaskiqState
 
 from core_service.application.use_cases.limits import DeleteExpiredLimits
+from core_service.application.use_cases.oauth import DeleteExpiredOAuthGrants
 from core_service.framework.dependencies.attempts import get_attempts_repo
 from core_service.framework.dependencies.file_storage import init_file_storage_client
+from core_service.framework.dependencies.oauth import get_oauth_codes_repo, get_oauth_tokens_repo
 from core_service.framework.dependencies.relational import get_session_maker
 from core_service.framework.dependencies.usage import get_usage_budgets_repo
 from core_service.infrastructure.ai_services.initialization import init_ai_services_client
@@ -28,6 +30,7 @@ async def on_worker_startup(state: TaskiqState) -> None:
     state.closing_callbacks.insert(0, close_file_storage_client)
 
     await DeleteExpiredLimits(get_session_maker(), get_usage_budgets_repo(), get_attempts_repo()).execute()
+    await DeleteExpiredOAuthGrants(get_session_maker(), get_oauth_codes_repo(), get_oauth_tokens_repo()).execute()
 
 
 @broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)

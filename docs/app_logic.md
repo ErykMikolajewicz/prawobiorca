@@ -26,6 +26,7 @@ For logged-in users, the application offers a "Cases" management function, which
 - Manages application templates used to generate DOCX applications. A template can be assigned to an organization and optionally to one of its suborganizations.
 - Manages organizations and their suborganizations.
 - Sets the prices of paid operations and the daily budgets.
+- Can search legal acts from an AI assistant (e.g. Claude) through the MCP server, after connecting it with an MCP client created in the MCP Clients View.
 ### 2.4. Usage Limits
 Operations that use AI services are paid from a daily budget, expressed in conventional złoty (the prices do not reflect real costs). The budget is renewed at midnight, Polish time. The Administrator sets the prices and budgets in the **Usage Tariff View**; the values below are the initial ones.
 
@@ -40,10 +41,11 @@ Operations that use AI services are paid from a daily budget, expressed in conve
 | Guest | 2 zł per IP address, and 50 zł shared by all guests |
 | Logged User | 5 zł per account |
 | Administrator | unlimited – never charged |
+| Administrator through MCP | 30 zł per month, shared by all MCP clients |
 
 - A guest who shares an address with many people (e.g. a university network) should create an account to get an own budget.
 - A failed application generation or document preparation is refunded; a failed search is not.
-- When the budget is used up, the operation is rejected and the user is told to log in (guest) or to come back the next day (logged user).
+- When the budget is used up, the operation is rejected and the user is told to log in (guest) or to come back the next day (logged user). The MCP budget is renewed on the first day of the month.
 - Regardless of the budgets, the real LLM cost of the whole system is capped monthly (`LLM_SERVICE_MONTHLY_COST_LIMIT_PLN`).
 - To protect accounts, a fixed 15-minute window allows 5 failed or pending login attempts for the same username from the same IP address. Successful logins release their reserved attempt; interrupted requests retain it until the window ends. Once the limit is reached, further attempts are blocked until capacity becomes available or the window ends. One IP address can make 20 registration attempts a day.
 
@@ -184,5 +186,18 @@ View available exclusively for the **Administrator**, serving to manage organiza
 View available exclusively for the **Administrator**, serving to set the prices of paid operations and the daily budgets described in [Usage Limits](#24-usage-limits).
 
 **Functionalities:**
-- Form with the prices of semantic search, application generation and document preparation, and with the daily budgets of an account, of a guest IP address and of all guests together. All values are in złoty and cannot be negative.
+- Form with the prices of semantic search, application generation and document preparation, with the daily budgets of an account, of a guest IP address and of all guests together, and with the monthly budget of all MCP clients. All values are in złoty and cannot be negative.
 - Saving the form changes the values immediately for all users. A new budget applies to the amounts already spent on the current day; a refund uses the current price.
+
+### 3.7. MCP Clients View
+
+View available exclusively for the **Administrator**, serving to connect AI assistants (e.g. Claude) to the search of legal acts through the MCP server at `/api/mcp`.
+
+**Functionalities:**
+- List of MCP clients (name and creation date).
+- Adding a client by name. After saving, the view shows once the MCP server address, the Client ID and the Client Secret, to be entered in the assistant (in Claude: a custom connector with the Client ID and Client Secret in the advanced settings). Only a hash of the secret is stored, so it can not be shown again.
+- Deleting a client (with confirmation) disconnects all assistants connected with it.
+
+**Connecting an assistant:**
+- The assistant opens the **Consent Page** in the browser. After logging in, the Administrator sees the name of the client and allows or denies the access. Only an Administrator can allow it.
+- The assistant can then search public and own private documents, search inside a document and read its details. Each search is charged from the monthly MCP budget.

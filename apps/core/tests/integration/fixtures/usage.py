@@ -14,6 +14,7 @@ async def insert_usage_tariff(
     account_daily_limit: Decimal = Decimal("5.00"),
     anonymous_ip_daily_limit: Decimal = Decimal("2.00"),
     anonymous_total_daily_limit: Decimal = Decimal("50.00"),
+    mcp_monthly_limit: Decimal = Decimal("30.00"),
 ) -> None:
     await session.execute(
         insert(usage_tariff_table).values(
@@ -24,5 +25,6 @@ async def insert_usage_tariff(
             account_daily_limit=account_daily_limit,
             anonymous_ip_daily_limit=anonymous_ip_daily_limit,
             anonymous_total_daily_limit=anonymous_total_daily_limit,
+            mcp_monthly_limit=mcp_monthly_limit,
         )
     )

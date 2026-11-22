@@ -7,10 +7,10 @@ import pytest
 from core_service.application.ports.usage import UsageBudgetsRepository, UsageTariffRepository
 from core_service.application.services.usage import UsageCharger
 from core_service.domain.exceptions.limits import UsageLimitExceeded
-from core_service.domain.services.usage import ANONYMOUS_TOTAL_BUDGET_KEY
+from core_service.domain.services.usage import ANONYMOUS_TOTAL_BUDGET_KEY, MCP_BUDGET_KEY
 from core_service.domain.value_objects.usage import PaidOperation, UsageTariff
 from core_service.domain.value_objects.users import Caller
-from tests.consts import ADMIN_ID, IP_ADDRESS, USER_ID
+from tests.consts import ADMIN_ID, IP_ADDRESS, MCP_CLIENT_ID, USER_ID
 from tests.mocks import get_awaited_arguments
 
 SEARCH_PRICE = Decimal("0.03")
@@ -21,15 +21,18 @@ TARIFF = UsageTariff(
     account_daily_limit=Decimal("5"),
     anonymous_ip_daily_limit=Decimal("2"),
     anonymous_total_daily_limit=Decimal("50"),
+    mcp_monthly_limit=Decimal("30"),
 )
 
 NOW = datetime(2026, 11, 16, 23, 30, 0, tzinfo=UTC)
 USAGE_DAY = date(2026, 11, 17)
 SECONDS_TO_NEXT_DAY = 23 * 60 * 60 + 30 * 60
+SECONDS_TO_NEXT_MONTH = 13 * 24 * 60 * 60 + SECONDS_TO_NEXT_DAY
 
 ANONYMOUS = Caller(user_id=None, ip_address=IP_ADDRESS)
 USER = Caller(user_id=USER_ID, ip_address=IP_ADDRESS)
 ADMIN = Caller(user_id=ADMIN_ID, is_admin=True, ip_address=IP_ADDRESS)
+MCP_ADMIN = Caller(user_id=ADMIN_ID, is_admin=True, ip_address=IP_ADDRESS, mcp_client_id=MCP_CLIENT_ID)
 
 
 def get_now(time_zone: tzinfo | None = None) -> datetime:
@@ -79,7 +82,7 @@ async def test_charge_spends_price_from_both_anonymous_budgets(
         f"ip:{IP_ADDRESS}",
         ANONYMOUS_TOTAL_BUDGET_KEY,
     ]
-    assert get_awaited_arguments(mock_usage_budgets_repo.spend, "daily_limit") == [Decimal("2"), Decimal("50")]
+    assert get_awaited_arguments(mock_usage_budgets_repo.spend, "limit") == [Decimal("2"), Decimal("50")]
     assert get_awaited_arguments(mock_usage_budgets_repo.spend, "amount") == [SEARCH_PRICE, SEARCH_PRICE]
 
 
@@ -101,6 +104,24 @@ async def test_charge_over_daily_limit(
     assert error.value.is_anonymous == is_anonymous
     assert error.value.retry_after_seconds == SECONDS_TO_NEXT_DAY
     mock_usage_budgets_repo.spend.assert_awaited_once()
+
+
+async def test_charge_spends_price_from_monthly_mcp_budget(usage_charger, mock_usage_budgets_repo, mock_opened_session):
+    await usage_charger.charge(mock_opened_session, MCP_ADMIN, PaidOperation.SEMANTIC_SEARCH)
+
+    mock_usage_budgets_repo.spend.assert_awaited_once_with(
+        mock_opened_session, MCP_BUDGET_KEY, date(2026, 11, 1), SEARCH_PRICE, Decimal("30")
+    )
+
+
+async def test_charge_over_monthly_mcp_limit(usage_charger, mock_usage_budgets_repo, mock_opened_session):
+    mock_usage_budgets_repo.spend.return_value = False
+
+    with pytest.raises(UsageLimitExceeded) as error:
+        await usage_charger.charge(mock_opened_session, MCP_ADMIN, PaidOperation.SEMANTIC_SEARCH)
+
+    assert error.value.is_anonymous is False
+    assert error.value.retry_after_seconds == SECONDS_TO_NEXT_MONTH
 
 
 async def test_refund_returns_price_to_account_budget(usage_charger, mock_usage_budgets_repo, mock_opened_session):

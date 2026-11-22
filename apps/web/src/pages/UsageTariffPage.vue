@@ -23,9 +23,14 @@ const LIMIT_FIELDS: TariffField[] = [
   { key: 'anonymousTotalDailyLimit', label: 'Wszyscy goście łącznie' },
 ]
 
+const MONTHLY_LIMIT_FIELDS: TariffField[] = [
+  { key: 'mcpMonthlyLimit', label: 'Wszyscy klienci MCP łącznie' },
+]
+
 const SECTIONS = [
   { title: 'Ceny operacji', fields: PRICE_FIELDS },
   { title: 'Dzienne budżety', fields: LIMIT_FIELDS },
+  { title: 'Miesięczne budżety', fields: MONTHLY_LIMIT_FIELDS },
 ]
 
 const tariff = ref<UsageTariffData | null>(null)
