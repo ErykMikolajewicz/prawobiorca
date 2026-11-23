@@ -1,5 +1,5 @@
-from collections.abc import Awaitable, Callable
-from contextlib import AsyncExitStack
+from collections.abc import Awaitable, Callable, Generator
+from contextlib import AsyncExitStack, contextmanager
 from typing import Annotated
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -13,9 +13,14 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from core_service.application.dtos.regulations import RegulationRepresentation, RegulationSearchResult
-from core_service.application.dtos.search import SearchOrder, SearchParams, SearchResult
+from core_service.application.dtos.search import RegulationTocPage, SearchOrder, SearchParams, SearchResult
 from core_service.application.services.usage import UsageCharger
-from core_service.application.use_cases.regulations import GetRegulation, SearchRegulation, SearchRegulations
+from core_service.application.use_cases.regulations import (
+    BrowseRegulation,
+    GetRegulation,
+    SearchRegulation,
+    SearchRegulations,
+)
 from core_service.domain.exceptions.access import AccessForbidden, LoginRequired
 from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.exceptions.regulations import RegulationNotFound, RegulationsNotPreparedToSearch
@@ -38,9 +43,9 @@ def get_mcp_dependencies() -> McpDependencies:
 mcp_server = MCPServer(
     name="Prawobiorca",
     instructions=(
-        "Semantic search engine of Polish legal acts and university regulations. "
-        "Find relevant acts with search_regulations, then search inside a chosen act with search_regulation "
-        "and cite its articles and paragraphs."
+        "Find Polish legal acts and university regulations in the Prawobiorca collection with search_regulations. "
+        "Within an act, use search_regulation for a topic or get_regulation_toc to browse headings and summaries. "
+        "Use get_regulation_section with a citation such as Art. 108 or a section_id to read the full provision."
     ),
     token_verifier=McpTokenVerifier(get_mcp_dependencies),
     auth=AuthSettings(
@@ -143,6 +148,57 @@ async def get_regulation_details(
         raise ToolError(f"Nie znaleziono aktu prawnego o id {regulation_id}.")
 
     return format_regulation(regulation)
+
+
+@contextmanager
+def browse_regulation(regulation_id: UUID) -> Generator[BrowseRegulation]:
+    try:
+        yield BrowseRegulation(
+            get_mcp_dependencies().session_maker, get_sections_repository(), get_regulation_repository()
+        )
+    except RegulationNotFound, LoginRequired, AccessForbidden:
+        raise ToolError(f"Nie znaleziono aktu prawnego o id {regulation_id}.")
+    except RegulationsNotPreparedToSearch as error:
+        raise ToolError(f"Akt prawny {error.regulations_name} nie jest jeszcze przygotowany do odczytu.")
+
+
+@mcp_server.tool(
+    description="Browse the table of contents in document order. Each entry includes its heading path, "
+    "section id and any stored summary. Continue with next_offset until it is null."
+)
+async def get_regulation_toc(
+    regulation_id: Annotated[UUID, Field(description="Id of the act returned by search_regulations.")],
+    offset: Annotated[int, Field(ge=0, le=2**31 - 1, description="Number of entries to skip.")] = 0,
+    limit: Annotated[int, Field(gt=0, le=100, description="Maximum entries per page.")] = 25,
+) -> RegulationTocPage:
+    with browse_regulation(regulation_id) as browse:
+        return await browse.get_toc(get_mcp_caller(), regulation_id, offset, limit)
+
+
+@mcp_server.tool(
+    description="Read a complete provision by section_id from the table of contents or by exact citation. "
+    "Supply exactly one. Repeated citations return heading paths and ids to choose from."
+)
+async def get_regulation_section(
+    regulation_id: Annotated[UUID, Field(description="Id of the act returned by search_regulations.")],
+    section_id: Annotated[UUID | None, Field(description="Section id from get_regulation_toc.")] = None,
+    citation: Annotated[
+        str | None, Field(min_length=1, description="Article or paragraph, e.g. Art. 108 or § 7.")
+    ] = None,
+) -> str:
+    if section_id is not None and citation is not None:
+        raise ToolError("Podaj tylko jeden argument: section_id albo citation.")
+    selector = section_id if section_id is not None else citation
+    if selector is None:
+        raise ToolError("Podaj section_id albo citation.")
+    with browse_regulation(regulation_id) as browse:
+        result = await browse.get_section(get_mcp_caller(), regulation_id, selector)
+    if result is None:
+        raise ToolError("Nie znaleziono przepisu w tym akcie.")
+    if isinstance(result, list):
+        choices = [f"{entry.header} (section_id: {entry.section_id})" for entry in result]
+        return "\n".join(["Oznaczenie występuje kilka razy. Wybierz przepis i podaj section_id.", *choices])
+    return f"## {result.header or 'Fragment'}\n{result.text}"
 
 
 transport_security = TransportSecuritySettings(

@@ -1,3 +1,4 @@
+import re
 from dataclasses import asdict
 from itertools import batched
 from typing import Any
@@ -13,9 +14,11 @@ from core_service.application.dtos.search import (
     SearchResultElement,
     SearchResultHighlight,
     SectionRepresentation,
+    TocEntry,
 )
 from core_service.application.ports.relational import AsyncSession
 from core_service.domain.exceptions.documents import RegulationDocumentsNotFound
+from core_service.domain.value_objects.legal_units import BREADCRUMB_SEPARATOR
 from core_service.domain.value_objects.regulations import SectionContent
 from core_service.domain.value_objects.sections import SectionsCollection, SectionSummary, SectionToSummarize
 from core_service.infrastructure.relational_db.schemas.sections import (
@@ -185,6 +188,44 @@ class SqlaSectionsRepository:
             )
             for row in rows
         ]
+
+    @staticmethod
+    async def list_toc_entries(
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_id: UUID,
+        *,
+        offset: int = 0,
+        limit: int | None = None,
+        citation: tuple[str, str] | None = None,
+    ) -> list[TocEntry]:
+        columns = regulations_sections_table.c
+        statement = select(
+            columns.id.label("section_id"), columns.header, columns.summary_label, columns.summary
+        ).where(columns.regulation_id == regulation_id, columns.user_id == user_id)
+        if citation is not None:
+            prefix, number = citation
+            unit_header = func.split_part(columns.header, BREADCRUMB_SEPARATOR, -1)
+            pattern = rf"^{re.escape(prefix)}[[:space:]]*{re.escape(number)}([[:space:]]|\.|$)"
+            statement = statement.where(unit_header.regexp_match(pattern, flags="i"))
+        result = await sqla_session(session).execute(
+            statement.order_by(columns.section_order).offset(offset).limit(limit)
+        )
+        return [TocEntry.model_validate(row) for row in result.mappings()]
+
+    @staticmethod
+    async def get_section_content(
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_id: UUID,
+        section_id: UUID,
+    ) -> SectionContent | None:
+        columns = regulations_sections_table.c
+        statement = select(columns.header, columns.text).where(
+            columns.regulation_id == regulation_id, columns.user_id == user_id, columns.id == section_id
+        )
+        row = (await sqla_session(session).execute(statement)).one_or_none()
+        return SectionContent(header=row.header, text=row.text) if row is not None else None
 
     @staticmethod
     async def search(

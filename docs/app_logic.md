@@ -200,4 +200,4 @@ View available exclusively for the **Administrator**, serving to connect AI assi
 
 **Connecting an assistant:**
 - The assistant opens the **Consent Page** in the browser. After logging in, the Administrator sees the name of the client and allows or denies the access. Only an Administrator can allow it.
-- The assistant can then search public and own private documents, search inside a document and read its details. Each search is charged from the monthly MCP budget.
+- The assistant can then search public and own private documents, search inside a document and read its details. It can also browse a paginated table of contents with available article summaries and read the full text of a provision by its citation or section ID. Only semantic searches draw on the monthly MCP budget.

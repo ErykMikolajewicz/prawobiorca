@@ -29,13 +29,19 @@ async def insert_section(
     chunk_vectors: list[list[float]],
     section_order: int = 0,
     user_id: UUID | None = None,
+    *,
+    header: str | None = "Art. 1",
+    summary_label: str | None = None,
+    summary: str | None = None,
 ) -> UUID:
     result = await session.execute(
         insert(regulations_sections_table)
         .values(
             regulation_id=regulation_id,
             user_id=user_id,
-            header="Art. 1",
+            header=header,
+            summary_label=summary_label,
+            summary=summary,
             text=text,
             section_order=section_order,
             elements=[{"text": text, "subsection": None}],

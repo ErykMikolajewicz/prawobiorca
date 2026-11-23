@@ -1,4 +1,5 @@
 import logging
+import re
 from dataclasses import dataclass
 from typing import NoReturn
 from uuid import UUID
@@ -10,7 +11,13 @@ from core_service.application.dtos.regulations import (
     RegulationSearchResult,
     RegulationUploadTarget,
 )
-from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation
+from core_service.application.dtos.search import (
+    RegulationTocPage,
+    SearchParams,
+    SearchResult,
+    SectionRepresentation,
+    TocEntry,
+)
 from core_service.application.ports.regulations import (
     RegulationDescriptionWriter,
     RegulationsRepository,
@@ -41,6 +48,7 @@ from core_service.domain.exceptions.regulations import (
     RegulationsNotPreparedToSearch,
     SectionSummariesGenerationInProgress,
 )
+from core_service.domain.services.legal_structure_parser import UNIT_NUMBER
 from core_service.domain.services.regulation_access import (
     check_can_add_regulation,
     check_can_generate_regulation_description,
@@ -59,12 +67,15 @@ from core_service.domain.value_objects.regulations import (
     RegulationRegistrationData,
     RegulationScope,
     RegulationType,
+    SectionContent,
 )
 from core_service.domain.value_objects.sections import SectionsCollection, SectionSummary
 from core_service.domain.value_objects.usage import PaidOperation
 from core_service.domain.value_objects.users import Caller
 
 logger = logging.getLogger(__name__)
+
+CITATION_PATTERN = re.compile(rf"(Art\.|§)\s*({UNIT_NUMBER})\.?", re.IGNORECASE)
 
 MAX_REGULATION_PREPARATION_DELIVERIES = 3
 
@@ -750,11 +761,59 @@ class ListRegulationSections:
                 await _raise_missing_sections_error(session, self.regulations_repository, owner.user_id, regulation_id)
 
 
+@dataclass
+class BrowseRegulation:
+    session_maker: SessionMaker
+    sections_repository: SectionsRepository
+    regulations_repository: RegulationsRepository
+
+    async def _get_owner_id(self, session: AsyncSession, caller: Caller, regulation_id: UUID) -> UUID | None:
+        owner = await self.regulations_repository.get_regulation_owner(session, regulation_id)
+        check_can_read_regulation(caller, owner)
+        await _require_prepared_regulation(session, self.regulations_repository, owner.user_id, regulation_id)
+        return owner.user_id
+
+    async def get_toc(self, caller: Caller, regulation_id: UUID, offset: int, limit: int) -> RegulationTocPage:
+        async with self.session_maker() as session:
+            user_id = await self._get_owner_id(session, caller, regulation_id)
+            entries = await self.sections_repository.list_toc_entries(
+                session, user_id, regulation_id, offset=offset, limit=limit + 1
+            )
+        return RegulationTocPage(entries=entries[:limit], next_offset=offset + limit if len(entries) > limit else None)
+
+    async def get_section(
+        self, caller: Caller, regulation_id: UUID, selector: UUID | str
+    ) -> SectionContent | list[TocEntry] | None:
+        async with self.session_maker() as session:
+            user_id = await self._get_owner_id(session, caller, regulation_id)
+            if isinstance(selector, UUID):
+                section_id = selector
+            else:
+                match = CITATION_PATTERN.fullmatch(selector.strip())
+                if match is None:
+                    return None
+                matches = await self.sections_repository.list_toc_entries(
+                    session, user_id, regulation_id, citation=(match[1], match[2])
+                )
+                if len(matches) != 1:
+                    return matches or None
+                section_id = matches[0].section_id
+            return await self.sections_repository.get_section_content(session, user_id, regulation_id, section_id)
+
+
 async def _raise_missing_sections_error(
     session: AsyncSession, regulations_repository: RegulationsRepository, user_id: UUID | None, regulation_id: UUID
 ) -> NoReturn:
     logger.warning("Regulation has no prepared documents! regulation id: %s", regulation_id)
 
+    await _require_prepared_regulation(session, regulations_repository, user_id, regulation_id)
+    logger.error("Regulation prepared, but documents not found!")
+    raise RegulationInInvalidState
+
+
+async def _require_prepared_regulation(
+    session: AsyncSession, regulations_repository: RegulationsRepository, user_id: UUID | None, regulation_id: UUID
+) -> None:
     regulation_representation = await regulations_repository.get_regulation_representation(
         session, user_id, regulation_id
     )
@@ -766,6 +825,3 @@ async def _raise_missing_sections_error(
     if regulation_representation.preparation_status != RegulationPreparationStatus.PREPARED:
         logger.warning("Regulation not prepared! regulation id: %s", regulation_id)
         raise RegulationsNotPreparedToSearch(regulations_name=regulation_representation.presentation_name)
-
-    logger.error("Regulation prepared, but documents not found!")
-    raise RegulationInInvalidState

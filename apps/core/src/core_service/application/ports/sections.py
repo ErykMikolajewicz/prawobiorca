@@ -1,7 +1,7 @@
 from typing import Protocol
 from uuid import UUID
 
-from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation
+from core_service.application.dtos.search import SearchParams, SearchResult, SectionRepresentation, TocEntry
 from core_service.application.ports.relational import AsyncSession
 from core_service.domain.value_objects.regulations import SectionContent
 from core_service.domain.value_objects.sections import SectionsCollection, SectionSummary, SectionToSummarize
@@ -29,6 +29,25 @@ class SectionsRepository(Protocol):
     async def list_sections(
         self, session: AsyncSession, user_id: UUID | None, regulation_id: UUID
     ) -> list[SectionRepresentation]: ...
+
+    async def list_toc_entries(
+        self,
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_id: UUID,
+        *,
+        offset: int = 0,
+        limit: int | None = None,
+        citation: tuple[str, str] | None = None,
+    ) -> list[TocEntry]: ...
+
+    async def get_section_content(
+        self,
+        session: AsyncSession,
+        user_id: UUID | None,
+        regulation_id: UUID,
+        section_id: UUID,
+    ) -> SectionContent | None: ...
 
     async def search(
         self,
