@@ -1,18 +1,23 @@
+import logging
 import tempfile
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from pathlib import Path
 from shutil import copyfileobj
 from typing import Annotated
 
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.backend_options import ThreadedDoclingParseBackendOptions
-from docling.datamodel.base_models import InputFormat
+from docling.datamodel.base_models import ConversionStatus, InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
-from fastapi import FastAPI, File, Request, UploadFile
+from docling.exceptions import ConversionError
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 
 from extraction_service.models import DocumentItem
 from extraction_service.services import extract_document_items
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -50,7 +55,17 @@ def parse_pdf(file: Annotated[UploadFile, File(...)], request: Request) -> list[
         file_path = Path(temp_dir) / "document.pdf"
         with file_path.open("wb") as temp_file:
             copyfileobj(file.file, temp_file, length=1024 * 1024)
-        result = converter.convert(file_path)
+        try:
+            result = converter.convert(file_path)
+        except ConversionError as error:
+            logger.warning("Regulation conversion failed: %s", error)
+            raise HTTPException(HTTPStatus.UNPROCESSABLE_CONTENT, "CONVERSION_FAILED") from error
+
+    if result.status != ConversionStatus.SUCCESS:
+        logger.warning(
+            "Regulation converted incompletely: %s", "; ".join(error.error_message for error in result.errors)
+        )
+        raise HTTPException(HTTPStatus.UNPROCESSABLE_CONTENT, "INCOMPLETE_CONVERSION")
 
     texts = result.document.texts
     return extract_document_items(texts)

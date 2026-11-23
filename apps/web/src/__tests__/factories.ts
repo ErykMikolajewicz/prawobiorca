@@ -56,6 +56,7 @@ export function createRegulation(
     description: null,
     regulationType: 'STATUTE',
     preparationStatus: 'PREPARED',
+    preparationFailureReason: null,
     descriptionStatus: 'NOT_REQUESTED',
     sectionSummariesStatus: 'NOT_REQUESTED',
     organizationId: null,

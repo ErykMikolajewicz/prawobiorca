@@ -34,6 +34,7 @@ function mountItem(
     description: null,
     regulationType: 'ACT',
     preparationStatus,
+    preparationFailureReason: null,
     descriptionStatus: 'NOT_REQUESTED',
     sectionSummariesStatus: 'NOT_REQUESTED',
     organizationId: null,
@@ -52,8 +53,9 @@ function mountItem(
         },
         RegulationTypeBadge: true,
         RegulationStatusBadge: {
-          template: '<span class="status-badge-stub">{{ preparationStatus }}</span>',
-          props: ['preparationStatus'],
+          template:
+            '<span class="status-badge-stub" :data-reason="failureReason">{{ preparationStatus }}</span>',
+          props: ['preparationStatus', 'failureReason'],
         },
         IconMotion: true,
       },
@@ -156,6 +158,12 @@ describe('RegulationItem', () => {
     expect(confirmRegulationUpload).not.toHaveBeenCalled()
     expect(wrapper.emitted('preparation-retried')?.[0]).toEqual(['uuid-1'])
     expect(shownMessages('success')).toEqual(['Ponowne przetwarzanie zostało rozpoczęte'])
+  })
+
+  it('passes the preparation failure reason to the status badge', () => {
+    const wrapper = mountItem('FAILED', true, { preparationFailureReason: 'INCOMPLETE_DOCUMENT' })
+
+    expect(wrapper.find('.status-badge-stub').attributes('data-reason')).toBe('INCOMPLETE_DOCUMENT')
   })
 
   it('blocks the retry button until the retry request ends', async () => {

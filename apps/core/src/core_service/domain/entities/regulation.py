@@ -9,7 +9,11 @@ from core_service.domain.exceptions.regulations import (
     SectionSummariesGenerationInProgress,
 )
 from core_service.domain.value_objects.descriptions import DescriptionStatus
-from core_service.domain.value_objects.regulations import RegulationDetails, RegulationPreparationStatus
+from core_service.domain.value_objects.regulations import (
+    RegulationDetails,
+    RegulationPreparationFailureReason,
+    RegulationPreparationStatus,
+)
 
 
 @dataclass
@@ -17,6 +21,7 @@ class Regulation(Describable):
     id: UUID
     presentation_name: str
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED
+    preparation_failure_reason: RegulationPreparationFailureReason | None = None
     description: str | None = None
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
     section_summaries_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
@@ -42,17 +47,18 @@ class Regulation(Describable):
     def start_preparation(self) -> None:
         if self.is_prepared:
             raise RegulationAlreadyInitialized
-        self.preparation_status = RegulationPreparationStatus.IN_PROGRESS
+        self._set_preparation_in_progress()
 
     def complete_preparation(self) -> None:
         if self.is_prepared:
             raise RegulationAlreadyInitialized
         self.preparation_status = RegulationPreparationStatus.PREPARED
 
-    def fail_preparation(self) -> None:
+    def fail_preparation(self, reason: RegulationPreparationFailureReason) -> None:
         if self.is_prepared:
             raise RegulationAlreadyInitialized
         self.preparation_status = RegulationPreparationStatus.FAILED
+        self.preparation_failure_reason = reason
 
     def request_description(self) -> None:
         if not self.is_prepared:
@@ -83,4 +89,8 @@ class Regulation(Describable):
             raise RegulationPreparationInProgress
         if self.preparation_status != allowed_status:
             raise RegulationInInvalidState
+        self._set_preparation_in_progress()
+
+    def _set_preparation_in_progress(self) -> None:
         self.preparation_status = RegulationPreparationStatus.IN_PROGRESS
+        self.preparation_failure_reason = None

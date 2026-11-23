@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { preparationStatusOptions } from '@/domain/regulations'
-import type { RegulationPreparationStatus } from '@/api/generated/model'
+import { preparationFailureReasonLabels, preparationStatusOptions } from '@/domain/regulations'
+import type {
+  RegulationPreparationFailureReason,
+  RegulationPreparationStatus,
+} from '@/api/generated/model'
 
 type Props = {
   preparationStatus: RegulationPreparationStatus
+  failureReason?: RegulationPreparationFailureReason | null
 }
 
 const props = defineProps<Props>()
@@ -15,10 +19,17 @@ const status = computed(() => {
   }
   return preparationStatusOptions[props.preparationStatus]
 })
+const failureReason = computed(() =>
+  props.preparationStatus === 'FAILED' && props.failureReason
+    ? preparationFailureReasonLabels[props.failureReason]
+    : undefined,
+)
 </script>
 
 <template>
-  <el-tag v-if="status" size="small" effect="plain" :type="status.tagType" class="app-badge">
-    {{ status.label }}
-  </el-tag>
+  <el-tooltip v-if="status" :disabled="!failureReason" :content="failureReason" placement="top">
+    <el-tag size="small" effect="plain" :type="status.tagType" class="app-badge">
+      {{ status.label }}
+    </el-tag>
+  </el-tooltip>
 </template>

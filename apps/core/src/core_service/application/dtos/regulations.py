@@ -9,6 +9,7 @@ from core_service.application.dtos.names import Name
 from core_service.domain.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH, MIN_FILENAME_LENGTH
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import (
+    RegulationPreparationFailureReason,
     RegulationPreparationStatus,
     RegulationScope,
     RegulationType,
@@ -62,6 +63,7 @@ class RegulationRepresentation:
     description: str | None = None
     regulation_type: RegulationType | None = None
     preparation_status: RegulationPreparationStatus = RegulationPreparationStatus.NOT_STARTED
+    preparation_failure_reason: RegulationPreparationFailureReason | None = None
     description_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
     section_summaries_status: DescriptionStatus = DescriptionStatus.NOT_REQUESTED
     organization_id: UUID | None = None

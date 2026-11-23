@@ -79,6 +79,25 @@ describe('RegulationDetailsDialog', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
+  describe('preparation failure', () => {
+    const failedRegulation: Partial<RegulationRepresentation> = {
+      preparationStatus: 'FAILED',
+      preparationFailureReason: 'UNREADABLE_DOCUMENT',
+    }
+
+    it('shows the failure reason to a user who can manage the regulation', async () => {
+      await mountDialog({ canManage: true, regulation: failedRegulation })
+
+      expect(dialog().find('.el-alert').text()).toContain('Nie udało się odczytać pliku.')
+    })
+
+    it('hides the failure reason from a user who cannot manage the regulation', async () => {
+      await mountDialog({ canManage: false, regulation: failedRegulation })
+
+      expect(dialog().find('.el-alert').exists()).toBe(false)
+    })
+  })
+
   describe('editing', () => {
     it('saves edited name and description', async () => {
       const wrapper = await mountDialog({ canManage: true })

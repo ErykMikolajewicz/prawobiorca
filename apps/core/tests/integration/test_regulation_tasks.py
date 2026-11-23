@@ -3,8 +3,12 @@ from fastapi import status
 from sqlalchemy import select
 
 from core_service.application.use_cases.regulations import MAX_REGULATION_PREPARATION_DELIVERIES
+from core_service.domain.exceptions.regulations import RegulationDocumentRejected
 from core_service.domain.value_objects.descriptions import DescriptionStatus
-from core_service.domain.value_objects.regulations import RegulationPreparationStatus
+from core_service.domain.value_objects.regulations import (
+    RegulationPreparationFailureReason,
+    RegulationPreparationStatus,
+)
 from core_service.domain.value_objects.sections import SectionSummary
 from core_service.infrastructure.relational_db.schemas.regulations import regulations_table
 from core_service.infrastructure.tasks.connection import DEFAULT_TASK_RETRY_COUNT
@@ -76,7 +80,33 @@ async def test_regulation_preparation_over_delivery_limit_marks_regulation_faile
 
     regulation = await get_regulation(session_maker, regulation_id)
     assert regulation.preparation_status == RegulationPreparationStatus.FAILED
+    assert regulation.preparation_failure_reason == RegulationPreparationFailureReason.PROCESSING_ERROR
     mock_regulation_splitter.split.assert_not_awaited()
+
+
+async def test_rejected_regulation_document_is_marked_failed_with_reason_without_retry(
+    user, session_maker, broker, mock_regulations_storage, mock_regulation_splitter
+):
+    async with session_maker.begin() as session:
+        regulation_id = await insert_regulation(
+            session, USER_ID, preparation_status=RegulationPreparationStatus.IN_PROGRESS
+        )
+        await PostgresRegulationPreparationScheduler(broker).schedule_regulation_preparation(
+            session, USER_ID, regulation_id
+        )
+    (task,) = await get_scheduled_tasks(session_maker)
+    mock_regulations_storage.get_regulation.return_value = b"%PDF"
+    mock_regulation_splitter.split.side_effect = RegulationDocumentRejected(
+        RegulationPreparationFailureReason.INCOMPLETE_DOCUMENT
+    )
+
+    with pytest.raises(RegulationDocumentRejected):
+        await execute_task(broker, task)
+
+    regulation = await get_regulation(session_maker, regulation_id)
+    assert regulation.preparation_status == RegulationPreparationStatus.FAILED
+    assert regulation.preparation_failure_reason == RegulationPreparationFailureReason.INCOMPLETE_DOCUMENT
+    assert await get_scheduled_task_names(session_maker) == [REGULATION_PREPARATION_TASK_NAME]
 
 
 @pytest.mark.parametrize(

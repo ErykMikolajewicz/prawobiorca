@@ -1,4 +1,5 @@
 import type { DescriptionStatus } from './descriptionStatus'
+import type { RegulationPreparationFailureReason } from './regulationPreparationFailureReason'
 import type { RegulationPreparationStatus } from './regulationPreparationStatus'
 import type { RegulationType } from './regulationType'
 
@@ -13,6 +14,7 @@ export interface RegulationRepresentation {
   description: string | null
   regulationType: RegulationType | null
   preparationStatus: RegulationPreparationStatus
+  preparationFailureReason: RegulationPreparationFailureReason | null
   descriptionStatus: DescriptionStatus
   sectionSummariesStatus: DescriptionStatus
   organizationId: string | null

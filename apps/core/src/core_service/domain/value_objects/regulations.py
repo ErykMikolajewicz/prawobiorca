@@ -23,6 +23,12 @@ class RegulationPreparationStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class RegulationPreparationFailureReason(StrEnum):
+    INCOMPLETE_DOCUMENT = "INCOMPLETE_DOCUMENT"
+    UNREADABLE_DOCUMENT = "UNREADABLE_DOCUMENT"
+    PROCESSING_ERROR = "PROCESSING_ERROR"
+
+
 @dataclass(frozen=True)
 class RegulationRegistrationData:
     presentation_name: str

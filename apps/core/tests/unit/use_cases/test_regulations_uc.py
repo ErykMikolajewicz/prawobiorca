@@ -34,6 +34,7 @@ from core_service.domain.exceptions.limits import UsageLimitExceeded
 from core_service.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
+    RegulationDocumentRejected,
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
@@ -43,6 +44,7 @@ from core_service.domain.exceptions.regulations import (
 from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.regulations import (
     RegulationOwner,
+    RegulationPreparationFailureReason,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationScope,
@@ -101,6 +103,10 @@ def store_regulation_representation(regulations_repository, regulation: Regulati
 
 def record_preparation_statuses(regulations_repository) -> list[RegulationPreparationStatus]:
     return record_saved_states(regulations_repository.save, "regulation", "preparation_status")
+
+
+def record_preparation_failure_reasons(regulations_repository) -> list[RegulationPreparationFailureReason | None]:
+    return record_saved_states(regulations_repository.save, "regulation", "preparation_failure_reason")
 
 
 def record_description_statuses(regulations_repository) -> list[DescriptionStatus]:
@@ -357,6 +363,7 @@ async def test_prepare_regulation_failure_marks_failed(
     prepare_regulation, regulations_repository, sections_repository, mock_regulation_preparator, error, is_last_attempt
 ):
     preparation_statuses = record_preparation_statuses(regulations_repository)
+    failure_reasons = record_preparation_failure_reasons(regulations_repository)
     mock_regulation_preparator.prepare_regulation.side_effect = error
 
     with pytest.raises(error):
@@ -364,6 +371,7 @@ async def test_prepare_regulation_failure_marks_failed(
 
     sections_repository.add_sections.assert_not_awaited()
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
+    assert failure_reasons == [None, RegulationPreparationFailureReason.PROCESSING_ERROR]
 
 
 async def test_prepare_regulation_retried_failure_keeps_in_progress(
@@ -376,6 +384,25 @@ async def test_prepare_regulation_retried_failure_keeps_in_progress(
         await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=False)
 
     assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS]
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [RegulationPreparationFailureReason.INCOMPLETE_DOCUMENT, RegulationPreparationFailureReason.UNREADABLE_DOCUMENT],
+)
+async def test_prepare_regulation_rejected_document_marks_failed_before_last_attempt(
+    prepare_regulation, regulations_repository, sections_repository, mock_regulation_preparator, reason
+):
+    preparation_statuses = record_preparation_statuses(regulations_repository)
+    failure_reasons = record_preparation_failure_reasons(regulations_repository)
+    mock_regulation_preparator.prepare_regulation.side_effect = RegulationDocumentRejected(reason)
+
+    with pytest.raises(RegulationDocumentRejected):
+        await prepare_regulation.execute(None, REGULATION_ID, is_last_attempt=False)
+
+    sections_repository.add_sections.assert_not_awaited()
+    assert preparation_statuses == [RegulationPreparationStatus.IN_PROGRESS, RegulationPreparationStatus.FAILED]
+    assert failure_reasons == [None, reason]
 
 
 @pytest.mark.parametrize("error", [ServiceUnavailable, RuntimeError])
@@ -473,22 +500,34 @@ async def test_prepare_regulation_schedules_requested_section_summaries_generati
 
 
 @pytest.mark.parametrize(
-    ("delivery_attempt", "expected_failed", "expected_statuses"),
+    ("delivery_attempt", "expected_failed", "expected_statuses", "expected_reasons"),
     [
-        (MAX_REGULATION_PREPARATION_DELIVERIES, False, []),
-        (MAX_REGULATION_PREPARATION_DELIVERIES + 1, True, [RegulationPreparationStatus.FAILED]),
+        (MAX_REGULATION_PREPARATION_DELIVERIES, False, [], []),
+        (
+            MAX_REGULATION_PREPARATION_DELIVERIES + 1,
+            True,
+            [RegulationPreparationStatus.FAILED],
+            [RegulationPreparationFailureReason.PROCESSING_ERROR],
+        ),
     ],
     ids=("within limit", "limit exceeded"),
 )
 async def test_fail_regulation_preparation(
-    fail_regulation_preparation, regulations_repository, delivery_attempt, expected_failed, expected_statuses
+    fail_regulation_preparation,
+    regulations_repository,
+    delivery_attempt,
+    expected_failed,
+    expected_statuses,
+    expected_reasons,
 ):
     preparation_statuses = record_preparation_statuses(regulations_repository)
+    failure_reasons = record_preparation_failure_reasons(regulations_repository)
 
     failed = await fail_regulation_preparation.execute(None, REGULATION_ID, delivery_attempt)
 
     assert failed is expected_failed
     assert preparation_statuses == expected_statuses
+    assert failure_reasons == expected_reasons
 
 
 async def test_fail_regulation_preparation_of_removed_regulation(fail_regulation_preparation, regulations_repository):

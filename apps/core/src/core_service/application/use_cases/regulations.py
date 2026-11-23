@@ -42,6 +42,7 @@ from core_service.domain.exceptions.organizations import OrganizationNotFound
 from core_service.domain.exceptions.regulations import (
     RegulationAlreadyInitialized,
     RegulationContentNotFound,
+    RegulationDocumentRejected,
     RegulationInInvalidState,
     RegulationNotFound,
     RegulationPreparationInProgress,
@@ -63,6 +64,7 @@ from core_service.domain.value_objects.descriptions import DescriptionStatus
 from core_service.domain.value_objects.organizations import OrganizationFilter
 from core_service.domain.value_objects.regulations import (
     RegulationDetails,
+    RegulationPreparationFailureReason,
     RegulationPreparationStatus,
     RegulationRegistrationData,
     RegulationScope,
@@ -96,6 +98,7 @@ async def _fail_preparation(
     usage_charger: UsageCharger,
     user_id: UUID | None,
     regulation_id: UUID,
+    reason: RegulationPreparationFailureReason,
 ) -> None:
     async with session_maker.begin() as session:
         regulation = await regulations_repository.get_for_update(session, user_id, regulation_id)
@@ -109,10 +112,16 @@ async def _fail_preparation(
             logger.warning("Regulation preparation already failed! regulation id: %s", regulation_id)
             return
 
-        regulation.fail_preparation()
+        regulation.fail_preparation(reason)
         await regulations_repository.save(session, regulation)
         if user_id is not None:
             await usage_charger.refund(session, user_id, PaidOperation.REGULATION_PREPARATION)
+
+
+def _get_preparation_failure_reason(error: Exception) -> RegulationPreparationFailureReason:
+    if isinstance(error, RegulationDocumentRejected):
+        return error.reason
+    return RegulationPreparationFailureReason.PROCESSING_ERROR
 
 
 async def _fail_description_generation(
@@ -190,7 +199,12 @@ class PrepareRegulation:
             logger.exception("Regulation preparation failed! regulation id: %s", regulation_id)
             if not is_retried(error, is_last_attempt):
                 await _fail_preparation(
-                    self.session_maker, self.regulations_repository, self.usage_charger, user_id, regulation_id
+                    self.session_maker,
+                    self.regulations_repository,
+                    self.usage_charger,
+                    user_id,
+                    regulation_id,
+                    _get_preparation_failure_reason(error),
                 )
             raise
 
@@ -231,7 +245,12 @@ class FailRegulationPreparation:
 
         logger.error("Regulation preparation exceeded deliveries limit! regulation id: %s", regulation_id)
         await _fail_preparation(
-            self.session_maker, self.regulations_repository, self.usage_charger, user_id, regulation_id
+            self.session_maker,
+            self.regulations_repository,
+            self.usage_charger,
+            user_id,
+            regulation_id,
+            RegulationPreparationFailureReason.PROCESSING_ERROR,
         )
         return True
 
