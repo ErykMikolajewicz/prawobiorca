@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import ElementPlus from 'element-plus'
 import GeneratePdfForm from '../GeneratePdfForm.vue'
-import { findOption, page } from '@/__tests__/dom'
+import { findButton, findOption, page } from '@/__tests__/dom'
 import { createPublishedTemplate, createTemplateField } from '@/__tests__/factories'
 import type { PublishedApplicationTemplate } from '@/api/generated/model'
 
@@ -63,8 +63,16 @@ function optionLabels() {
     .map((option) => option.text())
 }
 
-function findField(wrapper: VueWrapper, label: string) {
-  return wrapper
+function dialog() {
+  return page().find('[role="dialog"][aria-modal="true"]')
+}
+
+async function returnToCase() {
+  await findButton('Wróć do sprawy')!.trigger('click')
+}
+
+function findField(label: string) {
+  return page()
     .findAll('.el-form-item')
     .find((item) => item.find('label').exists() && item.find('label').text() === label)
 }
@@ -82,8 +90,10 @@ async function submit(wrapper: VueWrapper) {
   await flushPromises()
 }
 
-function shownErrors(wrapper: VueWrapper) {
-  return wrapper.findAll('.el-form-item__error').map((error) => error.text())
+function shownErrors() {
+  return page()
+    .findAll('.el-form-item__error')
+    .map((error) => error.text())
 }
 
 describe('GeneratePdfForm', () => {
@@ -153,25 +163,42 @@ describe('GeneratePdfForm', () => {
 
       expect(fieldLabels(wrapper)).toEqual([
         'Rodzaj wniosku:',
-        'Numer indeksu:',
-        'Semestr:',
-        'Punkty ECTS:',
-        'Data rozpoczęcia:',
         'Opisz swoją sytuację lub cel pisma:',
       ])
-      expect(findField(wrapper, 'Numer indeksu:')!.find('input').attributes('type')).toBe('text')
-      expect(findField(wrapper, 'Semestr:')!.find('.el-select').exists()).toBe(true)
-      expect(findField(wrapper, 'Punkty ECTS:')!.find('input').attributes('type')).toBe('number')
-      expect(findField(wrapper, 'Data rozpoczęcia:')!.find('.el-date-editor').exists()).toBe(true)
+      expect(dialog().isVisible()).toBe(true)
+      expect(
+        dialog()
+          .findAll('.el-form-item__label')
+          .map((label) => label.text()),
+      ).toEqual(['Numer indeksu:', 'Semestr:', 'Punkty ECTS:', 'Data rozpoczęcia:'])
+      expect(findField('Numer indeksu:')!.find('input').attributes('type')).toBe('text')
+      expect(findField('Semestr:')!.find('.el-select').exists()).toBe(true)
+      expect(findField('Punkty ECTS:')!.find('input').attributes('type')).toBe('number')
+      expect(findField('Data rozpoczęcia:')!.find('.el-date-editor').exists()).toBe(true)
       expect(optionLabels()).toEqual(expect.arrayContaining(['zimowy', 'letni']))
+    })
+
+    it('skips the parameter dialog for a template without fields', async () => {
+      const wrapper = mountForm({})
+      await chooseTemplate('Podanie')
+
+      expect(findButton('Edytuj parametry')).toBeUndefined()
+      expect(findButton('Wróć do sprawy')).toBeUndefined()
+      await wrapper.find('textarea').setValue('Proszę o rozpatrzenie podania.')
+      await submit(wrapper)
+      expect(wrapper.emitted('generate-pdf')?.[0]).toEqual([
+        { templateId: 'plain', description: 'Proszę o rozpatrzenie podania.', fieldValues: {} },
+      ])
     })
 
     it('replaces the fields and their values when another template is chosen', async () => {
       const wrapper = mountForm({})
       await chooseTemplate('Wniosek o urlop')
-      await findField(wrapper, 'Numer indeksu:')!.find('input').setValue('123456')
+      await findField('Numer indeksu:')!.find('input').setValue('123456')
 
+      await returnToCase()
       await chooseTemplate('Wniosek o stypendium')
+      await returnToCase()
       await wrapper.find('textarea').setValue('Proszę o stypendium.')
       await submit(wrapper)
 
@@ -194,21 +221,21 @@ describe('GeneratePdfForm', () => {
       await wrapper.find('textarea').setValue('Proszę o urlop.')
       await submit(wrapper)
 
-      expect(fieldLabels(wrapper)).not.toContain('Numer indeksu:')
+      expect(findField('Numer indeksu:')).toBeUndefined()
       expect(wrapper.emitted('generate-pdf')).toBeUndefined()
-      await vi.waitFor(() => expect(shownErrors(wrapper)).toEqual(['Wybierz szablon wniosku.']))
+      await vi.waitFor(() => expect(shownErrors()).toEqual(['Wybierz szablon wniosku.']))
     })
 
     it('keeps the chosen template when the list is reloaded with it', async () => {
       const wrapper = mountForm({})
       await chooseTemplate('Wniosek o urlop')
-      await findField(wrapper, 'Numer indeksu:')!.find('input').setValue('123456')
+      await findField('Numer indeksu:')!.find('input').setValue('123456')
 
       await wrapper.setProps({ templates: [leaveTemplate, plainTemplate] })
 
-      expect(
-        (findField(wrapper, 'Numer indeksu:')!.find('input').element as HTMLInputElement).value,
-      ).toBe('123456')
+      expect((findField('Numer indeksu:')!.find('input').element as HTMLInputElement).value).toBe(
+        '123456',
+      )
     })
   })
 
@@ -217,9 +244,15 @@ describe('GeneratePdfForm', () => {
       const wrapper = mountForm({})
 
       await chooseTemplate('Wniosek o urlop')
-      await findField(wrapper, 'Numer indeksu:')!.find('input').setValue('123456')
-      await findField(wrapper, 'Punkty ECTS:')!.find('input').setValue('30')
+      await findField('Numer indeksu:')!.find('input').setValue('123456')
+      await findField('Punkty ECTS:')!.find('input').setValue('30')
+      await returnToCase()
+      expect(dialog().isVisible()).toBe(false)
       await wrapper.find('textarea').setValue('Proszę o urlop z powodu choroby.')
+      await findButton('Edytuj parametry')!.trigger('click')
+      expect(dialog().isVisible()).toBe(true)
+      expect(findField('Numer indeksu:')!.find('input').element.value).toBe('123456')
+      await returnToCase()
       await submit(wrapper)
 
       expect(wrapper.emitted('generate-pdf')).toEqual([
@@ -240,7 +273,7 @@ describe('GeneratePdfForm', () => {
 
       expect(wrapper.emitted('generate-pdf')).toBeUndefined()
       await vi.waitFor(() =>
-        expect(shownErrors(wrapper)).toEqual(['Wybierz szablon wniosku.', 'Opisz swoją sytuację.']),
+        expect(shownErrors()).toEqual(['Wybierz szablon wniosku.', 'Opisz swoją sytuację.']),
       )
     })
 
@@ -248,11 +281,13 @@ describe('GeneratePdfForm', () => {
       const wrapper = mountForm({})
 
       await chooseTemplate('Wniosek o urlop')
+      await returnToCase()
       await wrapper.find('textarea').setValue('Proszę o urlop.')
       await submit(wrapper)
 
       expect(wrapper.emitted('generate-pdf')).toBeUndefined()
-      await vi.waitFor(() => expect(shownErrors(wrapper)).toEqual(['To pole jest wymagane.']))
+      expect(dialog().isVisible()).toBe(true)
+      await vi.waitFor(() => expect(shownErrors()).toEqual(['To pole jest wymagane.']))
     })
 
     it.each(['12345', '1234567', 'a123456'])(
@@ -261,38 +296,39 @@ describe('GeneratePdfForm', () => {
         const wrapper = mountForm({})
 
         await chooseTemplate('Wniosek o urlop')
-        await findField(wrapper, 'Numer indeksu:')!.find('input').setValue(indexNumber)
+        await findField('Numer indeksu:')!.find('input').setValue(indexNumber)
+        await returnToCase()
         await wrapper.find('textarea').setValue('Proszę o urlop.')
         await submit(wrapper)
 
         expect(wrapper.emitted('generate-pdf')).toBeUndefined()
-        await vi.waitFor(() => expect(shownErrors(wrapper)).toEqual(['Nieprawidłowy format.']))
+        await vi.waitFor(() => expect(shownErrors()).toEqual(['Nieprawidłowy format.']))
       },
     )
 
     it('does not report empty fields right after a template is chosen', async () => {
-      const wrapper = mountForm({})
+      mountForm({})
 
       await chooseTemplate('Wniosek o urlop')
       await flushPromises()
 
-      expect(findField(wrapper, 'Numer indeksu:')!.classes()).not.toContain('is-error')
-      expect(findField(wrapper, 'Opisz swoją sytuację lub cel pisma:')!.classes()).not.toContain(
-        'is-error',
-      )
+      expect(findField('Numer indeksu:')!.classes()).not.toContain('is-error')
+      expect(findField('Opisz swoją sytuację lub cel pisma:')!.classes()).not.toContain('is-error')
     })
 
     it('hides the errors of the previous template after another one is chosen', async () => {
       const wrapper = mountForm({})
       await chooseTemplate('Wniosek o urlop')
+      await returnToCase()
       await submit(wrapper)
       await vi.waitFor(() =>
-        expect(shownErrors(wrapper)).toEqual(['To pole jest wymagane.', 'Opisz swoją sytuację.']),
+        expect(shownErrors()).toEqual(['Opisz swoją sytuację.', 'To pole jest wymagane.']),
       )
 
+      await returnToCase()
       await chooseTemplate('Podanie')
 
-      await vi.waitFor(() => expect(shownErrors(wrapper)).toEqual([]))
+      await vi.waitFor(() => expect(shownErrors()).toEqual([]))
     })
   })
 })
