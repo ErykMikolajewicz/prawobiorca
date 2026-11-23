@@ -4,7 +4,9 @@ from email.policy import default
 import pytest
 from httpx2 import AsyncClient, MockTransport, Response
 
+from core_service.domain.exceptions.regulations import RegulationDocumentRejected
 from core_service.domain.value_objects.legal_units import RegulationElement, UsefulLabels
+from core_service.domain.value_objects.regulations import RegulationPreparationFailureReason
 from core_service.infrastructure.ai_services.regulation_splitter import HttpRegulationSplitter
 from core_service.shared.exceptions import ServiceRequestRejected, ServiceUnavailable
 
@@ -41,6 +43,25 @@ async def test_split_failure_raises_service_unavailable():
         await create_splitter(lambda request: Response(503)).split(b"%PDF-1.7")
 
 
-async def test_split_rejected_request_raises_service_request_rejected():
+@pytest.mark.parametrize(
+    "response",
+    [Response(400), Response(422, json={"detail": [{"msg": "Field required"}]})],
+    ids=("bad request", "validation error"),
+)
+async def test_split_rejected_request_raises_service_request_rejected(response):
     with pytest.raises(ServiceRequestRejected):
-        await create_splitter(lambda request: Response(422)).split(b"%PDF-1.7")
+        await create_splitter(lambda request: response).split(b"%PDF-1.7")
+
+
+@pytest.mark.parametrize(
+    ("detail", "reason"),
+    [
+        ("INCOMPLETE_CONVERSION", RegulationPreparationFailureReason.INCOMPLETE_DOCUMENT),
+        ("CONVERSION_FAILED", RegulationPreparationFailureReason.UNREADABLE_DOCUMENT),
+    ],
+)
+async def test_split_rejected_document_raises_regulation_document_rejected(detail, reason):
+    with pytest.raises(RegulationDocumentRejected) as error:
+        await create_splitter(lambda request: Response(422, json={"detail": detail})).split(b"%PDF-1.7")
+
+    assert error.value.reason == reason

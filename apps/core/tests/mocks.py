@@ -14,12 +14,13 @@ def get_awaited_argument(method: AsyncMock, name: str) -> Any:
 
 def record_saved_states(save: AsyncMock, name: str, attribute: str) -> list[Any]:
     signature = inspect.signature(save)
+    previous_record = save.side_effect
     states = []
 
     def record(*args, **kwargs) -> Any:
         entity = signature.bind(*args, **kwargs).arguments[name]
         states.append(getattr(entity, attribute))
-        return DEFAULT
+        return previous_record(*args, **kwargs) if previous_record else DEFAULT
 
     save.side_effect = record
     return states

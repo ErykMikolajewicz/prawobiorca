@@ -1,4 +1,8 @@
-import type { RegulationPreparationStatus, RegulationType } from '@/api/generated/model'
+import type {
+  RegulationPreparationFailureReason,
+  RegulationPreparationStatus,
+  RegulationType,
+} from '@/api/generated/model'
 
 export type { RegulationScope } from '@/api/generated/model'
 
@@ -20,6 +24,14 @@ export const preparationStatusOptions: Record<
   NOT_STARTED: { label: 'Oczekuje', tagType: 'info' },
   IN_PROGRESS: { label: 'Przetwarzanie', tagType: 'warning' },
   FAILED: { label: 'Błąd przetwarzania', tagType: 'danger' },
+}
+
+export const preparationFailureReasonLabels: Record<RegulationPreparationFailureReason, string> = {
+  INCOMPLETE_DOCUMENT:
+    'Nie udało się odczytać całego dokumentu, więc nie został udostępniony do wyszukiwania. Wgraj inną wersję pliku.',
+  UNREADABLE_DOCUMENT:
+    'Nie udało się odczytać pliku. Upewnij się, że to poprawny plik PDF bez hasła.',
+  PROCESSING_ERROR: 'Wystąpił błąd techniczny podczas przetwarzania. Ponów przetwarzanie.',
 }
 
 export type RegulationsOrder = 'name' | 'score'

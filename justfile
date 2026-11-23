@@ -71,7 +71,7 @@ test-integration:
 
 [working-directory: 'apps/extraction']
 test-extraction:
-    uv run --group test pytest tests/integration
+    uv run --group test pytest tests
 
 [working-directory: 'apps/core']
 cov:

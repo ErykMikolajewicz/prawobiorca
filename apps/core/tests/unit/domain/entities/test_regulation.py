@@ -11,7 +11,11 @@ from core_service.domain.exceptions.regulations import (
     SectionSummariesGenerationInProgress,
 )
 from core_service.domain.value_objects.descriptions import DescriptionStatus
-from core_service.domain.value_objects.regulations import RegulationDetails, RegulationPreparationStatus
+from core_service.domain.value_objects.regulations import (
+    RegulationDetails,
+    RegulationPreparationFailureReason,
+    RegulationPreparationStatus,
+)
 
 REGULATION_ID = UUID("5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f")
 
@@ -96,6 +100,19 @@ def test_start_preparation(preparation_status):
     assert regulation.preparation_status == RegulationPreparationStatus.IN_PROGRESS
 
 
+def test_restarted_preparation_clears_failure_reason():
+    retried_regulation = create_regulation(RegulationPreparationStatus.IN_PROGRESS)
+    started_regulation = create_regulation(RegulationPreparationStatus.IN_PROGRESS)
+    retried_regulation.fail_preparation(RegulationPreparationFailureReason.UNREADABLE_DOCUMENT)
+    started_regulation.fail_preparation(RegulationPreparationFailureReason.UNREADABLE_DOCUMENT)
+
+    retried_regulation.retry_preparation()
+    started_regulation.start_preparation()
+
+    assert retried_regulation.preparation_failure_reason is None
+    assert started_regulation.preparation_failure_reason is None
+
+
 def test_start_preparation_of_prepared_regulation():
     regulation = create_regulation(RegulationPreparationStatus.PREPARED)
 
@@ -108,10 +125,11 @@ def test_preparation_result():
     failed_regulation = create_regulation(RegulationPreparationStatus.IN_PROGRESS)
 
     prepared_regulation.complete_preparation()
-    failed_regulation.fail_preparation()
+    failed_regulation.fail_preparation(RegulationPreparationFailureReason.INCOMPLETE_DOCUMENT)
 
     assert prepared_regulation.is_prepared
     assert failed_regulation.preparation_status == RegulationPreparationStatus.FAILED
+    assert failed_regulation.preparation_failure_reason == RegulationPreparationFailureReason.INCOMPLETE_DOCUMENT
 
 
 def test_preparation_result_of_prepared_regulation():
@@ -120,9 +138,10 @@ def test_preparation_result_of_prepared_regulation():
     with pytest.raises(RegulationAlreadyInitialized):
         regulation.complete_preparation()
     with pytest.raises(RegulationAlreadyInitialized):
-        regulation.fail_preparation()
+        regulation.fail_preparation(RegulationPreparationFailureReason.PROCESSING_ERROR)
 
     assert regulation.is_prepared
+    assert regulation.preparation_failure_reason is None
 
 
 @pytest.mark.parametrize(

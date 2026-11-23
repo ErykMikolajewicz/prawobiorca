@@ -62,6 +62,7 @@ async def test_get_public_regulation(client, session_maker, user):
         "description": None,
         "regulationType": RegulationType.ACT,
         "preparationStatus": RegulationPreparationStatus.PREPARED,
+        "preparationFailureReason": None,
         "descriptionStatus": DescriptionStatus.NOT_REQUESTED,
         "sectionSummariesStatus": DescriptionStatus.NOT_REQUESTED,
         "organizationId": None,

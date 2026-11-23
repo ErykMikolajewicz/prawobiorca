@@ -97,6 +97,7 @@ async function retryPreparation() {
         <RegulationStatusBadge
           v-if="!isPrepared && canManage"
           :preparation-status="regulation.preparationStatus"
+          :failure-reason="regulation.preparationFailureReason"
         />
       </div>
     </div>

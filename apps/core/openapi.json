@@ -4033,6 +4033,15 @@
         ],
         "title": "RegulationDetailsData"
       },
+      "RegulationPreparationFailureReason": {
+        "type": "string",
+        "enum": [
+          "INCOMPLETE_DOCUMENT",
+          "UNREADABLE_DOCUMENT",
+          "PROCESSING_ERROR"
+        ],
+        "title": "RegulationPreparationFailureReason"
+      },
       "RegulationPreparationStatus": {
         "type": "string",
         "enum": [
@@ -4086,6 +4095,16 @@
             "$ref": "#/components/schemas/RegulationPreparationStatus",
             "default": "NOT_STARTED"
           },
+          "preparationFailureReason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegulationPreparationFailureReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "descriptionStatus": {
             "$ref": "#/components/schemas/DescriptionStatus",
             "default": "NOT_REQUESTED"
@@ -4127,6 +4146,7 @@
           "description",
           "regulationType",
           "preparationStatus",
+          "preparationFailureReason",
           "descriptionStatus",
           "sectionSummariesStatus",
           "organizationId",

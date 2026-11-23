@@ -3,6 +3,7 @@ import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRegulationDetails } from '@/composables/useRegulationDetails'
 import { descriptionStatusOptions, sectionSummariesStatusOptions } from '@/domain/descriptions'
+import { preparationFailureReasonLabels } from '@/domain/regulations'
 import { useAuthStore } from '@/stores/auth'
 import type { RegulationRepresentation } from '@/api/generated/model'
 
@@ -49,6 +50,13 @@ const createDate = computed(() =>
 )
 const canPreview = computed(() => props.regulation.preparationStatus !== 'NOT_STARTED')
 const isPrepared = computed(() => props.regulation.preparationStatus === 'PREPARED')
+const preparationFailureReason = computed(() => {
+  const reason = props.regulation.preparationFailureReason
+  if (!props.canManage || props.regulation.preparationStatus !== 'FAILED' || !reason) {
+    return undefined
+  }
+  return preparationFailureReasonLabels[reason]
+})
 const isDescriptionInProgress = computed(() => props.regulation.descriptionStatus === 'IN_PROGRESS')
 const canManageDescription = computed(() => isAdmin.value && props.canManage)
 const canGenerateDescription = computed(
@@ -135,6 +143,15 @@ function handlePreview() {
 
 <template>
   <el-dialog v-model="visible" title="Szczegóły regulacji" width="min(720px, 92vw)" append-to-body>
+    <el-alert
+      v-if="preparationFailureReason"
+      type="error"
+      show-icon
+      :closable="false"
+      title="Błąd przetwarzania"
+      :description="preparationFailureReason"
+      class="preparation-failure"
+    />
     <el-form label-position="top" @submit.prevent="handleSave">
       <el-form-item label="Nazwa:">
         <el-input v-if="canManage" v-model="name" placeholder="Nazwa regulacji" />
@@ -236,6 +253,10 @@ function handlePreview() {
 </template>
 
 <style scoped>
+.preparation-failure {
+  margin-bottom: var(--app-space-md);
+}
+
 .regulation-description {
   white-space: pre-wrap;
 }

@@ -31,6 +31,7 @@ function regulation(id: string): RegulationRepresentation {
     description: null,
     regulationType: 'ACT',
     preparationStatus: 'PREPARED',
+    preparationFailureReason: null,
     descriptionStatus: 'NOT_REQUESTED',
     sectionSummariesStatus: 'NOT_REQUESTED',
     organizationId: null,

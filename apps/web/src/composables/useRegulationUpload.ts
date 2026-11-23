@@ -125,6 +125,7 @@ export function useRegulationUpload() {
           description: null,
           regulationType: regulationTypeValue ?? null,
           preparationStatus: uploadResult.preparationStatus,
+          preparationFailureReason: null,
           descriptionStatus: generateDescription.value ? 'IN_PROGRESS' : 'NOT_REQUESTED',
           sectionSummariesStatus:
             target.value === 'PUBLIC' && generateSectionSummaries.value

@@ -5,7 +5,11 @@ from core_service.application.dtos.regulations import RegulationRepresentation
 from core_service.domain.consts import MAX_FILENAME_LENGTH, MAX_REGULATION_DESCRIPTION_LENGTH
 from core_service.domain.entities.regulation import Regulation
 from core_service.domain.value_objects.descriptions import DescriptionStatus
-from core_service.domain.value_objects.regulations import RegulationPreparationStatus, RegulationType
+from core_service.domain.value_objects.regulations import (
+    RegulationPreparationFailureReason,
+    RegulationPreparationStatus,
+    RegulationType,
+)
 from core_service.infrastructure.consts import VECTOR_LENGTH
 from core_service.infrastructure.relational_db.connection import mapper_registry, metadata
 
@@ -49,6 +53,11 @@ regulations_table = sqla.Table(
         default=RegulationPreparationStatus.NOT_STARTED,
     ),
     sqla.Column(
+        "preparation_failure_reason",
+        sqla.Enum(RegulationPreparationFailureReason, name="regulationpreparationfailurereason"),
+        nullable=True,
+    ),
+    sqla.Column(
         "organization_id",
         sqla.UUID,
         sqla.ForeignKey("organizations.id", ondelete="CASCADE", name=REGULATIONS_ORGANIZATION_FOREIGN_KEY),
@@ -81,6 +90,7 @@ mapper_registry.map_imperatively(
         "id",
         "presentation_name",
         "preparation_status",
+        "preparation_failure_reason",
         "description",
         "description_status",
         "section_summaries_status",

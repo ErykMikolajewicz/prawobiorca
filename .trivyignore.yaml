@@ -35,3 +35,6 @@ vulnerabilities:
   - id: CVE-2026-124709
     statement: libssl3t64, openssl and openssl-provider-legacy from the base image, no Debian fix. The service does not use OpenSSL QUIC; Python's ssl module and the HTTP stack use TLS over TCP only.
     expired_at: 2027-02-19
+  - id: CVE-2026-107494
+    statement: libssl3t64, openssl and openssl-provider-legacy from the base image, no Debian fix. The service does not use OpenSSL QUIC; Python's ssl module and the HTTP stack use TLS over TCP only.
+    expired_at: 2027-02-19
