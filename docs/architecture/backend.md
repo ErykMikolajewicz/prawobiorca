@@ -136,10 +136,12 @@ Business rules (prices, budgets, thresholds) are described in [application logic
 * **Clean-up**: the worker deletes budgets of past periods (keeping the current month) and expired attempt windows on startup (`DeleteExpiredLimits`).
 
 ### 3.6. MCP Server and OAuth
-The administrator can search legal acts from an AI assistant (e.g. Claude) through a remote MCP server. Business rules are described in [application logic](../app_logic.md#37-mcp-clients-view).
+
+The remote MCP server lets an administrator search and read acts from an AI assistant. Each tool uses the identity from the access token and follows the API's document access rules. See [application logic](../app_logic.md#37-mcp-clients-view).
 
 * **Same process as the API**: the MCP server (official `mcp` SDK, `framework/mcp/server.py`) is a Starlette app. FastAPI delegates the exact transport and protected-resource metadata paths to it. The transport checks the host and any supplied origin against `OAUTH_PUBLIC_URL`. It runs stateless with JSON responses, so any `core` replica can handle any request and no sticky sessions or SSE streams are needed. Its session manager is started in the `core` lifespan (`init_mcp_server`).
-* **Tools**: `search_regulations`, `search_regulation` and `get_regulation_details` call the existing use cases with a `Caller` built from the access token (`get_mcp_caller`), so the access policies and usage budgets are the same as in the REST API. Tools get the session maker and the embedder from `McpDependencies` in the MCP app state, which tests replace.
+* `search_regulations` finds acts by topic and returns their IDs. Given an act ID, `get_regulation_details` returns its metadata and `search_regulation` finds relevant provisions. Both searches draw on the shared monthly MCP budget.
+* `get_regulation_toc` returns a paginated list of headings, section IDs and available summaries in document order. `get_regulation_section` reads a full provision by section ID or citation (e.g. `Art. 108` or `§ 7`). If a citation occurs more than once, the tool returns the matching headings and IDs.
 * **Authorization server in `core`**: OAuth 2.1 authorization code flow with PKCE (`S256` only), required by remote connectors of Claude:
   * `GET /.well-known/oauth-protected-resource/api/mcp` (served by the SDK) points to the authorization server, `GET /.well-known/oauth-authorization-server` (`framework/api/endpoints/well_known.py`) describes it. Both paths are routed to `core` by the ingress, next to `/api`. The public URL comes from `OAUTH_PUBLIC_URL`.
   * `GET /api/oauth/authorize` validates the client, the redirect URI and the requested MCP resource and redirects to the `/oauth/consent` page of the frontend. The page reads the client name from `GET /api/oauth/consent` and, after the administrator allows the access, gets the redirect with a single-use code (60 s) from `POST /api/oauth/consent`.

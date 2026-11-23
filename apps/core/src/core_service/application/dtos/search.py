@@ -25,6 +25,18 @@ class SectionRepresentation(BaseModel):
     summary: str | None = None
 
 
+class TocEntry(BaseModel):
+    section_id: UUID
+    header: str | None
+    summary_label: str | None
+    summary: str | None
+
+
+class RegulationTocPage(BaseModel):
+    entries: list[TocEntry]
+    next_offset: int | None
+
+
 class SearchResult(SectionRepresentation):
     score: float = Field(ge=-1, le=1)
     highlight: SearchResultHighlight | None = None

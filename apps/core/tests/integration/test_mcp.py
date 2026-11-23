@@ -11,7 +11,7 @@ from core_service.infrastructure.relational_db.schemas.oauth import oauth_tokens
 from core_service.infrastructure.relational_db.schemas.usage_budgets import usage_budgets_table
 from core_service.infrastructure.relational_db.schemas.usage_tariff import usage_tariff_table
 from core_service.infrastructure.relational_db.schemas.users import users_table
-from tests.consts import ADMIN_ID
+from tests.consts import ADMIN_ID, UNKNOWN_ID, USER_ID
 from tests.integration.fixtures.ai_services import QUERY_VECTOR
 from tests.integration.fixtures.oauth import MCP_HEADERS, call_mcp_tool
 from tests.integration.fixtures.regulations import insert_regulation, insert_section
@@ -140,3 +140,110 @@ async def test_access_token_requires_issued_audience(
 async def test_transport_headers_before_authentication(client, headers, expected_status):
     response = await client.get("/api/mcp", headers={**MCP_HEADERS, **headers})
     assert response.status_code == expected_status
+
+
+async def test_browse_toc_then_read_section(
+    client, session_maker, mcp_dependencies, mcp_access_token, mock_texts_embedder
+):
+    header = "Rozdział 2 > Art. 10a Stypendia"
+    body = "1. Pierwszy ustęp.\n2. Drugi ustęp.\n1) punkt pierwszy."
+    async with session_maker.begin() as session:
+        regulation = await insert_regulation(session, None, preparation_status=RegulationPreparationStatus.PREPARED)
+        second = await insert_section(
+            session, regulation, "Dalsza treść.", [QUERY_VECTOR], section_order=1, header=None
+        )
+        first = await insert_section(
+            session,
+            regulation,
+            body,
+            [QUERY_VECTOR],
+            header=header,
+            summary_label="Stypendia",
+            summary="Warunki przyznania stypendium.",
+        )
+
+    args = {"regulation_id": str(regulation)}
+    response = await call_mcp_tool(client, mcp_access_token, "get_regulation_toc", {**args, "limit": 1})
+    page = response.json()["result"]["structuredContent"]
+    assert page == {
+        "entries": [
+            {
+                "section_id": str(first),
+                "header": header,
+                "summary_label": "Stypendia",
+                "summary": "Warunki przyznania stypendium.",
+            }
+        ],
+        "next_offset": 1,
+    }
+    response = await call_mcp_tool(
+        client, mcp_access_token, "get_regulation_toc", {**args, "limit": 1, "offset": page["next_offset"]}
+    )
+    assert response.json()["result"]["structuredContent"] == {
+        "entries": [{"section_id": str(second), "header": None, "summary_label": None, "summary": None}],
+        "next_offset": None,
+    }
+
+    for selector in [{"section_id": page["entries"][0]["section_id"]}, {"citation": " art.10a. "}]:
+        response = await call_mcp_tool(client, mcp_access_token, "get_regulation_section", {**args, **selector})
+        assert response.json()["result"]["content"][0]["text"] == f"## {header}\n{body}"
+    mock_texts_embedder.embed_queries.assert_not_awaited()
+    async with session_maker() as session:
+        assert (await session.execute(select(usage_budgets_table))).first() is None
+
+
+async def test_repeated_paragraph_returns_choices(client, session_maker, mcp_dependencies, mcp_access_token):
+    async with session_maker.begin() as session:
+        regulation = await insert_regulation(session, ADMIN_ID, preparation_status=RegulationPreparationStatus.PREPARED)
+        choices = []
+        for order, header in enumerate(["§ 7", "Załącznik nr 1 > § 7. Warunki", "§ 70", "§ 7a", "§ 7¹", "Art. 7"]):
+            section = await insert_section(
+                session, regulation, "Treść przepisu.", [QUERY_VECTOR], order, ADMIN_ID, header=header
+            )
+            if order < 2:
+                choices.append(f"{header} (section_id: {section})")
+    response = await call_mcp_tool(
+        client, mcp_access_token, "get_regulation_section", {"regulation_id": str(regulation), "citation": "§7"}
+    )
+    result = response.json()["result"]
+    assert result["isError"] is False
+    assert result["content"][0]["text"].splitlines()[1:] == choices
+
+
+@pytest.mark.parametrize(
+    ("tool", "selector"), [("get_regulation_toc", {}), ("get_regulation_section", {"citation": "Art. 1"})]
+)
+async def test_browse_requires_access_and_prepared_act(
+    client, session_maker, user, mcp_dependencies, mcp_access_token, tool, selector
+):
+    async with session_maker.begin() as session:
+        private = await insert_regulation(session, USER_ID, preparation_status=RegulationPreparationStatus.PREPARED)
+        pending = await insert_regulation(session, None, "W przygotowaniu")
+    for regulation, message in [
+        (private, "Nie znaleziono aktu"),
+        (UNKNOWN_ID, "Nie znaleziono aktu"),
+        (pending, "nie jest jeszcze przygotowany"),
+    ]:
+        response = await call_mcp_tool(client, mcp_access_token, tool, {"regulation_id": str(regulation), **selector})
+        result = response.json()["result"]
+        assert result["isError"]
+        assert message in result["content"][0]["text"]
+
+
+async def test_section_selector_must_resolve_in_requested_act(
+    client, session_maker, mcp_dependencies, mcp_access_token
+):
+    async with session_maker.begin() as session:
+        target = await insert_regulation(session, None, preparation_status=RegulationPreparationStatus.PREPARED)
+        other = await insert_regulation(session, None, preparation_status=RegulationPreparationStatus.PREPARED)
+        section = await insert_section(session, other, "Inny akt.", [QUERY_VECTOR])
+    for selector in [
+        {},
+        {"section_id": str(section), "citation": "Art. 1"},
+        {"section_id": str(section)},
+        {"citation": "Art. 1"},
+    ]:
+        response = await call_mcp_tool(
+            client, mcp_access_token, "get_regulation_section", {"regulation_id": str(target), **selector}
+        )
+        assert response.json()["result"]["isError"]
